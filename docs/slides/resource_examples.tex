@@ -1,0 +1,205 @@
+% Capacity assumptions and arithmetic: docs/slides/resource_estimates.md
+\begin{frame}{18. 容量の基準：状態1個と、実行用の確保量を分ける}
+  \smallnote{complex128（振幅16 byte）、圧縮なし。以下は構成・回路を仮定した容量計算で、実機性能の測定値ではない。}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.47\textwidth}
+      \begin{block}{状態サイズと分散した担当量}
+        \small $S(n)=16\,2^n\ \mathrm{byte}$\par
+        $s=S/N$：$N$ nodeへ均等配置した担当量。\par
+        $B=16\,2^{24}=256\ \mathrm{MiB}$：Block例。
+      \end{block}
+      \begin{itemize}\small
+        \item 1 qubit増えると、状態容量は2倍。
+        \item Frame／遅延Logは処理を減らす。\par
+              任意の全振幅を常に圧縮できるとはしない。
+        \item old/new、勾配2状態、Checkpoint、\par
+              I/O／MPI bufferも別に確保する。
+      \end{itemize}
+    \end{column}
+    \begin{column}{.49\textwidth}
+      \textbf{全状態1個の容量}\par\medskip
+      \begin{tabularx}{\linewidth}{@{}Xr@{}}
+        \toprule qubit & $S(n)$ \\
+        \midrule
+        30 & 16 GiB \\
+        32 & 64 GiB \\
+        36 & 1 TiB \\
+        40 & 16 TiB \\
+        44 & 256 TiB \\
+        50 & 16 PiB \\
+        \bottomrule
+      \end{tabularx}
+      \medskip
+      \smallnote{GiB=$2^{30}$、TiB=$2^{40}$、PiB=$2^{50}$ byte。\par
+        SSDの製品公称TBと、予約する空きTiBを区別する。}
+    \end{column}
+  \end{columns}
+  \takeaway{容量見積りは\textbf{同時に生きる版＋蓄積する出力＋作業領域}で決まる。}
+  \note{詳細：docs/slides/resource_estimates.md。全振幅S=16*2^n。50Qの16PiBは全状態1個で、work/checkpointを含まず、今回の構成で実行できるという主張ではない。node数とrank数は区別し、例では1rank/node。b=24は例のnative最大4Q JointもRAMに収まる設定。}
+\end{frame}
+
+% Chemistry estimates follow the capacity slides; kept in a separate input.
+
+\begin{frame}{19. 構成A：単一node・振幅をRAMだけに置く}
+  \smallnote{32 qubit、$S=64$ GiB、1 node／1 rank。durable Checkpointなし、追加prefix・同時Binding jobなし。}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.40\textwidth}
+      \begin{tikzpicture}[x=1cm,y=1cm]
+        \node[panel,text width=4.8cm,minimum height=1.2cm] (cpu) at (0,0) {CPU / Block Kernel / Frame};
+        \node[storage,text width=4.8cm,minimum height=1.8cm] (ram) at (0,-2.15) {RAMのみの振幅配置\\current / next / adjoint\\作業buffer / metadata};
+        \draw[flow,<->] (cpu) -- (ram);
+        \node[labeltext,text width=4.9cm] at (0,-3.7) {状態用SSD：0\\MPI node間通信：なし};
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{.56\textwidth}
+      \textbf{RAMの確保例：余裕25\%を加える}\par\medskip
+      \small $W=16$ GiB：Block作業領域＋metadata。\par\medskip
+      \begin{tabularx}{\linewidth}{@{}Xrr@{}}
+        \toprule 用途 & 計算上の確保量 & 予約例 \\
+        \midrule
+        Forward & $1.25(2S+W)$ & \textbf{256 GiB} \\
+         & $=180$ GiB & \\
+        Adjoint & $1.25(4S+W)$ & \textbf{512 GiB} \\
+         & $=340$ GiB & \\
+        \bottomrule
+      \end{tabularx}
+      \medskip
+      \small $2S$：旧／新のCOW更新。\par
+      $4S$：保護final＋forward＋adjoint＋次出力。\par
+      \smallnote{逆再生は一方ずつ更新。全中間状態を保持しない。\par
+        OS／MPI内部・allocator等の余裕は25\%に含む。}
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{状態が64 GiBでもRAM 64 GiBでの実行を保証しない。} 耐久保存は別のstorageが必要。}
+  \note{純粋なRAM振幅配置の容量モデル。現行runtimeのcatalog/journal用小容量filesystemは別で、完全無ディスク動作の実装済み保証ではない。MemoryBlockStoreのcurrent/next COWとstreaming adjointを想定。旧snapshot/prefixを追加保持すればその生存閉包を加算する。W=16GiBはb24、g<=16の1Joint working-setに余裕を持たせた例。managed予算とprocessRSSは同義ではなく25percentは校正対象の仮定。}
+\end{frame}
+
+\begin{frame}{20. 構成B：単一node・RAM Cache＋Local SSD}
+  \smallnote{36 qubit、$S=1$ TiB、1 node／1 rank、$b=24$。全状態をRAMに載せずBlock単位で処理する。}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.40\textwidth}
+      \begin{tikzpicture}[x=1cm,y=1cm]
+        \node[panel,text width=4.7cm] (cpu) at (0,0) {CPU / Block Kernel};
+        \node[panel,text width=4.7cm] (ram) at (0,-1.55) {RAM 64 GiB\\Cache 32＋work 16＋meta 1\\OS / MPI等の余裕 15};
+        \node[storage,text width=4.7cm] (ssd) at (0,-3.4) {Local SSD：rank segment\\状態 / COW / Checkpoint};
+        \draw[flow,<->] (cpu) -- (ram);
+        \draw[flow,<->] (ram) -- (ssd);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{.56\textwidth}
+      \textbf{現行append-onlyのSSD確保モデル}\par
+      \small 初期1状態＋Forward 8回分の全状態write。\par
+      Adjointはさらに16回分のwriteを仮定。\par\medskip
+      \begin{tabularx}{\linewidth}{@{}Xrr@{}}
+        \toprule 用途 & 余裕25\%込み & 空き領域の予約例 \\
+        \midrule
+        Forward & $1.25(1+8)S$ & \textbf{16 TiB} \\
+         & $=11.25$ TiB & \\
+        ＋Adjoint & $1.25(1+8+16)S$ & \textbf{32 TiB} \\
+         & $=31.25$ TiB & \\
+        \bottomrule
+      \end{tabularx}
+      \medskip
+      \smallnote{更新回数は回路依存の仮定。長い回路は追加容量が必要。\par
+        payloadを書かないFrame／virtual更新はwrite回数に入れない。}
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{現行Phase 3はappend-only。} 生存状態数個分だけでSSD容量を保証しない。}
+  \note{docs/phase3_implementation.mdのGCはancestor closureを保守的に保持し、whole-segment回収のみ。未参照live版のcompactionが保証される将来モデルなら、Forward3S、勾配5Sに25percentを加えて3.75/6.25TiB、予約例4/8TiBまで縮める候補はあるが、現行保証には使わない。SSD空き領域の確保サイズであり単体製品容量ではない。追加prefix、他job、export、複数checkpointコピー、padding/fragmentationが仮定を超える場合は別加算。b24 g16のcoordinator2g+3 buffersは8.75GiB程度でwork16GiB内に収まり、1Jointのみ同時実行という制限を置く。}
+\end{frame}
+
+\begin{frame}{21. 構成C：8 node＋Local SSD＋Ethernet}
+  \smallnote{40 qubit、$S=16$ TiB、8 node／8 rank、担当$s=2$ TiB/node。100 GbEを接続例として仮定（未測定）。}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.46\textwidth}
+      \begin{tikzpicture}[x=1cm,y=1cm]
+        \node[panel,text width=2.4cm,font=\footnotesize] (a) at (0,0) {Node 0 / rank 0\\RAM 64 GiB\\Local SSD};
+        \node[panel,text width=2.4cm,font=\footnotesize] (b) at (3.0,0) {Node 1 / rank 1\\RAM 64 GiB\\Local SSD};
+        \node[storage,text width=5.3cm] (net) at (1.5,-1.8) {Ethernet switch / MPI over TCP};
+        \draw[flow,<->] (a) -- (net);
+        \draw[flow,<->] (b) -- (net);
+        \node[panel,text width=5.3cm,font=\footnotesize] (more) at (1.5,-3.35) {Node 2--7：同じRAM/SSD割当};
+        \draw[flow,<->] (net) -- (more);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{.50\textwidth}
+      \textbf{各nodeの確保量}\par
+      \small RAM：\textbf{64 GiB}、作業・cache配分は構成Bと同じ。\par
+      SSD Forward：$11.25s=22.5$ TiB\par
+      \hfill $\Rightarrow$ \textbf{32 TiB/node} を予約。\par
+      SSD ＋Adjoint：$31.25s=62.5$ TiB\par
+      \hfill $\Rightarrow$ \textbf{64 TiB/node} を予約。\par\medskip
+      \begin{block}{cluster全体の予約例}
+        \small RAM：\textbf{512 GiB}\par
+        SSD：Forward \textbf{256 TiB}／＋Adjoint \textbf{512 TiB}
+      \end{block}
+      \smallnote{source/inputがremoteならMPIで取得する。\par
+        8 nodeのSSDを単一nodeから同時writeしない。}
+    \end{column}
+  \end{columns}
+  \takeaway{RAMを全状態分まで増やさず容量を分散する。\textbf{通信・SSD・CPUの実効費用}は別途校正する。}
+  \note{Ethernetは通常TCPの構成例でありRoCE/RDMAの例ではない。リンク速度100GbEは実機推奨や実効帯域の測定ではなく入力仮定。1rank/node、均等shard、coordinator1Jointを仮定。peer/rankごとのMPI stagingはwork16GiB、内部buffer等は15GiB余裕側で予算検査する。node-local storeがrestart時にも取得可能な前提。replicationやnode脱落の継続を容量モデルに含めない。}
+\end{frame}
+
+\begin{frame}{22. 構成D：8 node＋Local SSD＋InfiniBand}
+  \smallnote{比較のため構成Cと同じ40 qubit・8 node。200 Gb/s fabricは接続例の仮定で、性能測定値ではない。}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.46\textwidth}
+      \begin{tikzpicture}[x=1cm,y=1cm]
+        \node[panel,text width=2.4cm,font=\footnotesize] (a) at (0,0) {Node 0 / rank 0\\RAM / Local SSD\\HCA};
+        \node[panel,text width=2.4cm,font=\footnotesize] (b) at (3.0,0) {Node 1 / rank 1\\RAM / Local SSD\\HCA};
+        \node[task,text width=5.3cm] (net) at (1.5,-1.8) {InfiniBand fabric\\MPI / UCX};
+        \draw[flow,<->] (a) -- (net);
+        \draw[flow,<->] (b) -- (net);
+        \node[panel,text width=5.3cm,font=\footnotesize] (more) at (1.5,-3.4) {Node 2--7：同じ容量割当};
+        \draw[flow,<->] (net) -- (more);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{.50\textwidth}
+      \textbf{確保量はEthernetの例と同じ}\par
+      \small RAM：\textbf{64 GiB/node}（全体512 GiB）。\par
+      SSD：\textbf{32 TiB/node}／＋Adjoint \textbf{64 TiB/node}。\par
+      全体：\textbf{256 TiB}／＋Adjoint \textbf{512 TiB}。\par\medskip
+      \begin{block}{RDMA利用時の追加確認}
+        \small 登録・pinする通信bufferはRAM内で計上。\par
+        memlock上限、UCX／MPI対応、NUMA配置、\par
+        同時request数を実機で確認する。
+      \end{block}
+      \smallnote{bufferのpinと追加コピーを二重計上しない。\par
+        overlapのため並列度を増やすならRAMも再見積りする。}
+    \end{column}
+  \end{columns}
+  \takeaway{InfiniBandで\textbf{状態容量は減らない。} 変わるのは通信の費用と、得になる実行計画。}
+  \note{MPI/UCXとRDMA buffer registrationの参照：Open MPI InfiniBand/RoCE support https://docs.open-mpi.org/en/main/tuning-apps/networking/ib-and-roce.html 。実際のMPIビルドがUCXとHCAを利用すること、buffer登録とmemlock上限を確認する。登録bufferは既存RAMのpinで、常に別の状態コピーが発生するという意味ではない。通信内部の追加copy/stagingがあれば実測して加算。multi-node InfiniBandは本repoで実測済みではない。}
+\end{frame}
+
+\begin{frame}{23. 4構成の確保例：ForwardとAdjointを分ける}
+  \smallnote{容量計画の例。SSDは現行append-only、初期1＋Forward 8＋Adjoint追加16状態write、余裕25\%。}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{.21\textwidth}p{.11\textwidth}p{.12\textwidth}XX@{}}
+    \toprule 構成 & node数\newline qubit & 状態1個 $S$ & RAM / node\newline Forward / ＋Adjoint & SSD空き領域 / node\newline Forward / ＋Adjoint \\
+    \midrule
+    A：振幅RAMのみ & 1 / 32 & 64 GiB & \textbf{256 / 512 GiB} & \textbf{0 / 0}（耐久保存なし） \\
+    B：Local SSD & 1 / 36 & 1 TiB & \textbf{64 / 64 GiB} & \textbf{16 / 32 TiB} \\
+    C：Ethernet＋SSD & 8 / 40 & 16 TiB & \textbf{64 / 64 GiB} & \textbf{32 / 64 TiB} \\
+    D：InfiniBand＋SSD & 8 / 40 & 16 TiB & \textbf{64 / 64 GiB} & \textbf{32 / 64 TiB} \\
+    \bottomrule
+  \end{tabularx}
+  \medskip
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{回路・jobを増やすとき}\par
+      \small SSDはstate相当のwrite回数で増える。\par
+      追加prefix／checkpointコピー／export／\par
+      同時BindingのCOWと作業bufferを加算する。
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{生存版回収が成立する将来モデル}\par
+      \small Forward $1.25\times3s$、Adjoint $1.25\times5s$。\par
+      ただし現行whole-segment GCでは、\par
+      この小さい容量を保証しない。
+    \end{column}
+  \end{columns}
+  \takeaway{予約は\textbf{空き領域・nodeごとのpeak}で判定する。全体合計やNIC帯域だけで収容可否を決めない。}
+  \note{計算詳細はdocs/slides/resource_estimates.md。RAM Aは1.25(2S+16GiB)/1.25(4S+16GiB)から256/512GiBへ切上げ。B/C/DのRAMはcache32+work16+metadata1+OS/MPI15=64GiB、1Joint+限定prefetchを前提。C/Dの担当s=2TiB、11.25s=22.5TiBから32、31.25s=62.5TiBから64へ切上げ。各nodeのSSDにはその空き量が必要。CPU数、SSD台数、実効帯域と実行時間の推奨・保証ではない。}
+\end{frame}

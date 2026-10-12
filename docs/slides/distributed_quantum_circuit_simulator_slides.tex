@@ -25,7 +25,7 @@
 \setbeamertemplate{footline}{%
   \leavevmode\hbox{%
     \begin{beamercolorbox}[wd=.86\paperwidth,ht=2.8ex,dp=1.2ex,leftskip=5mm]{normal text}
-      \scriptsize\color{muted}DH-SVS（仮称）\quad 開発者向け設計説明 / 2026-10-12
+      \scriptsize\color{muted}DH-SVS（仮称）\quad 開発者向け設計説明 / 2026-10-13
     \end{beamercolorbox}%
     \begin{beamercolorbox}[wd=.14\paperwidth,ht=2.8ex,dp=1.2ex,rightskip=5mm plus1fil]{normal text}
       \hfill\scriptsize\insertframenumber\,/\,\inserttotalframenumber
@@ -45,7 +45,7 @@
 }
 \title{分散量子回路シミュレータの開発}
 \subtitle{状態の配置・移動・遅延実行を共同で最適化する}
-\date{2026年10月12日}
+\date{2026年10月13日}
 \hypersetup{pdftitle={分散量子回路シミュレータの開発},pdfsubject={開発者向け設計説明：DH-SVS},pdfauthor={}}
 
 \begin{document}
@@ -738,7 +738,10 @@
   \note{出典：開発仕様13〜14章。表の帯域と再生時間は設計の考え方を説明するための仮定値。1 GiB=1024 MiBとして256 MiB/2 GiB/s=125 ms、/8=31.25 ms。実際にはNIC共有・packing・同期・RAM予約と実効帯域条件を評価する。dry-runでPlanの合法性、容量不足、必要NIC/ディスク帯域も提示する。}
 \end{frame}
 
-\begin{frame}{18. 開発ロードマップ：意味の正しさから実機評価へ}
+\input{docs/slides/resource_examples.tex}
+\input{docs/slides/chemistry_examples.tex}
+
+\begin{frame}{27. 開発ロードマップ：意味の正しさから実機評価へ}
   \smallnote{設計要素は初期から型・不変条件に含め、実行Backendと最適化を段階的に拡張する。}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}p{.06\textwidth}p{.25\textwidth}X@{}}

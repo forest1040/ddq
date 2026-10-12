@@ -90,6 +90,10 @@ latexmk -lualatex -interaction=nonstopmode -halt-on-error -outdir=docs/slides do
 
 スライド17の帯域・再生時間は仕組みを説明するための仮定値です。性能の実測値ではありません。
 
+スライド18〜23に、RAMのみ／Local SSD／複数node Ethernet／複数node InfiniBandの構成例と、Forward・AdjointのRAM/SSD確保量を追加しています。[計算条件](docs/slides/resource_estimates.md)に、状態サイズ、append-onlyの更新回数、容量余裕、生存版GCモデルとの違いを記載しています。
+
+スライド24〜26には、各構成に収まる量子化学VQEのCAS／ansatz／Hamiltonian項数の仮定と、energy・随伴勾配・100反復の処理時間を追加しています。時間はPhase 4のnative並列化目標を使う条件付き計画値です。[Markdown](docs/slides/resource_estimates.md)、[計算script](docs/slides/estimate_chemistry.py)、[JSON](docs/slides/chemistry_estimates.json)に容量判定と計算内訳を保存しています。
+
 スライド3〜5は `ref/03-2.tex` のクロネッカー積の図と `ref/10.tex` のストライドアクセスの図をもとに、全体行列・振幅ペア・Block境界・Rank配置の対応を説明しています。
 
 スライド11〜13は、遅延Log・Global DAGの依存からRAM振幅へ反映するタイミング、F_3 frontierの操作例、RAM再利用・SSD書き戻し・Checkpointの耐久commitを図示しています。
