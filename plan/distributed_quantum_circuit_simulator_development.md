@@ -2088,6 +2088,7 @@ critical bottleneck / uncertainty
 
 ### Phase 3：MPI＋ストレージ階層
 
+- **実装設計**：[Phase 3 設計書](../docs/phase3_design.md) に、所有権・通信順序・分散 commit・2状態 Adjoint・容量/GC・検証条件を具体化する。
 - **開発時の参照メモ**：[Mac Studio 単体の MPI 開発資料](../ref/mac_studio_mpi_quantum_simulator.md) を参照する。Open MPI＋mpi4py＋uv による同一 Mac 上の複数 rank、rank と Block の分離、タイル通信、macOS F_NOCACHE を検証する。同一ホストの実測通信性能を実ネットワークへそのまま流用しない。資料内の Phase 番号は独自のもので、本計画のロードマップを優先する。振幅ファイルは本計画の rank ごとの集約 segment を継続し、Block ごとにファイルを作らない。
 - `mpi4py`をTransportへ統合、Joint Taskをrank間へ拡張。
 - **MCXのupper-target / local-control時の条件付きpartial exchange**を実装し、全Block交換・分解とのMPIバイト数/実行時間を比較する。

@@ -60,6 +60,10 @@ uv run python examples/phase2_benchmark.py --num-qubits 16 --output /tmp/svsim-p
 
 `frame_policy='keep'` で対応する局所回転を Frame の内側へ遅延できます。`auto` は校正がない局所回転を具体化し、校正済みの `FrameCalibration` を渡すと費用推定で選択します。[比較実験](docs/phase2_benchmark.md)は状態 1 MiB／managed RAM 256 KiB の例を含みます。
 
+## Phase 3 設計
+
+[Phase 3 設計書](docs/phase3_design.md)に、MPI と rank-owned ストレージ、MCX partial exchange、分散 checkpoint/prefix、S0/S1 の物理 SWAP、分散期待値・Adjoint、性能観測と検証計画を記載しています。Mac Studio 上の Open MPI＋mpi4py＋uv を開発環境とし、Phase 3 の API は実装予定です。
+
 ## スライドのビルド
 
 リポジトリ直下で実行します。LuaLaTeX、LuaTeX-ja、原ノ味フォント、Beamer、およびテンプレートで使用するパッケージ（quantikz等）が必要です。
