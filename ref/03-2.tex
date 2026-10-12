@@ -1,0 +1,742 @@
+\section{手計算で見る量子ビットの振る舞い}\label{sec:3-2}
+
+\begin{sectiongoal}
+本節では、前節で学んだ状態表現を使い、1量子ビットゲートと複数量子ビットへのゲートの作用を手計算で追います。行列積や振幅の更新を通じて、ゲートの合成と量子干渉を理解します。ブロッホ球の図で回転の幾何学的な意味も確認します。
+\end{sectiongoal}
+
+\begin{notebox}
+\textbf{並び順の確認}: 本節の手計算は、\ref{sec:3-1-endian}節の規約どおり\textbf{リトルエンディアン}（右端が量子ビット0、$\ket{q_1 q_0}$）で進めます。
+\end{notebox}
+
+\subsection{量子ゲートの基本原理}
+
+\subsubsection{線形性とユニタリ性}
+
+量子状態は規格化された複素ベクトルで記述されます。量子ビットに対する操作（ゲート）は、状態ベクトルに作用する線形変換として表現されます。すなわち、量子ゲートは行列 $U$ を用いて
+
+\[
+\ket{\psi} \mapsto U \ket{\psi}
+\]
+
+と書けます。この変換には2つの重要な性質があります。
+
+\begin{itemize}
+\item \textbf{線形性}: 重ね合わせ状態に対する作用は、各成分への作用の重ね合わせと一致します。
+
+\[
+U (\alpha \ket{\psi} + \beta \ket{\phi}) = \alpha U \ket{\psi} + \beta U \ket{\phi}
+\]
+
+\item \textbf{ユニタリ性}: ノイズや測定を含まない量子ゲートは、\ref{sec:2-2}節で学んだユニタリ行列で表されます。ノルム保存により確率の合計は1に保たれ、逆行列 $U^\dagger$ で操作を元に戻せます。
+\end{itemize}
+
+\subsubsection{量子ゲートの行列表現}
+
+1量子ビットの状態空間は2次元であるため、1量子ビットゲートは $2 \times 2$ のユニタリ行列で表現されます。グローバル位相を除いた一般形として、QiskitのUゲートと同じ次の行列を使えます。
+
+\[
+U(\theta,\phi,\lambda) =
+\begin{pmatrix}
+\cos(\theta/2) & -\ee^{\ii\lambda}\sin(\theta/2) \\
+\ee^{\ii\phi}\sin(\theta/2) & \ee^{\ii(\phi+\lambda)}\cos(\theta/2)
+\end{pmatrix}
+\]
+
+ここで $\theta,\phi,\lambda$ は実パラメータです。任意の1量子ビットユニタリ行列 $V$ は、実数 $\chi$ を用いて $V = \ee^{\ii\chi}U(\theta,\phi,\lambda)$ と書けます。$\ee^{\ii\chi}$ は状態全体に掛かるグローバル位相であり、測定確率に影響しません。したがって、グローバル位相を除けば3つの実パラメータで表せます。
+
+\subsection{パウリゲートの行列導出}
+
+\subsubsection{Xゲート：ビット反転}
+
+Xゲートは古典NOTゲートの量子版であり、$\ket{0}$ と $\ket{1}$ を入れ替える操作です。
+
+\[
+X = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}
+\]
+
+ブロッホ球上においてXゲートが状態をX軸まわりに180度回転させる様子を図\ref{fig:bloch_sphere_x}に示します。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=100mm]{../pre_figures/bloch_sphere_x.png}
+\caption{ブロッホ球（X軸まわりの180度回転）}
+\label{fig:bloch_sphere_x}
+\end{figure}
+
+作用を確認します：
+
+\[
+X \ket{0} = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix} \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \begin{pmatrix} 0 \\ 1 \end{pmatrix} = \ket{1}
+\]
+\[
+X \ket{1} = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix} \begin{pmatrix} 0 \\ 1 \end{pmatrix} = \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \ket{0}
+\]
+
+固有値と固有ベクトルを計算してみましょう。固有方程式 $\det(X - \lambda I) = 0$ を解くと、
+
+\[
+\det\begin{pmatrix} -\lambda & 1 \\ 1 & -\lambda \end{pmatrix} = \lambda^2 - 1 = 0
+\]
+
+より、固有値は $\lambda = \pm 1$ です。対応する固有ベクトルはそれぞれ
+
+\[
+\ket{+} = \frac{1}{\sqrt{2}}(\ket{0} + \ket{1})
+\]
+\[
+\ket{-} = \frac{1}{\sqrt{2}}(\ket{0} - \ket{1})
+\]
+
+です。すなわち、$\ket{+}$ と $\ket{-}$ はXゲートの固有状態であり、$X\ket{+} = \ket{+}$, $X\ket{-} = -\ket{-}$ が成り立ちます。
+
+\subsubsection{Yゲート：ビット反転＋位相反転}
+
+Yゲートはビット反転と位相反転の組み合わせです。
+
+\[
+Y = \begin{pmatrix} 0 & -\ii \\ \ii & 0 \end{pmatrix}
+\]
+
+Yゲートによる状態の幾何学的な変換を、ブロッホ球におけるY軸まわりの180度回転として図\ref{fig:bloch_sphere_y}に示します。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=100mm]{../pre_figures/bloch_sphere_y.png}
+\caption{ブロッホ球（Y軸まわりの180度回転）}
+\label{fig:bloch_sphere_y}
+\end{figure}
+
+作用：
+
+\[
+Y \ket{0} = \begin{pmatrix} 0 & -\ii \\ \ii & 0 \end{pmatrix} \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \begin{pmatrix} 0 \\ \ii \end{pmatrix} = \ii \ket{1}
+\]
+\[
+Y \ket{1} = \begin{pmatrix} 0 & -\ii \\ \ii & 0 \end{pmatrix} \begin{pmatrix} 0 \\ 1 \end{pmatrix} = \begin{pmatrix} -\ii \\ 0 \end{pmatrix} = -\ii \ket{0}
+\]
+
+Yゲートも固有値は $\pm 1$ であり、$Y^2 = I$ を満たします。また、$Y = \ii X Z$ という関係があります。
+
+\subsubsection{Zゲート：位相反転}
+
+Zゲートは $\ket{1}$ の位相を反転させます（$\ket{0}$ はそのままにします）。
+
+\[
+Z = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix}
+\]
+
+ブロッホ球上において、この位相反転操作はZ軸周りの180度回転として図\ref{fig:bloch_sphere_z}のように表されます。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=100mm]{../pre_figures/bloch_sphere_z.png}
+\caption{ブロッホ球（Z軸周りの180度回転）}
+\label{fig:bloch_sphere_z}
+\end{figure}
+
+作用：
+
+\[
+Z \ket{0} = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix} \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \ket{0}
+\]
+\[
+Z \ket{1} = \begin{pmatrix} 1 & 0 \\ 0 & -1 \end{pmatrix} \begin{pmatrix} 0 \\ 1 \end{pmatrix} = \begin{pmatrix} 0 \\ -1 \end{pmatrix} = -\ket{1}
+\]
+
+Zゲートの固有ベクトルは $\ket{0}$（固有値 $+1$）と $\ket{1}$（固有値 $-1$）です。すなわちZゲートは計算基底で対角な行列です。
+
+\begin{notebox}
+パウリゲート $X, Y, Z$ は以下の重要な性質を持ちます。
+\begin{itemize}
+\item $X^2 = Y^2 = Z^2 = I$
+\item $X Y = \ii Z$, $Y Z = \ii X$, $Z X = \ii Y$（交換関係）
+\item 任意の1量子ビットユニタリ行列は、パウリ行列と単位行列の線形結合で表現できます。
+\end{itemize}
+これらの関係は量子力学の角運動量代数と深く結びついており、量子ゲートの理解の基礎となります。
+\end{notebox}
+
+パウリゲートのブラケット表現および代数的な計算方法については、\ref{sec:3-1}節を参照してください。
+
+\subsection{アダマールゲート}
+
+アダマールゲート（Hゲート）は、計算基底を重ね合わせ状態に変換する、量子計算で最も重要なゲートの1つです。
+
+\[
+H = \frac{1}{\sqrt{2}} \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}
+\]
+
+Hゲートによって基底状態がブロッホ球上の赤道にある重ね合わせ状態へと変換される様子を図\ref{fig:bloch_sphere_h}に示します。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=100mm]{../pre_figures/bloch_sphere_h.png}
+\caption{ブロッホ球（Hゲートによる変換）}
+\label{fig:bloch_sphere_h}
+\end{figure}
+
+作用：
+
+\[
+H \ket{0} = \frac{1}{\sqrt{2}} \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix} \begin{pmatrix} 1 \\ 0 \end{pmatrix}
+= \frac{1}{\sqrt{2}} \begin{pmatrix} 1 \\ 1 \end{pmatrix}
+= \frac{1}{\sqrt{2}}(\ket{0} + \ket{1}) = \ket{+}
+\]
+\[
+H \ket{1} = \frac{1}{\sqrt{2}} \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix} \begin{pmatrix} 0 \\ 1 \end{pmatrix}
+= \frac{1}{\sqrt{2}} \begin{pmatrix} 1 \\ -1 \end{pmatrix}
+= \frac{1}{\sqrt{2}}(\ket{0} - \ket{1}) = \ket{-}
+\]
+
+\subsubsection{Hゲートの重要な性質}
+
+Hゲートには以下の重要な性質があります。
+
+\begin{itemize}
+\item $H^2 = I$：Hゲートを2回適用すると元の状態に戻ります。
+\item $H X H = Z$, $H Z H = X$：HゲートはXとZを交換します。
+\item $H Y H = -Y$（Yは符号が反転します）
+\end{itemize}
+
+\begin{warningbox}
+$H^2 = I$ の確認：$H\ket{0} = \ket{+}$ にさらに $H$ を適用すると、$H\ket{+} = \ket{0}$ となります。Hゲートは\textbf{ユニタリ}（$H^\dagger H = I$）であると同時に\textbf{エルミート}（$H^\dagger = H$）でもあるため、この2つを合わせると $H^{-1} = H^\dagger = H$ となり、自身が自身の逆ゲートになります。$H^2 = I$ はこのことの言い換えであり、量子アルゴリズムで頻繁に利用されます。なお $U^2 = I$ は一般のユニタリ行列が満たす性質ではない点に注意してください。
+\end{warningbox}
+
+\subsection{位相ゲート}
+
+\subsubsection{Sゲート}
+
+Sゲートは $\ket{1}$ の位相を $\ii$ だけ回転させます。
+
+\[
+S = \begin{pmatrix} 1 & 0 \\ 0 & \ii \end{pmatrix}
+\]
+
+作用：
+
+\[
+S \ket{0} = \begin{pmatrix} 1 & 0 \\ 0 & \ii \end{pmatrix} \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \ket{0}
+\]
+\[
+S \ket{1} = \begin{pmatrix} 1 & 0 \\ 0 & \ii \end{pmatrix} \begin{pmatrix} 0 \\ 1 \end{pmatrix} = \begin{pmatrix} 0 \\ \ii \end{pmatrix} = \ii \ket{1}
+\]
+
+Sゲートを2回適用するとZゲートになります：$S^2 = Z$。
+
+\subsubsection{Tゲート}
+
+Tゲートは $\ket{1}$ の位相を $\ee^{\ii\pi/4}$ だけ回転させます。
+
+\[
+T = \begin{pmatrix} 1 & 0 \\ 0 & \ee^{\ii\pi/4} \end{pmatrix}
+\]
+
+作用：
+
+\[
+T \ket{0} = \begin{pmatrix} 1 & 0 \\ 0 & \ee^{\ii\pi/4} \end{pmatrix} \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \ket{0}
+\]
+\[
+T \ket{1} = \begin{pmatrix} 1 & 0 \\ 0 & \ee^{\ii\pi/4} \end{pmatrix} \begin{pmatrix} 0 \\ 1 \end{pmatrix} = \begin{pmatrix} 0 \\ \ee^{\ii\pi/4} \end{pmatrix} = \ee^{\ii\pi/4} \ket{1}
+\]
+
+Tゲートを2回適用するとSゲートになります：$T^2 = S$。
+
+\begin{notebox}
+位相ゲート $S$ と $T$ は、量子計算において\textbf{ユニバーサルゲートセット}の構成要素となります。特に $H$, $T$, $\mathrm{CNOT}$ の3種類のゲートで任意の量子計算を実行できることが知られています。Tゲートはクリフォード階層において重要な役割を果たし、量子誤り訂正や魔法状態蒸留の理論の基盤となります。
+\end{notebox}
+
+\subsection{回転ゲート}
+
+任意の角度 $\theta$ の回転を生成する\textbf{回転ゲート}は、パウリ演算子の指数関数として定義されます。
+
+\[
+R_x(\theta) = \ee^{-\ii\theta X/2}
+= \cos(\theta/2) I - \ii\sin(\theta/2) X
+= \begin{pmatrix} \cos(\theta/2) & -\ii\sin(\theta/2) \\ -\ii\sin(\theta/2) & \cos(\theta/2) \end{pmatrix}
+\]
+
+\[
+R_y(\theta) = \ee^{-\ii\theta Y/2}
+= \cos(\theta/2) I - \ii\sin(\theta/2) Y
+= \begin{pmatrix} \cos(\theta/2) & -\sin(\theta/2) \\ \sin(\theta/2) & \cos(\theta/2) \end{pmatrix}
+\]
+
+\[
+R_z(\theta) = \ee^{-\ii\theta Z/2}
+= \cos(\theta/2) I - \ii\sin(\theta/2) Z
+= \begin{pmatrix} \ee^{-\ii\theta/2} & 0 \\ 0 & \ee^{\ii\theta/2} \end{pmatrix}
+\]
+
+\subsubsection{回転ゲートの性質}
+
+\begin{itemize}
+\item $R_x(\pi) = -\ii X$, $R_y(\pi) = -\ii Y$, $R_z(\pi) = -\ii Z$（グローバル位相を除いてパウリゲートに一致します）
+\item $R_x(2\pi) = -I$, $R_x(4\pi) = I$（グローバル位相の周期性）
+\item 任意の1量子ビットユニタリ操作は、3つの回転ゲートの組み合わせで表現できます（オイラー角分解）。
+\end{itemize}
+
+\subsubsection{オイラー角分解}
+
+任意の1量子ビットユニタリ行列 $V$ は、以下のように $R_z$ と $R_y$ の組み合わせで分解できます。
+
+\[
+V = \ee^{\ii\alpha} R_z(\beta) R_y(\gamma) R_z(\delta)
+\]
+
+ここで $\alpha, \beta, \gamma, \delta$ は実パラメータです。先に示したUゲートとの関係は次の通りです。
+
+\[
+U(\theta,\phi,\lambda)
+= \ee^{\ii(\phi+\lambda)/2}R_z(\phi)R_y(\theta)R_z(\lambda)
+\]
+
+この分解は、ブロッホ球上の任意の回転が2つの軸周りの回転で実現できることを示しています。
+
+\begin{exercise}[回転ゲートの確認]
+以下の問いに答えてください。必要に応じてNumPyで計算を確認してください。
+
+\begin{enumerate}
+\item $R_x(\pi) \ket{0}$ を計算し、結果が $-\ii\ket{1}$ となることを確認してください。
+\item $R_y(\pi/2) \ket{0}$ を計算し、その状態のブロッホ座標を求めてください。
+\item $R_z(\theta) R_y(\phi) \ket{0}$ の一般形を求め、これが任意の1量子ビット状態を表現できることを示してください。
+\item $H = \ii R_z(\pi/2) R_x(\pi/2) R_z(\pi/2)$ の関係をNumPyで確認してください。
+\end{enumerate}
+\end{exercise}
+
+\subsection{ゲートの合成と分解}
+
+\subsubsection{ゲートの合成}
+
+複数のゲートを続けて適用することは、それらの行列積に対応します。例えば、$H$ ゲートの後に $T$ ゲートを適用する操作は $T H$ という1つの行列で表現できます。
+
+\[
+T H = \begin{pmatrix} 1 & 0 \\ 0 & \ee^{\ii\pi/4} \end{pmatrix} \cdot
+\frac{1}{\sqrt{2}} \begin{pmatrix} 1 & 1 \\ 1 & -1 \end{pmatrix}
+= \frac{1}{\sqrt{2}} \begin{pmatrix} 1 & 1 \\ \ee^{\ii\pi/4} & -\ee^{\ii\pi/4} \end{pmatrix}
+\]
+
+ここで注意したいのが\textbf{順序}です。回路図では、先に適用するゲートを左に置いて左から右へ並べます。一方、行列の積では先に適用するゲートを\textbf{右}に書きます。「$H$ の後に $T$」は、回路では $H \to T$ の並び、行列では $T H$ になります。
+
+Qiskitで確かめてみましょう。\texttt{Operator} クラスを使うと、回路全体に対応する行列を取り出せます。
+
+\begin{lstlisting}[language=python]
+from qiskit import QuantumCircuit
+from qiskit.quantum_info import Operator
+import numpy as np
+
+# 回路では H を先に、T を後に置く（左から右）
+qc = QuantumCircuit(1)
+qc.h(0)
+qc.t(0)
+
+# 対応する行列は T @ H（右から左）
+H = np.array([[1, 1], [1, -1]], dtype=np.complex128) / np.sqrt(2)
+T = np.array([[1, 0], [0, np.exp(1j * np.pi / 4)]], dtype=np.complex128)
+
+print(np.round(Operator(qc).data, 4))
+print(np.round(T @ H, 4))
+print("一致:", np.allclose(Operator(qc).data, T @ H))
+\end{lstlisting}
+
+出力:
+
+\begin{lstlisting}
+[[ 0.7071+0.j   0.7071+0.j ]
+ [ 0.5   +0.5j -0.5   -0.5j]]
+[[ 0.7071+0.j   0.7071+0.j ]
+ [ 0.5   +0.5j -0.5   -0.5j]]
+一致: True
+\end{lstlisting}
+
+回路に書いた順序と、手計算で求めた $T H$ が一致することが確認できました。
+
+\subsubsection{任意の1量子ビットゲートの分解}
+
+任意の1量子ビットユニタリ行列は、$H$ と $T$ ゲートの組み合わせで近似できることが知られています（Solovay-Kitaevの定理）。実用的には、以下の分解がよく用いられます。
+
+\begin{itemize}
+\item 任意のユニタリ $U$ は $R_z(\beta) R_y(\gamma) R_z(\delta)$ にグローバル位相を乗じた形に分解できます。
+\item さらに $R_z$ と $R_y$ は $H$ と $T$ ゲートで近似できます。
+\end{itemize}
+
+\begin{notebox}
+Solovay-Kitaevの定理は、任意の1量子ビットユニタリ操作を $H$ と $T$ ゲートの組み合わせで、任意の精度 $\epsilon$ まで近似する方法を保証します。必要なゲート数は $O(\log^c(1/\epsilon))$（$c$ は定数）程度にとどまり、精度を高めてもゲート数が急激には増えません（計算量を表すオーダー記法 $O(\cdot)$ の詳細は第\ref{chap:12}章で解説します）。この定理はユニバーサルゲートセット $\{H, T, \mathrm{CNOT}\}$ が任意の量子計算を実行できることの理論的基盤です。
+\end{notebox}
+
+\subsection{グローバル位相と物理的等価性}
+
+量子状態 $\ket{\psi}$ にグローバル位相 $\ee^{\ii\phi}$ を乗じた $\ee^{\ii\phi}\ket{\psi}$ は、測定確率に影響を与えないため、物理的に同一の状態とみなされます。同様に、グローバル位相だけ異なる2つの量子ゲート $U$ と $\ee^{\ii\phi} U$ は物理的に等価です。
+
+例えば、$R_x(\pi) = -\ii X$ はグローバル位相 $-\ii$ を除いて $X$ ゲートと等価であり、両者はブロッホ球上で同じ回転を引き起こします。
+
+\[
+X = \begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}
+\]
+\[
+R_x(\pi) = \begin{pmatrix} 0 & -\ii \\ -\ii & 0 \end{pmatrix} = -\ii X
+\]
+
+これらは測定を通じて区別できません。
+
+\subsection{複数量子ビットへのゲートの作用}
+
+\ref{sec:3-1}節の状態ベクトル $(c_{00}, c_{01}, c_{10}, c_{11})^\top$ に対する操作を考えます。まず各計算基底の変化を決め、重ね合わせの各項に同じ規則を適用します。
+
+\subsubsection{1量子ビットゲート：振幅をペアにして更新する}
+
+2量子ビットのうち量子ビット0だけに $2\times2$ のゲート $U$ を作用させる場合を考えます。量子ビット1の値を固定すると、量子ビット0だけが異なる振幅のペア $(c_{00}, c_{01})$ と $(c_{10}, c_{11})$ ができます。各ペアに同じ $U$ を適用します。
+
+\[
+\begin{pmatrix} c_{00}' \\ c_{01}' \end{pmatrix} = U \begin{pmatrix} c_{00} \\ c_{01} \end{pmatrix},
+\qquad
+\begin{pmatrix} c_{10}' \\ c_{11}' \end{pmatrix} = U \begin{pmatrix} c_{10} \\ c_{11} \end{pmatrix}
+\]
+
+例えば $\ket{00}$ の量子ビット0にアダマールゲート $H = \frac{1}{\sqrt{2}}\begin{bmatrix} 1 & 1 \\ 1 & -1 \end{bmatrix}$ を作用させると、ペア $(1, 0)$ が $(1/\sqrt{2}, 1/\sqrt{2})$ になり、$(\ket{00} + \ket{01})/\sqrt{2}$ が得られます。量子ビット1に作用させる場合は、量子ビット0を固定したペア $(c_{00}, c_{10})$ と $(c_{01}, c_{11})$ を作ります。量子ビット数が増えても、操作しない量子ビットの値を固定してペアを作る、という考え方は同じです。
+
+\subsubsection{クロネッカー積による全体の行列表現}\label{sec:3-2-kron}
+
+振幅ペアの更新は、全体の状態ベクトルに1つの行列を掛ける形でも表せます。その行列を作るために、\hyperref[sec:3-1-kron]{「状態ベクトルのクロネッカー積」}で学んだクロネッカー積を行列へ拡張します。$2\times2$行列 $A=(a_{ij})$ と行列 $B$ のクロネッカー積は
+\[
+A\otimes B=\begin{pmatrix}a_{00}B&a_{01}B\\a_{10}B&a_{11}B\end{pmatrix}
+\]
+です。$A$の各要素を、その要素で$B$全体を掛けたブロックに置き換えます（図\ref{fig:kron-matrix-blocks}）。$A$が$m\times n$、$B$が$p\times q$なら、結果は$mp\times nq$です。通常の行列積 \texttt{A @ B} や、要素ごとの積 \texttt{A * B} とは異なる演算です。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=Stealth, font=\small]
+\node at (0,2) {$A$（$2\times2$）};
+\node[draw,minimum size=1cm] (a00) at (-0.55,1) {$a_{00}$};
+\node[draw,minimum size=1cm] at (0.55,1) {$a_{01}$};
+\node[draw,minimum size=1cm] at (-0.55,-0.1) {$a_{10}$};
+\node[draw,minimum size=1cm] at (0.55,-0.1) {$a_{11}$};
+\node at (1.6,0.45) {$\otimes$};
+\node at (2.7,1.5) {$B$（$2\times2$）};
+\node[draw,minimum size=1.4cm] at (2.7,0.45)
+ {$\begin{matrix}b_{00}&b_{01}\\b_{10}&b_{11}\end{matrix}$};
+\draw[->] (3.6,0.45) -- (4.4,0.45);
+\node at (7,2) {$A\otimes B$（$4\times4$）};
+\node[draw,minimum width=2.2cm,minimum height=1.3cm] (b00) at (5.8,1.15)
+ {$\begin{matrix}a_{00}b_{00}&a_{00}b_{01}\\a_{00}b_{10}&a_{00}b_{11}\end{matrix}$};
+\node[draw,minimum width=2.2cm,minimum height=1.3cm] at (8.1,1.15) {$a_{01}B$};
+\node[draw,minimum width=2.2cm,minimum height=1.3cm] at (5.8,-0.25) {$a_{10}B$};
+\node[draw,minimum width=2.2cm,minimum height=1.3cm] at (8.1,-0.25) {$a_{11}B$};
+\end{tikzpicture}
+\caption{行列のクロネッカー積のブロック構造。各枠は$A$の1要素を掛けた$B$であり、右上・左下・右下も左上と同様に展開します。}
+\label{fig:kron-matrix-blocks}
+\end{figure}
+
+2量子ビットの基底を $\ket{q_1q_0}$ の順に並べると、局所的なゲートの作用は次のように表せます。
+\begin{center}
+\begin{tabular}{lll}
+\hline
+操作 & 全体の行列 & NumPy \\ \hline
+$q_0$だけに$U$ & $I\otimes U$ & \texttt{np.kron(I, U)} \\
+$q_1$だけに$U$ & $U\otimes I$ & \texttt{np.kron(U, I)} \\
+$q_1$に$U_1$、$q_0$に$U_0$ & $U_1\otimes U_0$ & \texttt{np.kron(U1, U0)} \\ \hline
+\end{tabular}
+\end{center}
+
+操作しない量子ビットには単位行列$I$を置きます。図\ref{fig:kron-local-gates}で行列と回路を比べてみましょう。$I\otimes U$は$(c_{00},c_{01})$と$(c_{10},c_{11})$を更新し、$U\otimes I$は$(c_{00},c_{10})$と$(c_{01},c_{11})$を更新します。これは先ほどの振幅ペアによる計算そのものです。
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}[t]{0.49\linewidth}
+\centering
+$I\otimes U$：$q_0$に作用\\[1ex]
+\begin{quantikz}
+\lstick{$q_0$} & \gate{U} & \qw \\
+\lstick{$q_1$} & \qw & \qw
+\end{quantikz}
+\[
+\begin{array}{c|cccc}
+ &00&01&10&11\\\hline
+00&u_{00}&u_{01}&0&0\\
+01&u_{10}&u_{11}&0&0\\\hline
+10&0&0&u_{00}&u_{01}\\
+11&0&0&u_{10}&u_{11}
+\end{array}
+\]
+更新するペア：\\
+\fbox{$c_{00},\ c_{01}$}\quad\fbox{$c_{10},\ c_{11}$}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}
+\centering
+$U\otimes I$：$q_1$に作用\\[1ex]
+\begin{quantikz}
+\lstick{$q_0$} & \qw & \qw \\
+\lstick{$q_1$} & \gate{U} & \qw
+\end{quantikz}
+\[
+\begin{array}{c|cccc}
+ &00&01&10&11\\\hline
+00&u_{00}&0&u_{01}&0\\
+01&0&u_{00}&0&u_{01}\\\hline
+10&u_{10}&0&u_{11}&0\\
+11&0&u_{10}&0&u_{11}
+\end{array}
+\]
+更新するペア：\\
+\fbox{$c_{00},\ c_{10}$}\quad\fbox{$c_{01},\ c_{11}$}
+\end{minipage}
+\caption{局所ゲートの回路と全体の行列。行と列のラベルは基底$\ket{q_1q_0}$を表します。回路の上段は$q_0$であり、テンソル積の右の因子に対応します。}
+\label{fig:kron-local-gates}
+\end{figure}
+
+積状態には、それぞれの因子へゲートを適用できます。
+\[
+(U_1\otimes U_0)(\ket{\phi_1}\otimes\ket{\phi_0})
+=(U_1\ket{\phi_1})\otimes(U_0\ket{\phi_0}).
+\]
+一方、行列$I\otimes U$や$U\otimes I$自体は、入力が積状態でない場合にも使えます。量子もつれ状態に対しても、同じ行列で局所ゲートを適用できます。
+
+クロネッカー積には結合則と分配則が成り立ちます。ただし、一般に因子の順序は交換できません。対応する行列積が定義できる場合は、次の\textbf{混合積の性質}も使えます。
+\[
+(A\otimes B)(C\otimes D)=(AC)\otimes(BD).
+\]
+例えば、$q_0$に$U$、続けて$V$を適用する操作は$(I\otimes V)(I\otimes U)=I\otimes(VU)$です。$n$量子ビットのうち$q_k$だけに$U$を作用させる場合も、番号の大きい因子から並べ、$q_k$の位置に$U$、それ以外に$I$を置きます。
+
+\subsubsection{CNOTゲート}
+
+\textbf{CNOTゲート}（制御NOTゲート）は、制御量子ビットが $\ket{1}$ のときに標的量子ビットを反転させる2量子ビットゲートです。制御量子ビットを $c$、標的量子ビットを $t$ として $\mathrm{CNOT}_{c,t}$ と書きます。
+
+本書で基本として扱うのは、制御を量子ビット0、標的を量子ビット1とする $\mathrm{CNOT}_{0,1}$ です。各基底の移り先は次のようになります。
+
+\[
+\mathrm{CNOT}_{0,1} \ket{00} = \ket{00}
+\]
+\[
+\mathrm{CNOT}_{0,1} \ket{01} = \ket{11}
+\]
+\[
+\mathrm{CNOT}_{0,1} \ket{10} = \ket{10}
+\]
+\[
+\mathrm{CNOT}_{0,1} \ket{11} = \ket{01}
+\]
+
+右端の量子ビット0が1のときだけ、左端の量子ビット1が反転するため、$\ket{01}$ と $\ket{11}$ が入れ替わります。重ね合わせでは、確率振幅が次のように更新されます。
+
+\[
+(c_{00}, c_{01}, c_{10}, c_{11}) \longmapsto (c_{00}, c_{11}, c_{10}, c_{01})
+\]
+
+「制御が1なら」は測定して条件分岐するという意味ではなく、重ね合わせを保ったまま各項に規則が働くという意味です。
+
+各基底に対する出力を添字の順（$00, 01, 10, 11$）に列として並べることで、行列表示が得られます。
+
+\[
+\mathrm{CNOT}_{0,1} = \begin{pmatrix}
+1 & 0 & 0 & 0 \\
+0 & 0 & 0 & 1 \\
+0 & 0 & 1 & 0 \\
+0 & 1 & 0 & 0
+\end{pmatrix}
+\]
+
+これは添字1（$\ket{01}$）と添字3（$\ket{11}$）の行・列を入れ替えた形になっています。
+
+一方、制御と標的を入れ替えて、量子ビット1を制御、量子ビット0を標的とする $\mathrm{CNOT}_{1,0}$ を考えてみましょう。量子ビット1が $\ket{1}$ のときに量子ビット0を反転させるため、基底の移り先は次のようになります。
+
+\[
+\mathrm{CNOT}_{1,0} \ket{00} = \ket{00}, \quad \mathrm{CNOT}_{1,0} \ket{01} = \ket{01}
+\]
+\[
+\mathrm{CNOT}_{1,0} \ket{10} = \ket{11}, \quad \mathrm{CNOT}_{1,0} \ket{11} = \ket{10}
+\]
+
+これを出力ベクトルとして列に並べると、以下の行列になります。
+
+\[
+\mathrm{CNOT}_{1,0} = \begin{pmatrix}
+1 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 \\
+0 & 0 & 0 & 1 \\
+0 & 0 & 1 & 0
+\end{pmatrix}
+\]
+
+教科書では、量子ビット0を左に置く $\ket{q_0q_1}$ という\textbf{ビッグエンディアン}の表記がよく使われます。この並び順で、制御を $q_0$、標的を $q_1$ とするCNOTを表すと、左上が単位行列 $I$・右下が $X$ の形になります。本書は $\ket{q_1q_0}$ のリトルエンディアンなので、\textbf{同じ制御・標的のCNOTでも、基底の並び順が違うため行列表現が異なります}。
+
+なお、左上が $I$・右下が $X$ の行列を\textbf{本書の並び順で読むと}、上で示した $\mathrm{CNOT}_{1,0}$ に当たります。本書の並び順を固定した場合、$\mathrm{CNOT}_{0,1}$ は $\ket{01}$ と $\ket{11}$ を入れ替え、$\mathrm{CNOT}_{1,0}$ は $\ket{10}$ と $\ket{11}$ を入れ替えます。他書と比べるときは、基底の並び順と制御・標的の両方を確認してください。
+
+\paragraph{制御値ごとの射影を使った表現}
+
+複数量子ビットゲートが、すべて単一の$U_1\otimes U_0$になるわけではありません。$P_0=\ket{0}\bra{0}$、$P_1=\ket{1}\bra{1}$を使うと、CNOTは次の\textbf{積の和}で表せます。
+\[
+\mathrm{CNOT}_{0,1}=I\otimes P_0+X\otimes P_1.
+\]
+右の因子は制御量子ビット0です。$P_0$は$q_0=0$の成分だけを残し、そのとき標的$q_1$には$I$が作用します。$P_1$は$q_0=1$の成分だけを残し、そのとき標的には$X$が作用します。2つを足すと、先ほどの$\ket{01}$と$\ket{11}$を交換する行列になります。これは測定を挟む手順ではなく、重ね合わせを保つ演算子の分解です。
+
+制御と標的を逆にすると
+\[
+\mathrm{CNOT}_{1,0}=P_0\otimes I+P_1\otimes X
+\]
+となります。左の因子で制御値を選ぶため、左上が$I$、右下が$X$のブロック行列になることが分かります。
+
+\subsubsection{SWAPゲート}
+
+\textbf{SWAPゲート}（$\mathrm{SWAP}_{0,1}$）は、2つの量子ビットの状態をそっくり入れ替える2量子ビットゲートです。作用は次の一言で言い表せます。
+
+\[
+\mathrm{SWAP}_{0,1} \ket{q_1 q_0} = \ket{q_0 q_1}
+\]
+
+各基底の移り先を並べると次のようになります。
+
+\[
+\mathrm{SWAP}_{0,1} \ket{00} = \ket{00}, \quad \mathrm{SWAP}_{0,1} \ket{01} = \ket{10}
+\]
+\[
+\mathrm{SWAP}_{0,1} \ket{10} = \ket{01}, \quad \mathrm{SWAP}_{0,1} \ket{11} = \ket{11}
+\]
+
+$\ket{00}$ と $\ket{11}$ は2つの量子ビットが同じ値なので変化せず、$\ket{01}$ と $\ket{10}$ だけが入れ替わります。これを列ベクトルとして並べると、行列表示は次のようになります。
+
+\[
+\mathrm{SWAP}_{0,1} = \begin{pmatrix}
+1 & 0 & 0 & 0 \\
+0 & 0 & 1 & 0 \\
+0 & 1 & 0 & 0 \\
+0 & 0 & 0 & 1
+\end{pmatrix}
+\]
+
+CNOTゲートと違って制御量子ビットと標的量子ビットの区別がないため、$\mathrm{SWAP}_{0,1}$ と $\mathrm{SWAP}_{1,0}$ は同じゲートです。また、2回続けて適用すれば元に戻るので、次の関係が成り立ちます。
+
+\[
+\mathrm{SWAP}_{0,1}^2 = I
+\]
+
+\begin{notebox}
+SWAPゲートは、実機で回路を動かすときに重要な役割を果たします。実際の量子コンピュータでは、どの量子ビット同士がCNOTなどの2量子ビットゲートで直接つながっているかがハードウェアによって決まっており、任意の2つの量子ビットを直接操作できるとは限りません。離れた量子ビットどうしを相互作用させたいときは、SWAPゲートで状態を隣まで運んでから操作します。既存の量子計算フレームワークに備わっているトランスパイル機能は、この置き換えを自動で行う処理でもあります。
+\end{notebox}
+
+\subsubsection{NumPy による計算}
+
+振幅ペアの更新とCNOTによる振幅交換を関数にしたものがリスト\ref{src:apply_helpers}です。関数は入力を変更せず、操作後の状態を返します。第\ref{chap:4}章と第\ref{chap:5}章のコードでは、この2つの関数を使います。第\ref{part:3}部で作るシミュレータも、同じ考え方で動いています。
+
+\begin{lstlisting}[caption={1量子ビットゲートと CNOT の適用（apply\_helpers.py）},label=src:apply_helpers]
+import numpy as np
+
+def apply_1q(psi, U, k):
+    """量子ビット k に 2x2 行列 U を作用させた状態を返す。"""
+    out = np.array(psi, dtype=np.complex128)
+    for i in range(len(psi)):
+        if (i >> k) & 1 == 0:          # q_k = 0 の添字 i と
+            j = i | (1 << k)           # q_k = 1 の添字 j を組にする
+            out[i] = U[0, 0] * psi[i] + U[0, 1] * psi[j]
+            out[j] = U[1, 0] * psi[i] + U[1, 1] * psi[j]
+    return out
+
+def apply_cnot(psi, c, t):
+    """制御 c・標的 t の CNOT を作用させた状態を返す。"""
+    out = np.array(psi, dtype=np.complex128)
+    for i in range(len(psi)):
+        if (i >> c) & 1 == 1 and (i >> t) & 1 == 0:   # q_c = 1 かつ q_t = 0
+            j = i | (1 << t)                          # q_t だけが 1 の相手
+            out[i], out[j] = psi[j], psi[i]           # 振幅を交換
+    return out
+
+if __name__ == "__main__":
+    H = np.array([[1, 1], [1, -1]], dtype=np.complex128) / np.sqrt(2)
+    psi = np.zeros(4, dtype=np.complex128)
+    psi[0b01] = 1                 # |01>
+    print(apply_cnot(psi, 0, 1))   # |11>
+    # [0.+0.j 0.+0.j 0.+0.j 1.+0.j]
+    psi = apply_1q(psi, H, 0)     # H: (|00> - |01>)/√2
+    print(np.round(psi, 3))
+    # [ 0.707+0.j -0.707+0.j  0.   +0.j  0.   +0.j]
+\end{lstlisting}
+
+\texttt{(i >> k) \& 1} は添字 \texttt{i} の第 \texttt{k} ビット、つまり量子ビット $k$ の値を取り出す式で、\texttt{i | (1 << k)} はそのビットを1にした添字です。ビット演算は\ref{sec:6-1}節で詳しく説明します。
+
+\texttt{if \_\_name\_\_ == "\_\_main\_\_":} 以下の実行例は、このファイルを直接実行したときだけ動きます。他のファイルから関数をimportしたときには、実行例は動きません。
+
+\paragraph{クロネッカー積との一致を確認する}
+
+量子ビット0への$H$は、全体の行列$I\otimes H$を作っても、\texttt{apply\_1q}で振幅ペアを更新しても同じ結果になります。リスト\ref{src:kron_gate}では、積状態と量子もつれ状態の両方で確認します。\texttt{apply\_1q}はリスト\ref{src:apply_helpers}の関数を\texttt{apply\_helpers.py}に保存して使います。
+
+\begin{lstlisting}[caption={クロネッカー積と振幅ペアの更新の比較},label=src:kron_gate]
+import numpy as np
+from apply_helpers import apply_1q
+
+I = np.eye(2, dtype=np.complex128)
+H = np.array([[1, 1], [1, -1]], dtype=np.complex128) / np.sqrt(2)
+phi1 = np.array([0, 1], dtype=np.complex128)
+phi0 = np.array([1, 1], dtype=np.complex128) / np.sqrt(2)
+product = np.kron(phi1, phi0)
+bell = np.array([1, 0, 0, 1], dtype=np.complex128) / np.sqrt(2)
+
+for psi in (product, bell):
+    assert np.allclose(np.kron(I, H) @ psi, apply_1q(psi, H, 0))
+    assert np.allclose(np.kron(H, I) @ psi, apply_1q(psi, H, 1))
+print("Both methods agree.")
+# Both methods agree.
+\end{lstlisting}
+
+クロネッカー積で全体の行列を作る方法は数学的な対応を確かめるのに便利です。一方、量子ビット数が増えると行列は$2^n\times2^n$に大きくなるので、本書のシミュレータでは全体の行列を作らず振幅ペアを更新します。
+
+\subsubsection{量子もつれへの導入}
+
+CNOTゲートとHゲートを組み合わせることで、\textbf{ベル状態}と呼ばれる量子もつれ状態を生成できます。ベル状態の詳細な生成過程とその性質については\ref{sec:4-1}節で詳しく解説します。
+
+\begin{exercise}[CNOTゲートの手計算]
+以下のゲート操作を手計算で確認してください。また、必要に応じてNumPyでも確認してください。
+
+\begin{enumerate}
+\item $\mathrm{CNOT}_{0,1} \ket{01}$ を計算してください。
+\item $\mathrm{CNOT}_{0,1} \ket{10}$ を計算してください。
+\item $(\ket{00} + \ket{10})/\sqrt{2}$ に $\mathrm{CNOT}_{0,1}$ を適用した状態を計算してください。
+\item 3つのCNOTゲートの積 $\mathrm{CNOT}_{0,1} \mathrm{CNOT}_{1,0} \mathrm{CNOT}_{0,1}$ が $\mathrm{SWAP}_{0,1}$ ゲートと等価であることを確認してください。\textbf{ヒント}: 計算基底 $\ket{q_1 q_0}$ に順に作用させてみてください。
+\end{enumerate}
+\end{exercise}
+
+\subsection{手計算で理解する量子干渉}
+
+量子干渉は、複数の経路の確率振幅が互いに打ち消し合ったり強め合ったりする現象です。具体例として、Hゲートを2回続けて適用する場合を見てみましょう。
+
+\[
+H^2 \ket{0} = H(H\ket{0}) = H\left(\frac{1}{\sqrt{2}}(\ket{0} + \ket{1})\right)
+\]
+\[
+= \frac{1}{2}\{(\ket{0} + \ket{1}) + (\ket{0} - \ket{1})\}
+\]
+\[
+= \frac{1}{2}(2\ket{0}) = \ket{0}
+\]
+
+ここで $\ket{1}$ の成分が $(+1/2) + (-1/2) = 0$ と打ち消し合っていることに注目してください。これが\textbf{量子干渉}です。この干渉を利用することで、望ましい計算結果の確率を増幅し、望ましくない結果を抑制することができます。
+
+確率振幅が波のように強め合ったり打ち消し合ったりする量子干渉の概念を図\ref{fig:wave_interference}に示します。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=140mm]{../pre_figures/wave.png}
+\caption{量子干渉}
+\label{fig:wave_interference}
+\end{figure}
+
+\subsection{この節で学んだこと}
+
+本節では、手計算と理論的な導出を通じて以下の内容を学びました。
+
+\begin{itemize}
+\item \textbf{量子ゲートの原理}: 線形性とユニタリ性、可逆性
+\item \textbf{パウリゲート}: X（ビット反転）、Y、Z（位相反転）の行列と性質
+\item \textbf{アダマールゲート}: 重ね合わせ生成、$H^2 = I$、XとZの交換
+\item \textbf{位相ゲート}: SゲートとTゲート、位相回転の階層構造
+\item \textbf{回転ゲート}: $R_x$, $R_y$, $R_z$ の定義とオイラー角分解
+\item \textbf{ブロッホ球対応}: 各ゲートと球面上の回転操作の対応
+\item \textbf{ゲート合成}: 行列積による合成、任意ゲートの基本ゲートへの分解
+\item \textbf{複数量子ビットへの作用}: 操作しない量子ビットの値を固定し、振幅のペアを更新する
+\item \textbf{クロネッカー積}: 局所ゲートの全体行列を作り、振幅ペアの更新との対応を確認する
+\item \textbf{CNOTゲート}: $\mathrm{CNOT}_{c,t}$ の手計算による作用の確認と振幅交換
+\item \textbf{量子干渉}: 確率振幅の打ち消し合いと強め合い
+\end{itemize}
+
+手計算を自分で追うことで、量子状態の変化を感覚的に理解できたはずです。次章では、積状態と量子もつれの違い、および測定による状態の変化を学びます。
+
+\subsubsection{さらに学びたい人へ}
+
+本節の内容に関する発展的な学習リソースや参考文献については、付録\ref{chap:appC}を参照してください。
