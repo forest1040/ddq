@@ -29,6 +29,9 @@ class AccessPlan:
 
 
 def group_bits(gate, block_bits):
+    if gate.kind == 'PAULI_ROT':
+        # The caller uses XOR partner pairs, irrespective of upper X weight.
+        return tuple(sorted(q for q,p in zip(gate.targets,gate.paulis) if q >= block_bits and p in {'X','Y'}))
     if gate.diagonal: return ()
     return tuple(sorted({q for q in gate.targets if q >= block_bits}))
 

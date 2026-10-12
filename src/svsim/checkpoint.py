@@ -18,13 +18,17 @@ class SnapshotManifest:
     assets: tuple[str, ...]
     prefix_fingerprint: str | None = None
     schema_version: int = 1
+    binding_witnesses: tuple = ()
+    semantics_version: int = 1
 
     @classmethod
     def from_data(cls, data):
         data = dict(data)
-        if data.get('schema_version') != 1: raise ValueError('Unsupported snapshot schema')
+        if data.get('schema_version') not in {1,2}: raise ValueError('Unsupported snapshot schema')
+        if data.get('semantics_version',1) not in {1,2}: raise ValueError('Unsupported snapshot semantics')
         for key in ('layout','parameter_dependencies','assets'): data[key] = tuple(data[key])
         data['binding_values'] = tuple(tuple(x) for x in data['binding_values'])
+        data['binding_witnesses'] = tuple(tuple(x) for x in data.get('binding_witnesses',()))
         return cls(**data)
 
 

@@ -38,6 +38,13 @@ def apply_matrix(vector, matrix, targets, controls=(), control_values=()):
 
 def apply_gate(vector, gate, assets, binding=None):
     binding = binding or ParameterBinding('')
+    if gate.kind == 'PAULI_ROT':
+        from .pauli_rotation import SignedPauli, apply_pauli_rotation
+        x = sum(1 << q for q,p in zip(gate.targets,gate.paulis) if p in {'X','Y'})
+        z = sum(1 << q for q,p in zip(gate.targets,gate.paulis) if p in {'Z','Y'})
+        out = vector.copy()
+        apply_pauli_rotation(out,SignedPauli(x,z),gate.angle.evaluate(binding))
+        return out
     if gate.kind == 'MCX':
         indices = np.arange(len(vector), dtype=np.int64)
         cm = sum(1 << c for c in gate.controls)
@@ -58,6 +65,17 @@ def eager_reference(gates, num_qubits, assets, binding=None, initial_state=None)
     if initial_state is None: state[0] = 1
     for gate in gates:
         out = state.copy()
+        if gate.kind == 'PAULI_ROT':
+            # Independent source-index oracle, rather than the pair kernel.
+            x = sum(1 << q for q,p in zip(gate.targets,gate.paulis) if p in {'X','Y'})
+            z = sum(1 << q for q,p in zip(gate.targets,gate.paulis) if p in {'Z','Y'})
+            angle = gate.angle.evaluate(binding or ParameterBinding(''))
+            c,s = np.cos(angle/2),np.sin(angle/2)
+            for i in range(len(state)):
+                source = i ^ x
+                out[i] = c*state[i]-1j*s*1j**(x&z).bit_count()*(-1)**((source&z).bit_count()&1)*state[source]
+            state = out
+            continue
         if gate.kind == 'MCX':
             for i in range(len(state)):
                 if all(((i >> q) & 1) == v for q, v in zip(gate.controls, gate.control_values)):

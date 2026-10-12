@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from svsim.parameters import ParameterSymbol
+from svsim.clifford import CliffordTableau
 from svsim.storage import StorageConfig
 from svsim.stored_runtime import StoredSimulator
 from svsim.transport import StorageFile
@@ -22,7 +23,9 @@ def test_snapshot_resume_preserves_pending_frame_and_upper_phase(tmp_path):
     sim.gate("RZ", (7,), angle=0.37)
     sim.materialize()
     expected = sim.state()
-    assert any(sim.block_view(h).frame_id for h in range(sim.store.num_blocks))
+    assert any(sim.block_view(h).frame_asset_id and
+               sim.phase2.asset(sim.block_view(h).frame_asset_id).tableau != CliffordTableau.identity(cfg.block_bits)
+               for h in range(sim.store.num_blocks))
     assert len({sim.block_view(h).phase for h in range(sim.store.num_blocks)}) > 1
     snapshot = sim.commit_snapshot()
     sim.close()
@@ -37,7 +40,7 @@ def test_snapshot_resume_preserves_pending_frame_and_upper_phase(tmp_path):
 def test_interleaved_binding_forks_preserve_prefix_extents(tmp_path):
     cfg = config(tmp_path / "run")
     alpha, theta = ParameterSymbol("alpha"), ParameterSymbol("theta")
-    sim = StoredSimulator(8, cfg)
+    sim = StoredSimulator(8, cfg, frame_policy="materialize")
     sim.gate("RZ", (0,), angle=alpha)
     sim.gate("RY", (1,), angle=theta)
     base_binding = sim.bind({alpha: 0.2, theta: -0.3})
@@ -158,7 +161,7 @@ def test_failed_snapshot_commit_leaves_previous_snapshot_resumable(tmp_path, fai
 
     def factory(path, mode, **kwargs): return FaultStorage(path, mode, **kwargs)
 
-    sim = StoredSimulator(8, cfg, transport_factory=factory)
+    sim = StoredSimulator(8, cfg, transport_factory=factory, frame_policy="materialize")
     sim.gate("H", (0,))
     original = sim.commit_snapshot()
     expected = sim.state()

@@ -45,7 +45,8 @@ def test_runtime_observe_uses_virtual_transport_and_never_replans(tmp_path):
     def transport(*args,**kwargs):
         return MockTransport(open_storage(*args,**kwargs),bytes_per_second=1000000,delay_multipliers=(4,))
     config = StorageConfig(str(root),3,ram_budget_bytes=98304,alignment=64,metadata_reserve_bytes=32768)
-    with StoredSimulator(8,config,profile=profile,transport_factory=transport) as sim:
+    with StoredSimulator(8,config,profile=profile,transport_factory=transport,
+                         frame_policy='materialize') as sim:
         sim.gate('T',(0,)); sim.materialize()
         # Normal default guard remains observe-only. Short windows expedite this
         # deterministic integration test; no real sleeps are performed.
@@ -64,12 +65,12 @@ def test_failed_materialization_rolls_back_whole_logical_cut(tmp_path,monkeypatc
     with StoredSimulator(8,config) as sim:
         sim.gate('H',(0,)); sim.gate('H',(7,)); sim.gate('T',(0,))
         root = sim.root
-        original = sim._joint
+        original = sim._joint_phase2
         def failure(*args): raise OSError('injected joint failure')
-        monkeypatch.setattr(sim,'_joint',failure)
+        monkeypatch.setattr(sim,'_joint_phase2',failure)
         with pytest.raises(OSError,match='injected'): sim.materialize()
         assert sim.root == root and sim.frontier == -1
-        monkeypatch.setattr(sim,'_joint',original)
+        monkeypatch.setattr(sim,'_joint_phase2',original)
         expected = eager_reference(sim.sequencer.operations,8,sim.assets)
         np.testing.assert_allclose(sim.state(),expected,atol=1e-14)
 

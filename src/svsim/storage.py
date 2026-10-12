@@ -57,6 +57,10 @@ class StoredBlockView:
     binding_id: str = ''
     layout_id: int = 0
     parameter_dependencies: frozenset[str] = frozenset()
+    frame_asset_id: str = ''
+    phase_value: object = None
+    base_log: tuple = ()
+    base_coordinate_id: str = ''
 
 
 class FileBlockStore:
@@ -79,6 +83,10 @@ class FileBlockStore:
         self.db.execute('PRAGMA synchronous=FULL')
         self.db.execute(f'PRAGMA cache_size=-{max(1,min(16,config.metadata_reserve_bytes//4096))}')
         self.db.execute('PRAGMA temp_store=FILE')
+        version = self.db.execute('PRAGMA user_version').fetchone()[0]
+        if version not in {0,1,2}:
+            self.db.close()
+            raise OSError('Unsupported catalog schema')
         self.db.executescript('''
           CREATE TABLE IF NOT EXISTS roots(id TEXT PRIMARY KEY,parent TEXT,sealed INTEGER DEFAULT 0);
           CREATE TABLE IF NOT EXISTS versions(id TEXT PRIMARY KEY,segment INTEGER,offset INTEGER,checksum TEXT);
@@ -87,7 +95,13 @@ class FileBlockStore:
           CREATE TABLE IF NOT EXISTS snapshots(id TEXT PRIMARY KEY,data TEXT NOT NULL);
           CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,data TEXT);
           CREATE TABLE IF NOT EXISTS active_runs(id TEXT PRIMARY KEY,root TEXT);
+          CREATE TABLE IF NOT EXISTS root_edges(root TEXT PRIMARY KEY,data TEXT NOT NULL);
+          CREATE TABLE IF NOT EXISTS frames_v2(id TEXT PRIMARY KEY,data TEXT NOT NULL);
+          CREATE TABLE IF NOT EXISTS views_v2(root TEXT,h INTEGER,data TEXT NOT NULL,PRIMARY KEY(root,h));
+          CREATE TABLE IF NOT EXISTS root_log_bounds(root TEXT PRIMARY KEY,rotations INTEGER NOT NULL);
+          CREATE TABLE IF NOT EXISTS catalog_checksums(key TEXT PRIMARY KEY,checksum TEXT NOT NULL);
         ''')
+        self.db.execute('PRAGMA user_version=2')
         self.db.execute("INSERT OR IGNORE INTO frames VALUES(0,'[]')")
         if create:
             self.db.execute('INSERT INTO settings VALUES(?,?)',('config',canonical({'num_qubits':num_qubits,'block_bits':config.block_bits,'alignment':config.alignment})))
@@ -116,7 +130,16 @@ class FileBlockStore:
     def new_root(self, parent=None):
         root = uuid4().hex
         self.db.execute('INSERT INTO roots(id,parent) VALUES(?,?)',(root,parent)); self.db.commit()
+        self.db.execute('INSERT INTO root_log_bounds VALUES(?,?)',(root,self.log_bound(parent)))
+        self.db.commit()
         return root
+
+    def log_bound(self,root):
+        if not root: return 0
+        for r in self.root_chain(root):
+            row = self.db.execute('SELECT rotations FROM root_log_bounds WHERE root=?',(r,)).fetchone()
+            if row: return row[0]
+        return 0
 
     def seal(self, root):
         self.db.execute('UPDATE roots SET sealed=1 WHERE id=?',(root,)); self.db.commit()
@@ -133,7 +156,10 @@ class FileBlockStore:
 
     def view(self, root, h):
         if not 0 <= h < self.num_blocks: raise ValueError('Block ID out of range')
+        if getattr(self,'phase2',None): return self.phase2.view(root,h)
         for r in self.root_chain(root):
+            if self.db.execute('SELECT 1 FROM root_edges WHERE root=?',(r,)).fetchone():
+                raise ValueError('Phase-aware roots require StoredSimulator view resolution')
             row = self.db.execute('SELECT version,base,frontier,frame,re,im FROM views WHERE root=? AND h=?',(r,h)).fetchone()
             if row is not None: return StoredBlockView(*row[:4],complex(*row[4:]))
         return StoredBlockView('initial-one' if h == 0 else 'zero')
@@ -145,8 +171,10 @@ class FileBlockStore:
             for h, view in views:
                 self.db.execute('INSERT OR REPLACE INTO views VALUES(?,?,?,?,?,?,?,?)',
                                 (root,h,view.version_id,view.base_frontier,view.logical_frontier,view.frame_id,view.phase.real,view.phase.imag))
+                if getattr(self,'phase2',None): self.phase2.publish_extra(root,h,view)
 
     def flatten(self, root):
+        if getattr(self,'phase2',None): return root # Explicit compaction avoids hidden full-label scans.
         if sum(1 for _ in self.root_chain(root)) < self.config.root_depth_limit: return root
         flattened = self.new_root()
         for h in range(self.num_blocks): self.publish(flattened,((h,self.view(root,h)),))

@@ -118,7 +118,7 @@ def test_named_fallback_mode_matches_native(tmp_path):
 def test_insufficient_task_budget_fails_before_root_or_frontier_mutation(tmp_path):
     reserve = 64*1024
     sim = StoredSimulator(6, config(tmp_path/'too-small', block_bits=2,
-                                    ram=reserve+128, metadata=reserve))
+                                    ram=reserve+128, metadata=reserve),frame_policy='materialize')
     try:
         sim.gate('H', (0,))
         original_root = sim.root
@@ -161,5 +161,5 @@ def test_upper_diagonal_and_clifford_metadata_only_no_amplitude_io(tmp_path):
         sim.materialize()
         assert sim.trace.read_bytes == sim.trace.write_bytes == 0
         assert not sim.cache.entries
-        assert sim.block_view(0).frame_id != sim.block_view(16).frame_id
+        assert sim.block_view(0).frame_asset_id != sim.block_view(16).frame_asset_id
         assert sim.block_view(0).phase != sim.block_view(16).phase

@@ -1,7 +1,7 @@
 # Phase 2 設計書：Clifford／Non-Clifford の統合
 
 - 作成日：2026-10-13
-- 状態：実装予定。本書は設計仕様であり、新規 API・最適化・性能値は未実装。
+- 状態：実装済み。仕様との差分・境界と実測値は[実装・検証資料](phase2_implementation.md)および[比較実験](phase2_benchmark.md)を参照。
 - 対応仕様：[開発計画 §18 Phase 2](../plan/distributed_quantum_circuit_simulator_development.md#phase-2cliffordnon-cliffordの統合)、同計画 §2・§7。
 - 前提：[Phase 1 設計書](phase1_design.md)、[実装と検証](phase1_implementation.md)、[実測比較](phase1_benchmark.md)。
 - 開発環境：Python 3.12 以上、uv、NumPy、pytest。runtime の追加外部依存は原則不要。
@@ -145,6 +145,8 @@ tableau は immutable。合成・逆は新しい asset を返し、共有 Frame 
 本プロジェクトでは、tableau と **phase-sensitive な補助 stabilizer state** を組み合わせる。補助状態は Frame の `C|0...0>` だけを表し、任意 dense な `a_h` が stabilizer であるとは仮定しない。
 
 補助状態の更新と振幅評価には CH-form の phase-sensitive 手順を採用する。CH-form が global phase を保持することは [Bravyi ほか、§4.1](https://arxiv.org/pdf/1808.00128) に記述されている。CH-form の非一意性と、Frame operator の代表元選択は本実装で別に扱う。
+
+実装では phase-sensitive な affine-quadratic path sum と exact Z4 Gaussian elimination を採用した。canonical anchor の位相条件は同じで、CH-form への追加依存を必要としない。[実装資料](phase2_implementation.md#位相補助表現の変更)を参照。
 
 各 tableau T の補助状態の support から、最小の計算基底添字 `j0` を決定的な GF(2) 手順で求める。次の振幅を正の実数にする operator を canonical representative `C0(T)` と定義する。
 

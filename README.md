@@ -49,9 +49,16 @@ uv run python examples/phase1_benchmark.py --output /tmp/svsim-phase1-report.jso
 
 保存先は新しいディレクトリを指定します。`direct` は Linux の `O_DIRECT`／macOS の `F_NOCACHE` を選びます。managed RAM 上限と process RSS の違いは実装資料に記載しています。
 
-## Phase 2 設計
+## Phase 2：位相を保持する Frame
 
-[Phase 2 設計書](docs/phase2_design.md) に、位相を保持する Clifford tableau、Non-Clifford の base-side log と Pauli rotation、Frame 整合・コスト判断、Binding 専用 guard、仮想 Block 置換、snapshot 互換性と検証計画を記載しています。Phase 2 の新規 API は実装予定です。
+[Phase 2 設計書](docs/phase2_design.md)と[実装・検証資料](docs/phase2_implementation.md)に、Clifford tableau と相対位相、Pauli 回転の遅延ログ、Joint の Frame 整合、ExactPi と Binding guard、仮想 Block 置換、v1 snapshot 互換性を記載しています。
+
+```sh
+uv run python examples/phase2.py /tmp/svsim-phase2 --backend buffered
+uv run python examples/phase2_benchmark.py --num-qubits 16 --output /tmp/svsim-phase2-report.json
+```
+
+`frame_policy='keep'` で対応する局所回転を Frame の内側へ遅延できます。`auto` は校正がない局所回転を具体化し、校正済みの `FrameCalibration` を渡すと費用推定で選択します。[比較実験](docs/phase2_benchmark.md)は状態 1 MiB／managed RAM 256 KiB の例を含みます。
 
 ## スライドのビルド
 

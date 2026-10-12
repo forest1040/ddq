@@ -20,9 +20,10 @@ class GateOp:
     clifford: bool = False
     approximation_error: float = 0.0
     source_op_id: int | None = None
+    paulis: tuple[str, ...] = ()
 
     def __post_init__(self):
-        for name in ('targets', 'controls', 'control_values'):
+        for name in ('targets', 'controls', 'control_values', 'paulis'):
             object.__setattr__(self, name, tuple(getattr(self, name)))
 
     @property
@@ -38,7 +39,7 @@ class GateNormalizer:
         self.assets = assets or MatrixAssetRegistry()
 
     def gate(self, kind, targets, *, controls=(), control_values=None, angle=None,
-             matrix=None, approximation_error=0.0):
+             matrix=None, approximation_error=0.0, paulis=()):
         name = kind.upper()
         targets = tuple(operator.index(q) for q in targets)
         controls = tuple(operator.index(q) for q in controls)
@@ -50,17 +51,23 @@ class GateNormalizer:
             if len(controls) != count: raise ValueError('Invalid controlled X controls')
             name = 'MCX'
         if name == 'X': name = 'MCX'
-        if name not in {'H', 'S', 'SDG', 'Z', 'T', 'TDG', 'RX', 'RY', 'RZ', 'CZ', 'SWAP', 'MCX', 'DENSE_UNITARY'}:
+        if name not in {'H', 'S', 'SDG', 'Z', 'T', 'TDG', 'RX', 'RY', 'RZ', 'CZ', 'SWAP', 'MCX', 'DENSE_UNITARY', 'PAULI_ROT'}:
             raise ValueError(f'Unsupported gate {kind}')
         if not targets or len(set(targets + controls)) != len(targets + controls):
             raise ValueError('Targets and controls must be distinct')
         if any(q < 0 or q >= self.num_qubits for q in targets + controls): raise ValueError('Qubit out of range')
         required = 2 if name in {'CZ', 'SWAP'} else 1
-        if name != 'DENSE_UNITARY' and len(targets) != required: raise ValueError('Invalid target arity')
+        if name not in {'DENSE_UNITARY','PAULI_ROT'} and len(targets) != required: raise ValueError('Invalid target arity')
+        paulis = tuple(str(p).upper() for p in paulis)
+        if name == 'PAULI_ROT':
+            if len(paulis) != len(targets) or any(p not in {'I','X','Y','Z'} for p in paulis):
+                raise ValueError('One valid Pauli letter per target required')
+            if controls: raise ValueError('Controlled PAULI_ROT is unsupported')
+        elif paulis: raise ValueError('Paulis only allowed for PAULI_ROT')
         if controls and name in {'CZ', 'SWAP'}: raise ValueError('Extra controls unsupported for this gate')
         values = tuple(1 for _ in controls) if control_values is None else tuple(operator.index(v) for v in control_values)
         if len(values) != len(controls) or any(v not in (0, 1) for v in values): raise ValueError('Invalid control values')
-        if name in {'RX', 'RY', 'RZ'}:
+        if name in {'RX', 'RY', 'RZ', 'PAULI_ROT'}:
             if angle is None: raise ValueError('Rotation needs angle')
             angle = expression(angle)
         elif angle is not None: raise ValueError('Angle only allowed for rotations')
@@ -70,7 +77,7 @@ class GateNormalizer:
             if matrix is None: raise ValueError('Missing matrix')
             asset = self.assets.register(matrix, len(targets))
         elif matrix is not None: raise ValueError('Matrix only allowed for DENSE_UNITARY')
-        diagonal = name in {'S', 'SDG', 'Z', 'T', 'TDG', 'RZ', 'CZ'}
+        diagonal = name in {'S', 'SDG', 'Z', 'T', 'TDG', 'RZ', 'CZ'} or name == 'PAULI_ROT' and all(p in {'I','Z'} for p in paulis)
         permutation = name in {'MCX', 'SWAP'}
         clifford = name in {'H', 'S', 'SDG', 'Z', 'CZ', 'SWAP'} or name == 'MCX' and len(controls) <= 1
         if controls and name != 'MCX': clifford = False
@@ -80,7 +87,7 @@ class GateNormalizer:
             diagonal = np.array_equal(u, np.diag(np.diag(u)))
             permutation = bool(np.all((u == 0) | (u == 1)) and np.all(np.sum(u == 1, axis=0) == 1))
         return GateOp(name, targets, controls, values, angle, asset, diagonal=diagonal,
-                      permutation=permutation, clifford=clifford, approximation_error=approximation_error)
+                      permutation=permutation, clifford=clifford, approximation_error=approximation_error, paulis=paulis)
 
 
 class GlobalSequencer:

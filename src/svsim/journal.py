@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 from .ir import GateOp
-from .parameters import Expr, ParameterSymbol
+from .parameters import Expr, ParameterSymbol, ExactPi
 
 
 def canonical(value):
@@ -19,6 +19,7 @@ def expr_data(expr):
     if expr is None: return None
     if expr.op == 'symbol': return {'op':'symbol','symbol':asdict(expr.args[0])}
     if expr.op == 'const': return {'op':'const','value':expr.args[0]}
+    if expr.op == 'pi': return {'op':'pi','numerator':expr.args[0].numerator,'denominator':expr.args[0].denominator}
     return {'op':expr.op, 'args':[expr_data(a) for a in expr.args]}
 
 
@@ -26,12 +27,14 @@ def decode_expr(data):
     if data is None: return None
     if data['op'] == 'symbol': return Expr('symbol',(ParameterSymbol(**data['symbol']),))
     if data['op'] == 'const': return Expr('const',(data['value'],))
+    if data['op'] == 'pi': return Expr('pi',(ExactPi(data['numerator'],data['denominator']),))
     return Expr(data['op'],tuple(decode_expr(a) for a in data['args']))
 
 
 def gate_data(gate):
     data = asdict(gate)
     data['angle'] = expr_data(gate.angle)
+    if not gate.paulis: data.pop('paulis')  # Preserve legacy circuit hashes.
     return data
 
 

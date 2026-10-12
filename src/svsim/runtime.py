@@ -178,7 +178,7 @@ class DeferredSimulator:
                 self.blocks[h] = apply_gate(self.blocks[h], local_gate, self.assets, self.binding)
             return 'NATIVE_MCX_CONDITIONAL_SWAP' if gate.kind == 'MCX' else 'NATIVE_LOCAL'
         # A diagonal upper 1Q gate is a relative phase, preserving each block's norm.
-        if gate.diagonal and len(gate.targets) == 1 and not local_controls:
+        if gate.kind != 'PAULI_ROT' and gate.diagonal and len(gate.targets) == 1 and not local_controls:
             from .kernels import gate_matrix
             u = gate_matrix(local_gate, self.assets, self.binding)
             bit = gate.targets[0]-b

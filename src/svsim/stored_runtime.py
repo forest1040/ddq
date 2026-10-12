@@ -21,7 +21,7 @@ from .kernels import gate_matrix
 from .layout import QubitLayout
 from .lifecycle import HardwareProfiler, StaticCircuitOptimizer
 from .lowering import StructuredExactDecomposer
-from .parameters import ParameterBinding
+from .parameters import ParameterBinding, ExactPi
 from .planner import AccessPlan, MaterializationTask, group_bits, working_set
 from .storage import FileBlockStore, StoredBlockView, StorageConfig
 from .streaming_kernels import apply_local, apply_group
@@ -32,12 +32,18 @@ from .unitary import MatrixAssetRegistry
 class StoredSimulator:
     def __init__(self, num_qubits, storage: StorageConfig, *, initial_state=None,
                  initial_blocks=None, profile=None, execution='auto', mode='per-block-frame',
-                 transport_factory=None, _snapshot=None, _create=True):
+                 transport_factory=None, frame_policy='auto', alignment_policy='auto', frame_profile=None, _snapshot=None, _create=True):
         if execution not in {'auto','fallback','structured-exact'}: raise ValueError('Unknown gate execution mode')
         if mode not in {'per-block-frame','deferred-no-frame','batching','eager'}: raise ValueError('Unknown materialization mode')
+        if frame_policy not in {'auto','keep','materialize'}: raise ValueError('Unknown frame policy')
+        if alignment_policy not in {'auto','input-a','input-b','identity'}: raise ValueError('Unknown alignment policy')
+        self.frame_policy,self.alignment_policy = frame_policy,alignment_policy
+        self.frame_profile = frame_profile
         if initial_state is not None and initial_blocks is not None: raise ValueError('Choose one initial-state source')
         self.num_qubits, self.config = num_qubits, storage
         self.block_bits, self.execution, self.mode = storage.block_bits, execution, mode
+        if frame_profile is not None and frame_profile.block_bits != self.block_bits:
+            raise ValueError('Frame calibration block width must match execution width')
         self.normalizer = GateNormalizer(num_qubits)
         self.assets = self.normalizer.assets
         self.sequencer = GlobalSequencer()
@@ -52,6 +58,12 @@ class StoredSimulator:
         self._readonly_circuit = _snapshot is not None
         self._store_kwargs = {'transport_factory':transport_factory} if transport_factory else {}
         self.store = FileBlockStore(storage,num_qubits,create=_create,**self._store_kwargs)
+        from .phase2_runtime import Phase2Catalog
+        try: self.phase2 = Phase2Catalog(self)
+        except BaseException:
+            self.store.close()
+            raise
+        self.store.phase2 = self.phase2
         self.budget = MemoryBudget(storage.ram_budget_bytes,storage.metadata_reserve_bytes)
         self.cache = BlockCache(self.store,self.budget)
         self.journal = Journal(self.store.directory/'journal')
@@ -138,7 +150,7 @@ class StoredSimulator:
             self.sequencer.operations.pop()
             self.journal.rollback(cursors)
             raise
-        if self.binding is not None: self.binding = ParameterBinding(self.circuit_hash,self.binding.values)
+        if self.binding is not None: self.binding = ParameterBinding(self.circuit_hash,self.binding.values,self.binding.exact_witnesses)
         self.plan = None
         return op
 
@@ -199,7 +211,7 @@ class StoredSimulator:
         decomposer = StructuredExactDecomposer(self.assets)
         for gate in originals:
             if gate.angle is not None: gate.angle.evaluate(binding)
-            if self.execution == 'fallback': candidates = FallbackDecomposer().decompose(gate)
+            if self.execution == 'fallback' and gate.kind != 'PAULI_ROT': candidates = FallbackDecomposer().decompose(gate)
             elif self.execution == 'structured-exact' and gate.kind == 'DENSE_UNITARY': candidates = decomposer.decompose(gate)
             else: candidates = (gate,)
             out.extend((self._physical(op),(gate.op_id,)) for op in candidates)
@@ -215,7 +227,7 @@ class StoredSimulator:
                                          approximation_error=prev.approximation_error+gate.approximation_error),ids+sources)
                     continue
                 can_matrix = same and len(gate.targets) <= 2 and all(q < self.block_bits for q in gate.targets)
-                if can_matrix and not prev.clifford and not gate.clifford and prev.kind != 'MCX' and gate.kind != 'MCX':
+                if can_matrix and not prev.clifford and not gate.clifford and prev.kind not in {'MCX','PAULI_ROT'} and gate.kind not in {'MCX','PAULI_ROT'} and self.mode != 'per-block-frame':
                     matrix = gate_matrix(gate,self.assets,binding) @ gate_matrix(prev,self.assets,binding)
                     key = self.assets.register(matrix,len(gate.targets))
                     diagonal = prev.diagonal and gate.diagonal
@@ -234,7 +246,7 @@ class StoredSimulator:
         tasks = []
         for gate, sources in compiled:
             bits = group_bits(gate,self.block_bits)
-            count = 1 << len(bits)
+            count = 2 if gate.kind == 'PAULI_ROT' and bits else 1 << len(bits)
             tasks.append(MaterializationTask(str(sources),sources,'joint' if bits else 'local',bits,
                                              min(sources)-1,max(sources),working_set(self.config,count)))
         visits = len(tasks)*self.store.num_blocks*self.store.slot_bytes
@@ -247,6 +259,8 @@ class StoredSimulator:
             dependencies = frozenset().union(*(g.dependencies for g in self.sequencer.operations[:self.frontier+1]))
             for key in dependencies:
                 if self.binding.value(key) != binding.value(key): raise ValueError('Cannot change an executed parameter; fork its prefix snapshot')
+                if dict(self.binding.exact_witnesses).get(key) != dict(binding.exact_witnesses).get(key):
+                    raise ValueError('Cannot change an executed parameter witness; fork its prefix snapshot')
         for gate in self.sequencer.operations[:last+1]:
             if gate.angle is not None: gate.angle.evaluate(binding)
 
@@ -260,8 +274,18 @@ class StoredSimulator:
         self._validate_binding(binding,last)
         compiled = self._compiled(self.frontier+1,last,binding)
         # Refuse impossible tasks before changing any logical state.
-        for gate, _ in compiled:
-            needed = working_set(self.config,1 << len(group_bits(gate,self.block_bits)))
+        rotation_bound = self.store.log_bound(self.root)
+        for gate, sources in compiled:
+            bits = group_bits(gate,self.block_bits)
+            if self.mode == 'per-block-frame':
+                if gate.kind in {'MCX','SWAP'} and all(q >= self.block_bits for q in gate.qubits): continue
+                if not bits and self.frame_policy != 'materialize':
+                    rule = self.phase2.make_rule(gate,sources,binding)
+                    if rule is not None:
+                        if rule['kind'] != 'rotation': continue
+                        rotation_bound += 1
+                        if self.frame_policy == 'keep' and rotation_bound <= self.phase2.max_log: continue
+            needed = working_set(self.config,2 if gate.kind == 'PAULI_ROT' and bits else 1 << len(bits))
             if needed > self.budget.limit: raise MemoryError(f'Task requires at least {needed} managed bytes; budget is {self.budget.limit}')
         prior = self.root,self.frontier,self.binding
         self.binding = binding
@@ -270,12 +294,20 @@ class StoredSimulator:
             local = []
             for gate, sources in compiled:
                 bits = group_bits(gate,self.block_bits)
+                virtual = self.mode == 'per-block-frame' and gate.kind in {'MCX','SWAP'} and all(q >= self.block_bits for q in gate.qubits)
+                if virtual:
+                    if local: self._epoch(local); local = []
+                    from .permutation import PermutationEdge
+                    from dataclasses import asdict
+                    self.phase2.add_rule({'kind':'permutation','permutation':asdict(PermutationEdge.from_gate(gate,self.block_bits)),
+                                         'frontier':max(sources),'sources':sources})
+                    continue
                 if not bits:
                     local.append((gate,sources))
                     if self.mode == 'eager': self._epoch(local); local = []
                 else:
                     if local: self._epoch(local); local = []
-                    self._joint(gate,sources,bits)
+                    self._joint_phase2(gate,sources,bits)
             if local: self._epoch(local)
             self.frontier = last
         except BaseException:
@@ -298,71 +330,193 @@ class StoredSimulator:
 
     def _resolve_array(self, array, view, h):
         start = perf_counter()
-        for gate in self.store.frame(view.frame_id): apply_local(array,gate,self.assets,self.binding,block_id=h,block_bits=self.block_bits)
-        if view.phase != 1: array *= view.phase
-        if view.frame_id or view.phase != 1:
+        self.phase2.resolve(array,view,h)
+        if view.frame_id or view.frame_asset_id or view.phase != 1 or view.base_log:
             self.trace.record(f'frame-{h}',performance_class='frame',transfer_ms=(perf_counter()-start)*1000,
                               metadata={'path':'MATERIALIZE_FRAME','frame_id':view.frame_id,'block_id':h})
 
     def _epoch(self, operations):
+        return self._epoch_phase2(operations)
+
+    def _epoch_phase2(self, operations):
+        pending = []
+        for gate,sources in operations:
+            rule = self.phase2.make_rule(gate,sources) if self.mode == 'per-block-frame' and self.frame_policy != 'materialize' else None
+            if rule is not None and rule['kind'] == 'rotation':
+                from .frame_planner import choose_local
+                estimate = sum(len(op.get('word',())) for op in pending)
+                for ancestor in self.store.root_chain(self.root):
+                    row = self.store.db.execute('SELECT data FROM root_edges WHERE root=?',(ancestor,)).fetchone()
+                    if row:
+                        data = self.phase2.rule(ancestor,row[0]); estimate += sum(len(op.get('word',())) for op in data.get('ops',()))
+                decision = choose_local(self.frame_policy,working_set(self.config),self.profile.profile_id,
+                    calibration=self.frame_profile,frame_gate_estimate=min(estimate,2*self.block_bits**2),block_bits=self.block_bits)
+                self.trace.record(str(sources),performance_class='frame-plan',metadata={'path':'LOCAL_FRAME_DECISION',
+                    'decision':decision.data(),'source_ops':sources,'binding_id':self.binding.binding_id,'layout_id':self.layout.layout_id})
+                if decision.chosen == 'materialize': rule = None
+            if rule is not None:
+                if pending and len(canonical(pending+[rule]).encode())*4 > self.config.metadata_reserve_bytes//2-1024:
+                    self._publish_local_rules(pending,max(max(op['sources']) for op in pending)); pending = []
+                pending.append(rule)
+                if len(pending) >= min(32,self.phase2.max_log):
+                    self._publish_local_rules(pending,max(sources)); pending = []
+                continue
+            if pending:
+                self._publish_local_rules(pending,max(max(op['sources']) for op in pending)); pending = []
+            parent = self.root
+            new = self.store.new_root(parent)
+            end = max(sources)
+            for h in range(self.store.num_blocks):
+                if not self._upper_ok(gate,h): continue
+                view = self.store.view(parent,h)
+                self.cache.ensure(2*self.cache.buffer_cost)
+                with self.cache.outputs(1) as buffers:
+                    with self.cache.pin(view.version_id) as source: buffers[0].view[:] = source.view
+                    array = buffers[0].array(self.store.payload_bytes)
+                    try:
+                        self._resolve_array(array,view,h)
+                        local = self._local(gate)
+                        if local.kind == 'PAULI_ROT':
+                            from .phase2_runtime import pauli_of
+                            from .pauli_rotation import apply_pauli_rotation
+                            apply_pauli_rotation(array,pauli_of(gate),gate.angle.evaluate(self.binding),block_id=h,block_bits=self.block_bits)
+                        else: apply_local(array,local,self.assets,self.binding,block_id=h,block_bits=self.block_bits)
+                        version = self.cache.adopt(buffers[0])
+                        self.store.publish(new,((h,StoredBlockView(version,end,end)),))
+                    finally: del array
+            self.phase2.progress(new,end)
+            self.store.seal(parent)
+            self.root,self.frontier = new,end
+            self.journal.append('local',{'source_ops':sources,'input_root':parent,'output_root':new,'frontier':end,'semantics_version':2})
+            self.trace.record(str(sources),performance_class='compute',metadata={'path':'LOCAL_EPOCH','source_ops':sources,
+                'execution_gate_count':1,'execution':self.execution,'binding_id':self.binding.binding_id,'layout_id':self.layout.layout_id})
+        if pending: self._publish_local_rules(pending,max(max(op['sources']) for op in pending))
+
+    def _publish_local_rules(self,ops,end):
+        # Conservatively flush before appending enough rules to exceed any
+        # block's bounded log. The shared registry remains disk resident.
+        rotations = sum(op['kind'] == 'rotation' for op in ops)
+        prior = self.store.log_bound(self.root)
+        if prior+rotations > self.phase2.max_log: self.flush_base_logs()
+        self.phase2.add_rule({'kind':'local','ops':ops,'frontier':end,'sources':sorted({s for op in ops for s in op['sources']})})
+
+    def flush_base_logs(self):
+        """Explicit bounded-buffer checkpoint of base logs, retaining Frames."""
+        self._open()
         parent = self.root
-        new = self.store.new_root(parent)
-        end = max(max(sources) for _,sources in operations)
-        begin = perf_counter()
+        new = self.store.new_root()  # Flatten labels as an explicit scan task.
         for h in range(self.store.num_blocks):
             view = self.store.view(parent,h)
-            frame = list(self.store.frame(view.frame_id))
-            phase, version, base = view.phase,view.version_id,view.base_frontier
-            # Allocate a Block only if the epoch really needs amplitude work.
-            with ExitStack() as stack:
-                output = None
-                array = None
+            if view.base_log:
+                self.cache.ensure(2*self.cache.buffer_cost)
+                with self.cache.outputs(1) as buffers:
+                    with self.cache.pin(view.version_id) as source: buffers[0].view[:] = source.view
+                    array = buffers[0].array(self.store.payload_bytes)
+                    try:
+                        self.phase2.resolve_base(array,view,h)
+                        version = self.cache.adopt(buffers[0])
+                        view = replace(view,version_id=version,base_log=(),base_frontier=self.frontier)
+                    finally: del array
+            self.store.publish(new,((h,view),))
+        self.store.seal(parent); self.root = new
+        self.journal.append('commits',{'kind':'flush-base-logs','input_root':parent,'root':new,'frontier':self.frontier})
+        self.trace.record('flush-base-logs',metadata={'path':'FLUSH_BASE_LOGS','blocks':self.store.num_blocks})
+        return self
+
+    def compact_metadata(self):
+        """Explicit disk-catalog compaction, with one resolved view at a time."""
+        self._open()
+        parent = self.root; new = self.store.new_root()
+        for h in range(self.store.num_blocks): self.store.publish(new,((h,self.store.view(parent,h)),))
+        self.store.db.execute('UPDATE root_log_bounds SET rotations=? WHERE root=?',(self.store.log_bound(parent),new))
+        self.store.db.commit()
+        self.store.seal(parent); self.root = new
+        self.journal.append('commits',{'kind':'compact-metadata','input_root':parent,'root':new,'frontier':self.frontier})
+        self.trace.record('compact-metadata',metadata={'path':'COMPACT_METADATA','blocks':self.store.num_blocks})
+        return self
+
+    def _joint_phase2(self,gate,sources,bits):
+        from .phase2_runtime import pauli_of, inverse_word
+        from .frame_planner import choose_alignment
+        from .pauli_rotation import SignedPauli, apply_pauli_pair
+        from .phase import PhaseValue
+        import cmath
+        pauli_gate = gate.kind in {'PAULI_ROT','RX','RY'}
+        if pauli_gate and any(q < self.block_bits for q in gate.controls):
+            if self.alignment_policy in {'input-a','input-b'}: raise ValueError('Forced alignment is not legal for lower controls')
+            return self._joint(gate,sources,bits)
+        if not pauli_gate and (self.mode != 'per-block-frame' or self.frame_policy == 'materialize' or
+                              any(q < self.block_bits for q in gate.qubits) or self.alignment_policy == 'identity'):
+            if self.alignment_policy in {'input-a','input-b'} and self.mode == 'per-block-frame':
+                raise ValueError('Forced common-frame alignment is not legal for this Joint predicate/support')
+            return self._joint(gate,sources,bits)
+        parent = self.root; new = self.store.new_root(parent)
+        p = pauli_of(gate) if pauli_gate else None
+        mask = (p.x_mask >> self.block_bits) if p else sum(1 << (q-self.block_bits) for q in bits)
+        count = 2 if p else 1 << len(bits)
+        for base in range(self.store.num_blocks):
+            if p:
+                if base > (base ^ mask): continue
+                partners = [base,base ^ mask]
+            else:
+                if base & mask or not self._upper_ok(gate,base): continue
+                partners = [base | sum(((i >> j)&1) << (q-self.block_bits) for j,q in enumerate(bits)) for i in range(count)]
+            views = [self.store.view(parent,h) for h in partners]
+            assets = [self.phase2.asset(v.frame_asset_id) for v in views]
+            policy = 'identity' if self.frame_policy == 'materialize' or self.mode != 'per-block-frame' else self.alignment_policy
+            decision = choose_alignment(assets,policy,working_set(self.config,count),self.profile.profile_id,self.frame_profile)
+            identity = decision.chosen == 'identity'
+            reference = None if identity else assets[0 if decision.chosen == 'input-a' else min(1,count-1)]
+            phase = PhaseValue() if identity else views[0 if decision.chosen == 'input-a' else min(1,count-1)].phase_value
+            if not identity and phase.evaluate() == 0:
+                if policy != 'auto': raise ValueError('Common-frame phase anchor must be nonzero')
+                decision = choose_alignment(assets,'identity',working_set(self.config,count),self.profile.profile_id,self.frame_profile)
+                identity,reference,phase = True,None,PhaseValue()
+            frame_id = '' if identity else self.phase2.intern(reference)
+            self.cache.ensure(2*count*self.cache.buffer_cost)
+            with self.cache.outputs(count) as aligned:
+                arrays = [buf.array(self.store.payload_bytes) for buf in aligned]
                 try:
-                    for gate,sources in operations:
-                        if not self._upper_ok(gate,h): continue
-                        local = self._local(gate)
-                        scalar = self.mode == 'per-block-frame' and gate.diagonal and all(q >= self.block_bits for q in gate.targets) and not local.controls
-                        if scalar:
-                            matrix = gate_matrix(gate,self.assets,self.binding)
-                            index = sum(((h >> (q-self.block_bits))&1) << j for j,q in enumerate(gate.targets))
-                            phase *= matrix[index,index]
-                            continue
-                        if self.mode == 'per-block-frame' and self._frame_clifford(local):
-                            frame.append(replace(local,clifford=True))
-                            continue
-                        if output is None:
-                            self.cache.ensure(2*self.cache.buffer_cost)
-                            input_buffer = stack.enter_context(self.cache.pin(version))
-                            outputs = stack.enter_context(self.cache.outputs(1))
-                            output = outputs[0]
-                            output.view[:] = input_buffer.view
-                            array = output.array(self.store.payload_bytes)
-                        if frame or phase != 1:
-                            frame_start = perf_counter()
-                            for pending in frame: apply_local(array,pending,self.assets,self.binding,block_id=h,block_bits=self.block_bits)
-                            if phase != 1: array *= phase
-                            self.trace.record(f'frame-local-{h}',performance_class='frame',transfer_ms=(perf_counter()-frame_start)*1000,
-                                              metadata={'path':'MATERIALIZE_FRAME','block_id':h,'frame_gates':len(frame)})
-                            frame.clear(); phase = 1+0j
-                        apply_local(array,local,self.assets,self.binding,block_id=h,block_bits=self.block_bits)
-                        base = max(sources)
-                    if output is not None: version = self.cache.adopt(output)
-                    frame_id = self.store.intern_frame(frame)
-                    self.store.publish(new,((h,StoredBlockView(version,base,end,frame_id,phase)),))
-                finally:
-                    if array is not None: del array
-        self.store.seal(parent)
-        self.root = self.store.flatten(new)
-        self.frontier = end
-        sources = tuple(dict.fromkeys(s for _,ids in operations for s in ids))
-        self.journal.append('commits',{'task_id':uuid4().hex,'source_ops':sources,'root':self.root,'frontier':end,'layout_id':self.layout.layout_id})
-        self.journal.append('local',{'source_ops':sources,'input_root':parent,'output_root':self.root,
-                                     'frontier':end,'membership_rule':'catalog-overrides'})
-        self.trace.record(str(sources),performance_class='compute',transfer_ms=(perf_counter()-begin)*1000,
-            metadata={'path':'LOCAL_EPOCH','source_ops':sources,'mode':self.mode,'execution':self.execution,
-                      'fused_count':sum(len(ids)>1 for _,ids in operations),'binding_id':self.binding.binding_id,'layout_id':self.layout.layout_id,
-                      'execution_gate_count':len(operations),'lowered_count':len(operations) if self.execution != 'auto' else 0,
-                      'approximation_error':sum(g.approximation_error for g,_ in operations)})
+                    for i,h in enumerate(partners):
+                        with self.cache.pin(views[i].version_id) as source: aligned[i].view[:] = source.view
+                        if identity: self._resolve_array(arrays[i],views[i],h)
+                        else:
+                            self.phase2.resolve_base(arrays[i],views[i],h)
+                            if assets[i].tableau != reference.tableau:
+                                assets[i].apply(arrays[i],self.assets,self.binding)
+                                for op in inverse_word(reference.word): apply_local(arrays[i],op,self.assets,self.binding,block_bits=self.block_bits)
+                                arrays[i] *= cmath.exp(1j*np.pi*reference.correction/4)
+                            arrays[i] *= views[i].phase_value.evaluate()/phase.evaluate()
+                    with self.cache.outputs(count) as outputs:
+                        results = [buf.array(self.store.payload_bytes) for buf in outputs]
+                        try:
+                            if p:
+                                low_mask = (1 << self.block_bits)-1
+                                lower = SignedPauli(p.x_mask&low_mask,p.z_mask&low_mask)
+                                transformed = lower if identity else reference.tableau.conjugate_inverse(lower)
+                                pp = SignedPauli((p.x_mask&~low_mask)|transformed.x_mask,(p.z_mask&~low_mask)|transformed.z_mask,transformed.sign_bit)
+                                # Controlled upper RX/RY requires source-pair
+                                # predicate filtering; lower controls fall back.
+                                if gate.controls:
+                                    if any(q < self.block_bits for q in gate.controls):
+                                        raise ValueError('Controlled Joint rotation requires native fallback')
+                                    if not self._upper_ok(gate,base):
+                                        for i in range(count): results[i][:] = arrays[i]
+                                    else: apply_pauli_pair(*arrays,*results,pp,gate.angle.evaluate(self.binding),*partners,self.block_bits)
+                                else: apply_pauli_pair(*arrays,*results,pp,gate.angle.evaluate(self.binding),*partners,self.block_bits)
+                            else: apply_group(arrays,results,self._local(gate),self.block_bits,bits,self.assets,self.binding)
+                            versions = [self.cache.adopt(buf) for buf in outputs]
+                            end = max(sources)
+                            coordinate = uuid4().hex
+                            self.store.publish(new,((h,StoredBlockView(v,end,end,phase=phase.evaluate(),frame_asset_id=frame_id,
+                                phase_value=phase,base_coordinate_id=coordinate)) for h,v in zip(partners,versions)))
+                        finally: results.clear()
+                finally: arrays.clear()
+            self.trace.record(str(sources),performance_class='frame-plan',metadata={'path':'ALIGN_FRAME' if not identity else 'MATERIALIZE_FRAME',
+                'decision':decision.data(),'source_ops':sources,'partner_blocks':partners,'binding_id':self.binding.binding_id,'layout_id':self.layout.layout_id})
+        self.phase2.progress(new,max(sources))
+        self.store.seal(parent); self.root,self.frontier = new,max(sources)
+        self.journal.append('joint',{'source_ops':sources,'input_root':parent,'output_root':new,'semantics_version':2,'frontier':self.frontier})
 
     def _joint(self, gate, sources, bits):
         parent = self.root
@@ -393,6 +547,7 @@ class StoredSimulator:
                             self.store.publish(new,((h,StoredBlockView(v,end,end)) for h,v in zip(partners,versions)))
                         finally: result_arrays.clear()
                 finally: arrays.clear()
+        self.phase2.progress(new,max(sources))
         self.store.seal(parent)
         self.root = self.store.flatten(new)
         self.frontier = max(sources)
@@ -489,6 +644,7 @@ class StoredSimulator:
 
     def commit_snapshot(self, *, prefix_fingerprint=None):
         self._open()
+        self.phase2.validate_root(self.root)
         self._persist_assets()
         self.cache.flush()
         self.journal.flush()
@@ -496,7 +652,8 @@ class StoredSimulator:
         dependencies = sorted(frozenset().union(*(g.dependencies for g in self.sequencer.operations[:self.frontier+1])))
         manifest = SnapshotManifest(uuid4().hex,self.root,self.frontier,self.circuit_hash,self.initial_state_hash,
             self.layout.logical_to_physical,self.layout.layout_id,self.binding.values if self.binding else (),tuple(dependencies),
-            self.journal.cursors(),tuple(sorted(self.assets.assets)),prefix_fingerprint)
+            self.journal.cursors(),tuple(sorted(self.assets.assets)),prefix_fingerprint,schema_version=2,
+            binding_witnesses=tuple((k,v.numerator,v.denominator) for k,v in (self.binding.exact_witnesses if self.binding else ())),semantics_version=2)
         data = canonical(asdict(manifest))
         with self.store.db:
             self.store.db.execute('UPDATE roots SET sealed=1 WHERE id=?',(self.root,))
@@ -515,9 +672,10 @@ class StoredSimulator:
         self.materialize(frontier=first-1,binding=bound)
         dependencies = frozenset().union(*(g.dependencies for g in self.sequencer.operations[:first]))
         fixed = tuple((k,bound.value(k)) for k in sorted(dependencies))
+        fixed_witnesses = tuple((k,v.numerator,v.denominator) for k,v in bound.exact_witnesses if k in dependencies)
         fingerprint = content_hash({'schema_version':1,'prefix':[gate_data(g) for g in self.sequencer.operations[:first]],
                                     'initial':self.initial_state_hash,'fixed':fixed,'layout':self.layout.logical_to_physical,
-                                    'frontier':first-1,'dtype':'<c16','semantics':1})
+                                    'frontier':first-1,'dtype':'<c16','semantics':2,'witnesses':fixed_witnesses})
         return self.commit_snapshot(prefix_fingerprint=fingerprint)
 
     def _load_manifest(self, snapshot):
@@ -547,9 +705,11 @@ class StoredSimulator:
         self.layout = QubitLayout(manifest.layout,manifest.layout_id)
         self.root = self.store.new_root(manifest.root)
         self.frontier, self.initial_state_hash = manifest.frontier,manifest.initial_state_hash
-        self.binding = ParameterBinding(self.circuit_hash,manifest.binding_values)
+        self.binding = ParameterBinding(self.circuit_hash,manifest.binding_values,
+            tuple((k,ExactPi(n,d)) for k,n,d in manifest.binding_witnesses))
         # Validate referenced frames/extents lazily on load; committed root exists now.
         for _ in self.store.root_chain(manifest.root): pass
+        self.phase2.validate_root(manifest.root)
 
     def fork(self, snapshot, *, binding):
         self._open()
@@ -557,24 +717,29 @@ class StoredSimulator:
         if manifest.circuit_hash != self.circuit_hash: raise ValueError('Prefix belongs to another registered circuit')
         if binding.circuit_hash != self.circuit_hash: raise ValueError('Binding belongs to another circuit')
         fixed = dict(manifest.binding_values)
+        witnesses = {k:ExactPi(n,d) for k,n,d in manifest.binding_witnesses}
         for key in manifest.parameter_dependencies:
             if binding.value(key) != fixed[key]: raise ValueError('Prefix fixed-parameter fingerprint mismatch')
+            if dict(binding.exact_witnesses).get(key) != witnesses.get(key):
+                raise ValueError('Prefix fixed-parameter witness fingerprint mismatch')
         run = StoredSimulator(self.num_qubits,self.config,profile=self.profile,execution=self.execution,mode=self.mode,
+                              frame_policy=self.frame_policy,alignment_policy=self.alignment_policy,
+                              frame_profile=self.frame_profile,
                               _snapshot=manifest,_create=False,**({'transport_factory':self._store_kwargs['transport_factory']} if self._store_kwargs else {}))
         run.binding = binding
         run.trace.record('prefix-fork',metadata={'path':'PREFIX_FORK','snapshot_id':manifest.snapshot_id,'payload_copy_bytes':0,'binding_id':binding.binding_id})
         return run
 
     @classmethod
-    def resume(cls, storage, snapshot, *, profile=None, execution='auto', mode='per-block-frame'):
+    def resume(cls, storage, snapshot, *, profile=None, execution='auto', mode='per-block-frame',frame_policy='auto',alignment_policy='auto'):
         db = sqlite3.connect(Path(storage.directory)/'metadata/catalog.sqlite3')
         try: data = json.loads(db.execute("SELECT data FROM settings WHERE key='config'").fetchone()[0])
         finally: db.close()
-        return cls(data['num_qubits'],storage,profile=profile,execution=execution,mode=mode,_snapshot=snapshot,_create=False)
+        return cls(data['num_qubits'],storage,profile=profile,execution=execution,mode=mode,frame_policy=frame_policy,alignment_policy=alignment_policy,_snapshot=snapshot,_create=False)
 
     def handle(self, snapshot, *, role='forward'):
         manifest = self._load_manifest(snapshot)
-        binding = ParameterBinding(manifest.circuit_hash,manifest.binding_values)
+        binding = ParameterBinding(manifest.circuit_hash,manifest.binding_values,tuple((k,ExactPi(n,d)) for k,n,d in manifest.binding_witnesses))
         return StoredStateHandle(manifest.snapshot_id,manifest.root,manifest.frontier,binding.binding_id,manifest.circuit_hash,
                                  QubitLayout(manifest.layout,manifest.layout_id),role)
 
@@ -644,6 +809,10 @@ class StoredSimulator:
             mark(json.loads(row[0])['root'])
         with db:
             db.execute('DELETE FROM views WHERE root NOT IN (SELECT root FROM live_roots)')
+            db.execute('DELETE FROM views_v2 WHERE root NOT IN (SELECT root FROM live_roots)')
+            db.execute('DELETE FROM root_edges WHERE root NOT IN (SELECT root FROM live_roots)')
+            db.execute('DELETE FROM root_log_bounds WHERE root NOT IN (SELECT root FROM live_roots)')
+            db.execute('DELETE FROM catalog_checksums WHERE substr(key,6,32) NOT IN (SELECT root FROM live_roots)')
             db.execute('DELETE FROM roots WHERE id NOT IN (SELECT root FROM live_roots)')
             db.execute('DELETE FROM versions WHERE id NOT IN (SELECT version FROM views)')
         removed_bytes = 0
