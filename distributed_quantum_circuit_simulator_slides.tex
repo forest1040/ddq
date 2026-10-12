@@ -1,0 +1,407 @@
+% !TeX program = lualatex
+% Build: latexmk -lualatex -outdir=build distributed_quantum_circuit_simulator_slides.tex
+\documentclass[aspectratio=169,10pt,hyperref={unicode,hidelinks}]{beamer}
+\usepackage[haranoaji,deluxe]{luatexja-preset}
+\input{ref/preamble.tex}
+\usepackage{booktabs}
+\renewcommand{\kanjifamilydefault}{\gtdefault}
+
+\definecolor{ink}{HTML}{18334A}
+\definecolor{accent}{HTML}{087E8B}
+\definecolor{warm}{HTML}{C36A24}
+\definecolor{muted}{HTML}{526574}
+\definecolor{pale}{HTML}{EAF4F5}
+\setbeamercolor{normal text}{fg=ink,bg=white}
+\setbeamercolor{structure}{fg=accent}
+\setbeamercolor{frametitle}{fg=ink}
+\setbeamercolor{block title}{fg=white,bg=accent}
+\setbeamercolor{block body}{fg=ink,bg=pale}
+\setbeamercolor{alerted text}{fg=warm}
+\setbeamerfont{frametitle}{size=\Large,series=\bfseries}
+\setbeamerfont{block title}{size=\normalsize,series=\bfseries}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize item}{\scriptsize\raise1pt\hbox{$\blacktriangleright$}}
+\setbeamertemplate{itemize subitem}{\tiny\raise1pt\hbox{$\bullet$}}
+\setbeamertemplate{footline}{%
+  \leavevmode\hbox{%
+    \begin{beamercolorbox}[wd=.86\paperwidth,ht=2.8ex,dp=1.2ex,leftskip=5mm]{normal text}
+      \scriptsize\color{muted}DH-SVS（仮称）\quad 開発者向け設計説明 / 2026-10-12
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.14\paperwidth,ht=2.8ex,dp=1.2ex,rightskip=5mm plus1fil]{normal text}
+      \hfill\scriptsize\insertframenumber\,/\,\inserttotalframenumber
+    \end{beamercolorbox}}
+}
+\setbeamersize{text margin left=7mm,text margin right=7mm}
+\setlength{\parskip}{.15em}
+\newcommand{\takeaway}[1]{\par\vspace{2mm}\begin{beamercolorbox}[wd=\textwidth,sep=1.5mm]{block body}\small #1\end{beamercolorbox}\par}
+\newcommand{\smallnote}[1]{\par{\footnotesize\color{muted}#1\par}}
+\tikzset{
+  panel/.style={draw=accent,fill=pale,rounded corners=2pt,align=center,inner sep=6pt,font=\small},
+  storage/.style={panel,draw=muted,fill=black!3},
+  task/.style={panel,draw=warm,fill=warm!8},
+  flow/.style={-{Stealth[length=2mm]},thick,draw=accent},
+  backflow/.style={flow,dashed,draw=muted},
+  labeltext/.style={font=\scriptsize,text=muted,align=center},
+}
+\title{分散量子回路シミュレータの開発}
+\subtitle{状態の配置・移動・遅延実行を共同で最適化する}
+\date{2026年10月12日}
+\hypersetup{pdftitle={分散量子回路シミュレータの開発},pdfsubject={開発者向け設計説明：DH-SVS},pdfauthor={}}
+
+\begin{document}
+
+% 1: 独立した表紙は追加せず、目的を示す最初のスライドを兼ねる。
+\begin{frame}{1. 開発目的：大規模量子回路を実行したい}
+  {\large\bfseries 分散量子回路シミュレータの開発}\par
+  \smallnote{Deferred Hierarchical Distributed State-Vector Simulator（DH-SVS、仮称）}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \begin{block}{容量の壁：dense状態ベクトル}
+        \centering $S(n)=16\times 2^n\ \mathrm{bytes}$\par
+        \small\texttt{complex128}、状態1コピーの容量\par
+        \medskip
+        \begin{tabular}{rr}
+          \toprule 量子ビット数 & 状態容量 \\
+          \midrule 32 & 64 GiB \\40 & 16 TiB \\50 & 16 PiB \\
+          \bottomrule
+        \end{tabular}
+      \end{block}
+      \smallnote{作業Block、通信バッファ、Adjoint状態、Checkpoint、ログなどは別途必要。}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{目標：容量と実行時間を両立する}
+      \begin{itemize}
+        \item 単一ノードRAMを超える状態を扱う。
+        \item RAM・SSD/HDD・MPIを統合する。
+        \item 全状態走査と転送の繰り返しを減らす。
+      \end{itemize}
+      \medskip
+      \textbf{評価対象はEnd-to-End時間}\par
+      \small RAM帯域 / ディスクI/O / MPI通信 /\par
+      同期待ち / 振幅演算 / 計画の費用
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{保存できる容量}と\textbf{時間内に計算できる規模}を分けて評価する。}
+  \smallnote{本資料は実装前の設計説明。高速化効果・研究上の新規性は今後検証する。}
+  \note{出典：開発仕様1章、アウトライン1・5節。50量子ビットは16 PiBの容量例であり実行性能の約束ではない。32〜36量子ビット実測、40量子ビット級の容量・時間推定、50量子ビット級HPCのdry-runを段階的に目指す。}
+\end{frame}
+
+\begin{frame}{2. 基本戦略：状態ベクトルをBlockに分割する}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{振幅区間を管理・実行の単位にする}
+      \[
+        \ket{\Psi}=\sum_{h=0}^{2^{n-b}-1}\ket{h}\otimes\ket{\psi_h},
+        \quad \ket{\psi_h}\in\mathbb C^{2^b}
+      \]
+      \begin{itemize}
+        \item $b$：Block内のインデックスビット数。
+        \item Block-local演算は、RAM滞在中にまとめて実行。
+        \item Block間の振幅混合は、必要なBlock群の\textbf{Joint Task}で処理。
+      \end{itemize}
+      \smallnote{Blockは独立した量子部分系ではない。未正規化の振幅とBlock間の相対位相を保つ。}
+    \end{column}
+    \begin{column}{.49\textwidth}
+      \centering
+      \begin{tikzpicture}
+        \node[storage,minimum width=5.7cm] (disk) at (0,0) {SSD/HDD：$B_0\;B_1\;B_2\;B_3\;\cdots$};
+        \node[panel,minimum width=2.4cm] (a) at (-1.55,-1.35) {RAM：$B_0$\\局所ゲート列};
+        \node[panel,minimum width=2.4cm] (b) at (1.55,-1.35) {RAM：$B_1$\\局所ゲート列};
+        \node[task,minimum width=5.7cm] (joint) at (0,-2.85) {Joint Task：例）上位bitの$H$\\$(\psi_0\pm\psi_1)/\sqrt{2}$を共同計算};
+        \draw[flow] (disk.south -| a.north) -- (a.north);
+        \draw[flow] (disk.south -| b.north) -- (b.north);
+        \draw[flow] (a) -- (joint);
+        \draw[flow] (b) -- (joint);
+        \node[labeltext] at (0,-3.65) {Global DAGで入力版・依存順序を保証};
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+  \takeaway{Blockを読み込むたびに\textbf{複数の演算を進める}ことで、再読み込み・書き戻しを減らす。}
+  \note{出典：開発仕様2章、6章、9章。振幅の混合を伴わない上位対角ゲート等は位相メタデータで処理できることがある。全ての上位ゲートがJoint振幅交換になるわけではない。各Blockを個別に正規化してはならない。}
+\end{frame}
+
+\begin{frame}{3. MPI＋RAM＋SSD/HDDを同じ配置モデルで扱う}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.56\textwidth}
+      \centering
+      \begin{tikzpicture}
+        \node[panel,minimum width=7.1cm] (plan) at (0,0) {Semantic Gate IR / Global Dependency DAG};
+        \node[panel,minimum width=7.1cm] (sched) at (0,-1.1) {Planner / Runtime Scheduler / Performance Guard};
+        \node[panel,minimum width=7.1cm] (cache) at (0,-2.2) {Block Placement / Cache / RAM予約};
+        \node[storage,text width=1.6cm] (ram) at (-2.55,-3.65) {Local RAM};
+        \node[storage,text width=1.6cm] (ssd) at (0,-3.65) {Local\\SSD/HDD};
+        \node[storage,text width=1.6cm] (mpi) at (2.55,-3.65) {Remote RAM\\（MPI）};
+        \draw[flow] (plan)--(sched);
+        \draw[flow] (sched)--(cache);
+        \foreach \x in {ram,ssd,mpi} \draw[flow,<->] (cache.south -| \x.north)--(\x.north);
+        \node[panel,minimum width=7.1cm] (kernels) at (0,-4.8) {Block / Joint Kernels $\to$ 期待値・勾配・出力};
+        \foreach \x in {ram,ssd,mpi} \draw[flow] (\x.south)--(kernels.north -| \x.south);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{.40\textwidth}
+      \textbf{必要なBlockの正しい版を取得}
+      \begin{enumerate}
+        \item Local RAMを再利用。
+        \item Local SSD/HDDから読む。
+        \item MPIでRemote RAMから受信。
+        \item 同じbase版＋Logから再生。
+      \end{enumerate}
+      \medskip
+      \textbf{取得経路の選択条件}\par
+      \small Block版・依存frontier・Frame・Layoutが整合する候補だけを、移動／再生の費用で比較する。
+      \medskip
+      \smallnote{Checkpointは振幅だけでなく、版・Log・Frame・Layoutの整合した情報を保存する。}
+    \end{column}
+  \end{columns}
+  \takeaway{Out-of-coreとMPI分散を\textbf{「必要な振幅を計算場所へ集める」}問題として統合する。}
+  \note{出典：開発仕様5章、10〜12章。LocalとRemoteのレプリカも版付きで管理する。RAM予算は入力・出力・通信・I/Oのworking set全体を含む。ログ転送は正しいbaseと前提frontierが受信側にある場合に限る。}
+\end{frame}
+
+\begin{frame}{4. Qubit Layout：再配置の費用を後続ゲートで回収する}
+  \smallnote{例：40 qubit、4 MPI rank（$g=2$）、Block内$b=24$。領域は現在の物理配置で決まる。}
+  \begin{center}
+    \begin{tikzpicture}
+      \node[panel,minimum width=5.2cm] (local) at (0,0) {Block-local：24 bit\\\scriptsize 同一Block内の振幅演算};
+      \node[task,minimum width=4.4cm] (disk) at (4.95,0) {Disk-crossing：14 bit\\\scriptsize Rank内・Block間の取得};
+      \node[storage,minimum width=3.4cm] (global) at (9.05,0) {MPI-global：2 bit\\\scriptsize Rank間取得が必要な場合};
+      \draw[flow,<->] (local.south) to[bend right=22] node[below,font=\small] {物理Index-bit SWAP / FusedSWAP} (global.south);
+    \end{tikzpicture}
+  \end{center}
+  \vspace{-2mm}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{2種類のSWAPを区別する}
+      \begin{itemize}
+        \item \textbf{論理SWAP}：入力回路の作用。後続wire対応の更新で表せる場合がある。
+        \item \textbf{物理再配置}：論理状態を保ち、振幅配列とLayoutを一緒に変更する。
+      \end{itemize}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{先読み窓の総費用で選択する}
+      \[
+        T_{\rm move}+T_{\rm after}(W)+T_{\rm align}
+        < T_{\rm direct}(W)
+      \]
+      \small $W$：同じ先読み窓。移動＋窓内全ゲート＋整合の費用を、現Layoutでの窓全体と比較。必要な復元費用も加える。\par
+      \smallnote{FusedSWAPは複数の配置変更をまとめる候補。効果は転送量と実時間で測る。}
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{MPI削減量だけでなくSSD/HDDの増分I/Oも含めて}、局所化の損益を判断する。}
+  \note{出典：開発仕様8章。物理配列はphi_phys=P_L Psi_logical、配置変更後はphi'_phys=P_L' P_L^dagger phi_physとなる。Lだけ変えると論理状態を保つ物理再配置にはならない。境界を跨ぐFrameはまずmaterializeするのが安全なMVP。対角ゲートなどglobal bitでも振幅通信を必要としない例がある。判断にはリスク余裕と必要なら復元費用も加える。}
+\end{frame}
+
+\begin{frame}{5. 遅延LogとClifford Frame：必要時にまとめて具体化}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{保存振幅と論理状態を分ける}
+      \[
+        \ket{\psi_h}=e^{\ii\theta_h}C_h\ket{\phi_h}
+      \]
+      \smallnote{整合した論理cutでの表現。$\phi_h$：保存振幅、$C_h$：Block内Clifford、$\theta_h$：相対位相。}
+      \begin{itemize}
+        \item Per-Block Log：局所演算の履歴。
+        \item Global DAG：Block間依存と、一意なJoint Taskを保持。
+        \item Frame Group：共通Frameを共有し、メタデータ増大を抑える。
+      \end{itemize}
+      \smallnote{frontier＝論理的にどこまで演算を適用したか。保存振幅のbase版とは別に管理する。}
+    \end{column}
+    \begin{column}{.49\textwidth}
+      \centering
+      \begin{tikzpicture}
+        \node[panel,text width=2.2cm] (a) at (-1.6,0) {$B_A$：base版\\$C_A,\theta_A$, Log};
+        \node[panel,text width=2.2cm] (b) at (1.6,0) {$B_B$：base版\\$C_B,\theta_B$, Log};
+        \node[task,text width=5.7cm] (align) at (0,-1.6) {入力frontierと版を確定\\Frame・相対位相を整合};
+        \node[panel,text width=5.7cm] (joint) at (0,-3.1) {共同Kernelを一度だけ実行\\両出力の版・Frameを確定};
+        \draw[flow] (a)--(align);
+        \draw[flow] (b)--(align);
+        \draw[flow] (align)--(joint);
+        \node[labeltext] at (0,-3.95) {例：上位bitの$H$はBlock振幅を混合する};
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+  \takeaway{遅延実行で走査をまとめる。\textbf{全振幅の具体化コストや状態の情報量は消えない。}}
+  \note{出典：開発仕様2章、6〜7章、9章。Per-Block Frameを全体系の単一Clifford tableauと同一視しない。任意角回転をClifford Frameに入れない。非Cliffordは共役後のPauli回転ログなどとして保持できる。異なるFrame間HではC_A^dagger C_Bと相対位相を作用させて整合する費用が必要。演算前の入力を保ち両出力を計算する。非同期の全体状態はBlock版＋Log＋Frame＋未実行DAGで定義される。}
+\end{frame}
+
+\begin{frame}{6. Native-first：ゲートの意味と構造から実行方法を選ぶ}
+  \begin{center}
+    \begin{tikzpicture}
+      \node[panel,minimum width=12.8cm] (ir) at (0,0) {Semantic Gate IR：任意$U$ / 対角 / 置換 / MCX / Pauli回転 / 記号パラメータ};
+      \node[panel,text width=3.5cm] (native) at (-4.45,-1.5) {Block-local\\Native / 小規模Fusion};
+      \node[task,text width=3.5cm] (joint) at (0,-1.5) {非局所\\Joint Kernel / SWAP局所化};
+      \node[storage,text width=3.5cm] (fallback) at (4.45,-1.5) {Fallback分解\\基底・精度を明示して比較};
+      \foreach \x in {native,joint,fallback} \draw[flow] (ir.south -| \x.north)--(\x.north);
+    \end{tikzpicture}
+  \end{center}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{専用Kernelを優先候補にする}
+      \begin{itemize}
+        \item 1Q/2Q小密行列、対角・置換。
+        \item MCX：X / CNOT / CCX / CCCX以上を条件付き振幅置換として統一。
+        \item 任意$U$を検証して受付。実行幅・行列容量の上限は実測で決める。
+      \end{itemize}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{パラメータ変更で計画を再利用}
+      \[
+        R_z(\alpha)R_z(\beta)=R_z(\alpha+\beta)
+      \]
+      \small 記号式を融合 $\to$ 値をbind $\to$ 値依存候補をguard付きで特殊化。\par
+      \medskip
+      \smallnote{prefix状態の再利用は、依存パラメータ・入力状態・frontier・Frame・Layoutが一致する場合のみ。}
+    \end{column}
+  \end{columns}
+  \takeaway{Native・Fusion・Joint・SWAP・分解を、\textbf{精度とデータ移動を含む総費用}で比較する。}
+  \note{出典：開発仕様3章。MCXの制御数2以上は一般にCliffordではなくtableauに吸収しない。Frameを無視して保存phiにMCXを適用しない。Open controlもLayoutと論理基底に従って解釈する。高次の密行列は指数サイズのため無制限Native実行を保証しない。Clifford+TまたはClifford+T+Rzはfallback・比較基底。Bindingは不変で版付きにし、共有prefixはread-only/COWで保つ。}
+\end{frame}
+
+\begin{frame}{7. 3段階の最適化：計測→計画→実行時適応}
+  \begin{center}
+    \begin{tikzpicture}
+      \node[panel,text width=3.6cm,minimum height=1.85cm] (s1) at (-4.45,0) {\textbf{Stage 1：環境解析}\\RAM / SSD / MPIを実測\\混合負荷と競合を計測\\\scriptsize\texttt{hardware-profile.json}};
+      \node[panel,text width=3.6cm,minimum height=1.85cm] (s2) at (0,0) {\textbf{Stage 2：静的最適化}\\回路DAGと局所性を解析\\複数の合法な候補を保持\\\scriptsize\texttt{plan-template.json}};
+      \node[task,text width=3.6cm,minimum height=1.85cm] (s3) at (4.45,0) {\textbf{Stage 3：動的最適化}\\実効性能を監視・再推定\\安全な境界で計画変更\\\scriptsize\texttt{runtime-trace.jsonl}};
+      \draw[flow] (s1)--(s2);
+      \draw[flow] (s2)--(s3);
+      \draw[backflow] (s3.south) -- ++(0,-.5) -| node[pos=.25,below,font=\small] {実測を次回のプロファイル・計画へ反映} (s1.south);
+    \end{tikzpicture}
+  \end{center}
+  \vspace{3mm}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{Performance Guard：劣化を検知}
+      \begin{itemize}
+        \item 同じI/Oサイズ・キュー深度・通信形・並行負荷の想定値と比較。
+        \item 移動平均・継続時間・ヒステリシスで一時的な揺らぎを除く。
+      \end{itemize}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{効果と切替費用を比較して変更}
+      \begin{itemize}
+        \item 先読み深さ・並列度・取得元はTask境界で調整。
+        \item Layout等は版・DAG・Frameが整合する\textbf{safe frontier}で確定。
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \takeaway{残りの実行時間の短縮が、\textbf{監視・再計画・移行の追加費用}を上回るときに切り替える。}
+  \note{出典：開発仕様4章。LIVE_TUNE以外はprepare→reserve→drain affected tasks→migrate/materialize→validate→commit version。元回路の作用、Task一意性、DAG順序、入力版、近似誤差予算を維持する。対象rank合意とManifest更新も必要。毎ゲート全rank barrierは不要。実行中rank数変更やNIC物理能力変更は初期対象外。observe/recommend/autoを予定する。}
+\end{frame}
+
+\begin{frame}{8. 期待値・BackpropagationもBlock単位で実行する}
+  \setlength{\abovedisplayskip}{4pt}
+  \setlength{\belowdisplayskip}{4pt}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{Pauli期待値：部分和＋MPI集約}
+      \[
+        E=\bra{\Psi}O\ket{\Psi},\quad O=\sum_\ell c_\ell P_\ell
+      \]
+      \begin{tikzpicture}
+        \node[panel,text width=1.65cm] (a) at (0,0) {Block $h$};
+        \node[panel,text width=1.9cm] (b) at (3.4,0) {Partner\\$h\oplus x_{\rm high}$};
+        \draw[flow,<->] (a)--(b);
+        \node[task,text width=5.3cm] (inner) at (1.7,-1.2) {BlockPauliInner：局所／ペア内積};
+        \node[panel,text width=5.3cm] (reduce) at (1.7,-2.25) {rank内部分和 $\to$ MPI Allreduce};
+        \draw[flow] (a)--(inner);
+        \draw[flow] (b)--(inner);
+        \draw[flow] (inner)--(reduce);
+      \end{tikzpicture}
+      \smallnote{$x_{\rm high}$：PauliのX/Yが反転する上位bitのmask。全状態を1ノードにGatherせず計算する。}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \small
+      \textbf{Adjoint：2状態を逆方向に伝播}
+      \[
+        \psi_j=U_j\psi_{j-1},\qquad \lambda_m=O\psi_m
+        ,\quad O=O^\dagger
+      \]
+      \smallnote{$O$は$\theta_j$に非依存。$\lambda_{j-1}=U_j^\dagger\lambda_j$。Forwardも$U_j^\dagger$で逆再生。}
+      \[
+        \frac{\partial E}{\partial\theta_j}
+        =2\operatorname{Re}\bra{\lambda_j}
+        \frac{\partial U_j}{\partial\theta_j}\ket{\psi_{j-1}}
+      \]
+      \small
+      \begin{itemize}
+        \setlength{\itemsep}{2pt}
+        \item 非局所の逆ゲートは両状態で通信が必要。
+        \item 基本容量は$2S(n)$。40 qubitで\textbf{32 TiB}＋作業領域。
+        \item 逆再生・Checkpoint/再計算・Parameter-shiftをI/O込みで比較。
+      \end{itemize}
+      \smallnote{対象は途中測定のないユニタリー回路。内積のfrontier・Frame・Layoutを整合させる。}
+    \end{column}
+  \end{columns}
+  \takeaway{Pauli作用・Partner取得・内積を共通化し、\textbf{VQEの反復と勾配評価全体}を最適化する。}
+  \note{出典：開発仕様3.12〜3.15節。U_j=exp(-i theta_j P_j/2)では勾配はIm〈lambda_j|P_j|psi_j〉。共有パラメータは式DAGのchain ruleで加算する。異なるFrameではC_h^dagger O C_h'が単一Pauliとは限らず、整合またはmaterializeを比較する。一般パラメータUに二点shift ruleを無条件に使わない。O psi生成にも作業I/Oが要る。}
+\end{frame}
+
+\begin{frame}{9. Resource Estimator：実行前に容量と時間を見積もる}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{Hardware Profile＋回路＋Plan候補}
+      \begin{itemize}
+        \item RAMピーク、ストレージ、ノード数。
+        \item SSD/HDD read/write、MPI送受信量。
+        \item 全状態走査換算、Checkpoint容量。
+        \item 予想時間、ボトルネック、残時間。
+      \end{itemize}
+      \begin{block}{転送費用の基本モデル}
+        \small $T_{\rm fetch}\approx L+B/\beta_{\rm eff}$\par
+        $L$：遅延、$B$：バイト数、$\beta_{\rm eff}$：実効帯域。
+      \end{block}
+      \smallnote{並行処理の重なりと競合は混合負荷計測・DAGで評価する。全Taskの費用の単純和にはしない。}
+    \end{column}
+    \begin{column}{.49\textwidth}
+      \textbf{取得候補の比較例（説明用の仮定値）}\par
+      \small 同じ256 MiB Blockの正しい版が取得可能、遅延を省略、処理の重なりなしと仮定。\par
+      \medskip
+      \begin{tabularx}{\linewidth}{@{}Xrr@{}}
+        \toprule 経路 & 仮定 & 費用 \\
+        \midrule
+        Local SSD & 2 GiB/s & 125 ms \\
+        Remote RAM & 8 GiB/s & 31 ms \\
+        Log再生 & 40 ms & 40 ms \\
+        \bottomrule
+      \end{tabularx}
+      \medskip
+      \small Log再生は\textbf{同じbaseがRAMにある}場合。base取得・ログ転送が必要ならその費用も加算。\par
+      \medskip
+      \alert{MPIが1 GiB/sへ低下すると250 ms}\par
+      \small 同じBlockでも、実効性能の変化で選ぶ経路が変わる。
+    \end{column}
+  \end{columns}
+  \takeaway{見積りに\textbf{前提と誤差}を添え、実行traceで校正する。例の数値は性能測定結果ではない。}
+  \note{出典：開発仕様13〜14章。表の帯域と再生時間は設計の考え方を説明するための仮定値。1 GiB=1024 MiBとして256 MiB/2 GiB/s=125 ms、/8=31.25 ms。実際にはNIC共有・packing・同期・RAM予約と実効帯域条件を評価する。dry-runでPlanの合法性、容量不足、必要NIC/ディスク帯域も提示する。}
+\end{frame}
+
+\begin{frame}{10. 開発ロードマップ：意味の正しさから実機評価へ}
+  \smallnote{設計要素は初期から型・不変条件に含め、実行Backendと最適化を段階的に拡張する。}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}p{.06\textwidth}p{.25\textwidth}X@{}}
+    \toprule 段階 & 主な実装 & 次へ進むための確認 \\
+    \midrule
+    1 & NumPy参照・意味モデル & 8〜12 qubitでDAG / Log / Frame / Layout、任意$U$・MCX・bindの数値一致。\\
+    2 & 単一ノードRAM＋SSD & Block I/O、遅延具体化、Frame・相対位相、Checkpoint復旧を検証。\\
+    3 & MPI＋SSD & Joint / SWAP / 取得経路の版整合。1 / 2 / 4 rankで照合。\\
+    4 & 期待値・勾配・反復 & 参照期待値・有限差分勾配と照合。prefix再利用と追加I/Oを検証。\\
+    5 & Guard・Estimator & 帯域低下注入で再計画を検証。32〜36 qubit実測から40 qubit級の容量・時間を推定。\\
+    \bottomrule
+  \end{tabularx}
+  \medskip
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{比較対象を揃える}\par
+      通常のBlock batching / deferred-no-frame / Frame共有 / SWAPなし・あり / 固定Plan・適応Plan。
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{記録する指標}\par
+      数値誤差、総時間、I/O・MPIバイト、Cacheヒット、移行・再計画費、再開性、推定誤差。
+    \end{column}
+  \end{columns}
+  \takeaway{最初の成果物：\textbf{不変条件のADR＋小規模参照一致＋版付きtrace}。その上で改善量を測る。}
+  \smallnote{根拠資料：\texttt{ref/}内の開発仕様・スライド構成案。各フレームのTeX内noteに参照節を記載。}
+  \note{出典：開発仕様15〜18章、21章。これは説明用の5段階整理で、詳細仕様のPhase 0〜5と完全に同じ区分ではない。Estimatorのtrace収集、Observable/Gradient型、Guard前提は初期から組み込む。40/50 qubit相当のBlock数で状態なしメタデータ負荷も試験する。50 qubit級はHPC構成のdry-run対象。追加機能の価値は同一ハードウェア・同一精度でbaselineに対して評価する。}
+\end{frame}
+
+\end{document}
