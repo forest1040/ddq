@@ -356,7 +356,103 @@
   \note{出典：開発仕様2章、6〜7章、9章。Per-Block Frameを全体系の単一Clifford tableauと同一視しない。任意角回転をClifford Frameに入れない。非Cliffordは共役後のPauli回転ログなどとして保持できる。異なるFrame間HではC_A^dagger C_Bと相対位相を作用させて整合する費用が必要。演算前の入力を保ち両出力を計算する。非同期の全体状態はBlock版＋Log＋Frame＋未実行DAGで定義される。}
 \end{frame}
 
-\begin{frame}{9. 遅延Logから振幅へ反映するタイミング}
+\begin{frame}{9. Pauli Frameで保持できる作用と、Hの扱い}
+  \setlength{\abovedisplayskip}{4pt}
+  \setlength{\belowdisplayskip}{4pt}
+  \smallnote{Block内Pauli Frame：$\ket{\psi_h}=e^{\ii\theta_h}P_h\ket{\phi_h}$、$P_h=X^{\mathbf{x}_h}Z^{\mathbf{z}_h}$。積の位相・符号は$\theta_h$へ保持。}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{局所X/Z：振幅を読まずFrameへ吸収}
+      \begin{center}
+        \begin{tikzpicture}
+          \node[storage,text width=5.3cm,font=\footnotesize] at (1.5,.75) {保存Block $\phi_h$：変更しない};
+          \node[panel,text width=1.9cm] (old) at (0,-.55) {Frame $P_h$\\位相$\theta_h$};
+          \node[panel,text width=1.9cm] (new) at (3.1,-.55) {Frame $P'_h$\\位相$\theta'_h$};
+          \draw[flow] (old)--node[above,font=\scriptsize] {$Q$}(new);
+        \end{tikzpicture}
+      \end{center}
+      \small $Q P_h=e^{\ii\delta_h}P'_h$、$\theta'_h=\theta_h+\delta_h$。\par
+      例：$P_h=I$へ$X$を適用 $\Rightarrow P'_h=X$。\par
+      \smallnote{Pauli積は再びPauli。Block間の相対位相を捨てない。}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{Hそのもの：Pauli Frameへの吸収は不可}
+      \begin{center}
+        \begin{tikzpicture}
+          \node[storage,text width=1.8cm] (zero) at (0,0) {$\phi=\ket{0}$\\$P=I$};
+          \node[task,text width=2.6cm] (plus) at (3.4,0) {$H\ket{0}=\ket{+}$\\2振幅の重ね合わせ};
+          \draw[flow] (zero)--node[above,font=\small] {$H$}(plus);
+        \end{tikzpicture}
+      \end{center}
+      \small 位相を除くと$I,Z$は$\ket{0}$、$X,Y$は$\ket{1}$。\par
+      \textbf{保存$\ket{0}$を固定したまま、Pauli＋位相だけで$\ket{+}$は表せない。}\par
+      \smallnote{HはCliffordなので、Block内Clifford Frameなら保持できる。}
+    \end{column}
+  \end{columns}
+  \medskip
+  \textbf{既存のPauli FrameはH越しに伝播できる：$HX=ZH$}\par
+  \begin{center}
+    \begin{tikzpicture}
+      \node[panel,text width=3.6cm,font=\footnotesize] (input) at (0,0) {論理状態$X\ket{\phi}$\\保存状態$\phi$、Frame $P=X$};
+      \node[task,text width=3.6cm,font=\footnotesize] (apply) at (4.5,0) {$H$を適用：$HX\ket{\phi}=ZH\ket{\phi}$\\Frameは$X\to Z$へ更新};
+      \node[storage,text width=3.6cm,font=\footnotesize] (output) at (9.0,0) {残る$H$は$\phi$へ作用させる\\またはClifford Frameへ保持};
+      \draw[flow] (input)--(apply);
+      \draw[flow] (apply)--(output);
+    \end{tikzpicture}
+  \end{center}
+  \vspace{-1mm}
+  \takeaway{\textbf{Pauliの伝播と、Hそのものの遅延は別}。$HXH=Z$、$HZH=X$、$HYH=-Y$の符号も保持する。}
+  \note{Pauli Frameの定義と共役の参照：\href{https://pennylane.ai/compilation/pauli-frame-tracking/details}{PennyLane: Pauli Frame Tracking}。開発仕様2.2、7章のBlock内Clifford Frameの特殊ケースとしてPauli Frameを説明する。X^x、Z^zはBlock内b qubitのtensor Pauli。canonical orderはX^x Z^zで、左から論理Qを適用するとQ P_hを合成する。積のiや符号はtheta_hに保持し、Block間の相対位相を失わない。H P=(H P H^dagger) HなのでPauliを共役伝播できるが、保存phiを固定しHまでPauliに置き換える意味ではない。Pauli Frameは任意Cliffordを格納するtableauとは異なる。局所HはC_h←H C_hへ吸収できる。これらは単純なゲート順の例で、保留Logを跨ぐ書換えはDAG順序・共役変換の整合が前提。}
+\end{frame}
+
+\begin{frame}{10. 同じHでも：Block内はFrame、Block間は共同演算}
+  \setlength{\abovedisplayskip}{4pt}
+  \setlength{\belowdisplayskip}{4pt}
+  \smallnote{2 qubit、基底$\ket{q_1q_0}$、$b=1$。$q_0$はBlock内、$q_1$はBlock番号のbit。以下は整合した論理cutでの表現。}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{$H(q_0)$：Block内Clifford Frameで追跡}
+      \begin{center}
+        \begin{tikzpicture}
+          \node[panel,text width=2.1cm,font=\footnotesize] (a) at (0,0) {Aの保存振幅$\phi_A$\\Frame $C_A$};
+          \node[panel,text width=2.1cm,font=\footnotesize] (aout) at (3.1,0) {$\phi_A$は据置き\\$C'_A=HC_A$};
+          \node[panel,text width=2.1cm,font=\footnotesize] (b) at (0,-1.2) {Bの保存振幅$\phi_B$\\Frame $C_B$};
+          \node[panel,text width=2.1cm,font=\footnotesize] (bout) at (3.1,-1.2) {$\phi_B$は据置き\\$C'_B=HC_B$};
+          \draw[flow] (a)--node[above,font=\scriptsize] {$H$}(aout);
+          \draw[flow] (b)--node[above,font=\scriptsize] {$H$}(bout);
+          \node[labeltext] at (1.55,-2.0) {A/B間の振幅混合はない};
+        \end{tikzpicture}
+      \end{center}
+      \small 局所Hは$C_h$の更新で遅延できる。\par
+      \textbf{Pauli FrameからClifford Frameへ表現を広げる。}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{$H(q_1)$：Per-Block Frameだけでは不可}
+      \begin{center}
+        \begin{tikzpicture}
+          \node[panel,text width=2.1cm,font=\footnotesize] (a) at (-1.5,0) {Aの論理振幅$\psi_A$\\$e^{\ii\theta_A}C_A\phi_A$};
+          \node[panel,text width=2.1cm,font=\footnotesize] (b) at (1.5,0) {Bの論理振幅$\psi_B$\\$e^{\ii\theta_B}C_B\phi_B$};
+          \node[task,text width=5.3cm,font=\footnotesize,inner sep=4pt] (mix) at (0,-1.4) {Joint Task：要求時に版・Frame・位相を整合\\$\psi'_A=(\psi_A+\psi_B)/\sqrt{2}$\\$\psi'_B=(\psi_A-\psi_B)/\sqrt{2}$};
+          \draw[flow] (a)--(mix);
+          \draw[flow] (b)--(mix);
+          \node[labeltext] at (0,-2.35) {両入力を保持し、両出力版を一度だけ公開};
+        \end{tikzpicture}
+      \end{center}
+      \small Global DAGへ登録して遅延。必要時にBlockペアを取得し、和と差を共同計算する。\par
+    \end{column}
+  \end{columns}
+  \begin{center}
+    \begin{tikzpicture}
+      \node[panel,text width=3.5cm,font=\footnotesize] at (0,0) {上位$Z$：Bの位相$+\pi$\\振幅混合なし};
+      \node[panel,text width=3.5cm,font=\footnotesize] at (4.5,0) {上位$X$：論理参照A/Bを交換\\版・Frame等も一緒に対応};
+      \node[task,text width=3.5cm,font=\footnotesize] at (9.0,0) {上位$H$：A/Bの和と差\\位相・置換だけでは表せない};
+    \end{tikzpicture}
+  \end{center}
+  \takeaway{\textbf{局所HはClifford Frameへ、上位HはJoint DAGへ}。振幅の和と差が必要な時点で具体化する。}
+  \note{出典：開発仕様2.1〜2.4、9.2。Per-Block Frameの作用空間はBlock内b bitに限定する。Hは全体系としてCliffordだが上位Hによる任意Block振幅の混合を独立C_A/C_B、相対位相、Block置換だけで表せない。参照交換や符号変更は振幅の重ね合わせを作らないため。保存phiで計算する一案はtilde_phi_B=exp(i(theta_B-theta_A)) C_A^dagger C_B phi_Bを作り、phi'_A=(phi_A+tilde_phi_B)/sqrt2、phi'_B=(phi_A-tilde_phi_B)/sqrt2とする。共通出力FrameはC_A、基準位相はtheta_A。alignmentとmixed kernelの演算・I/O費用は必要。両Frameをidentityに具体化する候補等も比較する。上位Xの仮想Block参照置換はpayload版・Frame・相対位相・Log参照を一貫させ、物理Layout変更と区別する。Blockは独立量子部分系ではなく、個別規格化しない。}
+\end{frame}
+
+\begin{frame}{11. 遅延Logから振幅へ反映するタイミング}
   \smallnote{登録時はLog・Frame・DAGを更新。下図は、後続TaskがBlock A/Bのfrontier $F_3$の振幅を必要とする例。}
   \begin{center}
     \begin{tikzpicture}
@@ -405,7 +501,7 @@
   \note{出典：開発仕様6.3、9.1〜9.3、3.12.2。DAGはゲート行列や振幅を保存する場所ではなく、Taskの一意性・依存・入力/出力版を定義する。図は振幅が必要な処理のためA/BをF3へ進める具体化例。全Blockを毎回同じfrontierまで進める必要はない。Joint実行前に必要な全working setを予約し、正しい入力版を取得する。適用済みop_idとfrontierを更新して二重適用を防ぐ。Cliffordは必要に応じFrame更新で追跡を継続でき、全Frameを常にidentityへ解消する必要はない。観測のFrame-aware候補、片側整合、双方materializeを比較する。Checkpointは未具体化Logも保存可能で、次のスライドに記載。}
 \end{frame}
 
-\begin{frame}{10. RAMの更新結果を、いつSSDへ書き戻すか}
+\begin{frame}{12. RAMの更新結果を、いつSSDへ書き戻すか}
   \smallnote{振幅をRAMで更新するmaterialization、後続Taskへの版の公開、SSDへの永続化を別の段階として扱う。}
   \begin{center}
     \begin{tikzpicture}
@@ -447,7 +543,7 @@
   \note{出典：開発仕様9.1、10.2、12.1〜12.3。RAM出力版のTask-level atomic publishは後続処理から見える論理更新であり、耐久commitとは異なる。退避はdirty/pin/Replica/将来参照/再演算費用を評価する。I/O・MPI中のbufferは再利用・破棄しない。唯一の正しいbaseや未保護状態を失わない。Checkpointの未具体化表現にはBlock置換、FrameGroup、相対位相、未実行DAGも含める。全rankの一貫cut、op_idと反映済みfrontierで欠落・二重適用を防ぐ。O_DIRECTだけでは耐久性を保証しない。COWの旧版・Logはcommit後でもsnapshot等の参照がなくなるまで保持。ログ耐久性と振幅耐久性のポリシーは分ける。}
 \end{frame}
 
-\begin{frame}{11. Native-first：ゲートの意味と構造から実行方法を選ぶ}
+\begin{frame}{13. Native-first：ゲートの意味と構造から実行方法を選ぶ}
   \begin{center}
     \begin{tikzpicture}
       \node[panel,minimum width=12.8cm] (ir) at (0,0) {Semantic Gate IR：任意$U$ / 対角 / 置換 / MCX / Pauli回転 / 記号パラメータ};
@@ -480,7 +576,7 @@
   \note{出典：開発仕様3章。MCXの制御数2以上は一般にCliffordではなくtableauに吸収しない。Frameを無視して保存phiにMCXを適用しない。Open controlもLayoutと論理基底に従って解釈する。高次の密行列は指数サイズのため無制限Native実行を保証しない。Clifford+TまたはClifford+T+Rzはfallback・比較基底。Bindingは不変で版付きにし、共有prefixはread-only/COWで保つ。}
 \end{frame}
 
-\begin{frame}{12. 3段階の最適化：計測→計画→実行時適応}
+\begin{frame}{14. 3段階の最適化：計測→計画→実行時適応}
   \begin{center}
     \begin{tikzpicture}
       \node[panel,text width=3.6cm,minimum height=1.85cm] (s1) at (-4.45,0) {\textbf{Stage 1：環境解析}\\RAM / SSD / MPIを実測\\混合負荷と競合を計測\\\scriptsize\texttt{hardware-profile.json}};
@@ -512,7 +608,7 @@
   \note{出典：開発仕様4章。LIVE_TUNE以外はprepare→reserve→drain affected tasks→migrate/materialize→validate→commit version。元回路の作用、Task一意性、DAG順序、入力版、近似誤差予算を維持する。対象rank合意とManifest更新も必要。毎ゲート全rank barrierは不要。実行中rank数変更やNIC物理能力変更は初期対象外。observe/recommend/autoを予定する。}
 \end{frame}
 
-\begin{frame}{13. 期待値・BackpropagationもBlock単位で実行する}
+\begin{frame}{15. 期待値・BackpropagationもBlock単位で実行する}
   \setlength{\abovedisplayskip}{4pt}
   \setlength{\belowdisplayskip}{4pt}
   \begin{columns}[T,onlytextwidth]
@@ -560,7 +656,7 @@
   \note{出典：開発仕様3.12〜3.15節。U_j=exp(-i theta_j P_j/2)では勾配はIm〈lambda_j|P_j|psi_j〉。共有パラメータは式DAGのchain ruleで加算する。異なるFrameではC_h^dagger O C_h'が単一Pauliとは限らず、整合またはmaterializeを比較する。一般パラメータUに二点shift ruleを無条件に使わない。O psi生成にも作業I/Oが要る。}
 \end{frame}
 
-\begin{frame}{14. Resource Estimator：実行前に容量と時間を見積もる}
+\begin{frame}{16. Resource Estimator：実行前に容量と時間を見積もる}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{.48\textwidth}
       \textbf{Hardware Profile＋回路＋Plan候補}
@@ -599,7 +695,7 @@
   \note{出典：開発仕様13〜14章。表の帯域と再生時間は設計の考え方を説明するための仮定値。1 GiB=1024 MiBとして256 MiB/2 GiB/s=125 ms、/8=31.25 ms。実際にはNIC共有・packing・同期・RAM予約と実効帯域条件を評価する。dry-runでPlanの合法性、容量不足、必要NIC/ディスク帯域も提示する。}
 \end{frame}
 
-\begin{frame}{15. 開発ロードマップ：意味の正しさから実機評価へ}
+\begin{frame}{17. 開発ロードマップ：意味の正しさから実機評価へ}
   \smallnote{設計要素は初期から型・不変条件に含め、実行Backendと最適化を段階的に拡張する。}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}p{.06\textwidth}p{.25\textwidth}X@{}}
