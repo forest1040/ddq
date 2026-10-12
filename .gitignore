@@ -1,1 +1,2 @@
-/build/
+/build/*
+!/build/distributed_quantum_circuit_simulator_slides.pdf
