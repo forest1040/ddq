@@ -1,7 +1,7 @@
 # Phase 3 設計書：MPI＋ストレージ階層
 
 - 作成日：2026-10-13
-- 状態：実装予定。本書の新規 module・API・性能値は未実装。
+- 状態：同期 MPI runtime 実装済み。[実装・検証](phase3_implementation.md)と[実測比較](phase3_benchmark.md)を参照。本書は当初の設計を保存し、API／format の実装差分と性能改善の残項目は実装資料に記載する。
 - 対応仕様：[開発計画 Phase 3](../plan/distributed_quantum_circuit_simulator_development.md#phase-3mpiストレージ階層)、同計画 §3.4・§3.12〜3.14・§16。
 - 前提：[Phase 2 実装・検証](phase2_implementation.md)、[Phase 2 比較実験](phase2_benchmark.md)。
 - 開発時の参照：[Mac Studio 単体 MPI 資料](../ref/mac_studio_mpi_quantum_simulator.md)。資料の独自 Phase 番号とファイル配置例は、本計画の Phase 番号・集約 segment 方針へ読み替える。

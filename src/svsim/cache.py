@@ -62,6 +62,10 @@ class BufferLease:
             self.budget.release(self.cost)
             self.closed = True
 
+    def __enter__(self): return self
+    def __exit__(self,*args):
+        if not self.cached: self.close()
+
 
 @dataclass
 class CacheEntry:

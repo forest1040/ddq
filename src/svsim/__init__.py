@@ -20,3 +20,5 @@ from .pauli_rotation import SignedPauli, apply_pauli_rotation, apply_pauli_pair
 from .permutation import PermutationEdge
 from .frame_planner import FramePlanDecision
 from .frame_benchmark import FrameCalibration, calibrate_frames
+from .distributed import DistributedConfig, DistributedSimulator
+from .distributed_plan import MPIProfile

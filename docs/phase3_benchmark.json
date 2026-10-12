@@ -1,0 +1,391 @@
+{
+  "measured_at": "2026-10-13",
+  "trials_per_case": 1,
+  "cases": [
+    {
+      "case": "bench1",
+      "report": {
+        "schema_version": 1,
+        "scope": "same-host",
+        "num_qubits": 16,
+        "block_bits": 8,
+        "ranks": 1,
+        "state_bytes": 1048576,
+        "budget_bytes_per_rank": 262144,
+        "backend": "buffered",
+        "amplitude_store": "file",
+        "exchange": "packed",
+        "full_state_gather": false,
+        "expectation": 0.9323273456060321,
+        "gradient": null,
+        "execute_seconds_max": 7.055178957991302,
+        "expectation_seconds_max": 0.12860937498044223,
+        "gradient_seconds_max": null,
+        "checkpoint_seconds_max": 0.003906457917764783,
+        "restart_expectation_seconds_max": 0.14411841705441475,
+        "end_to_end_seconds_max": 7.375380542012863,
+        "rank_metrics": [
+          {
+            "rank": 0,
+            "managed_peak_bytes": 262144,
+            "send_payload_bytes": 0,
+            "recv_payload_bytes": 0,
+            "metadata_bytes": 652376,
+            "storage_read_bytes": 9437184,
+            "storage_write_bytes": 9437184,
+            "segment_bytes": 9437184
+          }
+        ],
+        "environment": [
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          }
+        ],
+        "network_profile": null
+      }
+    },
+    {
+      "case": "bench2",
+      "report": {
+        "schema_version": 1,
+        "scope": "same-host",
+        "num_qubits": 16,
+        "block_bits": 8,
+        "ranks": 2,
+        "state_bytes": 1048576,
+        "budget_bytes_per_rank": 262144,
+        "backend": "buffered",
+        "amplitude_store": "file",
+        "exchange": "packed",
+        "full_state_gather": false,
+        "expectation": 0.9323273456060321,
+        "gradient": null,
+        "execute_seconds_max": 7.230041833012365,
+        "expectation_seconds_max": 0.14034166606143117,
+        "gradient_seconds_max": null,
+        "checkpoint_seconds_max": 0.005861083045601845,
+        "restart_expectation_seconds_max": 0.15341570798773319,
+        "end_to_end_seconds_max": 7.58157533290796,
+        "rank_metrics": [
+          {
+            "rank": 0,
+            "managed_peak_bytes": 262144,
+            "send_payload_bytes": 655360,
+            "recv_payload_bytes": 655360,
+            "metadata_bytes": 1063065,
+            "storage_read_bytes": 4718592,
+            "storage_write_bytes": 4718592,
+            "segment_bytes": 4718592
+          },
+          {
+            "rank": 1,
+            "managed_peak_bytes": 262144,
+            "send_payload_bytes": 655360,
+            "recv_payload_bytes": 655360,
+            "metadata_bytes": 1063065,
+            "storage_read_bytes": 4718592,
+            "storage_write_bytes": 4718592,
+            "segment_bytes": 4718592
+          }
+        ],
+        "environment": [
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          },
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          }
+        ],
+        "network_profile": null
+      }
+    },
+    {
+      "case": "bench4",
+      "report": {
+        "schema_version": 1,
+        "scope": "same-host",
+        "num_qubits": 16,
+        "block_bits": 8,
+        "ranks": 4,
+        "state_bytes": 1048576,
+        "budget_bytes_per_rank": 262144,
+        "backend": "buffered",
+        "amplitude_store": "file",
+        "exchange": "packed",
+        "full_state_gather": false,
+        "expectation": 0.9323273456060321,
+        "gradient": null,
+        "execute_seconds_max": 11.192612083046697,
+        "expectation_seconds_max": 0.26455595798324794,
+        "gradient_seconds_max": null,
+        "checkpoint_seconds_max": 0.017964666010811925,
+        "restart_expectation_seconds_max": 0.2150464579463005,
+        "end_to_end_seconds_max": 11.764377125073224,
+        "rank_metrics": [
+          {
+            "rank": 0,
+            "managed_peak_bytes": 262144,
+            "send_payload_bytes": 589824,
+            "recv_payload_bytes": 589824,
+            "metadata_bytes": 1311467,
+            "storage_read_bytes": 2359296,
+            "storage_write_bytes": 2359296,
+            "segment_bytes": 2359296
+          },
+          {
+            "rank": 1,
+            "managed_peak_bytes": 262144,
+            "send_payload_bytes": 589824,
+            "recv_payload_bytes": 589824,
+            "metadata_bytes": 1311467,
+            "storage_read_bytes": 2359296,
+            "storage_write_bytes": 2359296,
+            "segment_bytes": 2359296
+          },
+          {
+            "rank": 2,
+            "managed_peak_bytes": 262144,
+            "send_payload_bytes": 589824,
+            "recv_payload_bytes": 589824,
+            "metadata_bytes": 1311467,
+            "storage_read_bytes": 2359296,
+            "storage_write_bytes": 2359296,
+            "segment_bytes": 2359296
+          },
+          {
+            "rank": 3,
+            "managed_peak_bytes": 262144,
+            "send_payload_bytes": 589824,
+            "recv_payload_bytes": 589824,
+            "metadata_bytes": 1311467,
+            "storage_read_bytes": 2359296,
+            "storage_write_bytes": 2359296,
+            "segment_bytes": 2359296
+          }
+        ],
+        "environment": [
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          },
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          },
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          },
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          }
+        ],
+        "network_profile": null
+      }
+    },
+    {
+      "case": "bench4full",
+      "report": {
+        "schema_version": 1,
+        "scope": "same-host",
+        "num_qubits": 16,
+        "block_bits": 8,
+        "ranks": 4,
+        "state_bytes": 1048576,
+        "budget_bytes_per_rank": 262144,
+        "backend": "buffered",
+        "amplitude_store": "file",
+        "exchange": "full",
+        "full_state_gather": false,
+        "expectation": 0.9323273456060321,
+        "gradient": null,
+        "execute_seconds_max": 11.293958249967545,
+        "expectation_seconds_max": 0.29616495897062123,
+        "gradient_seconds_max": null,
+        "checkpoint_seconds_max": 0.01334275002591312,
+        "restart_expectation_seconds_max": 0.16478991601616144,
+        "end_to_end_seconds_max": 11.86337287502829,
+        "rank_metrics": [
+          {
+            "rank": 0,
+            "managed_peak_bytes": 262144,
+            "send_payload_bytes": 786432,
+            "recv_payload_bytes": 786432,
+            "metadata_bytes": 1397765,
+            "storage_read_bytes": 2359296,
+            "storage_write_bytes": 2359296,
+            "segment_bytes": 2359296
+          },
+          {
+            "rank": 1,
+            "managed_peak_bytes": 262144,
+            "send_payload_bytes": 786432,
+            "recv_payload_bytes": 786432,
+            "metadata_bytes": 1397765,
+            "storage_read_bytes": 2359296,
+            "storage_write_bytes": 2359296,
+            "segment_bytes": 2359296
+          },
+          {
+            "rank": 2,
+            "managed_peak_bytes": 262144,
+            "send_payload_bytes": 786432,
+            "recv_payload_bytes": 786432,
+            "metadata_bytes": 1397765,
+            "storage_read_bytes": 2359296,
+            "storage_write_bytes": 2359296,
+            "segment_bytes": 2359296
+          },
+          {
+            "rank": 3,
+            "managed_peak_bytes": 262144,
+            "send_payload_bytes": 786432,
+            "recv_payload_bytes": 786432,
+            "metadata_bytes": 1397765,
+            "storage_read_bytes": 2359296,
+            "storage_write_bytes": 2359296,
+            "segment_bytes": 2359296
+          }
+        ],
+        "environment": [
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          },
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          },
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          },
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          }
+        ],
+        "network_profile": null
+      }
+    },
+    {
+      "case": "demo",
+      "report": {
+        "schema_version": 1,
+        "scope": "same-host",
+        "num_qubits": 8,
+        "block_bits": 2,
+        "ranks": 1,
+        "state_bytes": 4096,
+        "budget_bytes_per_rank": 524288,
+        "backend": "direct",
+        "amplitude_store": "file",
+        "exchange": "auto",
+        "full_state_gather": false,
+        "expectation": 0.9323273456060333,
+        "gradient": -0.36161543196496143,
+        "execute_seconds_max": 0.9408584999619052,
+        "expectation_seconds_max": 0.030975125031545758,
+        "gradient_seconds_max": 2.1090972499223426,
+        "checkpoint_seconds_max": 0.008476958028040826,
+        "restart_expectation_seconds_max": 0.039969083038158715,
+        "end_to_end_seconds_max": 3.170336415991187,
+        "rank_metrics": [
+          {
+            "rank": 0,
+            "managed_peak_bytes": 524288,
+            "send_payload_bytes": 0,
+            "recv_payload_bytes": 0,
+            "metadata_bytes": 350349,
+            "storage_read_bytes": 6291456,
+            "storage_write_bytes": 5767168,
+            "segment_bytes": 5767168
+          }
+        ],
+        "environment": [
+          {
+            "python": "3.12.13",
+            "numpy": "2.5.4",
+            "mpi4py": "4.1.2",
+            "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+            "host": "ank.local",
+            "thread_level": 3,
+            "byteorder": "little",
+            "complex128_size": 16
+          }
+        ],
+        "network_profile": null
+      }
+    }
+  ]
+}

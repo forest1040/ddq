@@ -60,9 +60,19 @@ uv run python examples/phase2_benchmark.py --num-qubits 16 --output /tmp/svsim-p
 
 `frame_policy='keep'` で対応する局所回転を Frame の内側へ遅延できます。`auto` は校正がない局所回転を具体化し、校正済みの `FrameCalibration` を渡すと費用推定で選択します。[比較実験](docs/phase2_benchmark.md)は状態 1 MiB／managed RAM 256 KiB の例を含みます。
 
-## Phase 3 設計
+## Phase 3：MPI とストレージ階層
 
-[Phase 3 設計書](docs/phase3_design.md)に、MPI と rank-owned ストレージ、MCX partial exchange、分散 checkpoint/prefix、S0/S1 の物理 SWAP、分散期待値・Adjoint、性能観測と検証計画を記載しています。Mac Studio 上の Open MPI＋mpi4py＋uv を開発環境とし、Phase 3 の API は実装予定です。
+[Phase 3 設計書](docs/phase3_design.md)、[実装・検証](docs/phase3_implementation.md)、[実測比較](docs/phase3_benchmark.md)に、rank ごとの RAM／SSD、MCX packed exchange、分散 checkpoint／prefix、S0/S1 physical SWAP、全状態を集めない期待値・随伴勾配、MPI 性能観測を記載しています。1/2/4 rank の実 MPI と macOS F_NOCACHE 経路を検証しました。
+
+```sh
+brew install open-mpi
+uv sync --locked --extra mpi
+uv run --locked --extra mpi pytest -q
+mpiexec -n 4 .venv/bin/python -m mpi4py examples/phase3.py \
+  --directory /tmp/svsim-phase3 --gradient --backend direct
+```
+
+MPI は optional dependency です。全 rank が同じ collective API 順序で実行し、ParameterSymbol には安定した parameter_id を指定します。
 
 ## スライドのビルド
 
