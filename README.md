@@ -1,4 +1,4 @@
-# 分散量子回路シミュレータ：開発者向けスライド
+# 分散量子回路シミュレータ
 
 `docs/slides/distributed_quantum_circuit_simulator_slides.tex` は、`plan/distributed_quantum_circuit_simulator_development.md` の開発仕様に沿った、日本語・16:9・18枚のBeamer資料です。共通テンプレート `docs/preamble.tex` を読み込みます。発表者向けの補足と出典節は各フレームの `\note{...}` に記載しています（通常のPDFには表示しません）。
 
@@ -9,8 +9,8 @@ docs/preamble.tex  共通TeXテンプレート
 docs/slides/    スライドのTeXソースと生成PDF・補助ファイル
 plan/           開発仕様
 ref/            参考資料・参照実装
-src/            Python実装用（現在は空の雛形）
-tests/          テスト用（現在は空の雛形）
+src/svsim/      Phase 0 の Python 実装
+tests/          数値一致・ライフサイクル・OS別 I/O テスト
 pyproject.toml  Pythonプロジェクト設定
 uv.lock         uvのロックファイル
 ```
@@ -24,9 +24,21 @@ uv sync
 uv run python --version
 ```
 
-仮想環境は`.venv/`に作成されます。現在、追加のPython依存パッケージはありません。
+仮想環境は`.venv/`に作成されます。NumPy と pytest をロックファイルから導入します。
 
-## ビルド
+## Phase 0 実装
+
+意味保存 Gate IR、共有 Block ログ、局所 Clifford Frame、Joint materialization、任意 U(2)/U(4)、symbolic parameter binding、期待値・随伴勾配の RAM 参照実装です。Linux の `O_DIRECT` と macOS の `F_NOCACHE` を共通の同期ストレージ API から使えます。
+
+```sh
+uv sync
+uv run pytest
+uv run python examples/phase0.py
+```
+
+[Phase 0 設計書](docs/phase0_design.md) に API・不変条件・検証範囲を記載しています。[I/O 資料](ref/direct_io_linux_macos.md) に OS ごとの相違点があります。ストレージ API の Block 自動退避への接続、MPI、非同期実行は次段階の範囲です。
+
+## スライドのビルド
 
 リポジトリ直下で実行します。LuaLaTeX、LuaTeX-ja、原ノ味フォント、Beamer、およびテンプレートで使用するパッケージ（quantikz等）が必要です。
 
