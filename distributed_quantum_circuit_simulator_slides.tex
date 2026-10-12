@@ -120,7 +120,140 @@
   \note{出典：開発仕様2章、6章、9章。振幅の混合を伴わない上位対角ゲート等は位相メタデータで処理できることがある。全ての上位ゲートがJoint振幅交換になるわけではない。各Blockを個別に正規化してはならない。}
 \end{frame}
 
-\begin{frame}{3. MPI＋RAM＋SSD/HDDを同じ配置モデルで扱う}
+% ref/03-2.tex の fig:kron-local-gates をBlock境界付きで再構成。
+\begin{frame}{3. 全体行列の形が、読み出す振幅ペアを決める}
+  \setlength{\abovedisplayskip}{4pt}
+  \setlength{\belowdisplayskip}{4pt}
+  \smallnote{2 qubit、基底$\ket{q_1q_0}$、$b=1$（2振幅/Block）。$v$はFrame・相対位相を反映した論理振幅。}
+  \[
+    v=(v_0,v_1\mid v_2,v_3)^{\mathsf T},\qquad
+    B_0=(v_0,v_1)^{\mathsf T},\quad B_1=(v_2,v_3)^{\mathsf T}
+  \]
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \centering
+      \textbf{$q_0$への$U$：$I\otimes U$}
+      \[
+        \begin{array}{c|cc|cc}
+          &00&01&10&11\\\hline
+          00&\color{accent}u_{00}&\color{accent}u_{01}&0&0\\
+          01&\color{accent}u_{10}&\color{accent}u_{11}&0&0\\\hline
+          10&0&0&\color{accent}u_{00}&\color{accent}u_{01}\\
+          11&0&0&\color{accent}u_{10}&\color{accent}u_{11}
+        \end{array}
+      \]
+      \begin{tikzpicture}
+        \node[panel,text width=5.5cm] {同じBlock内のペア\\$(v_0,v_1)$、$(v_2,v_3)$};
+      \end{tikzpicture}\par
+      \small $B'_0=UB_0,\quad B'_1=UB_1$\par
+      \smallnote{各BlockをRAMへ読み、Block内で更新できる。}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \centering
+      \textbf{$q_1$への$U$：$U\otimes I$}
+      \[
+        \begin{array}{c|cc|cc}
+          &00&01&10&11\\\hline
+          00&u_{00}&0&\color{warm}u_{01}&0\\
+          01&0&u_{00}&0&\color{warm}u_{01}\\\hline
+          10&\color{warm}u_{10}&0&u_{11}&0\\
+          11&0&\color{warm}u_{10}&0&u_{11}
+        \end{array}
+      \]
+      \begin{tikzpicture}
+        \node[task,text width=5.5cm] {Blockを跨ぐ同じoffsetのペア\\$(v_0,v_2)$、$(v_1,v_3)$};
+      \end{tikzpicture}\par
+      \small $B'_0=u_{00}B_0+u_{01}B_1$\par
+      \small $B'_1=u_{10}B_0+u_{11}B_1$\par
+    \end{column}
+  \end{columns}
+  \takeaway{同じ$2\times2$ゲートでも、\textbf{作用するbitの位置で必要なBlockが変わる}。全体行列は生成しない。}
+  \note{出典：ref/03-2.tex、クロネッカー積による全体の行列表現のfig:kron-local-gatesとfig:kron-matrix-blocksを再構成。表の行列区切りは保存Block B0/B1に対応する。右側はU⊗I=[u00 I,u01 I;u10 I,u11 I]で、一般の非対角UはBlock間の振幅混合を要する。対角Uではoff-diagonalが0なので例外となる。vはFrame・相対位相を含む論理振幅であり、保存phiにそのままUを掛ける意味ではない。}
+\end{frame}
+
+% ref/10.tex の fig:stride_access にb=2の保存Block境界を重ねる。
+\begin{frame}{4. ストライドアクセス：どこでBlock境界を越えるか}
+  \smallnote{3 qubit、$q_0$が最下位bit。1 Block＝4振幅（$b=2$）。線は$U$で同時更新するペア。}
+  \begin{center}
+    \begin{tikzpicture}[
+      accesscell/.style={draw=muted,minimum width=1.05cm,minimum height=.43cm,inner sep=1pt,font=\small},
+      pairline/.style={draw=accent,thick},
+      blockoutline/.style={draw=muted,dashed,rounded corners=2pt,inner sep=3pt},
+    ]
+      \foreach \t/\y/\stride in {0/0/1,1/-1.55/2,2/-3.10/4} {
+        \node[anchor=west,align=left,font=\small] at (0,\y) {$t=\t$\\stride $=\stride$};
+        \foreach \i in {0,...,7} {
+          \pgfmathtruncatemacro{\targetbit}{mod(floor(\i/\stride),2)}
+          \ifnum\targetbit=0
+            \node[accesscell,fill=pale] (c\t-\i) at (2.6+1.15*\i,\y) {$v_{\i}$};
+          \else
+            \node[accesscell,fill=accent!22] (c\t-\i) at (2.6+1.15*\i,\y) {$v_{\i}$};
+          \fi
+        }
+        \node[blockoutline,fit=(c\t-0)(c\t-3),label={[font=\scriptsize,text=muted]above:$B_0$：index 0--3}] {};
+        \node[blockoutline,fit=(c\t-4)(c\t-7),label={[font=\scriptsize,text=muted]above:$B_1$：index 4--7}] {};
+      }
+      \foreach \i/\j in {0/1,2/3,4/5,6/7}
+        \draw[pairline] (c0-\i.south) to[out=-60,in=-120] (c0-\j.south);
+      \foreach \i/\j in {0/2,1/3,4/6,5/7}
+        \draw[pairline] (c1-\i.south) to[out=-35,in=-145] (c1-\j.south);
+      \foreach \i/\j in {0/4,1/5,2/6,3/7}
+        \draw[pairline,draw=warm] (c2-\i.south) to[out=-22,in=-158] (c2-\j.south);
+      \node[anchor=west,font=\scriptsize,text=accent] at (0,-.65) {Block内};
+      \node[anchor=west,font=\scriptsize,text=accent] at (0,-2.20) {Block内};
+      \node[anchor=west,font=\scriptsize,text=warm] at (0,-3.75) {Block間};
+    \end{tikzpicture}
+  \end{center}
+  \small $i$のbit $t$が0なら、$j=i+2^t$。
+  $\begin{pmatrix}v'_i\\v'_j\end{pmatrix}
+   =U\begin{pmatrix}v_i\\v_j\end{pmatrix}$：両入力を保持してから両出力を書く。
+  \takeaway{\textbf{$t<b$なら同じBlock、$t\ge b$なら別Blockの同じoffset}をアクセスする。}
+  \note{出典：ref/10.tex、Step 1: ペア単位のストライドアクセスのfig:stride_accessを拡張し、t=2と保存Block境界を追加。薄色はtarget bit 0、濃色はtarget bit 1。t=0のペアは(0,1),(2,3),(4,5),(6,7)。t=1は(0,2),(1,3),(4,6),(5,7)。t=2は(0,4),(1,5),(2,6),(3,7)。元コードのblock_startは2*strideごとのループ範囲であり、本設計の保存Blockとは別の概念。Uは一般の振幅混合1Qゲートを想定し、対角等の特殊構造は後で専用処理する。}
+\end{frame}
+
+\begin{frame}{5. Blockペアの取得：Rank内I/OとMPIを区別する}
+  \setlength{\abovedisplayskip}{4pt}
+  \setlength{\belowdisplayskip}{4pt}
+  \smallnote{連続Block配置の例：4 qubit、$b=2$、2 rank。bit $t$は現在の物理Layoutで解決した位置。}
+  \[
+    i=h\,2^b+\ell,\quad 0\le\ell<2^b,
+    \qquad t\ge b:\quad h'=h\mathbin{\mathrm{XOR}}2^{t-b}
+  \]
+  \begin{center}
+    \begin{tikzpicture}
+      \node[storage,text width=5.1cm,minimum height=2.3cm] (r0) at (0,0) {};
+      \node[storage,text width=5.1cm,minimum height=2.3cm] (r1) at (7.0,0) {};
+      \node[font=\small\bfseries] at (0,.83) {Rank 0：RAM Cache / SSD};
+      \node[font=\small\bfseries] at (7.0,.83) {Rank 1：RAM Cache / SSD};
+      \node[panel,text width=1.85cm] (b0) at (-1.25,0) {$B_0$: $v_0$--$v_3$};
+      \node[panel,text width=1.85cm] (b1) at (1.25,0) {$B_1$: $v_4$--$v_7$};
+      \node[panel,text width=1.85cm] (b2) at (5.75,0) {$B_2$: $v_8$--$v_{11}$};
+      \node[panel,text width=1.85cm] (b3) at (8.25,0) {$B_3$: $v_{12}$--$v_{15}$};
+      \draw[flow,<->] (b0.south) to[bend right=30] node[below,font=\scriptsize] {$t=2$: $(B_0,B_1)$} (b1.south);
+      \draw[flow,<->] (b2.south) to[bend right=30] node[below,font=\scriptsize] {$t=2$: $(B_2,B_3)$} (b3.south);
+      \draw[flow,<->,draw=warm] (r0.south) -- ++(0,-.6) -| node[pos=.25,below,font=\small] {$t=3$: $(B_0,B_2)$、$(B_1,B_3)$をMPIで取得} (r1.south);
+    \end{tikzpicture}
+  \end{center}
+  \vspace{-1mm}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \small\textbf{同じoffsetを共同更新}\par
+      $(B_h[\ell],B_{h'}[\ell])$へ$U$を適用。\par
+      Rank内でもCache missならSSD読出し。\par
+      対角$U$ならBlock間の振幅混合は不要。
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \small\textbf{Joint Taskの実行手順}\par
+      入力版確認 $\to$ RAM予約 $\to$ 2 Block取得。\par
+      Frame・相対位相整合 $\to$ 更新 $\to$ 出力版確定。\par
+      次の局所ゲートもRAM滞在中に処理する。
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{Block境界を越えることとRank境界を越えることは別}。取得先はLayout・所有者から解決する。}
+  \note{出典：ref/03-2.tex、ref/10.texの振幅ペアと開発仕様8.2節、9.2節、10章。一般nではUの全体作用はI_(2^(n-t-1))⊗U⊗I_(2^t)。t<bならh不変でoffsetをell XOR 2^tで組み、t>=bならell不変でBlock番号をh XOR 2^(t-b)で組む。各ペアのtarget bitが0の側をUの第0成分として扱い、一度ずつ実行する。図はidentity Layoutの4qubitを上位1bitで2rankに分けた例。任意Layout/ownershipではrank IDを単純にXORせず所有者表を参照する。保存振幅と論理振幅の基底、相対位相を揃える。2Block＋出力・I/O・通信buffer全体をRAM予算へ計上。全working setが収まらない場合は合法なstreaming計画を用いる。}
+\end{frame}
+
+\begin{frame}{6. MPI＋RAM＋SSD/HDDを同じ配置モデルで扱う}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{.56\textwidth}
       \centering
@@ -157,7 +290,7 @@
   \note{出典：開発仕様5章、10〜12章。LocalとRemoteのレプリカも版付きで管理する。RAM予算は入力・出力・通信・I/Oのworking set全体を含む。ログ転送は正しいbaseと前提frontierが受信側にある場合に限る。}
 \end{frame}
 
-\begin{frame}{4. Qubit Layout：再配置の費用を後続ゲートで回収する}
+\begin{frame}{7. Qubit Layout：再配置の費用を後続ゲートで回収する}
   \smallnote{例：40 qubit、4 MPI rank（$g=2$）、Block内$b=24$。領域は現在の物理配置で決まる。}
   \begin{center}
     \begin{tikzpicture}
@@ -190,7 +323,7 @@
   \note{出典：開発仕様8章。物理配列はphi_phys=P_L Psi_logical、配置変更後はphi'_phys=P_L' P_L^dagger phi_physとなる。Lだけ変えると論理状態を保つ物理再配置にはならない。境界を跨ぐFrameはまずmaterializeするのが安全なMVP。対角ゲートなどglobal bitでも振幅通信を必要としない例がある。判断にはリスク余裕と必要なら復元費用も加える。}
 \end{frame}
 
-\begin{frame}{5. 遅延LogとClifford Frame：必要時にまとめて具体化}
+\begin{frame}{8. 遅延LogとClifford Frame：必要時にまとめて具体化}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{.48\textwidth}
       \textbf{保存振幅と論理状態を分ける}
@@ -223,7 +356,7 @@
   \note{出典：開発仕様2章、6〜7章、9章。Per-Block Frameを全体系の単一Clifford tableauと同一視しない。任意角回転をClifford Frameに入れない。非Cliffordは共役後のPauli回転ログなどとして保持できる。異なるFrame間HではC_A^dagger C_Bと相対位相を作用させて整合する費用が必要。演算前の入力を保ち両出力を計算する。非同期の全体状態はBlock版＋Log＋Frame＋未実行DAGで定義される。}
 \end{frame}
 
-\begin{frame}{6. Native-first：ゲートの意味と構造から実行方法を選ぶ}
+\begin{frame}{9. Native-first：ゲートの意味と構造から実行方法を選ぶ}
   \begin{center}
     \begin{tikzpicture}
       \node[panel,minimum width=12.8cm] (ir) at (0,0) {Semantic Gate IR：任意$U$ / 対角 / 置換 / MCX / Pauli回転 / 記号パラメータ};
@@ -256,7 +389,7 @@
   \note{出典：開発仕様3章。MCXの制御数2以上は一般にCliffordではなくtableauに吸収しない。Frameを無視して保存phiにMCXを適用しない。Open controlもLayoutと論理基底に従って解釈する。高次の密行列は指数サイズのため無制限Native実行を保証しない。Clifford+TまたはClifford+T+Rzはfallback・比較基底。Bindingは不変で版付きにし、共有prefixはread-only/COWで保つ。}
 \end{frame}
 
-\begin{frame}{7. 3段階の最適化：計測→計画→実行時適応}
+\begin{frame}{10. 3段階の最適化：計測→計画→実行時適応}
   \begin{center}
     \begin{tikzpicture}
       \node[panel,text width=3.6cm,minimum height=1.85cm] (s1) at (-4.45,0) {\textbf{Stage 1：環境解析}\\RAM / SSD / MPIを実測\\混合負荷と競合を計測\\\scriptsize\texttt{hardware-profile.json}};
@@ -288,7 +421,7 @@
   \note{出典：開発仕様4章。LIVE_TUNE以外はprepare→reserve→drain affected tasks→migrate/materialize→validate→commit version。元回路の作用、Task一意性、DAG順序、入力版、近似誤差予算を維持する。対象rank合意とManifest更新も必要。毎ゲート全rank barrierは不要。実行中rank数変更やNIC物理能力変更は初期対象外。observe/recommend/autoを予定する。}
 \end{frame}
 
-\begin{frame}{8. 期待値・BackpropagationもBlock単位で実行する}
+\begin{frame}{11. 期待値・BackpropagationもBlock単位で実行する}
   \setlength{\abovedisplayskip}{4pt}
   \setlength{\belowdisplayskip}{4pt}
   \begin{columns}[T,onlytextwidth]
@@ -336,7 +469,7 @@
   \note{出典：開発仕様3.12〜3.15節。U_j=exp(-i theta_j P_j/2)では勾配はIm〈lambda_j|P_j|psi_j〉。共有パラメータは式DAGのchain ruleで加算する。異なるFrameではC_h^dagger O C_h'が単一Pauliとは限らず、整合またはmaterializeを比較する。一般パラメータUに二点shift ruleを無条件に使わない。O psi生成にも作業I/Oが要る。}
 \end{frame}
 
-\begin{frame}{9. Resource Estimator：実行前に容量と時間を見積もる}
+\begin{frame}{12. Resource Estimator：実行前に容量と時間を見積もる}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{.48\textwidth}
       \textbf{Hardware Profile＋回路＋Plan候補}
@@ -375,7 +508,7 @@
   \note{出典：開発仕様13〜14章。表の帯域と再生時間は設計の考え方を説明するための仮定値。1 GiB=1024 MiBとして256 MiB/2 GiB/s=125 ms、/8=31.25 ms。実際にはNIC共有・packing・同期・RAM予約と実効帯域条件を評価する。dry-runでPlanの合法性、容量不足、必要NIC/ディスク帯域も提示する。}
 \end{frame}
 
-\begin{frame}{10. 開発ロードマップ：意味の正しさから実機評価へ}
+\begin{frame}{13. 開発ロードマップ：意味の正しさから実機評価へ}
   \smallnote{設計要素は初期から型・不変条件に含め、実行Backendと最適化を段階的に拡張する。}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}p{.06\textwidth}p{.25\textwidth}X@{}}
