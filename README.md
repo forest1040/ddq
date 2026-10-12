@@ -38,6 +38,10 @@ uv run python examples/phase0.py
 
 [Phase 0 設計書](docs/phase0_design.md) に API・不変条件・検証範囲を記載しています。[I/O 資料](ref/direct_io_linux_macos.md) に OS ごとの相違点があります。ストレージ API の Block 自動退避への接続、MPI、非同期実行は次段階の範囲です。
 
+## Phase 1 設計
+
+[Phase 1 設計書](docs/phase1_design.md) に、RAM＋SSD/HDD の Block Store と Cache、COW snapshot、物理レイアウト交換、streaming 期待値計算、I/O 性能監視の実装方針と完了条件を記載しています。Phase 1 の新規 API は実装予定です。
+
 ## スライドのビルド
 
 リポジトリ直下で実行します。LuaLaTeX、LuaTeX-ja、原ノ味フォント、Beamer、およびテンプレートで使用するパッケージ（quantikz等）が必要です。
