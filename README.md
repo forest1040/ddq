@@ -74,6 +74,10 @@ mpiexec -n 4 .venv/bin/python -m mpi4py examples/phase3.py \
 
 MPI は optional dependency です。全 rank が同じ collective API 順序で実行し、ParameterSymbol には安定した parameter_id を指定します。
 
+## Phase 4 設計
+
+[Phase 4 設計書](docs/phase4_design.md)に、macOS/Linux の非同期 I/O、nonblocking MPI と progress、予算付き prefetch／Parameter batch、Runtime Guard／ETA、LIVE_TUNE と safe frontier 再計画、S2／FusedSWAP、I/O-aware Gradient Scheduler の設計と検証条件を記載しています。Phase 4 の新規 API は未実装です。
+
 ## スライドのビルド
 
 リポジトリ直下で実行します。LuaLaTeX、LuaTeX-ja、原ノ味フォント、Beamer、およびテンプレートで使用するパッケージ（quantikz等）が必要です。

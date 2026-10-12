@@ -2102,6 +2102,7 @@ critical bottleneck / uncertainty
 
 ### Phase 4：非同期・階層スケジューラ
 
+- **実装設計**：[Phase 4 設計書](../docs/phase4_design.md) に、非同期 request/buffer 寿命、epoch cut、Parameter batch、Runtime Guard、safe replan、S2/FusedSWAP、Gradient Scheduler と検証順序を具体化する。
 - `io_uring`、nonblocking MPI、prefetch、background materialization。**Parameter batchスケジューラのbinding別メモリ割当とprefix checkpointのread/write競合を考慮**する。
 - Stage 3のAdaptive Schedulerと**Runtime Performance Guard**を完成させる。profileに対応する実効帯域・遅延のローリング比較、持続性判定、ヒステリシス、alert、ETA再予測、`RuntimeProfile`の版付き更新を実装する。
 - **性能低下を確認したとき、まずLIVE_TUNEを試し、改善が確実に見込める場合だけsafe frontierでFRONTIER_REPLANをcommit**する。切替費用、`plan_version`、失敗時fallbackを記録する。
