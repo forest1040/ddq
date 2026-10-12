@@ -9,7 +9,7 @@ docs/preamble.tex  共通TeXテンプレート
 docs/slides/    スライドのTeXソースと生成PDF・補助ファイル
 plan/           開発仕様
 ref/            参考資料・参照実装
-src/svsim/      Phase 0 の Python 実装
+src/svsim/      Phase 0 の参照計算と Phase 1 の外部記憶実装
 tests/          数値一致・ライフサイクル・OS別 I/O テスト
 pyproject.toml  Pythonプロジェクト設定
 uv.lock         uvのロックファイル
@@ -36,11 +36,18 @@ uv run pytest
 uv run python examples/phase0.py
 ```
 
-[Phase 0 設計書](docs/phase0_design.md) に API・不変条件・検証範囲を記載しています。[I/O 資料](ref/direct_io_linux_macos.md) に OS ごとの相違点があります。ストレージ API の Block 自動退避への接続、MPI、非同期実行は次段階の範囲です。
+[Phase 0 設計書](docs/phase0_design.md) に API・不変条件・検証範囲を記載しています。[I/O 資料](ref/direct_io_linux_macos.md) に OS ごとの相違点があります。外部記憶との接続は以下の Phase 1 実装で提供します。MPI と非同期実行は後続 Phase の範囲です。
 
-## Phase 1 設計
+## Phase 1 実装
 
-[Phase 1 設計書](docs/phase1_design.md) に、RAM＋SSD/HDD の Block Store と Cache、COW snapshot、物理レイアウト交換、streaming 期待値計算、I/O 性能監視の実装方針と完了条件を記載しています。Phase 1 の新規 API は実装予定です。
+RAM＋SSD/HDD の `StoredSimulator`、RAM 予算付き Block Cache、COW snapshot、物理レイアウト交換、全状態を集めない期待値計算、I/O 性能監視を追加しました。[Phase 1 設計書](docs/phase1_design.md)、[実装と検証](docs/phase1_implementation.md)、[実測比較](docs/phase1_benchmark.md) を参照してください。
+
+```sh
+uv run python examples/phase1.py --storage /tmp/svsim-phase1-demo --backend direct
+uv run python examples/phase1_benchmark.py --output /tmp/svsim-phase1-report.json
+```
+
+保存先は新しいディレクトリを指定します。`direct` は Linux の `O_DIRECT`／macOS の `F_NOCACHE` を選びます。managed RAM 上限と process RSS の違いは実装資料に記載しています。
 
 ## スライドのビルド
 

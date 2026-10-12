@@ -94,6 +94,43 @@ class StorageFile:
         self._check_open()
         os.fsync(self.fd)
 
+    def read_into(self, offset: int, buffer) -> int:
+        """Read into a caller-owned buffer; direct I/O requires aligned storage."""
+        return self._transfer_buffer(offset, buffer, writing=False)
+
+    def write_from(self, offset: int, buffer) -> int:
+        """Write a caller-owned buffer without allocating a bounce buffer."""
+        return self._transfer_buffer(offset, buffer, writing=True)
+
+    def _transfer_buffer(self, offset, buffer, *, writing):
+        self._check_open()
+        view = memoryview(buffer).cast('B')
+        try:
+            self._validate_range(offset, len(view))
+            if not writing and view.readonly:
+                raise TypeError('Read destination must be writable')
+            if self._direct:
+                self._validate_direct_range(offset, len(view))
+                if view.readonly or _buffer_address(view) % self.alignment:
+                    raise ValueError('Direct I/O buffer address must be aligned and writable')
+            done = 0
+            while done < len(view):
+                part = view[done:]
+                try:
+                    count = (os.pwritev if writing else os.preadv)(self.fd, [part], offset + done)
+                finally:
+                    part.release()
+                if count == 0:
+                    if writing: raise OSError('Zero-length write')
+                    break
+                done += count
+                if self._direct and done < len(view) and done % self.alignment:
+                    if writing: raise OSError('Partial direct write breaks alignment')
+                    break
+            return done
+        finally:
+            view.release()
+
     def close(self) -> None:
         if not self._closed:
             self._closed = True

@@ -1,7 +1,7 @@
 # Phase 1 設計書：単一ノード RAM＋SSD/HDD
 
 - 作成日：2026-10-12
-- 状態：実装予定。ここに記載する新規 API、性能値、コマンドは実装済みを意味しない。
+- 状態：Phase 1 の初期実装を追加済み。本書は設計仕様で、実装した API・具体化した選択・制約・検証は [実装と検証](phase1_implementation.md) を参照する。
 - 対応仕様：[開発計画 §18 Phase 1](../plan/distributed_quantum_circuit_simulator_development.md#phase-1単一ノードramssdhdd)
 - 前提：[Phase 0 設計書](phase0_design.md)、[Linux/macOS I/O 資料](../ref/direct_io_linux_macos.md)
 - 開発環境：Python 3.12 以上、uv、NumPy、pytest。新規依存は原則追加しない。
@@ -299,7 +299,7 @@ MockTransport は deterministic な bytes/仮想経過時間で持続的低下�
 
 ## 13. 公開 API 案と互換性
 
-以下は実装時の入口案。Phase 0 `DeferredSimulator` は維持し、既存テストの互換性を確認する。
+以下の入口を実装した。Phase 0 `DeferredSimulator` は維持し、既存テストの互換性を確認する。
 
 ```python
 from svsim import (
@@ -330,7 +330,7 @@ with StoredSimulator(num_qubits=24, storage=config) as sim:
 
 ## 14. 検証・ベンチマーク
 
-Python の実行は引き続き `uv sync`、`uv run pytest` を使用する。設計書作成時点では下記の新規テストと benchmark は未実装。
+Python の実行は引き続き `uv sync`、`uv run pytest` を使用する。下記の新規テストと benchmark の実施状況は [実装と検証](phase1_implementation.md) を参照する。
 
 | 分類 | 検証内容と合格条件 |
 |---|---|
