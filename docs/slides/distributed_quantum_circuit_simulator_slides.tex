@@ -1,8 +1,8 @@
 % !TeX program = lualatex
-% Build: latexmk -lualatex -outdir=build distributed_quantum_circuit_simulator_slides.tex
+% Build (from repository root): latexmk -lualatex -outdir=docs/slides docs/slides/distributed_quantum_circuit_simulator_slides.tex
 \documentclass[aspectratio=169,10pt,hyperref={unicode,hidelinks}]{beamer}
 \usepackage[haranoaji,deluxe]{luatexja-preset}
-\input{ref/preamble.tex}
+\input{docs/preamble.tex}
 \usepackage{booktabs}
 \renewcommand{\kanjifamilydefault}{\gtdefault}
 
@@ -763,7 +763,7 @@
     \end{column}
   \end{columns}
   \takeaway{最初の成果物：\textbf{不変条件のADR＋小規模参照一致＋版付きtrace}。その上で改善量を測る。}
-  \smallnote{根拠資料：\texttt{ref/}内の開発仕様・スライド構成案。各フレームのTeX内noteに参照節を記載。}
+  \smallnote{根拠資料：\texttt{plan/}内の開発仕様。各フレームのTeX内noteに参照節を記載。}
   \note{出典：開発仕様15〜18章、21章。これは説明用の5段階整理で、詳細仕様のPhase 0〜5と完全に同じ区分ではない。Estimatorのtrace収集、Observable/Gradient型、Guard前提は初期から組み込む。40/50 qubit相当のBlock数で状態なしメタデータ負荷も試験する。50 qubit級はHPC構成のdry-run対象。追加機能の価値は同一ハードウェア・同一精度でbaselineに対して評価する。}
 \end{frame}
 

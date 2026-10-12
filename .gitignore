@@ -1,2 +1,33 @@
-/build/*
-!/build/distributed_quantum_circuit_simulator_slides.pdf
+.DS_Store
+
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# TeX build temporary files
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.synctex.gz
+*.synctex(busy)
+*.fls
+*.fdb_latexmk
+*.xdv
+*.dvi
+*.bcf
+*.bbl
+*.blg
+*.run.xml
+*.lof
+*.lot
+*.vrb
+*.idx
+*.ind
+*.ilg
+*.lol

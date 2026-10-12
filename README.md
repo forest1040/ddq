@@ -1,16 +1,40 @@
 # 分散量子回路シミュレータ：開発者向けスライド
 
-`distributed_quantum_circuit_simulator_slides.tex` は、`ref/` の開発仕様とスライド構成案に沿った、日本語・16:9・18枚のBeamer資料です。共通テンプレート `ref/preamble.tex` を読み込みます。発表者向けの補足と出典節は各フレームの `\note{...}` に記載しています（通常のPDFには表示しません）。
+`docs/slides/distributed_quantum_circuit_simulator_slides.tex` は、`plan/distributed_quantum_circuit_simulator_development.md` の開発仕様に沿った、日本語・16:9・18枚のBeamer資料です。共通テンプレート `docs/preamble.tex` を読み込みます。発表者向けの補足と出典節は各フレームの `\note{...}` に記載しています（通常のPDFには表示しません）。
+
+## ディレクトリ構成
+
+```text
+docs/preamble.tex  共通TeXテンプレート
+docs/slides/    スライドのTeXソースと生成PDF・補助ファイル
+plan/           開発仕様
+ref/            参考資料・参照実装
+src/            Python実装用（現在は空の雛形）
+tests/          テスト用（現在は空の雛形）
+pyproject.toml  Pythonプロジェクト設定
+uv.lock         uvのロックファイル
+```
+
+## Python環境
+
+Python 3.12とuvを使用します。リポジトリ直下で実行します。
+
+```sh
+uv sync
+uv run python --version
+```
+
+仮想環境は`.venv/`に作成されます。現在、追加のPython依存パッケージはありません。
 
 ## ビルド
 
 リポジトリ直下で実行します。LuaLaTeX、LuaTeX-ja、原ノ味フォント、Beamer、およびテンプレートで使用するパッケージ（quantikz等）が必要です。
 
 ```sh
-latexmk -lualatex -interaction=nonstopmode -halt-on-error -outdir=build distributed_quantum_circuit_simulator_slides.tex
+latexmk -lualatex -interaction=nonstopmode -halt-on-error -outdir=docs/slides docs/slides/distributed_quantum_circuit_simulator_slides.tex
 ```
 
-出力：`build/distributed_quantum_circuit_simulator_slides.pdf`
+出力：`docs/slides/distributed_quantum_circuit_simulator_slides.pdf`。補助ファイルも`docs/slides/`に生成し、Gitでは無視します。
 
 スライド17の帯域・再生時間は仕組みを説明するための仮定値です。性能の実測値ではありません。
 

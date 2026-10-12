@@ -1,0 +1,7 @@
+[project]
+name = "ddq"
+version = "0.1.0"
+description = "Distributed quantum circuit simulator"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
