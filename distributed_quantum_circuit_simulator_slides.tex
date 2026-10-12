@@ -501,7 +501,50 @@
   \note{出典：開発仕様6.3、9.1〜9.3、3.12.2。DAGはゲート行列や振幅を保存する場所ではなく、Taskの一意性・依存・入力/出力版を定義する。図は振幅が必要な処理のためA/BをF3へ進める具体化例。全Blockを毎回同じfrontierまで進める必要はない。Joint実行前に必要な全working setを予約し、正しい入力版を取得する。適用済みop_idとfrontierを更新して二重適用を防ぐ。Cliffordは必要に応じFrame更新で追跡を継続でき、全Frameを常にidentityへ解消する必要はない。観測のFrame-aware候補、片側整合、双方materializeを比較する。Checkpointは未具体化Logも保存可能で、次のスライドに記載。}
 \end{frame}
 
-\begin{frame}{12. RAMの更新結果を、いつSSDへ書き戻すか}
+\begin{frame}{12. $F_3$はどの操作の後の状態か}
+  \smallnote{$F_3$はゲート名ではなく、Log・Joint Taskのどこまでを反映したかを示す論理frontier。}
+  \begin{center}
+    \begin{tikzpicture}
+      \node[panel,text width=2.7cm] (l1) at (0,0) {$L_1$：Block内\\$R_z(q_0)$};
+      \node[task,text width=2.8cm] (j2) at (3.5,0) {$J_2$：Block間\\$H(q_1)$};
+      \node[panel,text width=2.7cm] (l3) at (7.0,0) {$L_3$：Block内\\$R_x(q_0)$};
+      \node[storage,text width=2.4cm] (f3) at (10.5,0) {$F_3$\\この後の論理状態};
+      \draw[flow] (l1)--(j2);
+      \draw[flow] (j2)--(l3);
+      \draw[flow] (l3)--(f3);
+    \end{tikzpicture}
+  \end{center}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{$F_3$を要求する操作の例}
+      \footnotesize
+      \begin{itemize}
+        \setlength{\itemsep}{3pt}
+        \item 次のゲート：例えば次の$H(q_1)$に必要な入力振幅。
+        \item 振幅出力：この回路prefix後の振幅を読み出す。
+        \item 観測・測定：この時点の状態から値・結果を求める。
+      \end{itemize}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{要求に応じて必要な範囲だけ進める}
+      \footnotesize
+      \begin{itemize}
+        \setlength{\itemsep}{3pt}
+        \item $F_3$より前の依存を遡る。
+        \item $L_1\to J_2\to L_3$の順に版をそろえて実行。
+        \item 要求Blockの$F_3$版をRAMへ保持・提供する。
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \small
+  \begin{block}{観測時の補足}
+    Frame-awareなPauli期待値などは、必要なBlock版・Log・Frame・相対位相を解決して直接計算できる場合があり、振幅の全面的な具体化を省ける。
+  \end{block}
+  \takeaway{$F_3$は「3番目のゲート」ではなく、\textbf{$L_1$・$J_2$・$L_3$を反映した状態の版}を指す。}
+  \note{前ページの操作例を具体化。q0をBlock内bit、q1をBlock index bitとした説明用2量子ビット回路。L1=Rz(q0)、J2=upper H(q1)、L3=Rx(q0)。ここでF3はLogical frontier IDで、gate indexではない。次のupper-HはBlock pairの入力状態を要求する。全振幅出力は全ての必要Blockを求めるが、局所観測は対象範囲だけでよい場合がある。Pauli期待値はframe-aware kernelで直接評価可能な候補があり、異なるFrameではalignment費用や複数Pauli展開を評価する。測定は、結果に必要な振幅・確率を選んだ時点で用いる状態へ解決する。未要求の全Blockを常にF3へ進める意味ではない。}
+\end{frame}
+
+\begin{frame}{13. RAMの更新結果を、いつSSDへ書き戻すか}
   \smallnote{振幅をRAMで更新するmaterialization、後続Taskへの版の公開、SSDへの永続化を別の段階として扱う。}
   \begin{center}
     \begin{tikzpicture}
@@ -543,7 +586,7 @@
   \note{出典：開発仕様9.1、10.2、12.1〜12.3。RAM出力版のTask-level atomic publishは後続処理から見える論理更新であり、耐久commitとは異なる。退避はdirty/pin/Replica/将来参照/再演算費用を評価する。I/O・MPI中のbufferは再利用・破棄しない。唯一の正しいbaseや未保護状態を失わない。Checkpointの未具体化表現にはBlock置換、FrameGroup、相対位相、未実行DAGも含める。全rankの一貫cut、op_idと反映済みfrontierで欠落・二重適用を防ぐ。O_DIRECTだけでは耐久性を保証しない。COWの旧版・Logはcommit後でもsnapshot等の参照がなくなるまで保持。ログ耐久性と振幅耐久性のポリシーは分ける。}
 \end{frame}
 
-\begin{frame}{13. Native-first：ゲートの意味と構造から実行方法を選ぶ}
+\begin{frame}{14. Native-first：ゲートの意味と構造から実行方法を選ぶ}
   \begin{center}
     \begin{tikzpicture}
       \node[panel,minimum width=12.8cm] (ir) at (0,0) {Semantic Gate IR：任意$U$ / 対角 / 置換 / MCX / Pauli回転 / 記号パラメータ};
@@ -576,7 +619,7 @@
   \note{出典：開発仕様3章。MCXの制御数2以上は一般にCliffordではなくtableauに吸収しない。Frameを無視して保存phiにMCXを適用しない。Open controlもLayoutと論理基底に従って解釈する。高次の密行列は指数サイズのため無制限Native実行を保証しない。Clifford+TまたはClifford+T+Rzはfallback・比較基底。Bindingは不変で版付きにし、共有prefixはread-only/COWで保つ。}
 \end{frame}
 
-\begin{frame}{14. 3段階の最適化：計測→計画→実行時適応}
+\begin{frame}{15. 3段階の最適化：計測→計画→実行時適応}
   \begin{center}
     \begin{tikzpicture}
       \node[panel,text width=3.6cm,minimum height=1.85cm] (s1) at (-4.45,0) {\textbf{Stage 1：環境解析}\\RAM / SSD / MPIを実測\\混合負荷と競合を計測\\\scriptsize\texttt{hardware-profile.json}};
@@ -608,7 +651,7 @@
   \note{出典：開発仕様4章。LIVE_TUNE以外はprepare→reserve→drain affected tasks→migrate/materialize→validate→commit version。元回路の作用、Task一意性、DAG順序、入力版、近似誤差予算を維持する。対象rank合意とManifest更新も必要。毎ゲート全rank barrierは不要。実行中rank数変更やNIC物理能力変更は初期対象外。observe/recommend/autoを予定する。}
 \end{frame}
 
-\begin{frame}{15. 期待値・BackpropagationもBlock単位で実行する}
+\begin{frame}{16. 期待値・BackpropagationもBlock単位で実行する}
   \setlength{\abovedisplayskip}{4pt}
   \setlength{\belowdisplayskip}{4pt}
   \begin{columns}[T,onlytextwidth]
@@ -656,7 +699,7 @@
   \note{出典：開発仕様3.12〜3.15節。U_j=exp(-i theta_j P_j/2)では勾配はIm〈lambda_j|P_j|psi_j〉。共有パラメータは式DAGのchain ruleで加算する。異なるFrameではC_h^dagger O C_h'が単一Pauliとは限らず、整合またはmaterializeを比較する。一般パラメータUに二点shift ruleを無条件に使わない。O psi生成にも作業I/Oが要る。}
 \end{frame}
 
-\begin{frame}{16. Resource Estimator：実行前に容量と時間を見積もる}
+\begin{frame}{17. Resource Estimator：実行前に容量と時間を見積もる}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{.48\textwidth}
       \textbf{Hardware Profile＋回路＋Plan候補}
@@ -695,7 +738,7 @@
   \note{出典：開発仕様13〜14章。表の帯域と再生時間は設計の考え方を説明するための仮定値。1 GiB=1024 MiBとして256 MiB/2 GiB/s=125 ms、/8=31.25 ms。実際にはNIC共有・packing・同期・RAM予約と実効帯域条件を評価する。dry-runでPlanの合法性、容量不足、必要NIC/ディスク帯域も提示する。}
 \end{frame}
 
-\begin{frame}{17. 開発ロードマップ：意味の正しさから実機評価へ}
+\begin{frame}{18. 開発ロードマップ：意味の正しさから実機評価へ}
   \smallnote{設計要素は初期から型・不変条件に含め、実行Backendと最適化を段階的に拡張する。}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}p{.06\textwidth}p{.25\textwidth}X@{}}
