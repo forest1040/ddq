@@ -49,6 +49,10 @@ uv run python examples/phase1_benchmark.py --output /tmp/svsim-phase1-report.jso
 
 保存先は新しいディレクトリを指定します。`direct` は Linux の `O_DIRECT`／macOS の `F_NOCACHE` を選びます。managed RAM 上限と process RSS の違いは実装資料に記載しています。
 
+## Phase 2 設計
+
+[Phase 2 設計書](docs/phase2_design.md) に、位相を保持する Clifford tableau、Non-Clifford の base-side log と Pauli rotation、Frame 整合・コスト判断、Binding 専用 guard、仮想 Block 置換、snapshot 互換性と検証計画を記載しています。Phase 2 の新規 API は実装予定です。
+
 ## スライドのビルド
 
 リポジトリ直下で実行します。LuaLaTeX、LuaTeX-ja、原ノ味フォント、Beamer、およびテンプレートで使用するパッケージ（quantikz等）が必要です。
