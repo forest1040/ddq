@@ -221,6 +221,30 @@ class FileBlockStore:
         self.db.execute('INSERT INTO versions(id) VALUES(?)',(version,)); self.db.commit()
         return version
 
+    def reserve_extent(self, version, reservation):
+        """Claim a private immutable slot after the caller reserved its full cost."""
+        token = self.disk_budget.reservation(reservation)
+        if token is None or token['bytes'] < self.slot_bytes or token['state'] not in {'RESERVED','WRITING'}:
+            raise ValueError('A live full-slot disk reservation is required before allocator SQL')
+        ref = self.ref(version)
+        if ref.segment is not None: raise ValueError('Cannot overwrite immutable Block extent')
+        if shutil.disk_usage(self.directory).free < self.slot_bytes: raise OSError('Insufficient disk capacity')
+        with self.db:
+            self.db.execute('BEGIN IMMEDIATE')
+            segment, offset = json.loads(self.db.execute("SELECT data FROM settings WHERE key='allocator'").fetchone()[0])
+            if offset+self.slot_bytes > self.config.segment_size_bytes:
+                segment += 1; offset = 0
+            self.db.execute("UPDATE settings SET data=? WHERE key='allocator'",(canonical([segment,offset+self.slot_bytes]),))
+        self.segment,self.offset = segment,offset+self.slot_bytes
+        return segment, offset
+
+    def seal_extent(self, version, segment, offset, checksum):
+        """Catalog a completed private slot only after all bytes and checksum exist."""
+        ref = self.ref(version)
+        if ref.segment is not None: raise ValueError('Cannot overwrite immutable Block extent')
+        self.db.execute('UPDATE versions SET segment=?,offset=?,checksum=? WHERE id=?',
+                        (segment,offset,checksum,version)); self.db.commit()
+
     def delete_unwritten(self, version):
         self.db.execute('DELETE FROM versions WHERE id=? AND segment IS NULL',(version,)); self.db.commit()
 

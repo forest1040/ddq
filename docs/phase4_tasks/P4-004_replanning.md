@@ -1,12 +1,14 @@
 # P4-004：費用に基づく有限候補探索とsafe切替
 
-状態：設計／OPEN。依存：001、002、009。tile route利用時は006、cache/gradient比較は007/008。共通契約は[全体設計](../phase4_remaining_design.md)。
+状態：IN_PROGRESS（2026-10-14）。依存：001、002、009。tile route利用時は006、cache/gradient比較は007/008。共通契約は[全体設計](../phase4_remaining_design.md)。
+
+identity／finite policy proposal、全rank capability集約、全費用一回加算のoracleを先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#有限候補と費用oraclep4-004)。生成候補は自動cost／適用に未接続で採用不可。DEGRADEDだけを根拠にprefetchを変更しない。layout／migration候補、durable safe切替、VERIFYと実利益検証は残る。
 
 ## 現状と対象
 
-[runtime_control.py](../../src/svsim/runtime_control.py)は明示updatesとReplanEvidenceを検査し、drainしてpolicyを適用する。swap/lookahead変更はcheckpointを作る。`frontier()`はDEGRADED時にprefetchを0へするが、新条件の候補探索・費用込み利益・再校正は未実装。[async_scheduler.py](../../src/svsim/async_scheduler.py)ではengine/worker変更がrestart-required。
+[runtime_control.py](../../src/svsim/runtime_control.py)は既存の明示updates／ReplanEvidence APIを維持する。swap/lookahead変更はcheckpointを作る。`frontier()`はDEGRADED時にbounded候補探索し、未校正なら変更を採用しない。[async_scheduler.py](../../src/svsim/async_scheduler.py)ではengine/worker変更がrestart-required。
 
-新規予定：`replan_candidates.py`、`replan_cost.py`、`safe_replanner.py`。RuntimeControlを運用窓口に維持し、candidate generation/analysisとcollective適用を分離する。
+追加済み：`replan_candidates.py`、`replan_cost.py`。新規予定：`safe_replanner.py`。RuntimeControlを運用窓口に維持し、candidate generation/analysisとcollective適用を分離する。
 
 ## 候補とcapability
 

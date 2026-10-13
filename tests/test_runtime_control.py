@@ -40,8 +40,10 @@ def test_sustained_guard_live_tune_and_candidate_validation(tmp_path):
         sim.runtime.observe(BenchmarkSample(condition, bandwidth_bytes_per_second=10, latency_ms=100))
         assert sim.runtime.health == 'DEGRADED'
         sim.runtime.frontier()
-        assert sim.policy.prefetch_blocks == 0
-        assert sim.runtime.health == 'VERIFYING'
+        assert sim.policy.prefetch_blocks == 2
+        assert sim.runtime.health == 'DEGRADED'
+        assert sim.runtime.generated_candidates
+        assert not any(row['eligible'] for row in sim.runtime.generated_candidates.values())
         before = len(list(tmp_path.rglob('prepare-*.json')))
         rejected = sim.runtime.request_replan({'swap_policy': 'S2'})
         assert not rejected.eligible

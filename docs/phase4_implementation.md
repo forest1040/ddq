@@ -9,6 +9,8 @@
 
 2026-10-14にP4-009／001の[容量予約・runtime計測の基盤](phase4_foundation_implementation.md)を追加した。Macで検証し、両backlogはIN_PROGRESS。今回の変更はクラスタでは未実行。
 
+同日にP4-002／004／006／007の[先行実装](phase4_remaining_implementation.md)を追加した。finite remaining capture／診断ETA、bounded policy候補、P=1 tile、cache identity／費用fallbackが対象。4項目はIN_PROGRESSで、細粒度cost、自動safe切替、P>1 tile、cache共有／公平性と性能評価は残る。
+
 ## 1. 実装範囲
 
 `AsyncDistributedSimulator` は Phase 3 の正確な block kernel、Frame、parameter Binding、MPI owner routing を引き継ぐ。物理 I/O の worker と main thread の MPI progress を追加し、未公開 epoch 内の reordered execution と公開 prefix cut を分ける。CPU kernel 全体を別 thread へ移す方式ではなく、既存の gate kernel を main thread から実行しながら I/O・通信を進める。
@@ -19,7 +21,7 @@
 | `uring_backend.py`／`native/uring_backend.c` | optional Linux liburing adapter、明示 capability probe、CQE completion と buffer 管理 |
 | `mpi_progress.py`／`async_exchange.py` | 有限 typed MPI request、複数partnerの同時転送、slot generation、main-thread progress、completionとbuffer寿命の管理 |
 | `async_store_io.py` | 発行前の extent／disk 予約、成功 completion 後の checksum／catalog 更新、descriptor 寿命の管理 |
-| `async_cache.py` | bounded prefetch、dirty writeback、I/O 中の pin、bounded future-version hint と eviction 制御 |
+| `async_cache.py` | bounded prefetch、dirty writeback、I/O 中の pin、validated cost hint と LRU fallback |
 | `execution_tasks.py` | immutable な実行 step と epoch coverage、管理情報の予約、失敗 epoch の非公開化 |
 | `async_scheduler.py` | collective な epoch 実行、drain、S0/S1/S2 選択、snapshot、勾配実行への接続 |
 | `s2_planner.py`／`fused_swap.py` | 保守的な依存解析、local gate fusion、最大 2 組の ordered physical bit swap を一つの state pass に合成 |
@@ -102,13 +104,15 @@ v3 checkpoint が **既存の local owner volume 上にあり、同じ P/n/b と
 
 - `configure_guard(profile)`／`observe(sample)`：matched-condition の既存 health guard を利用する。
 - `record_cost(CostSample(...))`／`estimate_eta(tasks)`：明示した測定条件と有限 DAG の cost を登録・推定する。
+- `update_eta(endpoint_frontier=..., collective=...)`：有限window／counted suffix／requestを自動captureし、3 viewの診断ETAを更新する。
+- `search_candidates(collective=True)`：identityを含む有限policy候補を生成し、全rankのcapability拒否を集約する。生成候補の自動採用は未接続。
 - `request_replan(updates, evidence=..., apply=False)`：active state を変更せず candidate を生成する。
 - `apply_candidate(id)`：cut、plan／policy 版、有効期限、測定条件と利益下界を検査する。
 - `apply_policy(updates, classification=...)`：drain と全 rank vote を経て policy を適用する。FRONTIER_REPLAN は cut と policy を同じ durable commit に保存する。
 
-既定の `mode='observe'` は candidate を自動適用しない。`recommend` は eligible candidate の明示適用に使う。`auto` の初期低リスク応答は、DEGRADED 時の prefetch credit reduction である。改善を未測定のまま成功とせず VERIFYING へ移す。
+既定の `mode='observe'` は candidate を自動適用しない。`recommend` は既存の手動evidence付きeligible candidateの明示適用に使う。`auto` はDEGRADED時にbounded候補探索を行うが、校正済みtransition費用の自動供給が無いため生成候補を採用しない。DEGRADEDだけを根拠とするprefetch削減は廃止し、未実証の改善をVERIFY成功とはしない。
 
-I/O completion には物理操作の elapsed time を記録する。`RuntimeCostModel` は caller が渡した `CostTask` の dependency と resource demand から時間の下界を求め、未検証 overlap は速度向上として見込まず測定平均／上界を加算する。未測定条件は `INSUFFICIENT_BASELINE` となる。lazy runtime 全体から残 DAG を自動生成し、queue wait、fsync、MPI、kernel を統合した運用 ETA を常時計測する段階には達していない。mixed-load 自動校正、局所移行の自動探索、replan 頻度の全運用制御も今後の拡張である。cache は最大 64 個の future-version hint を使い、hint が無い場合は LRU に戻るが、Frame 解消費用や Binding 共有度を含む一般的な future cost model は未実装である。
+I/O completionにはqueue／service／whole wallを記録する。既存`RuntimeCostModel`は明示CostTask DAG、新`RuntimeETA`は自動captureのcounted DAGを扱い、未検証overlapはserial expected／upperとする。総ETAは必要costが揃ったときだけ数値で、通常の未校正profileではnullとなる。現endpointはgates-only。細粒度queue／fsync／MPI／kernelのlowering、mixed-load校正、migration費用と運用評価は残る。cacheは最大64 hintでvalidated／同unit／freshnessを検査し、unknown・staleではLRUへ戻る。raw／resolved identityは追加したが、resolved bufferのBinding共有や公平性は未有効。詳細は[先行実装資料](phase4_remaining_implementation.md)。
 
 ## 7. Mac の開発・実行
 

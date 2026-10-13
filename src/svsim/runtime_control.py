@@ -65,6 +65,14 @@ class RuntimeControl:
         self.measurements=None
         self.configure_measurements(max_bytes=max(1024,min(64*1024,sim.config.metadata_reserve_bytes//16)))
         self.profile_adapter = None
+        self._eta_baseline_adapter = None
+        self._eta_budget=0
+        self._eta_endpoint=None
+        self._eta_cost_views={}
+        self.latest_eta=None
+        self.generated_candidates={}
+        self._eta_last_progress=0
+        self.configure_eta(max_bytes=max(1024,min(8192,sim.config.metadata_reserve_bytes//32)))
 
     def configure_measurements(self, *, max_bytes, max_conditions=256, per_condition=64):
         """Reserve bounded observer storage, including indices and snapshot copies."""
@@ -86,6 +94,137 @@ class RuntimeControl:
         if self._measurement_budget:
             self.sim.budget.release(self._measurement_budget)
             self._measurement_budget=0
+        if getattr(self,'_eta_budget',0):
+            self.sim.budget.release(self._eta_budget)
+            self._eta_budget=0
+        if hasattr(self,'remaining_extractor'):self.remaining_extractor.invalidate()
+
+    def configure_eta(self, *, max_bytes=65536,scan_items=256,scan_seconds=.02):
+        from .remaining_work import CaptureLimits,RemainingWorkExtractor
+        limits=CaptureLimits(max_bytes=max_bytes,scan_items=scan_items,scan_seconds=scan_seconds)
+        pool=8*max_bytes
+        extra=max(0,pool-self._eta_budget)
+        # Monitoring must not cause foreground I/O just to make room.
+        try:self.sim.budget.reserve(extra)
+        except MemoryError:
+            if self._eta_budget:raise
+            limits=CaptureLimits(max_bytes=1024,scan_items=1,scan_seconds=.001)
+            pool=0
+        if pool<self._eta_budget:self.sim.budget.release(self._eta_budget-pool)
+        self._eta_budget=pool
+        self.remaining_extractor=RemainingWorkExtractor(limits)
+        self.latest_eta=None
+
+    def set_eta_cost_view(self,name,resolver):
+        """Explicit diagnostic views never certify an automatic switch."""
+        if name not in {'baseline','observed','adapted'}:raise ValueError('Unknown ETA view')
+        self._eta_cost_views[name]=resolver
+        self.invalidate_eta('DIAGNOSTIC_COST_VIEW_CHANGED')
+
+    def invalidate_eta(self, reason, *, reset_endpoint=False):
+        self.remaining_extractor.invalidate()
+        self.generated_candidates.clear()
+        if reset_endpoint:self._eta_endpoint=None
+        self.remaining_seconds=None
+        if self.latest_eta is not None:
+            old=dict(self.latest_eta)
+            old['stale']=True
+            old['invalidation_reason']=reason
+            old['rank_max_expected_seconds']={name:None for name in ('baseline','observed','adapted')}
+            old['views']={name:{**row,'lower_seconds':None,'expected_seconds':None,'upper_seconds':None,
+                'reason':'STALE_SNAPSHOT','unknown_reasons':('STALE_SNAPSHOT',reason)}
+                for name,row in old['views'].items()}
+            self.latest_eta=old
+
+    def update_eta(self, *, endpoint_frontier=None, collective=False):
+        from .runtime_eta import RuntimeETA
+        sim=self.sim
+        error=None
+        try:
+            if endpoint_frontier is not None:self._eta_endpoint=endpoint_frontier
+            snapshot=self.remaining_extractor.capture(sim,endpoint_frontier=self._eta_endpoint)
+            if not self._eta_budget:
+                snapshot=replace(snapshot,complete=False,unknown_reasons=snapshot.unknown_reasons+('ETA_MONITOR_BUDGET',))
+            reports={}
+            sources={}
+            for name in ('baseline','observed','adapted'):
+                adapter=self._eta_baseline_adapter if name=='baseline' else (self.profile_adapter if name=='observed' else None)
+                resolver=self._eta_cost_views.get(name)
+                explicit=name in self._eta_cost_views
+                if not explicit and adapter is not None:
+                    resolver=lambda task,adapter=adapter:adapter.cost_sample(task.context,task.condition)
+                sources[name]='diagnostic-explicit' if explicit else ('conditional-envelope' if adapter else 'unavailable')
+                reports[name]=asdict(RuntimeETA().evaluate(snapshot,resolver))
+            result={'schema_version':1,'kind':'runtime-eta','snapshot_id':snapshot.snapshot_id,
+                'endpoint':snapshot.endpoint,'scope':'rank-local','published_frontier':snapshot.published_frontier,
+                'endpoint_frontier':snapshot.endpoint_frontier,'remaining_sources':snapshot.remaining_sources,
+                'staged_sources':snapshot.staged_sources,'scanned_sources':snapshot.scanned_sources,
+                'unscanned_sources':snapshot.unscanned_sources,'private':snapshot.private,'stale':snapshot.stale,
+                'complete':snapshot.complete,'metadata_bytes':snapshot.metadata_bytes,
+                'extraction_seconds':snapshot.extraction_seconds,'views':reports,'cost_view_sources':sources,
+                'eligible_for_control':False}
+        except Exception as exc:
+            error=exc
+        if collective:sim.transport.vote(str(error) if error else None)
+        elif error is not None:raise error
+        if collective:
+            error=None
+            try:sim.trace.record('runtime-eta',performance_class='eta',metadata=result)
+            except Exception as exc:error=str(exc)
+            sim.transport.vote(error)
+            values=sim.transport.control.allgather({name:row['expected_seconds'] for name,row in reports.items()})
+            result['scope']='rank-max'
+            result['rank_max_expected_seconds']={name:max(row[name] for row in values) if all(row[name] is not None for row in values) else None for name in reports}
+        self.latest_eta=result
+        self.remaining_seconds=(result.get('rank_max_expected_seconds',{}).get('observed') if collective else reports['observed']['expected_seconds'])
+        return result
+
+    def progress_eta(self):
+        now=monotonic()
+        if self.latest_eta is None or now-self._eta_last_progress<1:return
+        self._eta_last_progress=now
+        # Monitoring failures must not turn successful request callbacks into
+        # failed foreground I/O. The next agreed boundary captures again.
+        try:self.update_eta()
+        except Exception:self.invalidate_eta('LOCAL_MONITOR_FAILURE')
+
+    def cache_context(self):
+        sim=self.sim
+        values={'root':sim.root,'layout':sim.layout.logical_to_physical,
+                'binding':sim.binding.binding_id if sim.binding else None,
+                'placement':sim.placement_epoch,'policy':self.policy_epoch,'profile':self.profile_version,
+                'source_length':len(sim.sequencer.operations)}
+        return {key:content_hash(value) for key,value in values.items()}
+
+    def search_candidates(self,*,collective=False):
+        from .replan_candidates import generate,RuntimeCapabilityRegistry
+        sim=self.sim
+        error=None
+        try:
+            snapshot=self.remaining_extractor.capture(sim,endpoint_frontier=self._eta_endpoint)
+            proposals=generate(sim,snapshot)
+            rows=[asdict(p) for p in proposals]
+        except Exception as exc:error=exc
+        if collective:sim.transport.vote(str(error) if error else None)
+        elif error is not None:raise error
+        if collective:
+            rows=sim.transport.broadcast_json(rows if sim.rank==0 else None)
+            capabilities=RuntimeCapabilityRegistry.capture(sim)
+            local=[capabilities.check(sim.policy,dict(row['updates'])) for row in rows]
+            reasons=sim.transport.control.allgather(local)
+            for index,row in enumerate(rows):
+                rejected=sorted({rank[index] for rank in reasons if rank[index] is not None})
+                if rejected:
+                    row['capability_reason']='|'.join(rejected)
+                    row['reason']=row['capability_reason']
+        self.generated_candidates={row['proposal_id']:row for row in rows}
+        return tuple(rows)
+
+    def set_cache_cost_hints(self,summary,*,cost_resolver=None):
+        if getattr(self.sim,'_private_epoch',False):raise ValueError('Cache hints require a published cut')
+        if not hasattr(self.sim.cache,'set_cost_hints'):raise ValueError('Cache does not support cost hints')
+        return self.sim.cache.set_cost_hints(summary,context=self.cache_context(),
+            cost_resolver=cost_resolver,context_getter=self.cache_context)
 
     def attach_profile_document(self, document, *, scope='same-host'):
         """Attach an immutable profile for exact-condition, exact-build lookup."""
@@ -99,12 +238,16 @@ class RuntimeControl:
             raise ValueError('Profile configuration differs from the current runtime allocation/build')
         self.profile_adapter = RuntimeProfileAdapter(document,
             configuration_fingerprint=actual.configuration_fingerprint,scope=scope)
+        if self._eta_baseline_adapter is None:self._eta_baseline_adapter=self.profile_adapter
+        self.profile_version+=1
+        self.invalidate_eta('PROFILE_ATTACHED')
         return self.profile_adapter
 
     def record_cost(self, sample):
         """Register a measured matched task cost, never an assumed link rate."""
         self.cost_model.record(sample)
         self.profile_version = max(self.profile_version, self.cost_model.version)
+        self.invalidate_eta('COST_PROFILE_CHANGED')
 
     def estimate_eta(self, tasks):
         estimate = self.cost_model.estimate(tasks)
@@ -295,6 +438,7 @@ class RuntimeControl:
                 sim._install_policy(old)
                 self.plan_version, self.policy_epoch = old_versions
             raise
+        self.invalidate_eta('POLICY_CHANGED')
         self.last_change = monotonic()
         transition = {'policy_epoch': self.policy_epoch, 'plan_version': self.plan_version,
                       'classification': classification, 'updates': updates, 'cut': sim.root}
@@ -307,6 +451,7 @@ class RuntimeControl:
 
     def frontier(self):
         sim = self.sim
+        self.update_eta(collective=True)
         states = sim.transport.control.allgather(self.health)
         if sim.policy.mode != 'auto' or 'DEGRADED' not in states:
             return
@@ -314,11 +459,12 @@ class RuntimeControl:
             monotonic()-self.last_change >= sim.policy.cooldown_seconds if sim.rank == 0 else None)
         if not ready:
             return
-        if sim.policy.prefetch_blocks:
-            # Credit reduction is the first bounded operational response. It
-            # changes no posted buffer and claims no improvement before VERIFY.
-            self.apply_policy({'prefetch_blocks': 0}, classification='LIVE_TUNE')
-            self.health = 'VERIFYING'
+        # Performance changes need calibrated transition costs. Capacity
+        # throttling belongs to admission, not to an unpriced health trigger.
+        candidates=self.search_candidates(collective=True)
+        sim.trace.record('replan-search',performance_class='planning',metadata={
+            'path':'BOUNDED_REPLAN_SEARCH','reason':'INSUFFICIENT_CALIBRATED_COST',
+            'candidate_count':len(candidates),'eligible_count':0})
 
     def state(self):
         return {'plan_version': self.plan_version, 'policy_epoch': self.policy_epoch,

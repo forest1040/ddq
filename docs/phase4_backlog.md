@@ -16,21 +16,23 @@
 
 P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtime measurement foundations`。Mac回帰469件成功、24構成・336 trialの検証証跡を同変更に含める。
 
-着手時に担当・関連commitを追記し、完了時はテスト／reportへのリンクと、測定条件・結果を記録する。scopeを縮小する場合は設計書と開発計画に反映し、項目を黙ってDONEにしない。P4-001／009の基盤はCodexとLunaが担当し、それ以外は担当未定。
+着手時に担当・関連commitを追記し、完了時はテスト／reportへのリンクと、測定条件・結果を記録する。scopeを縮小する場合は設計書と開発計画に反映し、項目を黙ってDONEにしない。P4-001／002／004／006／007／009の先行実装はCodexとLunaが担当し、それ以外は担当未定。
 
 2026-10-14に[容量予約・runtime計測の基盤](phase4_foundation_implementation.md)を実装した。catalogとledgerの同SQLite VFS、writerへの予約接続、validated completion、厳密profile adapter、有限actual-runtime campaignを追加した。Macの検証と残る受入条件は[検証資料](internal/phase4_foundation_validation/README.md)へ記録する。両項目はIN_PROGRESSで、全writerのfault／回収証跡、profile registryの全stage・自動接続、監視overhead、Linux／cross-host校正は残る。M1とPhase 4の完了は宣言しない。
 
 ## 一覧
 
+2026-10-14に[P4-002／004／006／007の先行実装](phase4_remaining_implementation.md)を追加した。Mac内の実MPIでsnapshotと候補合意を確認し、P=1 tile route、cache identity／unknown fallbackを検証した。4項目をIN_PROGRESSへ変更する。関連commit件名：`Implement Phase 4 remaining-work ETA, proposals, tile and cache foundations`。細粒度cost、自動safe切替、P>1 tile、cache共有／公平性／RAM課金と性能評価は残す。M2／M3の完了条件は維持する。
+
 | ID | 優先度 | 状態 | 残件 | 主な依存 |
 |---|---|---|---|---|
 | [P4-001](phase4_tasks/P4-001_measurement.md) | P0 | IN_PROGRESS | 条件一致の混合負荷校正とruntime計測 | Phase 5基盤 |
-| [P4-002](phase4_tasks/P4-002_remaining_eta.md) | P0 | OPEN | 残DAGからの自動ETA生成 | P4-001 |
+| [P4-002](phase4_tasks/P4-002_remaining_eta.md) | P0 | IN_PROGRESS | 残DAGからの自動ETA生成 | P4-001 |
 | [P4-003](phase4_tasks/P4-003_adaptive_validation.md) | P0 | OPEN | 性能低下から改善確認までの適応シナリオ | P4-001、002、004、009 |
-| [P4-004](phase4_tasks/P4-004_replanning.md) | P0 | OPEN | 費用に基づく再計画候補の探索と運用制御 | P4-001、002、009。tile採用時006 |
+| [P4-004](phase4_tasks/P4-004_replanning.md) | P0 | IN_PROGRESS | 費用に基づく再計画候補の探索と運用制御 | P4-001、002、009。tile採用時006 |
 | [P4-005](phase4_tasks/P4-005_performance_evaluation.md) | P0 | OPEN | 完了条件に対応する性能比較・trace report | P4-001〜004、006〜009 |
-| [P4-006](phase4_tasks/P4-006_tile_transpose.md) | P1 | OPEN | 作業予算内のaligned tile転置 | P4-009 |
-| [P4-007](phase4_tasks/P4-007_cache_policy.md) | P1 | OPEN | Frame・Binding共有を含むfuture-aware cache費用 | P4-001、002、009 |
+| [P4-006](phase4_tasks/P4-006_tile_transpose.md) | P1 | IN_PROGRESS | 作業予算内のaligned tile転置 | P4-009 |
+| [P4-007](phase4_tasks/P4-007_cache_policy.md) | P1 | IN_PROGRESS | Frame・Binding共有を含むfuture-aware cache費用 | P4-001、002、009 |
 | [P4-008](phase4_tasks/P4-008_gradient_selection.md) | P1 | OPEN | 勾配方式の自動校正と安全な選択評価 | P4-001、004、009 |
 | [P4-009](phase4_tasks/P4-009_disk_admission.md) | P1 | IN_PROGRESS | SQLite書込み前のdisk admission | Phase 5基盤 |
 | [P4-010](phase4_tasks/P4-010_native_uring.md) | P2 | BLOCKED | native io_uringのLinux実機検証 | 利用可能なliburing／kernel環境 |
@@ -49,7 +51,7 @@ completion collector、厳密profile adapter、実executorの有限mixed campaig
 
 ### P4-002：残DAGからの自動ETA生成
 
-現在の `estimate_eta(tasks)` は明示した有限DAGを扱う。runtimeからの自動抽出は未実装。
+window／counted suffix／in-flightの自動captureと3 viewの診断ETAを実装した。細粒度stage、profile充足、payload coverage、real held-out誤差とoverheadは残る。
 
 - 未実行gate、layout transition、I/O、MPI、metadata/commitを残DAGに反映する。抽出・評価用メモリも有界にする。
 - baseline／observed／adapted ETAを、profileとplanの版・切替費用・不確実性とともに更新する。
@@ -58,7 +60,7 @@ completion collector、厳密profile adapter、実executorの有限mixed campaig
 
 ### P4-003：性能低下から改善確認までの適応シナリオ
 
-Guardとpolicy変更API、prefetch credit削減は実装済み。設計が要求する一貫した改善実証が残る。
+Guardとpolicy変更APIは実装済み。DEGRADEDだけを根拠にしたautoのprefetch削減は廃止し、未校正なら候補探索までに留める。設計が要求する一貫した改善実証が残る。
 
 - 固定計画と同じ時刻・量の劣化をアプリ内に注入し、SSD／MPI／computeを個別に検証する。他jobに影響する負荷は使わない。
 - 持続低下→検出→LIVE_TUNE→必要なFRONTIER_REPLAN→VERIFYINGをtraceで追跡する。
@@ -68,7 +70,7 @@ Guardとpolicy変更API、prefetch credit削減は実装済み。設計が要求
 
 ### P4-004：費用に基づく再計画候補の探索と運用制御
 
-現在は明示したpolicy候補とevidenceを検査・適用できる。配置変更の自動探索は未実装。
+identityと有限policy候補、全rank capability集約、全費用を一回加算するoracleを実装した。生成候補は未qualifiedで採用不可。実costへの自動接続、配置候補、durable safe切替、VERIFYは残る。
 
 - 合法な取得経路・layout／swap・queue設定から有限候補を生成し、Frame整合、COW、容量、通信、移行・再校正費用を含めて比較する。
 - 利益下界・残回路長・測定条件を満たす候補だけを選び、探索時間・候補数・再計画頻度に上限を設ける。
@@ -87,7 +89,7 @@ Guardとpolicy変更API、prefetch credit削減は実装済み。設計が要求
 
 ### P4-006：作業予算内のaligned tile転置
 
-現在は最大2組のordered physical swapをfull blockで処理する。
+P=1／local FileBlockStore／identity Frame＋empty logのaligned tile routeを実装した。source page＋destination tileだけで実行し、full-block不可能なcaseも検証した。P>1、一般Frame、durable切替fault、勾配と性能比較は残る。
 
 - full output blockが予算に収まらない場合にaligned destination tileへ転置する経路を実装する。
 - overlapping pairの順序、bit階層、O_DIRECT alignment、Frame解消、COW容量、各output範囲の一意な書込みを保証する。
@@ -95,7 +97,7 @@ Guardとpolicy変更API、prefetch credit削減は実装済み。設計が要求
 
 ### P4-007：Frame・Binding共有を含むfuture-aware cache費用
 
-現在は最大64個のfuture-version hintを使い、hintなしではLRUへ戻る。
+raw／resolved identityとbounded cost hintを追加した。validated・同unit・freshnessが揃う場合のみ費用を使い、それ以外はLRUへ戻る。automatic FutureUse／actual cost、hintとtraceのRAM課金、Binding共有／公平性とpaired実測は残る。
 
 - bounded lookaheadで取得／再取得、Frame materialization、Binding間の合法なprefix共有を費用評価する。
 - stale hint、未知cost、reader/writer競合では安全なfallbackを維持する。logical amplitudeとBindingを混同しない。

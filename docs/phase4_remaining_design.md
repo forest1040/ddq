@@ -6,6 +6,8 @@
 
 2026-10-14更新：[P4-009／001の基盤実装](phase4_foundation_implementation.md)を追加した。個別backlogはIN_PROGRESS。下記M1〜M5の受入条件は維持する。
 
+同日更新：[P4-002／004／006／007の先行実装](phase4_remaining_implementation.md)を追加した。finite capture／候補、P=1 tile、cache identity／費用fallbackをMacで検証した。細粒度profile、自動切替、P>1 tile、共有／公平性と実性能は残り、M2／M3の完了は宣言しない。
+
 backlog IDごとに設計書を作り、各項目を個別に実装・review・検証できるようにする。依存関係、データ形式、資源上限、MPI合意、commitと運用境界は本書で共有する。個別書は現状との差、入出力、アルゴリズム、失敗時の処理、受入条件を定義する。共通契約の変更を伴う場合は本書と関係する個別書を同じ変更で改訂する。
 
 設計作成と実装完了は別に管理する。設計書の作成だけではbacklogの状態を変えず、実装着手・検証の進捗をbacklogへ反映する。各設計は以下の成果物で対応づける。

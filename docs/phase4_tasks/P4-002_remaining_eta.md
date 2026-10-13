@@ -1,10 +1,12 @@
 # P4-002：runtime残workからの自動ETA
 
-状態：設計／OPEN。依存：P4-001。共通契約は[全体設計](../phase4_remaining_design.md)。実行中に未完了gate、actual layout、request、metadata/commitを集計し、baseline/observed/adapted ETAを自動更新する。
+状態：IN_PROGRESS（2026-10-14）。依存：P4-001。共通契約は[全体設計](../phase4_remaining_design.md)。実行中に未完了gate、actual layout、request、metadata/commitを集計し、baseline/observed/adapted ETAを自動更新する。
+
+window／counted suffix／in-flight capture、private STAGED delta、strict-profile／diagnostic view、epoch／local completion更新を先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#残workとetap4-002)。現endpointはgates-only、suffix executor／private residualはunknown。細粒度stageとpayload coverage、held-out誤差／overheadの受入は残る。
 
 ## 現状・変更箇所
 
-[runtime_cost.py](../../src/svsim/runtime_cost.py)はcallerの有限CostTask DAGを評価し、未知conditionでは総時間nullを返す。[execution_tasks.py](../../src/svsim/execution_tasks.py)のEpochLedgerはwindow coverage用で、実I/O/MPI/computeの細粒度DAGを生成していない。[async_scheduler.py](../../src/svsim/async_scheduler.py)のactual order/historyとrequest ledgerを接続する。新規予定：`remaining_work.py`、`runtime_eta.py`。
+[runtime_cost.py](../../src/svsim/runtime_cost.py)はcallerの有限CostTask DAGを維持する。[execution_tasks.py](../../src/svsim/execution_tasks.py)のEpochLedgerはwindow coverage用。[async_scheduler.py](../../src/svsim/async_scheduler.py)から新規`remaining_work.py`／`runtime_eta.py`へ接続した。実I/O/MPI/computeの細粒度DAGはまだ生成しない。
 
 ## 入出力
 

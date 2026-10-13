@@ -5,6 +5,7 @@ from time import sleep
 from .async_io import BackpressureError
 from .async_store_io import AsyncStoreIO
 from .cache import BlockCache, BufferLease, CacheEntry
+from .cache_cost import FutureUseSummary, resolve_cost
 
 
 class AsyncBlockCache(BlockCache):
@@ -17,14 +18,49 @@ class AsyncBlockCache(BlockCache):
         self.errors = []
         self.prefetch_hits = self.prefetch_submitted = 0
         self.future_use = {}
+        self.cost_summary = None
+        self.cost_context = None
+        self.context_getter = None
+        self.cost_resolver = None
+        self.cost_trace = []
+        self.cost_reasons = {}
 
     def set_future_versions(self, versions):
-        """Bounded raw-version next-use hints from the current task window."""
+        """Legacy bounded hints; retained for callers, never used as cost evidence."""
         self.future_use.clear()
         for ordinal, version in enumerate(versions):
             if ordinal >= 64:
                 break
             self.future_use.setdefault(version, ordinal)
+
+    def set_cost_hints(self, summary, *, context=(), cost_resolver=None, context_getter=None):
+        """Install strict cost hints. Context must include all policy/root/layout/binding/profile versions."""
+        if not isinstance(summary, FutureUseSummary):
+            raise TypeError('summary must be a FutureUseSummary')
+        self.cost_summary = summary
+        self.cost_context = tuple(sorted(dict(context).items()))
+        self.cost_resolver = cost_resolver
+        self.context_getter = context_getter
+
+    def _cost_candidate(self, key, entry, live_context):
+        summary = self.cost_summary
+        if summary is None: return None, 'no_summary'
+        if live_context is None: return None, 'missing_context_getter'
+        if not summary.is_current(live_context): return None, 'stale_context'
+        if self.cost_context != tuple(sorted(dict(live_context).items())): return None, 'stale_context'
+        hint = summary.get(key)
+        if hint is None: return None, 'missing_hint'
+        cost = resolve_cost(hint, self.cost_resolver, key, entry)
+        if cost is None: return None, 'unknown_cost'
+        score = cost.eviction_score(entry.dirty, hint.reuse_count)
+        if score is None: return None, 'unvalidated_cost'
+        return (score, cost.units), 'known'
+
+    def _record_policy(self, reason, candidate=None):
+        self.cost_reasons[reason] = self.cost_reasons.get(reason, 0) + 1
+        if len(self.cost_trace) < 256:
+            self.cost_trace.append({'reason': reason, 'candidate': str(candidate) if candidate is not None else None,
+                                    'snapshot': self.cost_summary.snapshot_version if self.cost_summary else None})
 
     def poll(self):
         completed = self.engine.poll()
@@ -89,13 +125,22 @@ class AsyncBlockCache(BlockCache):
         self.poll()
         while self.budget.used + additional > self.budget.limit:
             eligible = [k for k, e in self.entries.items() if e.pins == 0 and e.buffer.pins == 0]
-            if self.future_use and eligible:
-                # Farther next use wins; ties prefer clean extents and LRU.
-                candidate = max(eligible, key=lambda k: (self.future_use.get(k, 65),
-                                                         not self.entries[k].dirty))
+            live_context = self.context_getter() if self.context_getter is not None else None
+            evaluations = [self._cost_candidate(k, self.entries[k], live_context) for k in eligible]
+            units = {value[0][1] for value in evaluations if value[0] is not None}
+            if eligible and evaluations and all(value[0] is not None for value in evaluations) and len(units) == 1:
+                # Lower retained benefit is cheaper to evict; equal cost prefers clean then LRU.
+                candidate = min(zip(eligible, evaluations),
+                                key=lambda item: (item[1][0][0], self.entries[item[0]].dirty))[0]
+                self._record_policy('known_cost', candidate)
             else:
                 candidate = next(iter(eligible), None)
+                reason = next((v[1] for v in evaluations if v[0] is None),
+                              'mixed_cost_units' if len(units) > 1 else 'no_eligible')
+                self._record_policy('lru_fallback:' + reason, candidate)
             if candidate is None:
+                if self.errors:
+                    self.poll()
                 if not self.engine.pending:
                     raise MemoryError('Insufficient unpinned RAM for task')
                 self.poll()

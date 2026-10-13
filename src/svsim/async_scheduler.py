@@ -124,6 +124,7 @@ class AsyncDistributedSimulator(DistributedSimulator):
             self.runtime.io_completion(request)
             if request.error is not None:
                 self._async_errors.append(request.error)
+        if completed and hasattr(self,'runtime'):self.runtime.progress_eta()
         return completed
 
     def _progress_io(self):
@@ -137,7 +138,8 @@ class AsyncDistributedSimulator(DistributedSimulator):
         return {'configuration_fingerprint': getattr(self.runtime.profile_adapter, 'fingerprint', None),
                 'n': self.num_qubits, 'block_bits': self.block_bits,
                 'backend': self.config.backend, 'engine': self.io_engine.identity,
-                'ranks': self.size, 'threads': self.policy.io_workers}
+                'ranks': self.size, 'threads': self.policy.io_workers,
+                'binding_id':self.binding.binding_id if self.binding else None}
 
     def _record_executor_group(self, event_id, group_id, condition, quantity,
                                wall_seconds, cpu_seconds, *, success, parent_id=None):
@@ -191,6 +193,20 @@ class AsyncDistributedSimulator(DistributedSimulator):
 
     def _fork_kwargs(self):
         return {'policy': self.policy}
+
+    def gate(self,*args,**kwargs):
+        op=super().gate(*args,**kwargs)
+        self.runtime.invalidate_eta('SOURCE_APPENDED',reset_endpoint=True)
+        return op
+
+    def tile_index_bit_swap(self,pairs,*,tile_bytes=4096):
+        """Explicit P=1 identity-Frame tile route; never an implicit fallback."""
+        if self._private_epoch:raise ValueError('Tile transpose requires a published cut')
+        self.drain()
+        from .tile_transpose import execute_tile_swap
+        result=execute_tile_swap(self,pairs,tile_bytes)
+        self.runtime.invalidate_eta('TILE_LAYOUT_CHANGED')
+        return result
 
     def _checkpoint_state(self):
         if self._angle_overrides:
@@ -336,6 +352,7 @@ class AsyncDistributedSimulator(DistributedSimulator):
             raise ValueError('Invalid frontier')
         self.transport.agree({'last': last, 'policy': asdict(self.policy)})
         self._set_binding(binding or self.binding or self.bind(), last)
+        self.runtime.update_eta(endpoint_frontier=last,collective=True)
         if self.frontier == -1 and self._gradient_origin is None and any(g.dependencies for g in self.sequencer.operations):
             self._gradient_origin = self.commit_snapshot()['snapshot_id']
         while self.frontier < last:
@@ -368,6 +385,7 @@ class AsyncDistributedSimulator(DistributedSimulator):
                                  binding_id=self.binding.binding_id, layout_id=self.layout.layout_id,
                                  placement_epoch=self.placement_epoch, plan_version=self.runtime.plan_version,
                                  policy_version=self.runtime.policy_epoch)
+                    self._active_epoch_ledger=ledger
                 except Exception as exc:
                     error = str(exc)
                 self.transport.vote(error)
@@ -448,6 +466,7 @@ class AsyncDistributedSimulator(DistributedSimulator):
                 del self.history[length:]
                 raise
             finally:
+                self._active_epoch_ledger=None
                 try:
                     if ledger is not None:
                         ledger.close()
@@ -483,12 +502,21 @@ class AsyncDistributedSimulator(DistributedSimulator):
         if self._private_epoch:
             raise ValueError('Cannot checkpoint an unpublished epoch')
         self.drain()
-        return super().commit_snapshot(**kwargs)
+        snapshot=super().commit_snapshot(**kwargs)
+        self.runtime.invalidate_eta('CHECKPOINT_COMMITTED')
+        return snapshot
+
+    def physical_index_bit_swap(self,a,b,*,_pending=False):
+        result=super().physical_index_bit_swap(a,b,_pending=_pending)
+        if not _pending:self.runtime.invalidate_eta('PHYSICAL_LAYOUT_CHANGED')
+        return result
 
     def fused_index_bit_swap(self, pairs):
         self.materialize(binding=self.binding)
         self.drain()
-        return execute_fused_swap(self, pairs)
+        result=execute_fused_swap(self, pairs)
+        self.runtime.invalidate_eta('FUSED_LAYOUT_CHANGED')
+        return result
 
     def collect_garbage(self):
         self.drain()

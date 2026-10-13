@@ -86,6 +86,8 @@ Phase 4は主要機能の実装・correctness検証まで進んでいます。�
 
 P4-009／001の[容量予約・runtime計測の基盤](docs/phase4_foundation_implementation.md)を実装しました。同じSQLiteへ接続するVFS、persistent予約、validated completion、有限runtime campaignを追加しています。Macの検証結果は[内部資料](docs/internal/phase4_foundation_validation/README.md)へ保存し、全受入条件が揃うまではIN_PROGRESSで管理します。
 
+P4-002／004／006／007の[先行実装](docs/phase4_remaining_implementation.md)を追加しました。残workの有界captureと診断ETA、有限候補、単一rankのtile転置、cache identityと費用fallbackをMacで検証しています。自動切替、複数rank tile、cache共有／公平性、校正と性能評価はbacklogへ残し、4項目はIN_PROGRESSです。
+
 [Phase 4 設計書](docs/phase4_design.md)と[実装・検証資料](docs/phase4_implementation.md)に、worker I/O、nonblocking MPI、先読み・書き戻し、S2／local fusion／FusedSWAP、Parameter batch、期待値・三方式の勾配、Runtime Guardとpolicy変更、node-local checkpoint／resume／GCを記載しています。[Mac実測比較](docs/phase4_benchmark.md)では同期／非同期／S2を同一回路で比較しています。
 
 Mac上のMPIとlocal scheduler、および許可後のPBS割当内で単一ノード・実2ノードの2／4 rankを検証しました。Linux O_DIRECT、PSM2／OFI／Ethernetで数値一致を確認しています。振幅・catalogはnode-localに保存し、checkpoint／resume／prefix lease／GCはMPI通信で管理します。[クラスタ検証記録](docs/internal/phase4_cluster_validation.md)は内部資料です。optional Linux io_uring adapterはliburingが既存環境になく、native Linux実機では未検証です。運用ETAの自動校正・一般的なtile migration等の拡張範囲は実装資料に明記しています。

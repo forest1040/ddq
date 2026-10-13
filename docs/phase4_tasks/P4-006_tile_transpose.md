@@ -1,12 +1,14 @@
 # P4-006：予算内のaligned destination tile転置
 
-状態：設計／OPEN。依存：009。費用採用は001/002/004。共通契約は[全体設計](../phase4_remaining_design.md)。full output blockを置けない条件に対し、ordered physical swapの検証済みtile routeを追加する。
+状態：IN_PROGRESS（2026-10-14）。依存：009。費用採用は001/002/004。共通契約は[全体設計](../phase4_remaining_design.md)。full output blockを置けない条件に対し、ordered physical swapの検証済みtile routeを追加する。
+
+P=1／local FileBlockStore／identity Frame＋empty log／scalar phaseのtile routeを先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#aligned-tile転置p4-006)。source aligned page＋destination tile、logical-order checksum、private output、inverse historyとfull-block不可能caseを検証した。P>1／remote／一般Frame、durable faultと性能・勾配検証は残る。
 
 ## 現状・変更
 
 [fused_swap.py](../../src/svsim/fused_swap.py)は最大2 pairの合成permutationとfull destination blockを作る。`source_labels()`と`sim.fetch()`はsource blockの取得/Frame解消を前提にする。destinationだけ小さくしてsource fetchのfull-block workspaceを無視する方式は採用しない。
 
-新規予定：`tile_transpose.py`、`tile_extent_writer.py`、`tile_resolver.py`。storage/async_store_io、MPI progress、fused_swap、history/checkpointを拡張する。既存full-block routeと単独swapをreferenceとして残す。
+追加済み：`tile_transpose.py`、`tile_extent_writer.py`、`tile_resolver.py`、storageのprivate slot helperとpublic wrapper。MPI fragment、durable transitionへの接続は残る。既存full-block routeと単独swapをreferenceとして残す。
 
 ## Mappingとroute certificate
 

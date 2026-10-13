@@ -1,10 +1,12 @@
 # P4-007：Frame・Bindingを含むfuture-aware cache費用
 
-状態：設計／OPEN。依存：001、002、009。004へ採用費用を供給する。共通契約は[全体設計](../phase4_remaining_design.md)。
+状態：IN_PROGRESS（2026-10-14）。依存：001、002、009。004へ採用費用を供給する。共通契約は[全体設計](../phase4_remaining_design.md)。
+
+raw／resolved identity descriptor、bounded future hint、validated costとunknown／staleのLRU fallbackを先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#cache-identityと費用fallbackp4-007)。resolved buffer共有は未有効。automatic FutureUse、actual profile供給、hint／trace RAM課金、prefix reader lifetime／公平性とpaired性能評価は残る。
 
 ## 現状・責務
 
-[async_cache.py](../../src/svsim/async_cache.py)は64 version以内のnext-use hintでevictionし、hintなしはLRU。prefetchはraw immutable extent、Frame解消はcaller。新規予定：`cache_cost.py`、`cache_identity.py`。AsyncBlockCacheのeviction/prefetchとParameterBatchの公平admissionへ接続する。
+[async_cache.py](../../src/svsim/async_cache.py)は新規`cache_cost.py`／`cache_identity.py`のfinite hintを受け付け、validated／同unit／freshnessが揃う場合だけ費用を比較する。不足時はLRU。旧next-use distanceだけではcost evictionを行わない。prefetchはraw immutable extent、Frame解消はcaller。ParameterBatchの公平admission接続は残る。
 
 raw cacheとresolved cacheを別kindにする。raw keyはdataset/store/version、storage ownerとformat/dtype。resolved keyはさらにsource coordinate、Frame/log/phase、layout、parameter dependencyの値とexact witnessを含む。same global Binding IDだけで一致/不一致を判定しない。依存しないparameter差だけなら同一性を証明し、log/phaseへ影響する差は共有しない。
 
