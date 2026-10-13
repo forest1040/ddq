@@ -1,0 +1,489 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-13",
+  "unchanged_target_models": {
+    "qpe": "chemistry_estimates.json",
+    "vqe": "vqe_estimates.json"
+  },
+  "python_inner_old_rate": 1563285.7614693984,
+  "python_inner_new_rate": 1536420.1149664063,
+  "python_inner_new_over_old": 0.9828146285438306,
+  "vqe_cpu_sensitivity": [
+    {
+      "case": "A-RAM",
+      "independent_processes_per_node": 1,
+      "kernel_rate": 1536420.1149664063,
+      "total_100_iterations_days": 134.41035299201806,
+      "scope": "CPU-rate sensitivity only; target I/O/network/reuse assumptions retained; balanced execution and replicated Mac-class CPUs not verified"
+    },
+    {
+      "case": "B-SSD",
+      "independent_processes_per_node": 1,
+      "kernel_rate": 1536420.1149664063,
+      "total_100_iterations_days": 8523.028286382889,
+      "scope": "CPU-rate sensitivity only; target I/O/network/reuse assumptions retained; balanced execution and replicated Mac-class CPUs not verified"
+    },
+    {
+      "case": "C-Ethernet",
+      "independent_processes_per_node": 1,
+      "kernel_rate": 1536420.1149664063,
+      "total_100_iterations_days": 42529.73351569706,
+      "scope": "CPU-rate sensitivity only; target I/O/network/reuse assumptions retained; balanced execution and replicated Mac-class CPUs not verified"
+    },
+    {
+      "case": "D-InfiniBand",
+      "independent_processes_per_node": 1,
+      "kernel_rate": 1536420.1149664063,
+      "total_100_iterations_days": 42528.950876808165,
+      "scope": "CPU-rate sensitivity only; target I/O/network/reuse assumptions retained; balanced execution and replicated Mac-class CPUs not verified"
+    },
+    {
+      "case": "A-RAM",
+      "independent_processes_per_node": 16,
+      "kernel_rate": 26141856.38047705,
+      "total_100_iterations_days": 7.906484590377659,
+      "scope": "CPU-rate sensitivity only; target I/O/network/reuse assumptions retained; balanced execution and replicated Mac-class CPUs not verified"
+    },
+    {
+      "case": "B-SSD",
+      "independent_processes_per_node": 16,
+      "kernel_rate": 26141856.38047705,
+      "total_100_iterations_days": 503.5223918788963,
+      "scope": "CPU-rate sensitivity only; target I/O/network/reuse assumptions retained; balanced execution and replicated Mac-class CPUs not verified"
+    },
+    {
+      "case": "C-Ethernet",
+      "independent_processes_per_node": 16,
+      "kernel_rate": 26141856.38047705,
+      "total_100_iterations_days": 2508.9457263780964,
+      "scope": "CPU-rate sensitivity only; target I/O/network/reuse assumptions retained; balanced execution and replicated Mac-class CPUs not verified"
+    },
+    {
+      "case": "D-InfiniBand",
+      "independent_processes_per_node": 16,
+      "kernel_rate": 26141856.38047705,
+      "total_100_iterations_days": 2508.163087489207,
+      "scope": "CPU-rate sensitivity only; target I/O/network/reuse assumptions retained; balanced execution and replicated Mac-class CPUs not verified"
+    }
+  ],
+  "qpe_cpu_sensitivity": [
+    {
+      "case": "A-RAM",
+      "independent_processes_per_node": 1,
+      "kernel_rate": 2893812.902698873,
+      "one_run_years": 16181.704470563529,
+      "all_runs_years": 517814.5430580329,
+      "scope": "CPU-rate sensitivity only; original RAM/network assumptions retained; not measured end-to-end QPE or distributed throughput"
+    },
+    {
+      "case": "B-SSD",
+      "independent_processes_per_node": 1,
+      "kernel_rate": 2893812.902698873,
+      "one_run_years": 1035629.0861216555,
+      "all_runs_years": 33140130.755892977,
+      "scope": "CPU-rate sensitivity only; original RAM/network assumptions retained; not measured end-to-end QPE or distributed throughput"
+    },
+    {
+      "case": "C-Ethernet",
+      "independent_processes_per_node": 1,
+      "kernel_rate": 2893812.902698873,
+      "one_run_years": 5233967.356213229,
+      "all_runs_years": 167486955.39882332,
+      "scope": "CPU-rate sensitivity only; original RAM/network assumptions retained; not measured end-to-end QPE or distributed throughput"
+    },
+    {
+      "case": "D-InfiniBand",
+      "independent_processes_per_node": 1,
+      "kernel_rate": 2893812.902698873,
+      "one_run_years": 5206056.393402369,
+      "all_runs_years": 166593804.5888758,
+      "scope": "CPU-rate sensitivity only; original RAM/network assumptions retained; not measured end-to-end QPE or distributed throughput"
+    },
+    {
+      "case": "A-RAM",
+      "independent_processes_per_node": 16,
+      "kernel_rate": 49031002.92181728,
+      "one_run_years": 955.0452243296921,
+      "all_runs_years": 30561.44717855015,
+      "scope": "CPU-rate sensitivity only; original RAM/network assumptions retained; not measured end-to-end QPE or distributed throughput"
+    },
+    {
+      "case": "B-SSD",
+      "independent_processes_per_node": 16,
+      "kernel_rate": 49031002.92181728,
+      "one_run_years": 61122.89436269007,
+      "all_runs_years": 1955932.6196060823,
+      "scope": "CPU-rate sensitivity only; original RAM/network assumptions retained; not measured end-to-end QPE or distributed throughput"
+    },
+    {
+      "case": "C-Ethernet",
+      "independent_processes_per_node": 16,
+      "kernel_rate": 49031002.92181728,
+      "one_run_years": 361436.3974184013,
+      "all_runs_years": 11565964.717388842,
+      "scope": "CPU-rate sensitivity only; original RAM/network assumptions retained; not measured end-to-end QPE or distributed throughput"
+    },
+    {
+      "case": "D-InfiniBand",
+      "independent_processes_per_node": 16,
+      "kernel_rate": 49031002.92181728,
+      "one_run_years": 333525.4346075412,
+      "all_runs_years": 10672813.907441318,
+      "scope": "CPU-rate sensitivity only; original RAM/network assumptions retained; not measured end-to-end QPE or distributed throughput"
+    }
+  ],
+  "qulacs_one_node_ram_qpe": [
+    {
+      "case": "A-RAM",
+      "storage": "RAM only",
+      "build": "distributed wheel",
+      "system_qubits": 24,
+      "simulated_qubits": 25,
+      "state_gib": 0.5,
+      "threads_requested": 1,
+      "cpu_wall_ratio_median": 0.999838680030713,
+      "native_rotations_per_run": 41943000000,
+      "measured_seconds_per_native_rotation": 0.06964544009315432,
+      "one_run_years": 97.19356441930091,
+      "all_runs_years": 3110.194061417629,
+      "one_run_years_sample_min": 96.531186033122,
+      "one_run_years_sample_max": 97.35840085219598,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "B-SSD",
+      "storage": "RAM only",
+      "build": "distributed wheel",
+      "system_qubits": 28,
+      "simulated_qubits": 29,
+      "state_gib": 8.0,
+      "threads_requested": 1,
+      "cpu_wall_ratio_median": 0.9998859331395891,
+      "native_rotations_per_run": 167772000000,
+      "measured_seconds_per_native_rotation": 1.118809502593649,
+      "one_run_years": 6245.410083865655,
+      "all_runs_years": 199853.12268370096,
+      "one_run_years_sample_min": 6240.383668540006,
+      "one_run_years_sample_max": 6246.5911027456805,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "A-RAM",
+      "storage": "RAM only",
+      "build": "distributed wheel",
+      "system_qubits": 24,
+      "simulated_qubits": 25,
+      "state_gib": 0.5,
+      "threads_requested": 8,
+      "cpu_wall_ratio_median": 0.9998898650977094,
+      "native_rotations_per_run": 41943000000,
+      "measured_seconds_per_native_rotation": 0.06991513931279769,
+      "one_run_years": 97.56994266378011,
+      "all_runs_years": 3122.2381652409636,
+      "one_run_years_sample_min": 97.32664851406014,
+      "one_run_years_sample_max": 97.99479805968409,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "B-SSD",
+      "storage": "RAM only",
+      "build": "distributed wheel",
+      "system_qubits": 28,
+      "simulated_qubits": 29,
+      "state_gib": 8.0,
+      "threads_requested": 8,
+      "cpu_wall_ratio_median": 0.9998616689353691,
+      "native_rotations_per_run": 167772000000,
+      "measured_seconds_per_native_rotation": 1.115981975250179,
+      "one_run_years": 6229.626281759598,
+      "all_runs_years": 199348.04101630714,
+      "one_run_years_sample_min": 6183.514681787736,
+      "one_run_years_sample_max": 6242.588510901723,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "A-RAM",
+      "storage": "RAM only",
+      "build": "distributed wheel",
+      "system_qubits": 24,
+      "simulated_qubits": 25,
+      "state_gib": 0.5,
+      "threads_requested": 16,
+      "cpu_wall_ratio_median": 0.9998623383447317,
+      "native_rotations_per_run": 41943000000,
+      "measured_seconds_per_native_rotation": 0.06963405468923156,
+      "one_run_years": 97.17767554002717,
+      "all_runs_years": 3109.6856172808693,
+      "one_run_years_sample_min": 96.76859820827322,
+      "one_run_years_sample_max": 97.78935083113237,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "B-SSD",
+      "storage": "RAM only",
+      "build": "distributed wheel",
+      "system_qubits": 28,
+      "simulated_qubits": 29,
+      "state_gib": 8.0,
+      "threads_requested": 16,
+      "cpu_wall_ratio_median": 0.9998622028286955,
+      "native_rotations_per_run": 167772000000,
+      "measured_seconds_per_native_rotation": 1.1139160090933728,
+      "one_run_years": 6218.093660845376,
+      "all_runs_years": 198978.99714705202,
+      "one_run_years_sample_min": 5791.426302570413,
+      "one_run_years_sample_max": 6231.471945108013,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "A-RAM",
+      "storage": "RAM only",
+      "build": "distributed wheel",
+      "system_qubits": 24,
+      "simulated_qubits": 25,
+      "state_gib": 0.5,
+      "threads_requested": 24,
+      "cpu_wall_ratio_median": 0.9998555330704778,
+      "native_rotations_per_run": 41943000000,
+      "measured_seconds_per_native_rotation": 0.06940018228124245,
+      "one_run_years": 96.85129533593364,
+      "all_runs_years": 3099.2414507498765,
+      "one_run_years_sample_min": 96.53167486454049,
+      "one_run_years_sample_max": 97.11345489864912,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "B-SSD",
+      "storage": "RAM only",
+      "build": "distributed wheel",
+      "system_qubits": 28,
+      "simulated_qubits": 29,
+      "state_gib": 8.0,
+      "threads_requested": 24,
+      "cpu_wall_ratio_median": 0.9998783993168648,
+      "native_rotations_per_run": 167772000000,
+      "measured_seconds_per_native_rotation": 1.1166320260308567,
+      "one_run_years": 6233.254990392531,
+      "all_runs_years": 199464.159692561,
+      "one_run_years_sample_min": 6224.317725655999,
+      "one_run_years_sample_max": 6236.755628544622,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "A-RAM",
+      "storage": "RAM only",
+      "build": "OpenMP source build",
+      "system_qubits": 24,
+      "simulated_qubits": 25,
+      "state_gib": 0.5,
+      "threads_requested": 1,
+      "cpu_wall_ratio_median": 0.9998710975836627,
+      "native_rotations_per_run": 41943000000,
+      "measured_seconds_per_native_rotation": 0.07754781900075614,
+      "one_run_years": 108.2217146096709,
+      "all_runs_years": 3463.0948675094687,
+      "one_run_years_sample_min": 107.278923713684,
+      "one_run_years_sample_max": 108.3793552485207,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "B-SSD",
+      "storage": "RAM only",
+      "build": "OpenMP source build",
+      "system_qubits": 28,
+      "simulated_qubits": 29,
+      "state_gib": 8.0,
+      "threads_requested": 1,
+      "cpu_wall_ratio_median": 0.9998807438739195,
+      "native_rotations_per_run": 167772000000,
+      "measured_seconds_per_native_rotation": 1.237639018218033,
+      "one_run_years": 6908.739322150595,
+      "all_runs_years": 221079.65830881905,
+      "one_run_years_sample_min": 6904.731264293671,
+      "one_run_years_sample_max": 6913.721843497603,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "A-RAM",
+      "storage": "RAM only",
+      "build": "OpenMP source build",
+      "system_qubits": 24,
+      "simulated_qubits": 25,
+      "state_gib": 0.5,
+      "threads_requested": 8,
+      "cpu_wall_ratio_median": 7.841180948443128,
+      "native_rotations_per_run": 41943000000,
+      "measured_seconds_per_native_rotation": 0.009059445314051118,
+      "one_run_years": 12.642892062375095,
+      "all_runs_years": 404.57254599600304,
+      "one_run_years_sample_min": 12.586370531069248,
+      "one_run_years_sample_max": 12.714606531436004,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "B-SSD",
+      "storage": "RAM only",
+      "build": "OpenMP source build",
+      "system_qubits": 28,
+      "simulated_qubits": 29,
+      "state_gib": 8.0,
+      "threads_requested": 8,
+      "cpu_wall_ratio_median": 7.905400152709091,
+      "native_rotations_per_run": 167772000000,
+      "measured_seconds_per_native_rotation": 0.14353407553426223,
+      "one_run_years": 801.2348488655967,
+      "all_runs_years": 25639.515163699096,
+      "one_run_years_sample_min": 800.665603206438,
+      "one_run_years_sample_max": 801.4339759512903,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "A-RAM",
+      "storage": "RAM only",
+      "build": "OpenMP source build",
+      "system_qubits": 24,
+      "simulated_qubits": 25,
+      "state_gib": 0.5,
+      "threads_requested": 16,
+      "cpu_wall_ratio_median": 15.565640135135896,
+      "native_rotations_per_run": 41943000000,
+      "measured_seconds_per_native_rotation": 0.004543884126178455,
+      "one_run_years": 6.3412090431312285,
+      "all_runs_years": 202.9186893801993,
+      "one_run_years_sample_min": 6.328182079801595,
+      "one_run_years_sample_max": 6.3665596565047595,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "B-SSD",
+      "storage": "RAM only",
+      "build": "OpenMP source build",
+      "system_qubits": 28,
+      "simulated_qubits": 29,
+      "state_gib": 8.0,
+      "threads_requested": 16,
+      "cpu_wall_ratio_median": 15.819967978022849,
+      "native_rotations_per_run": 167772000000,
+      "measured_seconds_per_native_rotation": 0.07184309115837095,
+      "one_run_years": 401.0419691077053,
+      "all_runs_years": 12833.34301144657,
+      "one_run_years_sample_min": 400.9000228492339,
+      "one_run_years_sample_max": 401.6340666761304,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "A-RAM",
+      "storage": "RAM only",
+      "build": "OpenMP source build",
+      "system_qubits": 24,
+      "simulated_qubits": 25,
+      "state_gib": 0.5,
+      "threads_requested": 24,
+      "cpu_wall_ratio_median": 16.056437606232176,
+      "native_rotations_per_run": 41943000000,
+      "measured_seconds_per_native_rotation": 0.004815605469048023,
+      "one_run_years": 6.720409257918704,
+      "all_runs_years": 215.05309625339854,
+      "one_run_years_sample_min": 6.6284920449165865,
+      "one_run_years_sample_max": 6.797346131475444,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    },
+    {
+      "case": "B-SSD",
+      "storage": "RAM only",
+      "build": "OpenMP source build",
+      "system_qubits": 28,
+      "simulated_qubits": 29,
+      "state_gib": 8.0,
+      "threads_requested": 24,
+      "cpu_wall_ratio_median": 19.28729320671738,
+      "native_rotations_per_run": 167772000000,
+      "measured_seconds_per_native_rotation": 0.06401605859718984,
+      "one_run_years": 357.3499661608019,
+      "all_runs_years": 11435.19891714566,
+      "one_run_years_sample_min": 351.9927692698122,
+      "one_run_years_sample_max": 359.1365876865079,
+      "scope": "linear extrapolation of eight synthetic terms; no molecular Hamiltonian, error certification, state preparation, IPEA measurement/reset or fusion"
+    }
+  ],
+  "cluster_small_transfer_comparison": [
+    {
+      "nodes": 2,
+      "ranks": 2,
+      "provider": "PSM2",
+      "transfer_bytes": 1048576,
+      "transfer_seconds_rank_max": [
+        0.0019235704094171524,
+        0.0006902767345309258,
+        0.0005239779129624367
+      ],
+      "transfer_median_ms": 0.6902767345309258,
+      "small_message_payload_gib_per_second": 1.4147405687425034,
+      "scope": "one 1 MiB transfer via bounded simulator protocol incl control/ack; three trials without separate warmup; not streaming bandwidth or InfiniBand"
+    },
+    {
+      "nodes": 2,
+      "ranks": 4,
+      "provider": "PSM2",
+      "transfer_bytes": 1048576,
+      "transfer_seconds_rank_max": [
+        0.0019949916750192642,
+        0.0005657905712723732,
+        0.0006399946287274361
+      ],
+      "transfer_median_ms": 0.6399946287274361,
+      "small_message_payload_gib_per_second": 1.5258917124692042,
+      "scope": "one 1 MiB transfer via bounded simulator protocol incl control/ack; three trials without separate warmup; not streaming bandwidth or InfiniBand"
+    },
+    {
+      "nodes": 2,
+      "ranks": 4,
+      "provider": "OFI/PSM2",
+      "transfer_bytes": 1048576,
+      "transfer_seconds_rank_max": [
+        0.0020915064960718155,
+        0.0008050324395298958,
+        0.000690029002726078
+      ],
+      "transfer_median_ms": 0.8050324395298958,
+      "small_message_payload_gib_per_second": 1.2130722341701787,
+      "scope": "one 1 MiB transfer via bounded simulator protocol incl control/ack; three trials without separate warmup; not streaming bandwidth or InfiniBand"
+    },
+    {
+      "nodes": 2,
+      "ranks": 4,
+      "provider": "Ethernet/TCP",
+      "transfer_bytes": 1048576,
+      "transfer_seconds_rank_max": [
+        0.005602789111435413,
+        0.0028883330523967743,
+        0.002962482161819935
+      ],
+      "transfer_median_ms": 2.962482161819935,
+      "small_message_payload_gib_per_second": 0.329643335101154,
+      "scope": "one 1 MiB transfer via bounded simulator protocol incl control/ack; three trials without separate warmup; not streaming bandwidth or InfiniBand"
+    }
+  ],
+  "sources": [
+    "performance_remeasurement.json",
+    "qulacs_ram_measurement.json",
+    "phase4_remeasurement.json",
+    "vqe_estimates.json",
+    "chemistry_estimates.json",
+    "estimate_chemistry.py",
+    "estimate_vqe.py",
+    "qulacs_omp_single_measurement.json",
+    "qulacs_omp_single_29_measurement.json",
+    "qulacs_omp_ram_measurement.json"
+  ],
+  "qpe_conditions": {
+    "energy_target_ha": 0.001,
+    "delta_max_inverse_ha": 0.01,
+    "phase_bits": 20,
+    "trotter_order": 2,
+    "algorithm": "IPEA",
+    "independent_runs": 32,
+    "overhead_ratio_assumed": 1.05,
+    "precision_certified": false
+  }
+}

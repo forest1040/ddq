@@ -1,0 +1,769 @@
+{
+  "schema_version": 1,
+  "time_utc": "2026-10-13T07:48:07.364945+00:00",
+  "scope": "one Mac / RAM only / Qulacs native CPU; synthetic terms, not molecular QPE",
+  "repetitions": 5,
+  "warmup_calls": 1,
+  "rows": [
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 8,
+      "kernel": "rotation_local",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.009562082937918603,
+      "seconds_per_native_rotation": 0.009562082937918603,
+      "amplitude_updates_per_second": 3509113256.792547,
+      "cpu_wall_ratio_median": 7.942830081385191,
+      "samples": [
+        {
+          "wall_seconds": 0.009567292057909071,
+          "cpu_seconds": 0.076017
+        },
+        {
+          "wall_seconds": 0.00956100004259497,
+          "cpu_seconds": 0.07596199999999997
+        },
+        {
+          "wall_seconds": 0.009555625030770898,
+          "cpu_seconds": 0.07541799999999999
+        },
+        {
+          "wall_seconds": 0.009571959031745791,
+          "cpu_seconds": 0.07601700000000006
+        },
+        {
+          "wall_seconds": 0.009562082937918603,
+          "cpu_seconds": 0.07594999999999996
+        }
+      ],
+      "norm": 1.0000000000000004
+    },
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 8,
+      "kernel": "rotation_diagonal",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.008236874942667782,
+      "seconds_per_native_rotation": 0.008236874942667782,
+      "amplitude_updates_per_second": 4073684769.230246,
+      "cpu_wall_ratio_median": 7.855268861916935,
+      "samples": [
+        {
+          "wall_seconds": 0.00875741709023714,
+          "cpu_seconds": 0.06541299999999994
+        },
+        {
+          "wall_seconds": 0.008236874942667782,
+          "cpu_seconds": 0.06493900000000008
+        },
+        {
+          "wall_seconds": 0.008261334034614265,
+          "cpu_seconds": 0.06489500000000004
+        },
+        {
+          "wall_seconds": 0.008220582967624068,
+          "cpu_seconds": 0.06388899999999986
+        },
+        {
+          "wall_seconds": 0.008178750053048134,
+          "cpu_seconds": 0.06442900000000007
+        }
+      ],
+      "norm": 1.0000000000000007
+    },
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 8,
+      "kernel": "controlled_symmetric_trotter_slice",
+      "native_rotations_per_call": 32,
+      "median_seconds": 0.28990225004963577,
+      "seconds_per_native_rotation": 0.009059445314051118,
+      "amplitude_updates_per_second": 3703806451.368207,
+      "cpu_wall_ratio_median": 7.841180948443128,
+      "samples": [
+        {
+          "wall_seconds": 0.28990225004963577,
+          "cpu_seconds": 2.273176
+        },
+        {
+          "wall_seconds": 0.28860620805062354,
+          "cpu_seconds": 2.2685439999999994
+        },
+        {
+          "wall_seconds": 0.2896122499369085,
+          "cpu_seconds": 2.266494999999999
+        },
+        {
+          "wall_seconds": 0.2910835830261931,
+          "cpu_seconds": 2.2719190000000005
+        },
+        {
+          "wall_seconds": 0.2915466669946909,
+          "cpu_seconds": 2.2861279999999997
+        }
+      ],
+      "norm": 0.9999999999999939
+    },
+    {
+      "qubits": 29,
+      "state_bytes": 8589934592,
+      "threads_requested": 8,
+      "kernel": "rotation_local",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.1534678339958191,
+      "seconds_per_native_rotation": 0.1534678339958191,
+      "amplitude_updates_per_second": 3498263434.2426825,
+      "cpu_wall_ratio_median": 7.914081852703331,
+      "samples": [
+        {
+          "wall_seconds": 0.153790625045076,
+          "cpu_seconds": 1.2127419999999987
+        },
+        {
+          "wall_seconds": 0.15444120799656957,
+          "cpu_seconds": 1.2195649999999993
+        },
+        {
+          "wall_seconds": 0.15312662499491125,
+          "cpu_seconds": 1.2122700000000002
+        },
+        {
+          "wall_seconds": 0.15276249998714775,
+          "cpu_seconds": 1.2152840000000005
+        },
+        {
+          "wall_seconds": 0.1534678339958191,
+          "cpu_seconds": 1.2145569999999992
+        }
+      ],
+      "norm": 1.0000000000000004
+    },
+    {
+      "qubits": 29,
+      "state_bytes": 8589934592,
+      "threads_requested": 8,
+      "kernel": "rotation_diagonal",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.13173062505666167,
+      "seconds_per_native_rotation": 0.13173062505666167,
+      "amplitude_updates_per_second": 4075520872.758891,
+      "cpu_wall_ratio_median": 7.890200168358169,
+      "samples": [
+        {
+          "wall_seconds": 0.13307995803188533,
+          "cpu_seconds": 1.0442099999999996
+        },
+        {
+          "wall_seconds": 0.13170999998692423,
+          "cpu_seconds": 1.0394190000000023
+        },
+        {
+          "wall_seconds": 0.13113004202023149,
+          "cpu_seconds": 1.036724999999997
+        },
+        {
+          "wall_seconds": 0.13173062505666167,
+          "cpu_seconds": 1.0393809999999988
+        },
+        {
+          "wall_seconds": 0.1325702500762418,
+          "cpu_seconds": 1.0409129999999998
+        }
+      ],
+      "norm": 1.0000000000000007
+    },
+    {
+      "qubits": 29,
+      "state_bytes": 8589934592,
+      "threads_requested": 8,
+      "kernel": "controlled_symmetric_trotter_slice",
+      "native_rotations_per_call": 32,
+      "median_seconds": 4.593090417096391,
+      "seconds_per_native_rotation": 0.14353407553426223,
+      "amplitude_updates_per_second": 3740372521.310081,
+      "cpu_wall_ratio_median": 7.905400152709091,
+      "samples": [
+        {
+          "wall_seconds": 4.593090417096391,
+          "cpu_seconds": 36.317678
+        },
+        {
+          "wall_seconds": 4.591223833034746,
+          "cpu_seconds": 36.28973699999999
+        },
+        {
+          "wall_seconds": 4.58982720808126,
+          "cpu_seconds": 36.297054
+        },
+        {
+          "wall_seconds": 4.593453499954194,
+          "cpu_seconds": 36.31308799999999
+        },
+        {
+          "wall_seconds": 4.5942319160094485,
+          "cpu_seconds": 36.291854
+        }
+      ],
+      "norm": 0.9999999999999939
+    },
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 16,
+      "kernel": "rotation_local",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.004863374982960522,
+      "seconds_per_native_rotation": 0.004863374982960522,
+      "amplitude_updates_per_second": 6899412880.471358,
+      "cpu_wall_ratio_median": 15.507749302540724,
+      "samples": [
+        {
+          "wall_seconds": 0.005001584067940712,
+          "cpu_seconds": 0.076318
+        },
+        {
+          "wall_seconds": 0.00487599999178201,
+          "cpu_seconds": 0.07535800000000004
+        },
+        {
+          "wall_seconds": 0.004863374982960522,
+          "cpu_seconds": 0.07542000000000004
+        },
+        {
+          "wall_seconds": 0.00479858391918242,
+          "cpu_seconds": 0.07514200000000004
+        },
+        {
+          "wall_seconds": 0.004818790941499174,
+          "cpu_seconds": 0.07503400000000005
+        }
+      ],
+      "norm": 1.0000000000000004
+    },
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 16,
+      "kernel": "rotation_diagonal",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.004128833068534732,
+      "seconds_per_native_rotation": 0.004128833068534732,
+      "amplitude_updates_per_second": 8126856049.403814,
+      "cpu_wall_ratio_median": 15.546765619851097,
+      "samples": [
+        {
+          "wall_seconds": 0.004127624910324812,
+          "cpu_seconds": 0.06411900000000004
+        },
+        {
+          "wall_seconds": 0.004119916004128754,
+          "cpu_seconds": 0.06429299999999993
+        },
+        {
+          "wall_seconds": 0.004128833068534732,
+          "cpu_seconds": 0.06419000000000008
+        },
+        {
+          "wall_seconds": 0.004129042034037411,
+          "cpu_seconds": 0.06380200000000014
+        },
+        {
+          "wall_seconds": 0.00415375002194196,
+          "cpu_seconds": 0.06476599999999988
+        }
+      ],
+      "norm": 1.0000000000000007
+    },
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 16,
+      "kernel": "controlled_symmetric_trotter_slice",
+      "native_rotations_per_call": 32,
+      "median_seconds": 0.14540429203771055,
+      "seconds_per_native_rotation": 0.004543884126178455,
+      "amplitude_updates_per_second": 7384526336.550818,
+      "cpu_wall_ratio_median": 15.565640135135896,
+      "samples": [
+        {
+          "wall_seconds": 0.14598558307625353,
+          "cpu_seconds": 2.2652100000000006
+        },
+        {
+          "wall_seconds": 0.14540429203771055,
+          "cpu_seconds": 2.2643450000000005
+        },
+        {
+          "wall_seconds": 0.145427625044249,
+          "cpu_seconds": 2.2627819999999996
+        },
+        {
+          "wall_seconds": 0.14522595796734095,
+          "cpu_seconds": 2.260535000000001
+        },
+        {
+          "wall_seconds": 0.1451055830111727,
+          "cpu_seconds": 2.2609440000000003
+        }
+      ],
+      "norm": 0.9999999999999939
+    },
+    {
+      "qubits": 29,
+      "state_bytes": 8589934592,
+      "threads_requested": 16,
+      "kernel": "rotation_local",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.07665504107717425,
+      "seconds_per_native_rotation": 0.07665504107717425,
+      "amplitude_updates_per_second": 7003726101.45095,
+      "cpu_wall_ratio_median": 15.853490950145337,
+      "samples": [
+        {
+          "wall_seconds": 0.07637745793908834,
+          "cpu_seconds": 1.2145940000000017
+        },
+        {
+          "wall_seconds": 0.07665504107717425,
+          "cpu_seconds": 1.215250000000001
+        },
+        {
+          "wall_seconds": 0.07687270897440612,
+          "cpu_seconds": 1.2154070000000026
+        },
+        {
+          "wall_seconds": 0.0776451249839738,
+          "cpu_seconds": 1.2167679999999983
+        },
+        {
+          "wall_seconds": 0.07645537494681776,
+          "cpu_seconds": 1.2154249999999998
+        }
+      ],
+      "norm": 1.0000000000000004
+    },
+    {
+      "qubits": 29,
+      "state_bytes": 8589934592,
+      "threads_requested": 16,
+      "kernel": "rotation_diagonal",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.06585879193153232,
+      "seconds_per_native_rotation": 0.06585879193153232,
+      "amplitude_updates_per_second": 8151848769.988647,
+      "cpu_wall_ratio_median": 15.78686716696672,
+      "samples": [
+        {
+          "wall_seconds": 0.06541991594713181,
+          "cpu_seconds": 1.039287999999999
+        },
+        {
+          "wall_seconds": 0.06585729098878801,
+          "cpu_seconds": 1.041125000000001
+        },
+        {
+          "wall_seconds": 0.06589083292055875,
+          "cpu_seconds": 1.0388699999999993
+        },
+        {
+          "wall_seconds": 0.06599925004411489,
+          "cpu_seconds": 1.041792000000001
+        },
+        {
+          "wall_seconds": 0.06585879193153232,
+          "cpu_seconds": 1.0397040000000004
+        }
+      ],
+      "norm": 1.0000000000000007
+    },
+    {
+      "qubits": 29,
+      "state_bytes": 8589934592,
+      "threads_requested": 16,
+      "kernel": "controlled_symmetric_trotter_slice",
+      "native_rotations_per_call": 32,
+      "median_seconds": 2.2989789170678705,
+      "seconds_per_native_rotation": 0.07184309115837095,
+      "amplitude_updates_per_second": 7472825895.207118,
+      "cpu_wall_ratio_median": 15.819967978022849,
+      "samples": [
+        {
+          "wall_seconds": 2.3023731249850243,
+          "cpu_seconds": 36.378372
+        },
+        {
+          "wall_seconds": 2.2981652080779895,
+          "cpu_seconds": 36.35690000000001
+        },
+        {
+          "wall_seconds": 2.2989789170678705,
+          "cpu_seconds": 36.37745000000001
+        },
+        {
+          "wall_seconds": 2.3013830829877406,
+          "cpu_seconds": 36.37817700000002
+        },
+        {
+          "wall_seconds": 2.298705874942243,
+          "cpu_seconds": 36.38480899999999
+        }
+      ],
+      "norm": 0.9999999999999939
+    },
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 24,
+      "kernel": "rotation_local",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.005092708044685423,
+      "seconds_per_native_rotation": 0.005092708044685423,
+      "amplitude_updates_per_second": 6588720913.427633,
+      "cpu_wall_ratio_median": 16.174891487440096,
+      "samples": [
+        {
+          "wall_seconds": 0.0049842920852825046,
+          "cpu_seconds": 0.08224900000000002
+        },
+        {
+          "wall_seconds": 0.005220583057962358,
+          "cpu_seconds": 0.08234799999999998
+        },
+        {
+          "wall_seconds": 0.005029333988204598,
+          "cpu_seconds": 0.082376
+        },
+        {
+          "wall_seconds": 0.005092708044685423,
+          "cpu_seconds": 0.08237399999999995
+        },
+        {
+          "wall_seconds": 0.005256208940409124,
+          "cpu_seconds": 0.08205799999999996
+        }
+      ],
+      "norm": 1.0000000000000004
+    },
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 24,
+      "kernel": "rotation_diagonal",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.004423707956448197,
+      "seconds_per_native_rotation": 0.004423707956448197,
+      "amplitude_updates_per_second": 7585137249.191493,
+      "cpu_wall_ratio_median": 15.644794068993459,
+      "samples": [
+        {
+          "wall_seconds": 0.004730082931928337,
+          "cpu_seconds": 0.07095499999999988
+        },
+        {
+          "wall_seconds": 0.004403750062920153,
+          "cpu_seconds": 0.07052900000000006
+        },
+        {
+          "wall_seconds": 0.004330791998654604,
+          "cpu_seconds": 0.06949099999999997
+        },
+        {
+          "wall_seconds": 0.004728415980935097,
+          "cpu_seconds": 0.0710240000000002
+        },
+        {
+          "wall_seconds": 0.004423707956448197,
+          "cpu_seconds": 0.06920799999999994
+        }
+      ],
+      "norm": 1.0000000000000007
+    },
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 24,
+      "kernel": "controlled_symmetric_trotter_slice",
+      "native_rotations_per_call": 32,
+      "median_seconds": 0.15409937500953674,
+      "seconds_per_native_rotation": 0.004815605469048023,
+      "amplitude_updates_per_second": 6967853204.683987,
+      "cpu_wall_ratio_median": 16.056437606232176,
+      "samples": [
+        {
+          "wall_seconds": 0.15199170797131956,
+          "cpu_seconds": 2.477641
+        },
+        {
+          "wall_seconds": 0.15409937500953674,
+          "cpu_seconds": 2.4742870000000003
+        },
+        {
+          "wall_seconds": 0.15373779099900275,
+          "cpu_seconds": 2.4824769999999994
+        },
+        {
+          "wall_seconds": 0.1555152500513941,
+          "cpu_seconds": 2.482258
+        },
+        {
+          "wall_seconds": 0.15586354199331254,
+          "cpu_seconds": 2.4770960000000013
+        }
+      ],
+      "norm": 0.9999999999999939
+    },
+    {
+      "qubits": 29,
+      "state_bytes": 8589934592,
+      "threads_requested": 24,
+      "kernel": "rotation_local",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.06838462501764297,
+      "seconds_per_native_rotation": 0.06838462501764297,
+      "amplitude_updates_per_second": 7850754637.632207,
+      "cpu_wall_ratio_median": 19.215722827477357,
+      "samples": [
+        {
+          "wall_seconds": 0.06632858305238187,
+          "cpu_seconds": 1.3042289999999994
+        },
+        {
+          "wall_seconds": 0.06627441698219627,
+          "cpu_seconds": 1.3148940000000024
+        },
+        {
+          "wall_seconds": 0.06907950004097074,
+          "cpu_seconds": 1.3128819999999983
+        },
+        {
+          "wall_seconds": 0.06838462501764297,
+          "cpu_seconds": 1.3140600000000013
+        },
+        {
+          "wall_seconds": 0.07050500006880611,
+          "cpu_seconds": 1.301864000000002
+        }
+      ],
+      "norm": 1.0000000000000004
+    },
+    {
+      "qubits": 29,
+      "state_bytes": 8589934592,
+      "threads_requested": 24,
+      "kernel": "rotation_diagonal",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.05819637491367757,
+      "seconds_per_native_rotation": 0.05819637491367757,
+      "amplitude_updates_per_second": 9225160721.71743,
+      "cpu_wall_ratio_median": 19.40824467394439,
+      "samples": [
+        {
+          "wall_seconds": 0.06044583406765014,
+          "cpu_seconds": 1.1202530000000017
+        },
+        {
+          "wall_seconds": 0.05819637491367757,
+          "cpu_seconds": 1.1307369999999999
+        },
+        {
+          "wall_seconds": 0.05623241700232029,
+          "cpu_seconds": 1.1290819999999968
+        },
+        {
+          "wall_seconds": 0.06016112491488457,
+          "cpu_seconds": 1.1366389999999953
+        },
+        {
+          "wall_seconds": 0.058060582960024476,
+          "cpu_seconds": 1.1268540000000016
+        }
+      ],
+      "norm": 1.0000000000000007
+    },
+    {
+      "qubits": 29,
+      "state_bytes": 8589934592,
+      "threads_requested": 24,
+      "kernel": "controlled_symmetric_trotter_slice",
+      "native_rotations_per_call": 32,
+      "median_seconds": 2.048513875110075,
+      "seconds_per_native_rotation": 0.06401605859718984,
+      "amplitude_updates_per_second": 8386503695.551907,
+      "cpu_wall_ratio_median": 19.28729320671738,
+      "samples": [
+        {
+          "wall_seconds": 2.048513875110075,
+          "cpu_seconds": 39.439871
+        },
+        {
+          "wall_seconds": 2.0202184170484543,
+          "cpu_seconds": 39.30432599999999
+        },
+        {
+          "wall_seconds": 2.017803666065447,
+          "cpu_seconds": 39.330326000000014
+        },
+        {
+          "wall_seconds": 2.058755708974786,
+          "cpu_seconds": 39.707825000000014
+        },
+        {
+          "wall_seconds": 2.0498832080047578,
+          "cpu_seconds": 39.34101899999999
+        }
+      ],
+      "norm": 0.9999999999999939
+    }
+  ],
+  "environments": [
+    {
+      "threads_requested": 8,
+      "qulacs": "0.6.14",
+      "numpy": "2.5.4",
+      "python": "3.12.13",
+      "rss_peak_bytes": 9173073920,
+      "verification": "Pauli sign convention and controlled lowering match independent svsim oracle"
+    },
+    {
+      "threads_requested": 16,
+      "qulacs": "0.6.14",
+      "numpy": "2.5.4",
+      "python": "3.12.13",
+      "rss_peak_bytes": 9173352448,
+      "verification": "Pauli sign convention and controlled lowering match independent svsim oracle"
+    },
+    {
+      "threads_requested": 24,
+      "qulacs": "0.6.14",
+      "numpy": "2.5.4",
+      "python": "3.12.13",
+      "rss_peak_bytes": 9173696512,
+      "verification": "Pauli sign convention and controlled lowering match independent svsim oracle"
+    }
+  ],
+  "load_before": {
+    "time_utc": "2026-10-13T07:47:01.308664+00:00",
+    "user_percent": 9.22,
+    "system_percent": 3.69,
+    "idle_percent": 87.8,
+    "load_average": "4.45 4.86 4.89"
+  },
+  "load_between_thread_counts": [
+    {
+      "time_utc": "2026-10-13T07:47:34.288704+00:00",
+      "user_percent": 8.56,
+      "system_percent": 3.37,
+      "idle_percent": 88.5,
+      "load_average": "6.96 5.43 5.09"
+    },
+    {
+      "time_utc": "2026-10-13T07:47:51.617461+00:00",
+      "user_percent": 8.44,
+      "system_percent": 3.49,
+      "idle_percent": 88.5,
+      "load_average": "9.46 6.12 5.35"
+    },
+    {
+      "time_utc": "2026-10-13T07:48:07.364836+00:00",
+      "user_percent": 8.51,
+      "system_percent": 3.29,
+      "idle_percent": 88.18,
+      "load_average": "11.11 6.65 5.55"
+    }
+  ],
+  "load_after": {
+    "time_utc": "2026-10-13T07:48:08.580327+00:00",
+    "user_percent": 8.46,
+    "system_percent": 3.29,
+    "idle_percent": 88.23,
+    "load_average": "11.11 6.65 5.55"
+  },
+  "load_during": [
+    {
+      "time_utc": "2026-10-13T07:47:07.522862+00:00",
+      "user_percent": 33.25,
+      "system_percent": 3.32,
+      "idle_percent": 63.41,
+      "load_average": "5.06 4.98 4.93"
+    },
+    {
+      "time_utc": "2026-10-13T07:47:13.733886+00:00",
+      "user_percent": 33.24,
+      "system_percent": 3.36,
+      "idle_percent": 63.39,
+      "load_average": "5.53 5.08 4.97"
+    },
+    {
+      "time_utc": "2026-10-13T07:47:19.950302+00:00",
+      "user_percent": 33.7,
+      "system_percent": 3.28,
+      "idle_percent": 63.64,
+      "load_average": "5.81 5.14 4.99"
+    },
+    {
+      "time_utc": "2026-10-13T07:47:26.155138+00:00",
+      "user_percent": 33.13,
+      "system_percent": 3.43,
+      "idle_percent": 63.43,
+      "load_average": "6.61 5.33 5.06"
+    },
+    {
+      "time_utc": "2026-10-13T07:47:32.368602+00:00",
+      "user_percent": 33.22,
+      "system_percent": 3.21,
+      "idle_percent": 63.55,
+      "load_average": "6.96 5.43 5.09"
+    },
+    {
+      "time_utc": "2026-10-13T07:47:38.586543+00:00",
+      "user_percent": 58.23,
+      "system_percent": 3.35,
+      "idle_percent": 38.4,
+      "load_average": "7.92 5.65 5.18"
+    },
+    {
+      "time_utc": "2026-10-13T07:47:44.808045+00:00",
+      "user_percent": 58.23,
+      "system_percent": 3.29,
+      "idle_percent": 38.46,
+      "load_average": "8.97 5.91 5.27"
+    },
+    {
+      "time_utc": "2026-10-13T07:47:51.041143+00:00",
+      "user_percent": 25.54,
+      "system_percent": 3.92,
+      "idle_percent": 70.52,
+      "load_average": "9.93 6.16 5.36"
+    },
+    {
+      "time_utc": "2026-10-13T07:47:57.291834+00:00",
+      "user_percent": 68.85,
+      "system_percent": 4.47,
+      "idle_percent": 26.67,
+      "load_average": "9.74 6.24 5.40"
+    },
+    {
+      "time_utc": "2026-10-13T07:48:03.539815+00:00",
+      "user_percent": 67.88,
+      "system_percent": 5.3,
+      "idle_percent": 26.81,
+      "load_average": "11.12 6.58 5.52"
+    }
+  ],
+  "threads_requested": [
+    8,
+    16,
+    24
+  ],
+  "qubits_measured": [
+    25,
+    29
+  ],
+  "openmp_linked": true,
+  "extension_sha256": "4153e0b13c25214fe2904cf715077706f8ba784da8be932d09d6c22232e3b2d3",
+  "revision": "53b154928c932c92e8c18f72b4c1f4ccbb658586",
+  "script_sha256": "371dbad5dde0b716e264b31ac50ead8187c1bd0246fd57c9df2d589f32b2893e"
+}

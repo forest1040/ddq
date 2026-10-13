@@ -1,0 +1,1765 @@
+{
+  "schema_version": 1,
+  "scope": "same-host",
+  "platform": "macOS-26.7.1-arm64-arm-64bit",
+  "revision": "53b154928c932c92e8c18f72b4c1f4ccbb658586",
+  "working_tree": "dirty",
+  "worker_sha256": "fdbd9171f6f3f5489eaa507cec4e0c4137a589c92dadaee67f826e982b05a2c9",
+  "lock_hash": "850aa96ac1d868f27530f00f8ef8c9dcf954c60cdaa881ba2d8c2dabb2f6540b",
+  "repetitions": 5,
+  "warmup_repetitions": 1,
+  "backend": "buffered",
+  "rows": [
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.5140725419623777,
+      "end_to_end_seconds": 0.6341300830245018,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 245760,
+          "read_bytes": 851968,
+          "write_bytes": 851968,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 0
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.5140578340506181,
+      "end_to_end_seconds": 0.6322994160000235,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 245760,
+          "read_bytes": 851968,
+          "write_bytes": 851968,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 1
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.5108888329705223,
+      "end_to_end_seconds": 0.6296867080964148,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 245760,
+          "read_bytes": 851968,
+          "write_bytes": 851968,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 2
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.5046569159021601,
+      "end_to_end_seconds": 0.6231134999543428,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 245760,
+          "read_bytes": 851968,
+          "write_bytes": 851968,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 3
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.509514500037767,
+      "end_to_end_seconds": 0.6262750000460073,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 245760,
+          "read_bytes": 851968,
+          "write_bytes": 851968,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 4
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.6316939169773832,
+      "end_to_end_seconds": 0.7562097910558805,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 851968,
+          "write_bytes": 851968,
+          "send_bytes": 0,
+          "io_requests": 417
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 0
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.5736284580780193,
+      "end_to_end_seconds": 0.6973395419772714,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 851968,
+          "write_bytes": 851968,
+          "send_bytes": 0,
+          "io_requests": 417
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 1
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.577982334070839,
+      "end_to_end_seconds": 0.702270207926631,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 851968,
+          "write_bytes": 851968,
+          "send_bytes": 0,
+          "io_requests": 417
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 2
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.5734747919486836,
+      "end_to_end_seconds": 0.6973638329654932,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 851968,
+          "write_bytes": 851968,
+          "send_bytes": 0,
+          "io_requests": 417
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 3
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.574209958082065,
+      "end_to_end_seconds": 0.6983161249663681,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 851968,
+          "write_bytes": 851968,
+          "send_bytes": 0,
+          "io_requests": 417
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 4
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.08729204093106091,
+      "end_to_end_seconds": 0.20986608299426734,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 131072,
+          "write_bytes": 131072,
+          "send_bytes": 0,
+          "io_requests": 65
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 0
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.08736324997153133,
+      "end_to_end_seconds": 0.20950704196002334,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 131072,
+          "write_bytes": 131072,
+          "send_bytes": 0,
+          "io_requests": 65
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 1
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.08667133294511586,
+      "end_to_end_seconds": 0.20886870799586177,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 131072,
+          "write_bytes": 131072,
+          "send_bytes": 0,
+          "io_requests": 65
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 2
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.08718341693747789,
+      "end_to_end_seconds": 0.21165275003295392,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 131072,
+          "write_bytes": 131072,
+          "send_bytes": 0,
+          "io_requests": 65
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 3
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 1,
+      "execute_seconds": 0.0877505000680685,
+      "end_to_end_seconds": 0.20965424994938076,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 131072,
+          "write_bytes": 131072,
+          "send_bytes": 0,
+          "io_requests": 65
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 4
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.6511283749714494,
+      "end_to_end_seconds": 0.8794762080069631,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 245760,
+          "read_bytes": 421888,
+          "write_bytes": 425984,
+          "send_bytes": 2048,
+          "io_requests": 0
+        },
+        {
+          "rank": 1,
+          "peak": 245760,
+          "read_bytes": 421888,
+          "write_bytes": 425984,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 0
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.6655104999663308,
+      "end_to_end_seconds": 0.8912255000323057,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 245760,
+          "read_bytes": 421888,
+          "write_bytes": 425984,
+          "send_bytes": 2048,
+          "io_requests": 0
+        },
+        {
+          "rank": 1,
+          "peak": 245760,
+          "read_bytes": 421888,
+          "write_bytes": 425984,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 1
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.6314925840124488,
+      "end_to_end_seconds": 0.8577413329621777,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 245760,
+          "read_bytes": 421888,
+          "write_bytes": 425984,
+          "send_bytes": 2048,
+          "io_requests": 0
+        },
+        {
+          "rank": 1,
+          "peak": 245760,
+          "read_bytes": 421888,
+          "write_bytes": 425984,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 2
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.6506158750271425,
+      "end_to_end_seconds": 0.8766299170674756,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 245760,
+          "read_bytes": 421888,
+          "write_bytes": 425984,
+          "send_bytes": 2048,
+          "io_requests": 0
+        },
+        {
+          "rank": 1,
+          "peak": 245760,
+          "read_bytes": 421888,
+          "write_bytes": 425984,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 3
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.6289527079788968,
+      "end_to_end_seconds": 0.8575346670113504,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 245760,
+          "read_bytes": 421888,
+          "write_bytes": 425984,
+          "send_bytes": 2048,
+          "io_requests": 0
+        },
+        {
+          "rank": 1,
+          "peak": 245760,
+          "read_bytes": 421888,
+          "write_bytes": 425984,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 4
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.7000818339874968,
+      "end_to_end_seconds": 0.9275054580066353,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 425984,
+          "write_bytes": 425984,
+          "send_bytes": 2048,
+          "io_requests": 209
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 417792,
+          "write_bytes": 425984,
+          "send_bytes": 0,
+          "io_requests": 207
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 0
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.6855017920024693,
+      "end_to_end_seconds": 0.9024046669946983,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 425984,
+          "write_bytes": 425984,
+          "send_bytes": 2048,
+          "io_requests": 209
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 417792,
+          "write_bytes": 425984,
+          "send_bytes": 0,
+          "io_requests": 207
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 1
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.7142423749901354,
+      "end_to_end_seconds": 0.9288839579094201,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 425984,
+          "write_bytes": 425984,
+          "send_bytes": 2048,
+          "io_requests": 209
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 417792,
+          "write_bytes": 425984,
+          "send_bytes": 0,
+          "io_requests": 207
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 2
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.6937660420080647,
+      "end_to_end_seconds": 0.9102141249459237,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 425984,
+          "write_bytes": 425984,
+          "send_bytes": 2048,
+          "io_requests": 209
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 417792,
+          "write_bytes": 425984,
+          "send_bytes": 0,
+          "io_requests": 207
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 3
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.6846407080302015,
+      "end_to_end_seconds": 0.9012099159881473,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 425984,
+          "write_bytes": 425984,
+          "send_bytes": 2048,
+          "io_requests": 209
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 417792,
+          "write_bytes": 425984,
+          "send_bytes": 0,
+          "io_requests": 207
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 4
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.10908562503755093,
+      "end_to_end_seconds": 0.3249158749822527,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 65536,
+          "write_bytes": 65536,
+          "send_bytes": 2048,
+          "io_requests": 33
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 57344,
+          "write_bytes": 65536,
+          "send_bytes": 2048,
+          "io_requests": 31
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 0
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.10924245801288635,
+      "end_to_end_seconds": 0.3292935829376802,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 65536,
+          "write_bytes": 65536,
+          "send_bytes": 2048,
+          "io_requests": 33
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 57344,
+          "write_bytes": 65536,
+          "send_bytes": 2048,
+          "io_requests": 31
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 1
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.10951566707808524,
+      "end_to_end_seconds": 0.3269592090509832,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 65536,
+          "write_bytes": 65536,
+          "send_bytes": 2048,
+          "io_requests": 33
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 57344,
+          "write_bytes": 65536,
+          "send_bytes": 2048,
+          "io_requests": 31
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 2
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.10965370805934072,
+      "end_to_end_seconds": 0.3277170410146937,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 65536,
+          "write_bytes": 65536,
+          "send_bytes": 2048,
+          "io_requests": 33
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 57344,
+          "write_bytes": 65536,
+          "send_bytes": 2048,
+          "io_requests": 31
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 3
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 2,
+      "execute_seconds": 0.10952504095621407,
+      "end_to_end_seconds": 0.3280980000272393,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 65536,
+          "write_bytes": 65536,
+          "send_bytes": 2048,
+          "io_requests": 33
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 57344,
+          "write_bytes": 65536,
+          "send_bytes": 2048,
+          "io_requests": 31
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 4
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 1.207242041011341,
+      "end_to_end_seconds": 2.2471919170347974,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 0
+        },
+        {
+          "rank": 1,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 0
+        },
+        {
+          "rank": 2,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 0
+        },
+        {
+          "rank": 3,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 0
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 1.2189792500576004,
+      "end_to_end_seconds": 2.2996866670437157,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 0
+        },
+        {
+          "rank": 1,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 0
+        },
+        {
+          "rank": 2,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 0
+        },
+        {
+          "rank": 3,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 1
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 1.2237623749533668,
+      "end_to_end_seconds": 2.2683850000612438,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 0
+        },
+        {
+          "rank": 1,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 0
+        },
+        {
+          "rank": 2,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 0
+        },
+        {
+          "rank": 3,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 2
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 1.2331867910688743,
+      "end_to_end_seconds": 2.2670431670267135,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 0
+        },
+        {
+          "rank": 1,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 0
+        },
+        {
+          "rank": 2,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 0
+        },
+        {
+          "rank": 3,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 3
+    },
+    {
+      "runtime": "sync",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 1.301606500055641,
+      "end_to_end_seconds": 2.329065791913308,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 0
+        },
+        {
+          "rank": 1,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 0
+        },
+        {
+          "rank": 2,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 0
+        },
+        {
+          "rank": 3,
+          "peak": 229376,
+          "read_bytes": 0,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 0
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 4
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 1.224136000033468,
+      "end_to_end_seconds": 2.1870705829933286,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 54
+        },
+        {
+          "rank": 1,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 54
+        },
+        {
+          "rank": 2,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 54
+        },
+        {
+          "rank": 3,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 54
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 0
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 1.2381069170078263,
+      "end_to_end_seconds": 2.2047731659840792,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 54
+        },
+        {
+          "rank": 1,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 54
+        },
+        {
+          "rank": 2,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 54
+        },
+        {
+          "rank": 3,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 54
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 1
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 1.1950628750491887,
+      "end_to_end_seconds": 2.149820625083521,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 54
+        },
+        {
+          "rank": 1,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 54
+        },
+        {
+          "rank": 2,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 54
+        },
+        {
+          "rank": 3,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 54
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 2
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 1.240939166978933,
+      "end_to_end_seconds": 2.207374084042385,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 54
+        },
+        {
+          "rank": 1,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 54
+        },
+        {
+          "rank": 2,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 54
+        },
+        {
+          "rank": 3,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 54
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 3
+    },
+    {
+      "runtime": "async",
+      "policy": "S0",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 1.153775625047274,
+      "end_to_end_seconds": 2.110995708964765,
+      "expectation": 0.9323273456060347,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 54
+        },
+        {
+          "rank": 1,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 1024,
+          "io_requests": 54
+        },
+        {
+          "rank": 2,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 54
+        },
+        {
+          "rank": 3,
+          "peak": 217344,
+          "read_bytes": 4096,
+          "write_bytes": 212992,
+          "send_bytes": 0,
+          "io_requests": 54
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 4
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 0.21539962501265109,
+      "end_to_end_seconds": 1.158544791978784,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 2,
+          "peak": 217344,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 3,
+          "peak": 217344,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 0
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 0.21553716692142189,
+      "end_to_end_seconds": 1.1788039999082685,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 2,
+          "peak": 217344,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 3,
+          "peak": 217344,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 1
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 0.20195570797659457,
+      "end_to_end_seconds": 1.1578975000884384,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 2,
+          "peak": 217344,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 3,
+          "peak": 217344,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 2
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 0.21864866698160768,
+      "end_to_end_seconds": 1.1769081249367446,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 2,
+          "peak": 217344,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 3,
+          "peak": 217344,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 3
+    },
+    {
+      "runtime": "async",
+      "policy": "S2",
+      "backend": "buffered",
+      "ranks": 4,
+      "execute_seconds": 0.2161006670212373,
+      "end_to_end_seconds": 1.1875185000244528,
+      "expectation": 0.9323273456060344,
+      "rank_metrics": [
+        {
+          "rank": 0,
+          "peak": 250112,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 1,
+          "peak": 250112,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 2,
+          "peak": 217344,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        },
+        {
+          "rank": 3,
+          "peak": 217344,
+          "read_bytes": 8192,
+          "write_bytes": 32768,
+          "send_bytes": 1024,
+          "io_requests": 11
+        }
+      ],
+      "state_bytes": 4096,
+      "num_qubits": 8,
+      "block_bits": 4,
+      "managed_budget_per_rank": 262144,
+      "scope": "same-host",
+      "frame_policy": "materialize",
+      "repetition": 4
+    }
+  ],
+  "summary": [
+    {
+      "ranks": 1,
+      "runtime": "sync",
+      "policy": "S0",
+      "execute_median_seconds": 0.5108888329705223,
+      "execute_min_seconds": 0.5046569159021601,
+      "execute_max_seconds": 0.5140725419623777,
+      "read_bytes_median": 851968,
+      "write_bytes_median": 851968,
+      "managed_peak_bytes_max": 245760
+    },
+    {
+      "ranks": 1,
+      "runtime": "async",
+      "policy": "S0",
+      "execute_median_seconds": 0.574209958082065,
+      "execute_min_seconds": 0.5734747919486836,
+      "execute_max_seconds": 0.6316939169773832,
+      "read_bytes_median": 851968,
+      "write_bytes_median": 851968,
+      "managed_peak_bytes_max": 250112
+    },
+    {
+      "ranks": 1,
+      "runtime": "async",
+      "policy": "S2",
+      "execute_median_seconds": 0.08729204093106091,
+      "execute_min_seconds": 0.08667133294511586,
+      "execute_max_seconds": 0.0877505000680685,
+      "read_bytes_median": 131072,
+      "write_bytes_median": 131072,
+      "managed_peak_bytes_max": 250112
+    },
+    {
+      "ranks": 2,
+      "runtime": "sync",
+      "policy": "S0",
+      "execute_median_seconds": 0.6506158750271425,
+      "execute_min_seconds": 0.6289527079788968,
+      "execute_max_seconds": 0.6655104999663308,
+      "read_bytes_median": 843776,
+      "write_bytes_median": 851968,
+      "managed_peak_bytes_max": 245760
+    },
+    {
+      "ranks": 2,
+      "runtime": "async",
+      "policy": "S0",
+      "execute_median_seconds": 0.6937660420080647,
+      "execute_min_seconds": 0.6846407080302015,
+      "execute_max_seconds": 0.7142423749901354,
+      "read_bytes_median": 843776,
+      "write_bytes_median": 851968,
+      "managed_peak_bytes_max": 250112
+    },
+    {
+      "ranks": 2,
+      "runtime": "async",
+      "policy": "S2",
+      "execute_median_seconds": 0.10951566707808524,
+      "execute_min_seconds": 0.10908562503755093,
+      "execute_max_seconds": 0.10965370805934072,
+      "read_bytes_median": 122880,
+      "write_bytes_median": 131072,
+      "managed_peak_bytes_max": 250112
+    },
+    {
+      "ranks": 4,
+      "runtime": "sync",
+      "policy": "S0",
+      "execute_median_seconds": 1.2237623749533668,
+      "execute_min_seconds": 1.207242041011341,
+      "execute_max_seconds": 1.301606500055641,
+      "read_bytes_median": 0,
+      "write_bytes_median": 851968,
+      "managed_peak_bytes_max": 229376
+    },
+    {
+      "ranks": 4,
+      "runtime": "async",
+      "policy": "S0",
+      "execute_median_seconds": 1.224136000033468,
+      "execute_min_seconds": 1.153775625047274,
+      "execute_max_seconds": 1.240939166978933,
+      "read_bytes_median": 16384,
+      "write_bytes_median": 851968,
+      "managed_peak_bytes_max": 217344
+    },
+    {
+      "ranks": 4,
+      "runtime": "async",
+      "policy": "S2",
+      "execute_median_seconds": 0.21553716692142189,
+      "execute_min_seconds": 0.20195570797659457,
+      "execute_max_seconds": 0.21864866698160768,
+      "read_bytes_median": 32768,
+      "write_bytes_median": 131072,
+      "managed_peak_bytes_max": 250112
+    }
+  ]
+}

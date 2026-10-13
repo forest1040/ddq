@@ -170,7 +170,7 @@ all Gでfull read/write、分散時は2sの通信も仮定し、metadata-only/lo
 
 ### 現行kernelとの差と再現ファイル
 
-同じMacで現行Python `pauli_inner`をb=16、X/Z mask=3/5、warmup後3回測り、約1.6百万 amplitude-term/sだった（[生データ](vqe_estimates.json)）。これはI/O／MPI／Frameを含まないlocal microbenchmarkで、量子化学実行の測定ではない。目標ρ=1億は約60倍であり、上の表を現在のPython実装の時間として読まない。現行MPIはkernelをnode数分すべて並列に進める保証もない。
+旧計測は現行Python `pauli_inner`をb=16、X/Z mask=3/5、warmup後3回で約1.563百万 amplitude-term/sだった。2026-10-13の再計測はwarmup後7回で約1.536百万（旧値比0.983）。[生データ](vqe_estimates.json)には旧値も保持し、[再計測JSON](performance_remeasurement.json)にCPU負荷・各試行・並列測定を保存した。I/O／MPI／Frameを含まないlocal microbenchmarkで、量子化学実行の測定ではない。目標ρ=1億は再計測の単一process値の約65倍。16独立processの内積合計は約26.14百万だが、現行MPI実行器の均衡した並列処理を保証する値ではない。
 
 [計算script](estimate_vqe.py)と[JSON](vqe_estimates.json)に仮定・算式・容量判定・時間内訳を保存した。geometry／活性積分／実際のM・K・G、matched mixed profileと実kernel throughputが得られたら、目標値を置換して再校正する。
 
@@ -272,6 +272,8 @@ Ttotal = 32*Ttrajectory
 この非常に大きな値は、1 mHa QPEのlong controlled powersと、各Pauli factorで全状態を別々に更新するreferenceの費用を表す。実用時間の保証ではない。係数／Trotter biasが未検証のためcertified estimateでもない。項grouping／diagonal fusion／layout／working-bank reuse／controlled branch処理の検討が必要で、その利益を後付けで仮定しない。
 
 [計算script](estimate_chemistry.py)と[JSON](chemistry_estimates.json)をQPE model_version=2へ更新。delta_max=0.02/0.005、energy目標10 mHaの感度もJSONへ保存する。errorを再認証せず大きなdeltaで高速化を主張しない。
+
+2026-10-13の低負荷時の再計測と、Qulacsによる**単一ノード・RAMのみ**の条件付き外挿は[実行速度再計測資料](performance_remeasurement.md)に追加した。単一threadも比較に残す。元の目標値表は維持し、実測したkernelと未測定のモデル仮定を区別する。既存クラスタ結果は匿名化した小転送比較として利用する。
 
 ```sh
 uv run --locked --extra mpi python docs/slides/estimate_chemistry.py \

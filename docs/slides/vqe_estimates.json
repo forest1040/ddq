@@ -177,6 +177,24 @@
   "local_python_kernel_measurement": {
     "block_bits": 16,
     "samples_seconds": [
+      0.042322958004660904,
+      0.043020624900236726,
+      0.04050729202572256,
+      0.0426549999974668,
+      0.042897584033198655,
+      0.043184917070902884,
+      0.042645958019420505
+    ],
+    "median_seconds": 0.0426549999974668,
+    "amplitude_terms_per_second": 1536420.1149664063,
+    "scope": "one local Python kernel; excludes MPI/IO/Frame; not a chemistry benchmark",
+    "source": "performance_remeasurement.json",
+    "date": "2026-10-13",
+    "cpu_wall_ratio_median": 0.9998227617508024
+  },
+  "previous_local_python_kernel_measurement": {
+    "block_bits": 16,
+    "samples_seconds": [
       0.041360374889336526,
       0.042045833077281713,
       0.04192195797804743

@@ -92,11 +92,12 @@
     \end{column}
     \begin{column}{.48\textwidth}
       \textbf{現行Pythonとの違い}\par
-      \small local内積：約\textbf{160万 amplitude-term/s}。\par
-      表の目標1億は約60倍。\par
+      \small 再計測single process：\textbf{154万項/s}。\par
+      16独立process合計：\textbf{2,614万項/s}。\par
+      表の目標1億は未測定のまま。\par
       現行runtimeの量子化学実測として扱わない。
     \end{column}
   \end{columns}
   \takeaway{\textbf{容量に収まることと、実用時間で終わることは別。} 計算条件・script・JSONをMarkdownにも保存する。}
-  \note{docs/slides/resource_estimates.md、estimate_vqe.py、vqe_estimates.json。local計測はb16、mask3/5、warmup後3試行のPython pauli_innerで、MPI/SSD/Frameを除く。量子化学積分・ground stateの測定ではない。native目標rhoの0.5〜2倍などの感度と、matched mixed profileで再校正が必要。rho自体が同じでも現行MPIでは全node kernelが均衡並列に動く保証はない。}
+  \note{docs/slides/resource_estimates.md、estimate_vqe.py、vqe_estimates.json、performance_remeasurement.json。旧local計測はb16、mask3/5、warmup後3試行。再計測は同条件7試行で156→154万項/s、旧値比0.983。MPI/SSD/Frameを除く。16独立processのaggregate throughputと実MPIの並列度を区別する。量子化学積分・ground stateの測定ではない。}
 \end{frame}

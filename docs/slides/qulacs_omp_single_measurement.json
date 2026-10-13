@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "time_utc": "2026-10-13T07:46:33.997391+00:00",
+  "scope": "one Mac / RAM only / Qulacs native CPU; synthetic terms, not molecular QPE",
+  "repetitions": 5,
+  "warmup_calls": 1,
+  "rows": [
+    {
+      "qubits": 20,
+      "state_bytes": 16777216,
+      "threads_requested": 1,
+      "kernel": "rotation_local",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.0023451249580830336,
+      "seconds_per_native_rotation": 0.0023451249580830336,
+      "amplitude_updates_per_second": 447130118.32731223,
+      "cpu_wall_ratio_median": 1.0004829013910779,
+      "samples": [
+        {
+          "wall_seconds": 0.0023403330706059933,
+          "cpu_seconds": 0.002344999999999986
+        },
+        {
+          "wall_seconds": 0.0023298749001696706,
+          "cpu_seconds": 0.0023309999999999997
+        },
+        {
+          "wall_seconds": 0.0023451249580830336,
+          "cpu_seconds": 0.0023470000000000157
+        },
+        {
+          "wall_seconds": 0.0024139999877661467,
+          "cpu_seconds": 0.0024150000000000005
+        },
+        {
+          "wall_seconds": 0.0026099999668076634,
+          "cpu_seconds": 0.002611000000000002
+        }
+      ],
+      "norm": 1.0000000000000004
+    },
+    {
+      "qubits": 20,
+      "state_bytes": 16777216,
+      "threads_requested": 1,
+      "kernel": "rotation_diagonal",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.002735208021476865,
+      "seconds_per_native_rotation": 0.002735208021476865,
+      "amplitude_updates_per_second": 383362432.31468207,
+      "cpu_wall_ratio_median": 0.9999999572348904,
+      "samples": [
+        {
+          "wall_seconds": 0.0028352088993415236,
+          "cpu_seconds": 0.002821999999999991
+        },
+        {
+          "wall_seconds": 0.0028658329974859953,
+          "cpu_seconds": 0.0028670000000000084
+        },
+        {
+          "wall_seconds": 0.002735208021476865,
+          "cpu_seconds": 0.0027359999999999884
+        },
+        {
+          "wall_seconds": 0.0024897920666262507,
+          "cpu_seconds": 0.002484000000000014
+        },
+        {
+          "wall_seconds": 0.0022140000946819782,
+          "cpu_seconds": 0.0022140000000000215
+        }
+      ],
+      "norm": 1.0000000000000007
+    },
+    {
+      "qubits": 20,
+      "state_bytes": 16777216,
+      "threads_requested": 1,
+      "kernel": "controlled_symmetric_trotter_slice",
+      "native_rotations_per_call": 32,
+      "median_seconds": 0.07703549996949732,
+      "seconds_per_native_rotation": 0.0024073593740467913,
+      "amplitude_updates_per_second": 435571029.11366946,
+      "cpu_wall_ratio_median": 0.999956295953347,
+      "samples": [
+        {
+          "wall_seconds": 0.07722337497398257,
+          "cpu_seconds": 0.07722000000000001
+        },
+        {
+          "wall_seconds": 0.07620962511282414,
+          "cpu_seconds": 0.07620500000000002
+        },
+        {
+          "wall_seconds": 0.07706174999475479,
+          "cpu_seconds": 0.07706300000000005
+        },
+        {
+          "wall_seconds": 0.07703549996949732,
+          "cpu_seconds": 0.07703800000000005
+        },
+        {
+          "wall_seconds": 0.07503549999091774,
+          "cpu_seconds": 0.07501499999999994
+        }
+      ],
+      "norm": 0.9999999999999939
+    },
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 1,
+      "kernel": "rotation_local",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.08268599992152303,
+      "seconds_per_native_rotation": 0.08268599992152303,
+      "amplitude_updates_per_second": 405805481.36137176,
+      "cpu_wall_ratio_median": 0.9999567544551893,
+      "samples": [
+        {
+          "wall_seconds": 0.08382362499833107,
+          "cpu_seconds": 0.08382
+        },
+        {
+          "wall_seconds": 0.08268599992152303,
+          "cpu_seconds": 0.08268500000000001
+        },
+        {
+          "wall_seconds": 0.08363895898219198,
+          "cpu_seconds": 0.08364000000000005
+        },
+        {
+          "wall_seconds": 0.08118391700554639,
+          "cpu_seconds": 0.08116400000000001
+        },
+        {
+          "wall_seconds": 0.08135137497447431,
+          "cpu_seconds": 0.08133400000000002
+        }
+      ],
+      "norm": 1.0000000000000004
+    },
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 1,
+      "kernel": "rotation_diagonal",
+      "native_rotations_per_call": 1,
+      "median_seconds": 0.07061154197435826,
+      "seconds_per_native_rotation": 0.07061154197435826,
+      "amplitude_updates_per_second": 475197553.5697109,
+      "cpu_wall_ratio_median": 0.9999498385921165,
+      "samples": [
+        {
+          "wall_seconds": 0.07001858402509242,
+          "cpu_seconds": 0.07000200000000012
+        },
+        {
+          "wall_seconds": 0.07049908395856619,
+          "cpu_seconds": 0.0704889999999998
+        },
+        {
+          "wall_seconds": 0.07170366705395281,
+          "cpu_seconds": 0.07170499999999991
+        },
+        {
+          "wall_seconds": 0.07074241701047868,
+          "cpu_seconds": 0.070743
+        },
+        {
+          "wall_seconds": 0.07061154197435826,
+          "cpu_seconds": 0.070608
+        }
+      ],
+      "norm": 1.0000000000000007
+    },
+    {
+      "qubits": 25,
+      "state_bytes": 536870912,
+      "threads_requested": 1,
+      "kernel": "controlled_symmetric_trotter_slice",
+      "native_rotations_per_call": 32,
+      "median_seconds": 2.4815302080241963,
+      "seconds_per_native_rotation": 0.07754781900075614,
+      "amplitude_updates_per_second": 432693432.6763313,
+      "cpu_wall_ratio_median": 0.9998710975836627,
+      "samples": [
+        {
+          "wall_seconds": 2.4851449170382693,
+          "cpu_seconds": 2.4848930000000005
+        },
+        {
+          "wall_seconds": 2.4815302080241963,
+          "cpu_seconds": 2.481215999999999
+        },
+        {
+          "wall_seconds": 2.4599119579652324,
+          "cpu_seconds": 2.459576
+        },
+        {
+          "wall_seconds": 2.4821719579631463,
+          "cpu_seconds": 2.481852
+        },
+        {
+          "wall_seconds": 2.4746964169899,
+          "cpu_seconds": 2.4743400000000015
+        }
+      ],
+      "norm": 0.9999999999999939
+    }
+  ],
+  "environments": [
+    {
+      "threads_requested": 1,
+      "qulacs": "0.6.14",
+      "numpy": "2.5.4",
+      "python": "3.12.13",
+      "rss_peak_bytes": 604192768,
+      "verification": "Pauli sign convention and controlled lowering match independent svsim oracle"
+    }
+  ],
+  "load_before": {
+    "time_utc": "2026-10-13T07:46:15.131737+00:00",
+    "user_percent": 8.56,
+    "system_percent": 3.37,
+    "idle_percent": 88.6,
+    "load_average": "4.41 4.91 4.91"
+  },
+  "load_between_thread_counts": [
+    {
+      "time_utc": "2026-10-13T07:46:33.997287+00:00",
+      "user_percent": 8.57,
+      "system_percent": 3.51,
+      "idle_percent": 87.91,
+      "load_average": "4.50 4.90 4.90"
+    }
+  ],
+  "load_after": {
+    "time_utc": "2026-10-13T07:46:35.221075+00:00",
+    "user_percent": 8.56,
+    "system_percent": 3.29,
+    "idle_percent": 88.13,
+    "load_average": "4.50 4.90 4.90"
+  },
+  "load_during": [
+    {
+      "time_utc": "2026-10-13T07:46:21.337609+00:00",
+      "user_percent": 11.41,
+      "system_percent": 3.29,
+      "idle_percent": 85.29,
+      "load_average": "4.50 4.92 4.91"
+    },
+    {
+      "time_utc": "2026-10-13T07:46:27.540520+00:00",
+      "user_percent": 11.45,
+      "system_percent": 3.29,
+      "idle_percent": 85.24,
+      "load_average": "4.54 4.92 4.91"
+    },
+    {
+      "time_utc": "2026-10-13T07:46:33.760032+00:00",
+      "user_percent": 9.2,
+      "system_percent": 3.87,
+      "idle_percent": 87.9,
+      "load_average": "4.50 4.90 4.90"
+    }
+  ],
+  "threads_requested": [
+    1
+  ],
+  "qubits_measured": [
+    20,
+    25
+  ],
+  "openmp_linked": true,
+  "extension_sha256": "4153e0b13c25214fe2904cf715077706f8ba784da8be932d09d6c22232e3b2d3",
+  "revision": "53b154928c932c92e8c18f72b4c1f4ccbb658586",
+  "script_sha256": "371dbad5dde0b716e264b31ac50ead8187c1bd0246fd57c9df2d589f32b2893e"
+}

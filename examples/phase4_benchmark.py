@@ -64,7 +64,11 @@ def main():
                               'write_bytes_median': median(sum(r['write_bytes'] for r in row['rank_metrics']) for row in selected),
                               'managed_peak_bytes_max': max(r['peak'] for row in selected for r in row['rank_metrics'])})
     report = {'schema_version': 1, 'scope': 'same-host', 'platform': platform.platform(),
-              'revision': revision, 'working_tree': 'phase4-uncommitted', 'lock_hash': lock_hash,
+              'revision': revision,
+              'working_tree': 'dirty' if subprocess.check_output(
+                  ['git', 'status', '--porcelain'], cwd=root, text=True).strip() else 'clean',
+              'worker_sha256': sha256((root/'examples/phase4_benchmark_worker.py').read_bytes()).hexdigest(),
+              'lock_hash': lock_hash,
               'repetitions': args.repetitions, 'warmup_repetitions': 1, 'backend': args.backend,
               'rows': rows, 'summary': summaries}
     destination = Path(args.output)

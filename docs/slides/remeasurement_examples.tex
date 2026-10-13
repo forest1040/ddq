@@ -1,0 +1,136 @@
+% Raw data and model: performance_remeasurement.md / performance_estimates.json
+\begin{frame}{31. 再計測：空きコアとkernel並列を確認する}
+  \smallnote{Mac Studio：RAM 512 GiB、32 core（24 Performance＋8 Efficiency）。開始時CPU idle約88\%。}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{同じPython内積の再計測}\par
+      \small 旧：\textbf{156万項/s}（warmup＋3回）。\par
+      新：\textbf{154万項/s}（warmup＋7回）。\par
+      CPU時間／wall時間は約1。\par
+      単一processの大きな短縮は確認できない。\par\medskip
+      \textbf{旧時間表の読み方}\par
+      \small QPE表の1億更新/sは\textbf{未測定目標}。\par
+      旧Python計測から算出した表ではない。\par
+      元のVQE／QPE表を保持し、実測外挿を追加する。
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{独立processの合計速度}\par\small
+      \begin{tabularx}{\linewidth}{@{}rXX@{}}
+        \toprule process & 内積 & pair回転 \\
+        \midrule
+        1 & 154万/s & 289万/s \\
+        4 & 676万/s & 1,228万/s \\
+        8 & 1,317万/s & 2,463万/s \\
+        16 & 2,614万/s & 4,903万/s \\
+        \bottomrule
+      \end{tabularx}
+      \smallnote{b=16、最遅worker基準、7回中央値。\par
+        MPI／SSD／Frameを含むruntime速度とは別。}
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{Pythonの単一processと、C++のコア並列を分けて測る。} Qulacs RAM実測で次頁の推定を校正する。}
+  \note{performance_remeasurement.jsonとphase4_remeasurement.json。新Pauli内積は1,536,420/s、旧1,563,286/s、比0.983。process CPU/wallは約1.0。b20でも同程度。24P/8Eはsysctl、CPU負荷はaggregate top。ほかの利用者のjobは停止していない。}
+\end{frame}
+
+\begin{frame}{32. Qulacs RAM：25Qで単一threadと並列を比較}
+  \smallnote{H$_2$O型CAS(8e,12o)の\textbf{問題サイズ}：system 24Q＋IPEA ancilla 1Q、状態512 MiB。}
+  \small
+  \begin{tabularx}{\textwidth}{@{}rXXXX@{}}
+    \toprule OpenMP thread & 32回転片 秒 & CPU/wall & 1 trajectory 外挿 & 32 trajectory 外挿 \\
+    \midrule
+    1 & 2.4815 & 1.00 & 約108.2年 & 約3,463年 \\
+    8 & 0.2899 & 7.84 & 約12.64年 & 約405年 \\
+    16 & 0.1454 & 15.57 & 約6.34年 & 約203年 \\
+    24 & 0.1541 & 16.06 & 約6.72年 & 約215年 \\
+    \bottomrule
+  \end{tabularx}
+  \medskip
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{同じOpenMP版で比較}\par
+      \small Qulacs 0.6.14、warmup＋5回中央値。\par
+      8合成Pauli項の2次対称列、16制御factor。\par
+      各factorを2回転に分解、計32 native回転。\par
+      SSD／MPIなし。16 threadが今回の最速。
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{1 mHa設定への線形外挿}\par
+      \small 1 trajectory：\textbf{$4.1943\times10^{10}$回転}。\par
+      $T=1.05\,(t_{32}/32)\,N_{\rm rot}$。\par
+      元の目標468年の約1/74に相当。\par
+      分子積分・Trotter bias・state prepは未検証。
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{Qulacs＋コア並列で大きく短縮するが、long powersの回数は残る。} 精度認証済みの化学計算時間ではない。}
+  \note{qulacs_omp_single_measurement.json、qulacs_omp_ram_measurement.json、performance_estimates.json。配布wheelは1/8/16/24thread指定でもCPU/wall約1、25Q片約2.23秒、single-thread外挿約97年。既存libompを使うsource buildで実際の並列を確認。同一buildの1対16速度比17.07。m20、delta_max0.01、base_steps2、M5000という旧入力を保持。measurement/reset/feedforwardや固有状態準備を測っていない。}
+\end{frame}
+
+\begin{frame}{33. Qulacs RAM：29Qでも単一threadを残す}
+  \smallnote{N$_2$型CAS(10e,14o)の問題サイズ：system 28Q＋IPEA ancilla 1Q。\textbf{1 nodeのRAMだけ}、状態8 GiB。}
+  \small
+  \begin{tabularx}{\textwidth}{@{}rXXXX@{}}
+    \toprule OpenMP thread & 32回転片 秒 & CPU/wall & 1 trajectory 外挿 & 32 trajectory 外挿 \\
+    \midrule
+    1 & 39.6044 & 1.00 & 約6,909年 & 約22.1万年 \\
+    8 & 4.5931 & 7.91 & 約801年 & 約2.56万年 \\
+    16 & 2.2990 & 15.82 & 約401年 & 約1.28万年 \\
+    24 & 2.0485 & 19.29 & 約357年 & 約1.14万年 \\
+    \bottomrule
+  \end{tabularx}
+  \medskip
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{単一nodeへ載せた比較}\par
+      \small 元のB構成と同じ問題サイズ・$M=20,000$。\par
+      SSDは使用せず、通信時間も加えない。\par
+      同じOpenMP版で1／8／16／24 threadを比較。\par
+      24 threadは単一threadより約19.3倍速い。
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{速度以外の仮定は維持}\par
+      \small 1 trajectory：\textbf{$1.67772\times10^{11}$回転}。\par
+      25Qとの差は状態16倍・項数4倍が主因。\par
+      32 trajectoryは逐次実行、RAMは32倍にしない。\par
+      項grouping／fusionの利益は含めない。
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{高速なRAM実行でも、全Pauli別passのQPE基準は長い。} 回路とTrotter誤差の最適化は別途必要。}
+  \note{qulacs_omp_single_29_measurement.jsonはwarmup1＋3回、並列はwarmup1＋5回。単一threadを同一buildで揃えた。state8GiB、process RSSは複数サイズのprocess全体のpeakなのでqubit別RAM測定として扱わない。m20、delta_max0.01、base_steps2、M20000。1.05marginは仮定でありmeasure/resetやstate prepの測定ではない。}
+\end{frame}
+
+\begin{frame}{34. 再計測とクラスタ結果：使える範囲を区別する}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{同一MacのMPI runtime}\par\small
+      \begin{tabularx}{\linewidth}{@{}Xrr@{}}
+        \toprule 条件 & 旧 秒 & 新 秒 \\
+        \midrule
+        1 rank 同期S0 & 0.5117 & 0.5109 \\
+        1 rank 非同期S2 & 0.0909 & 0.0873 \\
+        4 rank 非同期S0 & 1.3029 & 1.2241 \\
+        4 rank 非同期S2 & 0.2616 & 0.2155 \\
+        \bottomrule
+      \end{tabularx}
+      \smallnote{同じ8Q回路、buffered、warmup＋5回。\par
+        多くの条件で数\%、4 rank S2は約1.21倍速。\par
+        この小回路をQPE時間へ外挿しない。}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{実2 nodeの小さな転送}\par\small
+      \begin{tabularx}{\linewidth}{@{}Xr@{}}
+        \toprule 経路（4 rank） & 1 MiB中央値 ms \\
+        \midrule
+        PSM2 & 0.640 \\
+        OFI/PSM2 & 0.805 \\
+        Ethernet/TCP & 2.962 \\
+        \bottomrule
+      \end{tabularx}
+      \smallnote{3試行、control／ack込み。bulk帯域ではない。\par
+        実環境はOmni-Pathと10 Gb Ethernet。\par
+        200 Gb InfiniBand／100 Gb Ethernetの\par
+        8 node構成へそのまま転用しない。}
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{単一node RAMの推定に通信時間は加えない。} 分散構成の校正には同じpayload・配置での実測が必要。}
+  \note{既存cluster結果を匿名化してperformance_estimates.jsonへ集約。新規cluster job投入なし。機能確認の1MiB bounded protocol、rank elapsed MAXの3回中央値、独立warmupなし。送信と受信を足してbyteを二重計数しない。Omni-PathをInfiniBandの実測と扱わない。}
+\end{frame}
