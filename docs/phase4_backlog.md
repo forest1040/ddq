@@ -16,11 +16,13 @@
 
 P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtime measurement foundations`。Mac回帰469件成功、24構成・336 trialの検証証跡を同変更に含める。
 
-着手時に担当・関連commitを追記し、完了時はテスト／reportへのリンクと、測定条件・結果を記録する。scopeを縮小する場合は設計書と開発計画に反映し、項目を黙ってDONEにしない。P4-001／002／004／006／007／009の先行実装はCodexとLunaが担当し、それ以外は担当未定。
+着手時に担当・関連commitを追記し、完了時はテスト／reportへのリンクと、測定条件・結果を記録する。scopeを縮小する場合は設計書と開発計画に反映し、項目を黙ってDONEにしない。P4-001〜009の先行実装はCodexとLunaが担当し、それ以外は担当未定。
 
 2026-10-14に[容量予約・runtime計測の基盤](phase4_foundation_implementation.md)を実装した。catalogとledgerの同SQLite VFS、writerへの予約接続、validated completion、厳密profile adapter、有限actual-runtime campaignを追加した。Macの検証と残る受入条件は[検証資料](internal/phase4_foundation_validation/README.md)へ記録する。両項目はIN_PROGRESSで、全writerのfault／回収証跡、profile registryの全stage・自動接続、監視overhead、Linux／cross-host校正は残る。M1とPhase 4の完了は宣言しない。
 
 ## 一覧
+
+2026-10-14に[P4-003／005／008の先行実装](phase4_validation_implementation.md)を追加した。注入とsafe-refusal、paired report、明示勾配校正とstrict adapterをMacで検証し、3項目をIN_PROGRESSとする。関連commit件名：`Implement Phase 4 adaptive evaluation, paired reports and gradient calibration`。実costによるpositive採用／VERIFY、全比較matrix、包括admissionと認証済みauto性能は残り、Phase 4の完了を宣言しない。
 
 2026-10-14に[P4-002／004／006／007の先行実装](phase4_remaining_implementation.md)を追加した。Mac内の実MPIでsnapshotと候補合意を確認し、P=1 tile route、cache identity／unknown fallbackを検証した。4項目をIN_PROGRESSへ変更する。関連commit件名：`Implement Phase 4 remaining-work ETA, proposals, tile and cache foundations`。細粒度cost、自動safe切替、P>1 tile、cache共有／公平性／RAM課金と性能評価は残す。M2／M3の完了条件は維持する。
 
@@ -28,12 +30,12 @@ P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtim
 |---|---|---|---|---|
 | [P4-001](phase4_tasks/P4-001_measurement.md) | P0 | IN_PROGRESS | 条件一致の混合負荷校正とruntime計測 | Phase 5基盤 |
 | [P4-002](phase4_tasks/P4-002_remaining_eta.md) | P0 | IN_PROGRESS | 残DAGからの自動ETA生成 | P4-001 |
-| [P4-003](phase4_tasks/P4-003_adaptive_validation.md) | P0 | OPEN | 性能低下から改善確認までの適応シナリオ | P4-001、002、004、009 |
+| [P4-003](phase4_tasks/P4-003_adaptive_validation.md) | P0 | IN_PROGRESS | 性能低下から改善確認までの適応シナリオ | P4-001、002、004、009 |
 | [P4-004](phase4_tasks/P4-004_replanning.md) | P0 | IN_PROGRESS | 費用に基づく再計画候補の探索と運用制御 | P4-001、002、009。tile採用時006 |
-| [P4-005](phase4_tasks/P4-005_performance_evaluation.md) | P0 | OPEN | 完了条件に対応する性能比較・trace report | P4-001〜004、006〜009 |
+| [P4-005](phase4_tasks/P4-005_performance_evaluation.md) | P0 | IN_PROGRESS | 完了条件に対応する性能比較・trace report | P4-001〜004、006〜009 |
 | [P4-006](phase4_tasks/P4-006_tile_transpose.md) | P1 | IN_PROGRESS | 作業予算内のaligned tile転置 | P4-009 |
 | [P4-007](phase4_tasks/P4-007_cache_policy.md) | P1 | IN_PROGRESS | Frame・Binding共有を含むfuture-aware cache費用 | P4-001、002、009 |
-| [P4-008](phase4_tasks/P4-008_gradient_selection.md) | P1 | OPEN | 勾配方式の自動校正と安全な選択評価 | P4-001、004、009 |
+| [P4-008](phase4_tasks/P4-008_gradient_selection.md) | P1 | IN_PROGRESS | 勾配方式の自動校正と安全な選択評価 | P4-001、004、009 |
 | [P4-009](phase4_tasks/P4-009_disk_admission.md) | P1 | IN_PROGRESS | SQLite書込み前のdisk admission | Phase 5基盤 |
 | [P4-010](phase4_tasks/P4-010_native_uring.md) | P2 | BLOCKED | native io_uringのLinux実機検証 | 利用可能なliburing／kernel環境 |
 | [P4-011](phase4_tasks/P4-011_offline_migration.md) | P2 | OPEN | v3共有treeのoffline node-local移行 | P4-009、対応範囲の確定 |
@@ -60,6 +62,8 @@ window／counted suffix／in-flightの自動captureと3 viewの診断ETAを実�
 
 ### P4-003：性能低下から改善確認までの適応シナリオ
 
+bounded注入driverとactual compute hook、専用Guardとsafe-refusalを実装した。injected資料をproduction校正から除外する。actual storage／MPI、real cost採用／VERIFY、正味改善と別hostは残る。
+
 Guardとpolicy変更APIは実装済み。DEGRADEDだけを根拠にしたautoのprefetch削減は廃止し、未校正なら候補探索までに留める。設計が要求する一貫した改善実証が残る。
 
 - 固定計画と同じ時刻・量の劣化をアプリ内に注入し、SSD／MPI／computeを個別に検証する。他jobに影響する負荷は使わない。
@@ -78,6 +82,8 @@ identityと有限policy候補、全rank capability集約、全費用を一回加
 - 完了証跡：候補採用／拒否理由、commit前後fault、replan後の状態・期待値・勾配一致。
 
 ### P4-005：完了条件に対応する性能比較・trace report
+
+manifest／raw測定hash／rank MAX／resource検証、全metricのpaired統計と有限Mac runnerを実装した。large state／tile／cache／control／lifecycle／別hostの最終matrixは残る。
 
 既存Mac比較は小回路の同期S0／非同期S0／非同期S2で、主な改善はlocal fusion。クラスタ測定は小規模correctness用であり、完全な性能比較ではない。
 
@@ -104,6 +110,8 @@ raw／resolved identityとbounded cost hintを追加した。validated・同unit
 - 完了証跡：LRUとの同条件比較、quota公平性、余分な先読み／I/Oとmanaged peakのtrace。
 
 ### P4-008：勾配方式の自動校正と安全な選択評価
+
+明示actual calibration、strict envelope adapter、runtime attachmentと未認証fallbackを実装した。認証済みauto性能、包括admission、generator／Frame／replan／別hostは残る。
 
 三方式の数値一致と明示costによる選択は検証済み。実測costの自動校正と運用評価が残る。
 

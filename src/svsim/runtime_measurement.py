@@ -236,7 +236,7 @@ class RuntimeMeasurementCollector:
         """Return only successful, validated, non-warmup observations."""
         self._check_thread()
         candidates = [item for ring in self._rings.values() for item in ring
-                      if not item.warmup and item.success and item.validated]
+                      if not item.warmup and item.success and item.validated and item.evidence == 'measured']
         result = []
         for item in candidates:
             parent = item.parent_id

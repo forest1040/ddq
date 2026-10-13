@@ -1,0 +1,57 @@
+{
+  "kind": "phase4-followup-matrix",
+  "revision": "79d255b6030017e853d658e3b85f06b206bb9614",
+  "scope": "same-host",
+  "cluster_used": false,
+  "repetitions": 7,
+  "warmup": 2,
+  "rows": [
+    {
+      "case": "buffered-p1",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "buffered-p1.json",
+      "validated": true,
+      "sha256": "d56ca1bdcaf364918bc7ec575ec2e1acb384f2d65c10fe58e92a6d594cea27d5"
+    },
+    {
+      "case": "buffered-p2",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "buffered-p2.json",
+      "validated": true,
+      "sha256": "6fcdda5f4aa57680a5e4f1447d3c2015c0e79379105741ee49fd4953f556baea"
+    },
+    {
+      "case": "buffered-p4",
+      "state": "FAILED",
+      "error": null,
+      "raw": "buffered-p4.json",
+      "validated": false
+    },
+    {
+      "case": "direct-p1",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "direct-p1.json",
+      "validated": true,
+      "sha256": "909ac2ba8281114b11bd69fa63a84e40f9cb9f7d6da4ddc9bbe6ea930baeaa79"
+    },
+    {
+      "case": "direct-p2",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "direct-p2.json",
+      "validated": true,
+      "sha256": "ca2478436aa2720baf58e49151c403ddb5a232e94c32e22814c6032fb1b4d6f4"
+    },
+    {
+      "case": "direct-p4",
+      "state": "FAILED",
+      "error": null,
+      "raw": "direct-p4.json",
+      "validated": false
+    }
+  ],
+  "elapsed_seconds": 958.8572318329243
+}

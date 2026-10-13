@@ -1,6 +1,9 @@
 # P4-005：Phase 4完了条件の性能比較・trace report
 
-状態：設計／OPEN。依存：001〜004、006〜009。011は移行の完了証跡へ、010は利用可能環境のnative証跡へ接続する。共通契約は[全体設計](../phase4_remaining_design.md)。
+状態：IN_PROGRESS（2026-10-14）。依存：001〜004、006〜009。011は移行の完了証跡へ、010は利用可能環境のnative証跡へ接続する。共通契約は[全体設計](../phase4_remaining_design.md)。
+
+
+manifest／raw測定hash／rank MAX／resource検証、全metricのpaired統計と有限Mac runnerを実装した。large state／tile／cache／control／lifecycle／別hostの最終matrixは残る。 [実装範囲と検証](../phase4_validation_implementation.md)。
 
 ## 現状・成果物
 

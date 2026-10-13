@@ -1,10 +1,13 @@
 # P4-003：持続低下から改善確認までの適応検証
 
-状態：設計／OPEN。依存：001、002、004、009。共通契約は[全体設計](../phase4_remaining_design.md)。Guard/policy APIの存在から、再現可能な正味改善の検証へ進める。
+状態：IN_PROGRESS（2026-10-14）。依存：001、002、004、009。共通契約は[全体設計](../phase4_remaining_design.md)。Guard/policy APIの存在から、再現可能な正味改善の検証へ進める。
+
+
+bounded注入driverとactual compute hook、専用Guardとsafe-refusalを実装した。injected資料をproduction校正から除外する。actual storage／MPI、real cost採用／VERIFY、正味改善と別hostは残る。 [実装範囲と検証](../phase4_validation_implementation.md)。
 
 ## 現状・変更
 
-現`RuntimeControl.frontier()`はGuardのDEGRADEDでprefetch creditを減らし、VERIFYINGへ移る。caller sample/evidenceの単体試験はあるが、実completion→ETA→候補→切替→実利益が連続する試験は未達。新規予定：`performance_injection.py`、`adaptive_evaluation.py`、`examples/phase4_adaptive_check.py`。controllerの動作は004の契約へ合わせる。
+現`RuntimeControl.frontier()`はDEGRADED時にbounded候補探索し、未校正なら変更を採用しない。caller sample/evidenceの単体試験はあるが、実completion→ETA→候補→切替→実利益が連続する試験は未達。新規予定：`performance_injection.py`、`adaptive_evaluation.py`、`examples/phase4_adaptive_check.py`。controllerの動作は004の契約へ合わせる。
 
 ## Caseと注入
 

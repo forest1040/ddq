@@ -1,0 +1,27 @@
+{
+  "kind": "phase4-followup-matrix",
+  "revision": "79d255b6030017e853d658e3b85f06b206bb9614",
+  "scope": "same-host",
+  "cluster_used": false,
+  "repetitions": 7,
+  "warmup": 2,
+  "rows": [
+    {
+      "case": "buffered-p4",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "buffered-p4.json",
+      "validated": true,
+      "sha256": "37606601fb5b8b4464a22d80cf631abd28e1ea2e7ec90d029e36a7bc7c1cddb6"
+    },
+    {
+      "case": "direct-p4",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "direct-p4.json",
+      "validated": true,
+      "sha256": "7fdac90f92787755c65cc0d68c1581d851e3c6620988c3448e3feba396738e81"
+    }
+  ],
+  "elapsed_seconds": 648.4793410829734
+}

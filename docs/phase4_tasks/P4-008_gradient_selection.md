@@ -1,6 +1,9 @@
 # P4-008：勾配方式の自動校正と安全な選択
 
-状態：設計／OPEN。依存：001、004、009。cost countは002、cache共有は007。共通契約は[全体設計](../phase4_remaining_design.md)。
+状態：IN_PROGRESS（2026-10-14）。依存：001、004、009。cost countは002、cache共有は007。共通契約は[全体設計](../phase4_remaining_design.md)。
+
+
+明示actual calibration、strict envelope adapter、runtime attachmentと未認証fallbackを実装した。認証済みauto性能、包括admission、generator／Frame／replan／別hostは残る。 [実装範囲と検証](../phase4_validation_implementation.md)。
 
 ## 現状・差分
 

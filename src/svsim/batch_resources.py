@@ -15,7 +15,8 @@ def share_budget(parent, child):
     if hasattr(child.store, 'budget'):
         child.store.budget = parent.budget
     child._shared_metadata_bytes = (amount-child.io_engine.metadata_bytes-
-                                   child.runtime._measurement_budget-child.runtime._eta_budget)
+                                   child.runtime._measurement_budget-child.runtime._eta_budget-
+                                   child.runtime._injection_budget-child.runtime._gradient_profile_budget)
     return child
 
 

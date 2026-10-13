@@ -11,6 +11,8 @@
 
 同日にP4-002／004／006／007の[先行実装](phase4_remaining_implementation.md)を追加した。finite remaining capture／診断ETA、bounded policy候補、P=1 tile、cache identity／費用fallbackが対象。4項目はIN_PROGRESSで、細粒度cost、自動safe切替、P>1 tile、cache共有／公平性と性能評価は残る。
 
+P4-003／005／008の[注入・paired report・明示勾配校正](phase4_validation_implementation.md)も追加した。injected completionはproduction costから除外する。actual三方式の数値とunknown時のadjoint fallbackを検証し、positive採用／VERIFY、包括admissionと最終性能matrixは残す。
+
 ## 1. 実装範囲
 
 `AsyncDistributedSimulator` は Phase 3 の正確な block kernel、Frame、parameter Binding、MPI owner routing を引き継ぐ。物理 I/O の worker と main thread の MPI progress を追加し、未公開 epoch 内の reordered execution と公開 prefix cut を分ける。CPU kernel 全体を別 thread へ移す方式ではなく、既存の gate kernel を main thread から実行しながら I/O・通信を進める。

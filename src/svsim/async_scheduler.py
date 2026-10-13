@@ -8,7 +8,7 @@ from .async_io import WorkerIOEngine, BackpressureError
 from .distributed import DistributedSimulator
 from .execution_tasks import EpochLedger
 from .fused_swap import execute_fused_swap
-from .journal import decode_gate, gate_data
+from .journal import content_hash, decode_gate, gate_data
 from .mpi_progress import MPIProgressEngine
 from .runtime_control import RuntimeControl
 from .s2_planner import plan_window
@@ -150,6 +150,7 @@ class AsyncDistributedSimulator(DistributedSimulator):
             units='groups', quantity=1, protocol_seconds=wall_seconds,
             service_seconds=None, cpu_seconds=cpu_seconds,
             success=success, validated=success,
+            evidence='injected' if getattr(self,'_measurement_injected',False) else 'measured',
             warmup=self._measurement_warmup,
             scope='same-host' if same_host else 'cross-host')
 
@@ -409,8 +410,12 @@ class AsyncDistributedSimulator(DistributedSimulator):
                     gate_begin = perf_counter()
                     gate_cpu = process_time()
                     gate_success = False
+                    injection_ticket=None
+                    service_begin=gate_begin
                     measurements.begin_group(gate_group)
                     try:
+                        injection_ticket=self.runtime.before_executor(gate_event,len(ops))
+                        service_begin=perf_counter()
                         if is_fused:
                             self._execute_local_fused(group, prior[1])
                             ids = tuple(g.op_id for g in group)
@@ -436,6 +441,16 @@ class AsyncDistributedSimulator(DistributedSimulator):
                         ledger.stage(ids, input_root, self.root)
                         gate_success = True
                     finally:
+                        injection_class=None
+                        if injection_ticket is not None:
+                            descriptors=[]
+                            for g in ops:
+                                data=gate_data(self._physical(g));data.pop('op_id',None);data.pop('source_op_id',None)
+                                descriptors.append(data)
+                            injection_class=content_hash({'operations':descriptors,'layout':self.layout.logical_to_physical,
+                                'n':self.num_qubits,'b':self.block_bits,'P':self.size,'binding':self.binding.binding_id})
+                        self.runtime.after_executor(injection_ticket,service_seconds=perf_counter()-service_begin,
+                            source_ids=tuple(g.op_id for g in ops),success=gate_success,work_class=injection_class)
                         measurements.end_group(gate_group)
                         condition = {'operation': 'executor-group' if len(ops) > 1 else 'executor-gate',
                                      'executor': executor if gate_success else ('fused-local' if is_fused else 'single-gate'),
@@ -525,19 +540,47 @@ class AsyncDistributedSimulator(DistributedSimulator):
     def gradient(self, observable, *, parameters=None, binding=None, method='auto', costs=None):
         from .gradient_scheduler import GradientScheduler
         from .phase4_gradient import execute_gradient
+        from .gradient_cost_adapter import GradientCostAdapter
+        from .gradient_runtime_context import gradient_context
+        from .observables import ObservableIR
+        if not isinstance(observable,ObservableIR):observable=ObservableIR(tuple(observable))
         self.materialize(binding=binding)
         requested = list(parameters) if parameters is not None else sorted(
             set().union(*(g.dependencies for g in self.sequencer.operations)))
         error = None
         try:
+            context=gradient_context(self,observable,requested)
+            adapter=GradientCostAdapter()
+            cost_origin='manual-reference' if costs is not None else 'unavailable'
+            if method=='auto' and costs is None and self.runtime.gradient_calibration is not None:
+                if context['injected'] or not context['build']:
+                    costs={}
+                    cost_origin='INJECTED_EVALUATION' if context['injected'] else 'INSUFFICIENT_BUILD_BASELINE'
+                else:
+                    costs=adapter.adapt(self.runtime.gradient_calibration,context)
+                    cost_origin=adapter.last_reason
             schedule = GradientScheduler().choose(self.sequencer.operations, requested, self.binding,
-                        method, costs, available_ram_bytes=self.budget.limit)
+                        method, costs, available_ram_bytes=self.budget.limit,
+                        available_disk_bytes=self.config.disk_quota_bytes)
         except Exception as exc:
             error = str(exc)
         self.transport.vote(error)
         self.transport.agree(asdict(schedule))
-        self.trace.record('gradient-schedule', metadata={'path': 'GRADIENT_SCHEDULE', **asdict(schedule)})
-        return execute_gradient(self, observable, requested, schedule)
+        self.trace.record('gradient-schedule', metadata={'path': 'GRADIENT_SCHEDULE', **asdict(schedule),
+            'cost_origin':cost_origin,'context_hash':content_hash(context)})
+        self.runtime.invalidate_eta('GRADIENT_JOB_STARTED')
+        started=perf_counter();success=False;result=None
+        try:
+            result=execute_gradient(self, observable, requested, schedule)
+            success=True
+            return result
+        finally:
+            self.runtime.latest_gradient={'method':schedule.method,'cost_origin':cost_origin,
+                'context_hash':content_hash(context),'wall_seconds':perf_counter()-started,
+                'success':success,'estimated_seconds':schedule.estimated_seconds,
+                'resource_baseline':'execution-admission-only',
+                'evidence':'injected' if getattr(self,'_measurement_injected',False) else 'measured'}
+            self.runtime.invalidate_eta('GRADIENT_JOB_FINISHED')
 
     def close(self):
         if self.closed:

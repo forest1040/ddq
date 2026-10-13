@@ -1,0 +1,424 @@
+{
+  "kind": "phase4-followup-selected-results",
+  "scope": "same-host",
+  "cluster_used": false,
+  "n": 4,
+  "b": 2,
+  "source_hash": "26910c45dc40cdfffab419f2c52f9e55b438c95009a9fc412f08779a4701ef3f",
+  "worker_hash": "be9c96123f16f49ec138534194af2913fe1b7fa9ce049045a57567a7767552f0",
+  "lock_hash": "850aa96ac1d868f27530f00f8ef8c9dcf954c60cdaa881ba2d8c2dabb2f6540b",
+  "completed_cases": 6,
+  "measured_trials": 294,
+  "warmup_trials": 84,
+  "extra_gradient_context_and_auto_trials": 12,
+  "adaptive_measured_degraded_trials": 84,
+  "adaptive_switches": 0,
+  "production_gradient_cost_count": 0,
+  "failed_attempts": [
+    {
+      "case": "buffered-p4",
+      "matrix": "mac-matrix-20261014/matrix.json",
+      "state": "FAILED",
+      "raw_available": false
+    },
+    {
+      "case": "direct-p4",
+      "matrix": "mac-matrix-20261014/matrix.json",
+      "state": "FAILED",
+      "raw_available": false
+    }
+  ],
+  "selected_cases": [
+    {
+      "case": "buffered-p1",
+      "raw": "mac-matrix-20261014/buffered-p1.json",
+      "sha256": "d56ca1bdcaf364918bc7ec575ec2e1acb384f2d65c10fe58e92a6d594cea27d5",
+      "ranks": 1,
+      "backend_requested": "buffered",
+      "resolved_backend_attested": false,
+      "comparison": {
+        "medians_seconds": {
+          "S0": 0.5288584999507293,
+          "S2": 0.2941984160570428
+        },
+        "paired_difference_ci95_seconds": [
+          -0.23625595902558416,
+          -0.22704091703053564
+        ],
+        "claim": "observed-direction-only",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          -0.23581641702912748,
+          -0.22945179091766477
+        ]
+      },
+      "adaptive": {
+        "medians_seconds": {
+          "fixed": 1.9924078750191256,
+          "auto": 1.9951144170481712
+        },
+        "paired_difference_ci95_seconds": [
+          -0.004096957971341908,
+          0.01717216696124524
+        ],
+        "claim": "unconfirmed",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          -0.004035832826048136,
+          0.01791637495625764
+        ]
+      },
+      "gradient": {
+        "adjoint": {
+          "whole_trial_median_seconds": 0.5020852501038462,
+          "runner_median_seconds": 0.3253050409257412
+        },
+        "recompute": {
+          "whole_trial_median_seconds": 0.5902382079511881,
+          "runner_median_seconds": 0.4121694579953328
+        },
+        "parameter-shift": {
+          "whole_trial_median_seconds": 1.20954020798672,
+          "runner_median_seconds": 1.0241133329691365
+        }
+      },
+      "gradient_auto": {
+        "method": "adjoint",
+        "cost_origin": "INSUFFICIENT_BUILD_BASELINE",
+        "context_hash": "b4b0fb330d9d4f91dfddd07cd88903e3ab3650c2b08bc1f6cc419fc08e410ab4",
+        "wall_seconds": 0.32068129093386233,
+        "success": true,
+        "estimated_seconds": null,
+        "resource_baseline": "execution-admission-only",
+        "evidence": "measured"
+      }
+    },
+    {
+      "case": "buffered-p2",
+      "raw": "mac-matrix-20261014/buffered-p2.json",
+      "sha256": "6fcdda5f4aa57680a5e4f1447d3c2015c0e79379105741ee49fd4953f556baea",
+      "ranks": 2,
+      "backend_requested": "buffered",
+      "resolved_backend_attested": false,
+      "comparison": {
+        "medians_seconds": {
+          "S0": 1.1050807080464438,
+          "S2": 0.6614325409755111
+        },
+        "paired_difference_ci95_seconds": [
+          -0.48805675003677607,
+          -0.41130937403067946
+        ],
+        "claim": "observed-direction-only",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          -0.43171391799114645,
+          -0.41882658400572836
+        ]
+      },
+      "adaptive": {
+        "medians_seconds": {
+          "fixed": 2.555958708981052,
+          "auto": 2.5684151250170544
+        },
+        "paired_difference_ci95_seconds": [
+          -0.020311042084358633,
+          0.021670292015187442
+        ],
+        "claim": "unconfirmed",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          -0.008275041007436812,
+          0.022028582985512912
+        ]
+      },
+      "gradient": {
+        "adjoint": {
+          "whole_trial_median_seconds": 1.0492826669942588,
+          "runner_median_seconds": 0.6592853750335053
+        },
+        "recompute": {
+          "whole_trial_median_seconds": 1.2214525830931962,
+          "runner_median_seconds": 0.8300759580451995
+        },
+        "parameter-shift": {
+          "whole_trial_median_seconds": 2.8168859999859706,
+          "runner_median_seconds": 2.400846333010122
+        }
+      },
+      "gradient_auto": {
+        "method": "adjoint",
+        "cost_origin": "INSUFFICIENT_BUILD_BASELINE",
+        "context_hash": "7f23dfa294dbf279e79fcb45d4cbe20878013ee452cd0b1384553ebef959cf2f",
+        "wall_seconds": 0.6481207909528166,
+        "success": true,
+        "estimated_seconds": null,
+        "resource_baseline": "execution-admission-only",
+        "evidence": "measured"
+      }
+    },
+    {
+      "case": "buffered-p4",
+      "raw": "mac-p4-retry-20261014/buffered-p4.json",
+      "sha256": "37606601fb5b8b4464a22d80cf631abd28e1ea2e7ec90d029e36a7bc7c1cddb6",
+      "ranks": 4,
+      "backend_requested": "buffered",
+      "resolved_backend_attested": false,
+      "comparison": {
+        "medians_seconds": {
+          "S0": 3.9105121670290828,
+          "S2": 2.409347000066191
+        },
+        "paired_difference_ci95_seconds": [
+          -1.545229542069137,
+          -1.4429187499918044
+        ],
+        "claim": "observed-direction-only",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          -1.5556509169982746,
+          -1.4709132079733536
+        ]
+      },
+      "adaptive": {
+        "medians_seconds": {
+          "fixed": 5.991586250020191,
+          "auto": 6.033992458018474
+        },
+        "paired_difference_ci95_seconds": [
+          0.0035941669484600425,
+          0.08287658297922462
+        ],
+        "claim": "observed-direction-only",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          0.00022362510208040476,
+          0.07287462498061359
+        ]
+      },
+      "gradient": {
+        "adjoint": {
+          "whole_trial_median_seconds": 3.548411624971777,
+          "runner_median_seconds": 2.194699625018984
+        },
+        "recompute": {
+          "whole_trial_median_seconds": 4.003220707993023,
+          "runner_median_seconds": 2.650692750001326
+        },
+        "parameter-shift": {
+          "whole_trial_median_seconds": 9.324657500023022,
+          "runner_median_seconds": 7.833700208924711
+        }
+      },
+      "gradient_auto": {
+        "method": "adjoint",
+        "cost_origin": "INSUFFICIENT_BUILD_BASELINE",
+        "context_hash": "53a8574e04d9be1d84be63d1dec49592db6d6a7edf92cd17f70eef112d7fa5a9",
+        "wall_seconds": 2.098584041930735,
+        "success": true,
+        "estimated_seconds": null,
+        "resource_baseline": "execution-admission-only",
+        "evidence": "measured"
+      }
+    },
+    {
+      "case": "direct-p1",
+      "raw": "mac-matrix-20261014/direct-p1.json",
+      "sha256": "909ac2ba8281114b11bd69fa63a84e40f9cb9f7d6da4ddc9bbe6ea930baeaa79",
+      "ranks": 1,
+      "backend_requested": "direct",
+      "resolved_backend_attested": false,
+      "comparison": {
+        "medians_seconds": {
+          "S0": 0.5450236670440063,
+          "S2": 0.29945575003512204
+        },
+        "paired_difference_ci95_seconds": [
+          -0.25458579102996737,
+          -0.234165541944094
+        ],
+        "claim": "observed-direction-only",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          -0.2543192079756409,
+          -0.2350487910443917
+        ]
+      },
+      "adaptive": {
+        "medians_seconds": {
+          "fixed": 1.9812853330513462,
+          "auto": 2.0041487920098007
+        },
+        "paired_difference_ci95_seconds": [
+          0.005662292009219527,
+          0.03925770800560713
+        ],
+        "claim": "observed-direction-only",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          0.0032306250650435686,
+          0.04036674997769296
+        ]
+      },
+      "gradient": {
+        "adjoint": {
+          "whole_trial_median_seconds": 0.5097258749883622,
+          "runner_median_seconds": 0.33397399995010346
+        },
+        "recompute": {
+          "whole_trial_median_seconds": 0.6204721250105649,
+          "runner_median_seconds": 0.438430416979827
+        },
+        "parameter-shift": {
+          "whole_trial_median_seconds": 1.272822333034128,
+          "runner_median_seconds": 1.0888252080185339
+        }
+      },
+      "gradient_auto": {
+        "method": "adjoint",
+        "cost_origin": "INSUFFICIENT_BUILD_BASELINE",
+        "context_hash": "d961dfa018b8c6b2c6703968a5926dab6d5241abbc67c0fb777bcceb38f6b5e0",
+        "wall_seconds": 0.34126595803536475,
+        "success": true,
+        "estimated_seconds": null,
+        "resource_baseline": "execution-admission-only",
+        "evidence": "measured"
+      }
+    },
+    {
+      "case": "direct-p2",
+      "raw": "mac-matrix-20261014/direct-p2.json",
+      "sha256": "ca2478436aa2720baf58e49151c403ddb5a232e94c32e22814c6032fb1b4d6f4",
+      "ranks": 2,
+      "backend_requested": "direct",
+      "resolved_backend_attested": false,
+      "comparison": {
+        "medians_seconds": {
+          "S0": 1.1944538750685751,
+          "S2": 0.6964723750716075
+        },
+        "paired_difference_ci95_seconds": [
+          -0.525528666912578,
+          -0.49025533406529576
+        ],
+        "claim": "observed-direction-only",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          -0.5350508750416338,
+          -0.4869398750597611
+        ]
+      },
+      "adaptive": {
+        "medians_seconds": {
+          "fixed": 2.6628678750712425,
+          "auto": 2.667594791040756
+        },
+        "paired_difference_ci95_seconds": [
+          -0.02347141702193767,
+          0.05194291705265641
+        ],
+        "claim": "unconfirmed",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          -0.009999000001698732,
+          0.05574429198168218
+        ]
+      },
+      "gradient": {
+        "adjoint": {
+          "whole_trial_median_seconds": 1.125650667003356,
+          "runner_median_seconds": 0.7068534169811755
+        },
+        "recompute": {
+          "whole_trial_median_seconds": 1.3110331250354648,
+          "runner_median_seconds": 0.8913713749498129
+        },
+        "parameter-shift": {
+          "whole_trial_median_seconds": 2.8540293750120327,
+          "runner_median_seconds": 2.424917583935894
+        }
+      },
+      "gradient_auto": {
+        "method": "adjoint",
+        "cost_origin": "INSUFFICIENT_BUILD_BASELINE",
+        "context_hash": "28bd5b1e89bef329f55cadd9177aac3126e1f9f54486491335c503e6d5df94d5",
+        "wall_seconds": 0.7087033750722185,
+        "success": true,
+        "estimated_seconds": null,
+        "resource_baseline": "execution-admission-only",
+        "evidence": "measured"
+      }
+    },
+    {
+      "case": "direct-p4",
+      "raw": "mac-p4-retry-20261014/direct-p4.json",
+      "sha256": "7fdac90f92787755c65cc0d68c1581d851e3c6620988c3448e3feba396738e81",
+      "ranks": 4,
+      "backend_requested": "direct",
+      "resolved_backend_attested": false,
+      "comparison": {
+        "medians_seconds": {
+          "S0": 3.98036454198882,
+          "S2": 2.436483290977776
+        },
+        "paired_difference_ci95_seconds": [
+          -1.5526238740421832,
+          -1.4894925828557462
+        ],
+        "claim": "observed-direction-only",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          -1.5087540410459042,
+          -1.4892421250697225
+        ]
+      },
+      "adaptive": {
+        "medians_seconds": {
+          "fixed": 6.075057750102133,
+          "auto": 6.083979959017597
+        },
+        "paired_difference_ci95_seconds": [
+          -0.057617791928350925,
+          0.06719787488691509
+        ],
+        "claim": "unconfirmed",
+        "measured_pairs": 7,
+        "steady_paired_difference_ci95_seconds": [
+          -0.026597667019814253,
+          0.05082283297087997
+        ]
+      },
+      "gradient": {
+        "adjoint": {
+          "whole_trial_median_seconds": 3.609080499969423,
+          "runner_median_seconds": 2.2280169998994097
+        },
+        "recompute": {
+          "whole_trial_median_seconds": 4.074617417063564,
+          "runner_median_seconds": 2.696505416999571
+        },
+        "parameter-shift": {
+          "whole_trial_median_seconds": 9.259088958031498,
+          "runner_median_seconds": 7.832146917004138
+        }
+      },
+      "gradient_auto": {
+        "method": "adjoint",
+        "cost_origin": "INSUFFICIENT_BUILD_BASELINE",
+        "context_hash": "48c1ffb825fcc6056d2083b66bad2aa4b35a442fa99e30729152199358c3802b",
+        "wall_seconds": 2.1352357090217993,
+        "success": true,
+        "estimated_seconds": null,
+        "resource_baseline": "execution-admission-only",
+        "evidence": "measured"
+      }
+    }
+  ],
+  "limitations": [
+    "resolved backend telemetry missing",
+    "no certified production envelope",
+    "positive automatic switching and VERIFY pending",
+    "small same-host cases only",
+    "managed RAM excludes process and OS RSS"
+  ]
+}

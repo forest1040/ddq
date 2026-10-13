@@ -72,6 +72,12 @@ class RuntimeControl:
         self.latest_eta=None
         self.generated_candidates={}
         self._eta_last_progress=0
+        self.performance_injection=None
+        self._executor_observer=None
+        self._injection_budget=0
+        self._gradient_profile_budget=0
+        self.gradient_calibration=None
+        self.latest_gradient=None
         self.configure_eta(max_bytes=max(1024,min(8192,sim.config.metadata_reserve_bytes//32)))
 
     def configure_measurements(self, *, max_bytes, max_conditions=256, per_condition=64):
@@ -98,6 +104,103 @@ class RuntimeControl:
             self.sim.budget.release(self._eta_budget)
             self._eta_budget=0
         if hasattr(self,'remaining_extractor'):self.remaining_extractor.invalidate()
+        for name in ('_injection_budget','_gradient_profile_budget'):
+            amount=getattr(self,name,0)
+            if amount:self.sim.budget.release(amount)
+            setattr(self,name,0)
+        self.performance_injection=None
+        self._executor_observer=None
+        self.gradient_calibration=None
+
+    def configure_performance_injection(self,spec,*,observer=None):
+        """Opt-in, in-process compute delays for evaluation only."""
+        from .performance_injection import InjectionSpec,PerformanceInjection
+        sim=self.sim
+        error=None
+        try:
+            if sim._private_epoch:raise ValueError('Injection requires a published cut')
+            if not isinstance(spec,InjectionSpec):raise TypeError('InjectionSpec required')
+            if spec.resource!='compute' or spec.trigger!='work' or spec.operations!=('executor-group',) or spec.per_bytes is not None:
+                raise ValueError('Actual runtime injection supports compute executor-group only')
+            if observer is not None and not callable(observer):raise TypeError('Observer must be callable')
+        except Exception as exc:error=str(exc)
+        sim.transport.vote(error)
+        sim.transport.agree({'performance_injection':asdict(spec)})
+        pool=8*4096+512*spec.max_events
+        extra=max(0,pool-self._injection_budget)
+        admitted=False;error=None
+        try:sim.budget.reserve(extra);admitted=True
+        except Exception as exc:error=str(exc)
+        try:sim.transport.vote(error)
+        except BaseException:
+            if admitted:sim.budget.release(extra)
+            raise
+        if pool<self._injection_budget:sim.budget.release(self._injection_budget-pool)
+        self._injection_budget=pool
+        self.performance_injection=PerformanceInjection(spec)
+        self.performance_injection.start()
+        self._executor_observer=observer
+        sim._measurement_injected=True
+        self.invalidate_eta('EVALUATION_INJECTION_ATTACHED')
+        return self.performance_injection
+
+    def before_executor(self,event_id,source_count):
+        from time import sleep
+        driver=self.performance_injection
+        if driver is None:return None
+        ticket=None;error=None
+        # Progress actual requests while waiting for a bounded service barrier.
+        try:
+            ticket=driver.request('executor-group',work=source_count,token=event_id)
+            while ticket is not None and ticket.state=='pending':
+                driver.progress()
+                if ticket.state=='pending':
+                    self.sim._progress_io()
+                    self.sim.transport.poll()
+                    sleep(min(.001,max(0,ticket.ready_at-monotonic())))
+        except Exception as exc:
+            error=str(exc)
+            if ticket is not None:driver.cancel(ticket)
+        self.sim.transport.vote(error or (str(self.sim._async_errors[0]) if self.sim._async_errors else None))
+        return ticket
+
+    def after_executor(self,ticket,*,service_seconds,source_ids,success,work_class=None):
+        if ticket is None:return
+        if success:self.performance_injection.complete(ticket,service_seconds=service_seconds)
+        else:self.performance_injection.cancel(ticket)
+        if self._executor_observer is not None:
+            try:self._executor_observer({'event_id':ticket.event_id,'source_ids':source_ids,
+                'actual_service_seconds':service_seconds,'injected_delay_seconds':ticket.actual_delay_seconds,
+                'planned_delay_seconds':ticket.planned_delay,'success':success,'evidence':'injected','work_class':work_class})
+            except Exception as exc:self.sim._async_errors.append(exc)
+
+    def attach_gradient_calibration(self,report):
+        """Store bounded explicit evidence; attaching never runs a pilot."""
+        from copy import deepcopy
+        from .journal import canonical
+        sim=self.sim
+        data=None;error=None
+        try:
+            if sim._private_epoch:raise ValueError('Gradient profile requires a published cut')
+            data=report.to_dict() if hasattr(report,'to_dict') else dict(report)
+            size=len(canonical(data).encode())
+            if size>65536:raise ValueError('Gradient calibration exceeds runtime profile limit')
+        except Exception as exc:error=str(exc)
+        sim.transport.vote(error)
+        sim.transport.agree({'gradient_calibration':content_hash(data)})
+        pool=8*size;extra=max(0,pool-self._gradient_profile_budget)
+        admitted=False;error=None
+        try:sim.budget.reserve(extra);admitted=True
+        except Exception as exc:error=str(exc)
+        try:sim.transport.vote(error)
+        except BaseException:
+            if admitted:sim.budget.release(extra)
+            raise
+        if pool<self._gradient_profile_budget:sim.budget.release(self._gradient_profile_budget-pool)
+        self._gradient_profile_budget=pool
+        self.gradient_calibration=deepcopy(data)
+        self.invalidate_eta('GRADIENT_PROFILE_ATTACHED')
+        return content_hash(data)
 
     def configure_eta(self, *, max_bytes=65536,scan_items=256,scan_seconds=.02):
         from .remaining_work import CaptureLimits,RemainingWorkExtractor
@@ -143,6 +246,8 @@ class RuntimeControl:
         try:
             if endpoint_frontier is not None:self._eta_endpoint=endpoint_frontier
             snapshot=self.remaining_extractor.capture(sim,endpoint_frontier=self._eta_endpoint)
+            if getattr(sim,'_measurement_injected',False):
+                snapshot=replace(snapshot,unknown_reasons=snapshot.unknown_reasons+('EVALUATION_INJECTION_ACTIVE',))
             if not self._eta_budget:
                 snapshot=replace(snapshot,complete=False,unknown_reasons=snapshot.unknown_reasons+('ETA_MONITOR_BUDGET',))
             reports={}
@@ -313,10 +418,11 @@ class RuntimeControl:
                 queue_seconds=getattr(request, 'queue_seconds', None),
                 service_seconds=request.elapsed_seconds, protocol_seconds=elapsed,
                 payload_bytes=sim.store.slot_bytes, storage_bytes=sim.store.slot_bytes,
+                evidence='injected' if getattr(sim,'_measurement_injected',False) else 'measured',
                 success=successful, validator=lambda: bool(getattr(request, 'validated', False)),
                 warmup=bool(getattr(sim,'_measurement_warmup',False)),
                 scope='same-host' if same_host else 'cross-host')
-        if successful and elapsed > 0:
+        if successful and elapsed > 0 and not getattr(self.sim,'_measurement_injected',False):
             self.observe(BenchmarkSample(condition,
                           bandwidth_bytes_per_second=self.sim.store.slot_bytes/elapsed,
                           latency_ms=elapsed*1000))
@@ -342,6 +448,7 @@ class RuntimeControl:
             condition=condition, parent_id=metadata.get('group_id'), stage='mpi-transfer',
             units='calls', quantity=1, protocol_seconds=elapsed,
             payload_bytes=request.count, success=request.error is None,
+            evidence='injected' if getattr(self.sim,'_measurement_injected',False) else 'measured',
             validated=request.error is None,
             warmup=bool(getattr(self.sim,'_measurement_warmup',False)),
             scope=scope)
