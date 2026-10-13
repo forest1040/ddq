@@ -1,0 +1,73 @@
+% Existing model and measured-kernel projections; no new benchmark is used.
+\begin{frame}{35. VQE全ケース：100反復の時間を一つの表に}
+  \smallnote{\textbf{100反復（energy＋Adjoint）の合計、単位：日。} Qは全system、Nはnode数。容量はnode当たり。}
+  {\scriptsize\setlength{\tabcolsep}{3pt}\renewcommand{\arraystretch}{1.35}
+  \begin{tabularx}{\textwidth}{@{}p{.16\textwidth}p{.065\textwidth}*{6}{>{\centering\arraybackslash}X}@{}}
+    \toprule
+    構成 & Q / N & 状態\newline GiB & RAM / SSD\newline GiB / TiB & native\newline 目標 & Python\newline 1 process & Python\newline 16 process & Qulacs\newline VQE全体 \\
+    \midrule
+    A：RAMのみ & 24 / 1 & 0.25 & 512 / 0 & 2.07 & 134.4 & 7.91 & 未計測 \\
+    B：SSDあり & 28 / 1 & 4 & 64 / 32 & 133.7 & 8,523 & 503.5 & 未計測 \\
+    C：Ethernet & 32 / 8 & 8 & 64 / 64 & 663.2 & 42,530 & 2,508.9 & 未計測 \\
+    D：InfiniBand & 32 / 8 & 8 & 64 / 64 & 662.5 & 42,529 & 2,508.2 & 未計測 \\
+    \bottomrule
+  \end{tabularx}}
+  \medskip
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{共通workload}\par
+      \small A：H$_2$O型CAS(8e,12o)、$M=5,000$。\par
+      B：N$_2$型CAS(10e,14o)、$M=20,000$。\par
+      C/D：CAS(10e,16o)、$M=50,000$。\par
+      128 native回転・16 parameter、追加評価を除く。\par
+      積分未生成、100反復での収束は保証しない。
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{3つの時間列の根拠}\par
+      \small native目標：\textbf{1億項/s/node}、未測定。\par
+      Python：内積再計測\textbf{154万／2,614万項/s}。\par
+      process数はnodeごとの均衡並列を仮定する。\par
+      SSD／network／prefix再利用の仮定は維持。\par
+      Qulacs回転速度からVQE全体を推定しない。
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{全構成で同じ100反復を比較する。} 目標値とkernel速度の感度であり、化学VQEのend-to-end実測ではない。}
+  \note{vqe_estimates.jsonのtotal_100_iterations_secondsを86400で割る。Python列はperformance_estimates.jsonのvqe_cpu_sensitivity.total_100_iterations_days。1/16は独立process/nodeでthread数ではない。RAM/SSDは予約例、process RSSではない。1e8native目標、RAM32GiB/s、SSD2GiB/s、Ethernet8/IB16GiB/sと5percentmargin、均衡並列・partner reuseを仮定。QulacsのPauli回転測定だけではobservable/action/reverse/checkpoint費用を校正できない。}
+\end{frame}
+
+\begin{frame}{36. QPE全ケース：32 trajectoryの時間を一つの表に}
+  \smallnote{\textbf{全列は独立32 trajectoryの合計、単位：年。} 1 mHa設定・2次対称トロッター・IPEA（誤差未認証）。}
+  {\scriptsize\setlength{\tabcolsep}{2pt}\renewcommand{\arraystretch}{1.4}
+  \begin{tabularx}{\textwidth}{@{}p{.15\textwidth}p{.065\textwidth}*{8}{>{\centering\arraybackslash}X}@{}}
+    \toprule
+    & & \multicolumn{3}{c}{計画／Python kernel速度の感度} & 配布版 & \multicolumn{4}{c}{Qulacs OpenMP・RAM実測から外挿} \\
+    \cmidrule(lr){3-5}\cmidrule(lr){6-6}\cmidrule(lr){7-10}
+    構成 & 全Q / N & native\newline 目標 & Python\newline 1 process & Python\newline 16 process & 実質\newline 1 thread & 1 thread & 8 thread & 16 thread & 24 thread \\
+    \midrule
+    A：RAMのみ & 25 / 1 & 1.498万 & 51.78万 & 3.056万 & 3,110 & 3,463 & 405 & 203 & 215 \\
+    B：SSDあり & 29 / 1 & 95.90万 & 3,314万 & 195.6万 & --- & --- & --- & --- & --- \\
+    C：Ethernet & 33 / 8 & 658.1万 & 1.675億 & 1,157万 & --- & --- & --- & --- & --- \\
+    D：InfiniBand & 33 / 8 & 568.8万 & 1.666億 & 1,067万 & --- & --- & --- & --- & --- \\
+    B：RAM比較 & 29 / 1 & --- & --- & --- & 19.99万 & 22.11万 & 2.564万 & 1.283万 & 1.144万 \\
+    \bottomrule
+  \end{tabularx}}
+  \medskip
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{構成と処理の境界}\par
+      \small RAM/SSD予約（GiB/TiB、各node）：\par
+      A 512/0、B 64/32、C/D 64/64。\par
+      BのRAM比較：\textbf{512 GiB Mac、SSDなし}。\par
+      状態/node：A 0.5、B 8、C/D 16 GiB。
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{時間列を混同しない}\par
+      \small Qulacsは合成8項の32回転片から線形外挿。\par
+      配布版は指定1〜24 threadでも実質単一thread。\par
+      ---：その構成で未計測／未見積もり。\par
+      BのSSD時間をRAM比較へコピーしない。
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{容量・構成と同じ条件の時間だけを対応させる。} 固有状態準備・measurement/reset・Trotter biasの検証は別途必要。}
+  \note{chemistry_estimates.jsonのall_runs_years、performance_estimates.jsonのqpe_cpu_sensitivity/qulacs_one_node_ram_qpe.all_runs_years。PythonはnodeごとにMac等級CPUを均衡配置する仮定で、分散throughput未測定。Qulacs列はA-RAMとB case(storage RAM only)の配布wheel1/OpenMP1/8/16/24。B RAM比較は別保存構成、元B-SSDのnative/Python値を入れない。配布wheelの8/16/24指定時の小差はrawJSONを参照。native目標1e8、Lambda100、m20、delta_max0.01、base_steps2、M5000/20000/50000を維持。単一nodeのRAM実測をSSD/8nodeへ移さない。年は365.25日。表の表示は丸め値。}
+\end{frame}

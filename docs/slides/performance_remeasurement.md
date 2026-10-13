@@ -120,6 +120,39 @@ Aの16 threadは旧native目標表の約468年より約74倍短い。これはQu
 
 実環境は10 Gb EthernetとOmni-Pathであり、元の構成例の100 Gb Ethernet／200 Gb InfiniBandとは違う。これは経路比較に利用し、8 nodeで数GiBを流す帯域へ比例外挿しない。Omni-PathをInfiniBandの実測と呼ばない。したがってC/Dの元の目標帯域は置換しない。単一ノードRAMのQulacs推定には通信項を入れない。
 
+## 全ケースの一覧表
+
+スライド35／36に、VQE／QPEそれぞれ一つの表を追加した。既存JSONの値を表示単位へ換算したもので、新しい実機計測や構成間の性能保証ではない。
+
+### VQE：100反復（energy＋Adjoint）、単位は日
+
+RAM／SSDはnode当たりの予約例（GiB／TiB）、状態はnode当たりGiB。Python列の1／16は独立process数/nodeで、均衡並列とMac等級CPUの複製を仮定する。
+
+| 構成 | system Q / node | 状態/node GiB | RAM/SSD予約 | native目標 日 | Python 1 process 日 | Python 16 process 日 | Qulacs VQE全体 |
+|---|---|---:|---|---:|---:|---:|---|
+| A RAMのみ | 24 / 1 | 0.25 | 512 / 0 | 2.07 | 134.4 | 7.91 | 未計測 |
+| B SSDあり | 28 / 1 | 4 | 64 / 32 | 133.7 | 8,523 | 503.5 | 未計測 |
+| C Ethernet | 32 / 8 | 8 | 64 / 64 | 663.2 | 42,530 | 2,508.9 | 未計測 |
+| D InfiniBand | 32 / 8 | 8 | 64 / 64 | 662.5 | 42,529 | 2,508.2 | 未計測 |
+
+native目標は未測定の1億項/s/node、Python列は内積の再計測rate（約154万／2,614万項/s）による感度。元のSSD/network帯域、partner reuse、5%marginの仮定を維持する。Qulacs回転の速度から、未測定のobservable/action/reverse/checkpointを含むVQE全体を導出しない。native列の根拠は [vqe_estimates.json](vqe_estimates.json)の **cases[].total_100_iterations_seconds / 86400**、Python列は [performance_estimates.json](performance_estimates.json)の **vqe_cpu_sensitivity[].total_100_iterations_days**。
+
+### QPE：独立32 trajectory、単位は年
+
+全Qはsystem＋IPEA ancilla 1個。1 mHa設定、2次対称トロッター、Lambda=100 Ha、m=20、delta_max=0.01 Ha^-1を維持し、誤差は未認証。全列を32 trajectoryの合計へ揃え、1 trajectoryと混在させない。
+
+| 構成 | 全Q / node | native目標 年 | Python 1 process 年 | Python 16 process 年 | Qulacs配布版 実質1 thread 年 | OpenMP 1 thread 年 | OpenMP 8 thread 年 | OpenMP 16 thread 年 | OpenMP 24 thread 年 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| A RAMのみ | 25 / 1 | 1.498万 | 51.78万 | 3.056万 | 3,110 | 3,463 | 405 | 203 | 215 |
+| B SSDあり | 29 / 1 | 95.90万 | 3,314万 | 195.6万 | — | — | — | — | — |
+| C Ethernet | 33 / 8 | 658.1万 | 1.675億 | 1,157万 | — | — | — | — | — |
+| D InfiniBand | 33 / 8 | 568.8万 | 1.666億 | 1,067万 | — | — | — | — | — |
+| B RAM比較 | 29 / 1 | — | — | — | 19.99万 | 22.11万 | 2.564万 | 1.283万 | 1.144万 |
+
+「—」はその構成で未計測／未見積もり。B RAM比較は元のBと同じ29Qを512 GiB MacのRAMだけに載せる別構成であり、元のSSDモデルの数値をコピーしない。Qulacsの単一ノード実測をC/DのSSD／8 node構成へ転用しない。配布版は1 thread指定の代表値を載せ、8／16／24指定時も実効CPUはほぼ1 coreであることを前節に記載した。OpenMPの全thread条件は同じ表で比較する。
+
+native列の根拠は [chemistry_estimates.json](chemistry_estimates.json)の **cases[].all_runs_years**、Python列は [performance_estimates.json](performance_estimates.json)の **qpe_cpu_sensitivity[].all_runs_years**、Qulacs列は同JSONの **qulacs_one_node_ram_qpe[].all_runs_years**。Qulacs列は合成項からの外挿で、固有状態準備、IPEA measurement/reset/feedforward、分子積分、Trotter biasの実測・認証を含まない。年は365.25日、表は丸め値。
+
 ## 再現
 
 計測を同時に起動せず順に実行する。
