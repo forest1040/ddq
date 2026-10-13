@@ -175,3 +175,186 @@ os._exit(0)
                              evidence='duplicate-recovery-attempt')
     assert recovered.reserved_bytes == 0
     recovered.close()
+
+
+def test_shared_policy_connections_serialize_and_share_pending_quota(tmp_path):
+    ledger = tmp_path / 'shared.sqlite'
+    common = dict(roots=[tmp_path], quota_bytes=100, usage=lambda: 0,
+                  free=lambda: 1000, shared_policy=True)
+    first = DiskBudget(ledger, **common)
+    second = DiskBudget(ledger, **common)
+    key = first.reserve(100, operation='shared-client')
+    assert second.reserved_bytes == 100
+    with pytest.raises(DiskAdmissionError, match='quota'):
+        second.reserve(1, operation='must-not-overbook')
+    assert second.reservation(key)['bytes'] == 100
+    first.close()
+    second.close()
+
+
+def test_shared_policy_mismatch_rejects_before_touching_existing_reservation(tmp_path):
+    ledger = tmp_path / 'shared.sqlite'
+    original = DiskBudget(ledger, [tmp_path], quota_bytes=100, usage=lambda: 0,
+                          free=lambda: 1000, shared_policy=True)
+    key = original.reserve(60, operation='keep-existing')
+    original.close()
+
+    with pytest.raises(DiskAdmissionError, match='policy mismatch'):
+        DiskBudget(ledger, [tmp_path], quota_bytes=99, usage=lambda: 0,
+                   free=lambda: 1000, shared_policy=True)
+
+    reopened = DiskBudget(ledger, [tmp_path], quota_bytes=100, usage=lambda: 0,
+                          free=lambda: 1000, shared_policy=True)
+    assert reopened.reservation(key)['state'] == 'RESERVED'
+    assert reopened.reserved_bytes == 60
+    reopened.release(key)
+    reopened.close()
+
+
+def test_generic_client_cannot_bypass_an_already_bound_shared_policy(tmp_path):
+    ledger = tmp_path / 'shared.sqlite'
+    shared = DiskBudget(ledger, [tmp_path], quota_bytes=100, usage=lambda: 0,
+                        free=lambda: 1000, shared_policy=True)
+    key = shared.reserve(60, operation='protected')
+    shared.close()
+
+    with pytest.raises(DiskAdmissionError, match='policy mismatch'):
+        DiskBudget(ledger, [tmp_path], quota_bytes=1000, usage=lambda: 0,
+                   free=lambda: 1000, shared_policy=False)
+
+    reopened = DiskBudget(ledger, [tmp_path], quota_bytes=100, usage=lambda: 0,
+                          free=lambda: 1000, shared_policy=True)
+    assert reopened.reservation(key)['state'] == 'RESERVED'
+    assert reopened.reserved_bytes == 60
+    reopened.release(key)
+    reopened.close()
+
+
+def test_legacy_ledger_with_active_token_cannot_be_bound_to_shared_policy(tmp_path):
+    ledger = tmp_path / 'legacy.sqlite'
+    legacy = DiskBudget(ledger, [tmp_path], usage=lambda: 0, free=lambda: 1000)
+    key = legacy.reserve(5, operation='legacy-active')
+    legacy.close()
+
+    shared = dict(roots=[tmp_path], usage=lambda: 0, free=lambda: 1000,
+                  shared_policy=True)
+    with pytest.raises(DiskAdmissionError, match='legacy reservations are active'):
+        DiskBudget(ledger, **shared)
+
+    legacy = DiskBudget(ledger, [tmp_path], usage=lambda: 0, free=lambda: 1000)
+    assert legacy.reserved_bytes == 5
+    legacy.release(key)
+    legacy.close()
+    bound = DiskBudget(ledger, **shared)
+    assert bound.reserved_bytes == 0
+    bound.close()
+
+
+def test_root_limit_is_global_across_clients_and_constructor(tmp_path):
+    roots = []
+    for index in range(256):
+        root = tmp_path / f'root-{index}'
+        root.mkdir()
+        roots.append(root)
+    common = dict(quota_bytes=10000, usage=lambda: 0, free=lambda: 100000,
+                  shared_policy=True)
+    budget = DiskBudget(tmp_path / 'roots.sqlite', roots[:250], **common)
+    other = DiskBudget(tmp_path / 'roots.sqlite', roots[250:], **common)
+    extra = tmp_path / 'root-extra'
+    extra.mkdir()
+    with pytest.raises(DiskAdmissionError, match='root limit'):
+        other.register_roots([extra])
+    assert budget.db.execute('SELECT count(*) FROM roots').fetchone()[0] == 256
+    budget.close()
+    other.close()
+
+    too_many = tmp_path / 'too-many'
+    too_many.mkdir()
+    with pytest.raises(DiskAdmissionError, match='root limit'):
+        DiskBudget(tmp_path / 'too-many-roots.sqlite', roots + [too_many], **common)
+
+
+def test_shared_root_registration_rejects_aggregate_overquota_and_rolls_back(tmp_path):
+    first_root = tmp_path / 'first'
+    other_root = tmp_path / 'other'
+    first_root.mkdir()
+    other_root.mkdir()
+    payload = other_root / 'existing.bin'
+    payload.write_bytes(b'x' * 101)
+    include_other = [False]
+
+    def observed():
+        roots = (first_root, other_root) if include_other[0] else (first_root,)
+        return sum(item.stat().st_size for root in roots
+                   for item in root.rglob('*') if item.is_file())
+
+    budget = DiskBudget(tmp_path / 'ledger.sqlite', [first_root], quota_bytes=100,
+                        usage=observed, free=lambda: 10000, shared_policy=True)
+    include_other[0] = True
+    with pytest.raises(DiskAdmissionError, match='shared disk quota'):
+        budget.register_roots([other_root])
+    assert budget.db.execute('SELECT path FROM roots').fetchall() == [(str(first_root.resolve()),)]
+    budget.close()
+
+
+def test_nested_child_roots_compact_under_parent_without_losing_usage(tmp_path):
+    parent = tmp_path / 'dataset'
+    parent.mkdir()
+    child_root = parent / 'suffixes'
+    child_root.mkdir()
+    payload = child_root / 'payload.bin'
+    payload.write_bytes(b'payload')
+    budget = DiskBudget(tmp_path / 'ledger.sqlite', [parent], quota_bytes=10000,
+                        usage=lambda: 0, free=lambda: 100000, shared_policy=True)
+
+    for index in range(300):
+        child = child_root / f'shift-{index}' / 'nested'
+        child.mkdir(parents=True)
+        budget.register_roots([child])
+
+    assert budget.db.execute('SELECT path FROM roots').fetchall() == [(str(parent.resolve()),)]
+    assert budget._observed_usage() == len(b'payload')
+    budget.close()
+
+
+def test_unrelated_roots_with_sibling_prefix_names_remain_distinct(tmp_path):
+    prefix_root = tmp_path / 'Root.A'
+    sibling_prefix_root = tmp_path / 'Root.A2'
+    prefix_root.mkdir()
+    sibling_prefix_root.mkdir()
+    budget = DiskBudget(tmp_path / 'ledger.sqlite', [prefix_root], quota_bytes=10000,
+                        usage=lambda: 0, free=lambda: 100000, shared_policy=True)
+    budget.register_roots([sibling_prefix_root])
+    paths = {Path(path) for (path,) in budget.db.execute('SELECT path FROM roots')}
+    assert paths == {prefix_root.resolve(), sibling_prefix_root.resolve()}
+    budget.close()
+
+
+def test_incoming_parent_compacts_descendant_and_keeps_existing_bytes(tmp_path):
+    ancestor = tmp_path / 'parent'
+    descendant = ancestor / 'child' / 'grandchild'
+    descendant.mkdir(parents=True)
+    (descendant / 'kept.bin').write_bytes(b'keep these bytes')
+    initial = DiskBudget(tmp_path / 'ledger.sqlite', [descendant], quota_bytes=10000,
+                         usage=lambda: 0, free=lambda: 100000, shared_policy=True)
+    initial.register_roots([ancestor])
+    assert initial.db.execute('SELECT path FROM roots').fetchall() == [(str(ancestor.resolve()),)]
+    assert initial._observed_usage() == len(b'keep these bytes')
+    initial.close()
+
+
+def test_nonoverlapping_root_limit_still_rejects_257th_root(tmp_path):
+    control = tmp_path / 'control'
+    control.mkdir()
+    budget = DiskBudget(tmp_path / 'ledger.sqlite', [control], quota_bytes=10000,
+                        usage=lambda: 0, free=lambda: 100000, shared_policy=True)
+    siblings = []
+    for index in range(256):
+        root = tmp_path / f'unrelated-{index}'
+        root.mkdir()
+        siblings.append(root)
+    budget.register_roots(siblings[:255])
+    with pytest.raises(DiskAdmissionError, match='root limit'):
+        budget.register_roots([siblings[255]])
+    assert budget.db.execute('SELECT count(*) FROM roots').fetchone()[0] == 256  # control + 255 siblings
+    budget.close()

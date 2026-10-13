@@ -48,11 +48,17 @@ class DistributedConfig:
     disk_quota_bytes: int | None = None
     min_free_bytes: int = 0
     drain_reserve_bytes: int = 0
+    disk_admission_ledger: str | None = None
 
     def __post_init__(self):
         StorageConfig(self.directory,self.block_bits,self.ram_budget_bytes_per_rank,self.backend,self.alignment,
                       metadata_reserve_bytes=self.metadata_reserve_bytes)
         if self.storage_scope not in {'shared','node-local'}: raise ValueError('Invalid storage scope')
+        if self.disk_admission_ledger is not None:
+            if (self.storage_scope!='node-local' or not isinstance(self.disk_admission_ledger,str) or
+                    not self.disk_admission_ledger or len(self.disk_admission_ledger.encode())>4096 or
+                    not Path(self.disk_admission_ledger).is_absolute()):
+                raise ValueError('disk_admission_ledger requires an absolute node-local path')
         if self.disk_quota_bytes is not None and self.disk_quota_bytes <= 0: raise ValueError('Invalid disk quota')
         if self.min_free_bytes < 0 or self.drain_reserve_bytes < 0: raise ValueError('Invalid disk reserve')
         if self.tile_bytes < 16 or self.tile_bytes%16: raise ValueError('tile_bytes must be a positive multiple of 16')
@@ -79,7 +85,9 @@ class DistributedSimulator:
         try:
             self.ownership = OwnershipMap(num_qubits,config.block_bits,self.size)
             common_config=asdict(config)
-            if config.storage_scope == 'node-local': common_config.pop('directory')
+            if config.storage_scope == 'node-local':
+                common_config.pop('directory')
+                common_config.pop('disk_admission_ledger')
             self.transport.agree({'num_qubits':num_qubits,'config':common_config,'schema':3})
             self.environment = self.transport.handshake()
             self.block_bits = config.block_bits
@@ -197,16 +205,28 @@ class DistributedSimulator:
             from .storage_placement import StoragePlacement
             StoragePlacement.local('bootstrap',self.rank,self.environment[self.rank]['host'],self.directory)
             record={'host':self.environment[self.rank]['host'],'volume':os.stat(self.directory).st_dev,
-                    'root':str(self.directory.resolve())}
+                    'root':str(self.directory.resolve()),
+                    'ledger':str(Path(self.config.disk_admission_ledger).resolve())
+                        if self.config.disk_admission_ledger is not None else None}
         except Exception as exc:error=str(exc)
         self.transport.vote(error)
         gathered=self.transport.control.allgather(record)
         local=[r for r in gathered if r['host']==record['host'] and r['volume']==record['volume']]
         roots=sorted({r['root'] for r in local})
         key=content_hash({'host':record['host'],'volume':record['volume'],'roots':roots})
-        ledger=Path(roots[0])/'.disk-admission'/f'{key}.sqlite3'
-        self.disk_budget=DiskBudget(ledger,roots,quota_bytes=self.config.disk_quota_bytes,
-            min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes)
+        error=None
+        choices={r['ledger'] for r in local}
+        if len(choices)!=1:error='Same-host/volume ranks must select the same disk admission ledger'
+        self.transport.vote(error)
+        selected=next(iter(choices))
+        ledger=Path(selected) if selected is not None else Path(roots[0])/'.disk-admission'/f'{key}.sqlite3'
+        error=None
+        try:
+            self.disk_budget=DiskBudget(ledger,roots,quota_bytes=self.config.disk_quota_bytes,
+                min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes,
+                shared_policy=True)
+        except Exception as exc:error=str(exc)
+        self.transport.vote(error)
 
     def _attach_disk_budget(self):
         from .disk_budget import DiskBudget
@@ -219,7 +239,8 @@ class DistributedSimulator:
         if self.disk_budget is None:
             ledger=Path(own.root)/'.disk-admission'/f'{key}.sqlite3'
             self.disk_budget=DiskBudget(ledger,roots,quota_bytes=self.config.disk_quota_bytes,
-                min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes)
+                min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes,
+                shared_policy=True)
         self.disk_budget.register_roots(roots)
         self.store.disk_budget=self.disk_budget
 

@@ -1,0 +1,384 @@
+.FFFFFF................................................................. [ 92%]
+...FFF                                                                   [100%]
+=================================== FAILURES ===================================
+___________ test_shared_volume_dataset_fork_and_gradient[buffered-1] ___________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-56365@1,0]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '1', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-56365@1,0]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+___________ test_shared_volume_dataset_fork_and_gradient[buffered-2] ___________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-56396@1,1]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '2', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-56396@1,1]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+___________ test_shared_volume_dataset_fork_and_gradient[buffered-4] ___________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-56452@1,3]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '4', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-56452@1,3]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+____________ test_shared_volume_dataset_fork_and_gradient[direct-1] ____________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-56561@1,0]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '1', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-56561@1,0]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+____________ test_shared_volume_dataset_fork_and_gradient[direct-2] ____________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-56589@1,1]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '2', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-56589@1,1]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+____________ test_shared_volume_dataset_fork_and_gradient[direct-4] ____________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 55, in <module>
+E         gradient=child.gradient(observable,[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E     TypeError: AsyncDistributedSimulator.gradient() takes 2 positional arguments but 3 positional arguments (and 1 keyword-only argument) were given
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-56644@1,3]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '4', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-56644@1,3]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+_____________ test_async_file_state_larger_than_managed_budget[1] ______________
+tests/test_phase4_mpi.py:34: in test_async_file_state_larger_than_managed_budget
+    run_worker(tmp_path,ranks,'S2','buffered','--bounded')
+tests/test_phase4_mpi.py:18: in run_worker
+    subprocess.run([shutil.which('mpiexec'),'-n',str(ranks),sys.executable,
+../../.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/subprocess.py:571: in run
+    raise CalledProcessError(retcode, process.args,
+E   subprocess.CalledProcessError: Command '['/opt/homebrew/bin/mpiexec', '-n', '1', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py', '/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1081/test_async_file_state_larger_t0', '--backend', 'buffered', '--policy', 'S2', '--bounded']' returned non-zero exit status 1.
+----------------------------- Captured stderr call -----------------------------
+Traceback (most recent call last):
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 142, in <module>
+    if args.bounded: run_bounded(base,args.backend,policy)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 116, in run_bounded
+    sim.materialize()
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 437, in materialize
+    self._execute(physical, prior[1])
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 289, in _execute
+    return super()._execute(gate, end, physical_swap=physical_swap)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 596, in _execute
+    self._admit(2*count+3,output_blocks=self.ownership.blocks_per_rank)
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 163, in _admit
+    return super()._admit(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 322, in _admit
+    self.transport.vote(error)
+  File "/Users/tmori/work3/ddq/src/svsim/mpi_transport.py", line 75, in vote
+    raise CollectiveError("collective failure: " + "; ".join(f"rank {i}: {s}" for i, s in failures))
+svsim.mpi_transport.CollectiveError: collective failure: rank 0: Insufficient unpinned RAM for task
+--------------------------------------------------------------------------
+
+prterun detected that one or more processes exited with non-zero status,
+thus causing the job to be terminated. The first process to do so was:
+
+   Process name: [prterun-ank-58503@1,0]
+   Exit code:    1
+--------------------------------------------------------------------------
+_____________ test_async_file_state_larger_than_managed_budget[2] ______________
+tests/test_phase4_mpi.py:34: in test_async_file_state_larger_than_managed_budget
+    run_worker(tmp_path,ranks,'S2','buffered','--bounded')
+tests/test_phase4_mpi.py:18: in run_worker
+    subprocess.run([shutil.which('mpiexec'),'-n',str(ranks),sys.executable,
+../../.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/subprocess.py:571: in run
+    raise CalledProcessError(retcode, process.args,
+E   subprocess.CalledProcessError: Command '['/opt/homebrew/bin/mpiexec', '-n', '2', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py', '/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1081/test_async_file_state_larger_t1', '--backend', 'buffered', '--policy', 'S2', '--bounded']' returned non-zero exit status 1.
+----------------------------- Captured stderr call -----------------------------
+Traceback (most recent call last):
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 142, in <module>
+Traceback (most recent call last):
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 142, in <module>
+    if args.bounded: run_bounded(base,args.backend,policy)
+    if args.bounded: run_bounded(base,args.backend,policy)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 116, in run_bounded
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 116, in run_bounded
+    sim.materialize()
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 437, in materialize
+    sim.materialize()
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 437, in materialize
+    self._execute(physical, prior[1])
+    self._execute(physical, prior[1])
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 289, in _execute
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 289, in _execute
+    return super()._execute(gate, end, physical_swap=physical_swap)
+    return super()._execute(gate, end, physical_swap=physical_swap)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 596, in _execute
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 596, in _execute
+    self._admit(2*count+3,output_blocks=self.ownership.blocks_per_rank)
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 163, in _admit
+    self._admit(2*count+3,output_blocks=self.ownership.blocks_per_rank)
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 163, in _admit
+    return super()._admit(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 322, in _admit
+    return super()._admit(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 322, in _admit
+    self.transport.vote(error)
+  File "/Users/tmori/work3/ddq/src/svsim/mpi_transport.py", line 75, in vote
+    self.transport.vote(error)
+  File "/Users/tmori/work3/ddq/src/svsim/mpi_transport.py", line 75, in vote
+    raise CollectiveError("collective failure: " + "; ".join(f"rank {i}: {s}" for i, s in failures))
+    raise CollectiveError("collective failure: " + "; ".join(f"rank {i}: {s}" for i, s in failures))
+svsim.mpi_transport.CollectiveError: collective failure: rank 0: Insufficient unpinned RAM for task
+svsim.mpi_transport.CollectiveError: collective failure: rank 0: Insufficient unpinned RAM for task
+--------------------------------------------------------------------------
+
+prterun detected that one or more processes exited with non-zero status,
+thus causing the job to be terminated. The first process to do so was:
+
+   Process name: [prterun-ank-58524@1,1]
+   Exit code:    1
+--------------------------------------------------------------------------
+_____________ test_async_file_state_larger_than_managed_budget[4] ______________
+tests/test_phase4_mpi.py:34: in test_async_file_state_larger_than_managed_budget
+    run_worker(tmp_path,ranks,'S2','buffered','--bounded')
+tests/test_phase4_mpi.py:18: in run_worker
+    subprocess.run([shutil.which('mpiexec'),'-n',str(ranks),sys.executable,
+../../.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/subprocess.py:571: in run
+    raise CalledProcessError(retcode, process.args,
+E   subprocess.CalledProcessError: Command '['/opt/homebrew/bin/mpiexec', '-n', '4', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py', '/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1081/test_async_file_state_larger_t2', '--backend', 'buffered', '--policy', 'S2', '--bounded']' returned non-zero exit status 1.
+----------------------------- Captured stderr call -----------------------------
+Traceback (most recent call last):
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 142, in <module>
+    if args.bounded: run_bounded(base,args.backend,policy)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 116, in run_bounded
+    sim.materialize()
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 437, in materialize
+    self._execute(physical, prior[1])
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 289, in _execute
+    return super()._execute(gate, end, physical_swap=physical_swap)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 596, in _execute
+    self._admit(2*count+3,output_blocks=self.ownership.blocks_per_rank)
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 163, in _admit
+    return super()._admit(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 322, in _admit
+    self.transport.vote(error)
+  File "/Users/tmori/work3/ddq/src/svsim/mpi_transport.py", line 75, in vote
+    raise CollectiveError("collective failure: " + "; ".join(f"rank {i}: {s}" for i, s in failures))
+svsim.mpi_transport.CollectiveError: collective failure: rank 0: Insufficient unpinned RAM for task
+Traceback (most recent call last):
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 142, in <module>
+    if args.bounded: run_bounded(base,args.backend,policy)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 116, in run_bounded
+    sim.materialize()
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 437, in materialize
+    self._execute(physical, prior[1])
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 289, in _execute
+    return super()._execute(gate, end, physical_swap=physical_swap)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 596, in _execute
+    self._admit(2*count+3,output_blocks=self.ownership.blocks_per_rank)
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 163, in _admit
+    return super()._admit(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 322, in _admit
+    self.transport.vote(error)
+  File "/Users/tmori/work3/ddq/src/svsim/mpi_transport.py", line 75, in vote
+    raise CollectiveError("collective failure: " + "; ".join(f"rank {i}: {s}" for i, s in failures))
+svsim.mpi_transport.CollectiveError: collective failure: rank 0: Insufficient unpinned RAM for task
+Traceback (most recent call last):
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 142, in <module>
+    if args.bounded: run_bounded(base,args.backend,policy)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 116, in run_bounded
+    sim.materialize()
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 437, in materialize
+    self._execute(physical, prior[1])
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 289, in _execute
+    return super()._execute(gate, end, physical_swap=physical_swap)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 596, in _execute
+    self._admit(2*count+3,output_blocks=self.ownership.blocks_per_rank)
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 163, in _admit
+    return super()._admit(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 322, in _admit
+    self.transport.vote(error)
+  File "/Users/tmori/work3/ddq/src/svsim/mpi_transport.py", line 75, in vote
+    raise CollectiveError("collective failure: " + "; ".join(f"rank {i}: {s}" for i, s in failures))
+svsim.mpi_transport.CollectiveError: collective failure: rank 0: Insufficient unpinned RAM for task
+Traceback (most recent call last):
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 142, in <module>
+    if args.bounded: run_bounded(base,args.backend,policy)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/tests/mpi_phase4_worker.py", line 116, in run_bounded
+    sim.materialize()
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 437, in materialize
+    self._execute(physical, prior[1])
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 289, in _execute
+    return super()._execute(gate, end, physical_swap=physical_swap)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 596, in _execute
+    self._admit(2*count+3,output_blocks=self.ownership.blocks_per_rank)
+  File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 163, in _admit
+    return super()._admit(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/tmori/work3/ddq/src/svsim/distributed.py", line 322, in _admit
+    self.transport.vote(error)
+  File "/Users/tmori/work3/ddq/src/svsim/mpi_transport.py", line 75, in vote
+    raise CollectiveError("collective failure: " + "; ".join(f"rank {i}: {s}" for i, s in failures))
+svsim.mpi_transport.CollectiveError: collective failure: rank 0: Insufficient unpinned RAM for task
+--------------------------------------------------------------------------
+
+prterun detected that one or more processes exited with non-zero status,
+thus causing the job to be terminated. The first process to do so was:
+
+   Process name: [prterun-ank-58564@1,3]
+   Exit code:    1
+--------------------------------------------------------------------------
+=========================== short test summary info ============================
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-1]
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-2]
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-4]
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-1]
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-2]
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-4]
+FAILED tests/test_phase4_mpi.py::test_async_file_state_larger_than_managed_budget[1]
+FAILED tests/test_phase4_mpi.py::test_async_file_state_larger_than_managed_budget[2]
+FAILED tests/test_phase4_mpi.py::test_async_file_state_larger_than_managed_budget[4]
+9 failed, 69 passed in 204.16s (0:03:24)

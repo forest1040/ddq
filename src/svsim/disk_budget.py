@@ -46,21 +46,40 @@ def _integer(value, name, *, minimum=0, optional=False):
         raise ValueError(f'Invalid {name}')
 
 
+def _root_antichain(paths):
+    """Return the minimum ancestor set covering all resolved roots."""
+    ordered = sorted({Path(path).resolve() for path in paths},
+                     key=lambda path: (len(path.parts), str(path)))
+    selected = []
+    for path in ordered:
+        if any(path.is_relative_to(parent) for parent in selected):
+            continue
+        selected.append(path)
+    return tuple(selected)
+
+
 class DiskBudget:
     """Coordinate byte reservations through a SQLite ledger on one volume."""
 
     def __init__(self, ledger, roots, *, quota_bytes=None, min_free_bytes=0,
                  drain_reserve_bytes=0, usage=None, free=None,
-                 max_page_count=1024, max_records=4096, bootstrap_bytes=8*1024*1024):
+                 max_page_count=1024, max_records=4096, bootstrap_bytes=8*1024*1024,
+                 shared_policy=False):
         _integer(min_free_bytes, 'minimum free bytes')
         _integer(drain_reserve_bytes, 'drain reserve bytes')
         _integer(quota_bytes, 'disk quota', minimum=1, optional=True)
         _integer(max_page_count, 'maximum ledger pages', minimum=1)
         _integer(max_records, 'maximum ledger records', minimum=8)
         _integer(bootstrap_bytes, 'ledger bootstrap bytes', minimum=1)
+        if type(shared_policy) is not bool:
+            raise ValueError('Invalid shared ledger policy flag')
         self.roots = tuple(dict.fromkeys(Path(p).resolve() for p in roots))
         if not self.roots:
             raise ValueError('Disk budget needs a local root')
+        # Bound each caller-supplied root list independently. Persistent shared
+        # roots have their own 256-entry limit after ancestor compaction.
+        if len(self.roots) > 256:
+            raise DiskAdmissionError('Disk ledger root limit exceeded (input list)')
         devices = {p.stat().st_dev for p in self.roots}
         if len(devices) != 1:
             raise ValueError('Disk budget roots must be on one volume')
@@ -70,6 +89,7 @@ class DiskBudget:
         self._usage = usage if usage is not None else self._observed_usage
         self._free = free if free is not None else self._observed_free
         self.max_records = max_records
+        self.shared_policy = shared_policy
         self.bootstrap_bytes = bootstrap_bytes
         # Split one fixed metadata pool between bounded database pages and its
         # rollback journal. The VFS enforces both caps before each write.
@@ -126,6 +146,9 @@ class DiskBudget:
                 actual_cap = self.db.execute(f'PRAGMA max_page_count={page_cap}').fetchone()[0]
                 if actual_cap != page_cap:
                     raise DiskAdmissionError('Ledger page cap could not be enforced')
+                # Persist the effective SQLite page limit, rather than the
+                # constructor's pre-page-size estimate, in shared policy.
+                self.max_page_count = actual_cap
                 with self._ledger_transaction(active_already=True):
                     self.db.execute('''CREATE TABLE IF NOT EXISTS reservations(
                         id TEXT PRIMARY KEY, bytes INTEGER NOT NULL, materialized INTEGER NOT NULL DEFAULT 0,
@@ -139,6 +162,12 @@ class DiskBudget:
                         if name not in cols:
                             self.db.execute(f'ALTER TABLE reservations ADD COLUMN {name} {decl}')
                     self.db.execute('CREATE TABLE IF NOT EXISTS roots(path TEXT PRIMARY KEY)')
+                    self.db.execute('''CREATE TABLE IF NOT EXISTS shared_policy(
+                        singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+                        quota_bytes INTEGER, min_free_bytes INTEGER NOT NULL,
+                        drain_reserve_bytes INTEGER NOT NULL, bootstrap_bytes INTEGER NOT NULL,
+                        max_page_count INTEGER NOT NULL, max_records INTEGER NOT NULL,
+                        volume_device INTEGER NOT NULL, custom_accounting INTEGER NOT NULL)''')
                     self.db.execute('''CREATE TRIGGER IF NOT EXISTS reservation_labels_insert
                         BEFORE INSERT ON reservations
                         WHEN length(CAST(NEW.operation AS BLOB))>64
@@ -153,7 +182,15 @@ class DiskBudget:
                           OR (NEW.generation IS NOT NULL AND length(CAST(NEW.generation AS BLOB))>128)
                           OR (NEW.evidence IS NOT NULL AND length(CAST(NEW.evidence AS BLOB))>256)
                         BEGIN SELECT RAISE(ABORT,'reservation metadata exceeds byte limit'); END''')
-                    self.db.executemany('INSERT OR IGNORE INTO roots VALUES(?)', [(str(p),) for p in self.roots])
+                    self._check_or_bind_shared_policy(devices.pop())
+                    existing_roots = [Path(path) for (path,) in self.db.execute('SELECT path FROM roots')]
+                    selected_roots = _root_antichain(existing_roots + list(self.roots))
+                    if len(selected_roots) > 256:
+                        raise DiskAdmissionError('Disk ledger root limit exceeded')
+                    self.db.execute('DELETE FROM roots')
+                    self.db.executemany('INSERT INTO roots VALUES(?)', [(str(p),) for p in selected_roots])
+                    if self.shared_policy:
+                        self._check_shared_root_capacity()
                     self.db.execute('PRAGMA user_version=3')
         except BaseException:
             try:
@@ -201,6 +238,47 @@ class DiskBudget:
                 if entry[1] <= 0:
                     _LEDGER_REGISTRY.pop(self._registry_key, None)
         self._registry_acquired = False
+
+    def _check_or_bind_shared_policy(self, volume_device):
+        """Verify an existing immutable policy, or bind it when requested.
+
+        A legacy ledger can be bound only while it has no live reservation.
+        Terminal/history rows do not prevent binding because they do not
+        contribute pending credit. A generic caller may open an unbound legacy
+        ledger, but cannot opt out of a policy that is already bound.
+        """
+        expected = (self.quota_bytes, self.min_free_bytes,
+                    self.drain_reserve_bytes, self.bootstrap_bytes,
+                    self.max_page_count, self.max_records, int(volume_device),
+                    int(self._custom_accounting))
+        row = self.db.execute('''SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,
+            bootstrap_bytes,max_page_count,max_records,volume_device,custom_accounting
+            FROM shared_policy WHERE singleton=1''').fetchone()
+        if row is not None:
+            if tuple(row) != expected:
+                raise DiskAdmissionError('Shared disk ledger policy mismatch')
+            self.shared_policy = True
+            return
+        if not self.shared_policy:
+            return
+        active = self.db.execute("SELECT 1 FROM reservations WHERE state IN ('RESERVED','WRITING') LIMIT 1").fetchone()
+        if active is not None:
+            raise DiskAdmissionError('Cannot bind shared policy while legacy reservations are active')
+        self.db.execute('''INSERT INTO shared_policy(singleton,quota_bytes,min_free_bytes,
+            drain_reserve_bytes,bootstrap_bytes,max_page_count,max_records,volume_device,
+            custom_accounting) VALUES(1,?,?,?,?,?,?,?,?)''', expected)
+
+    def _check_shared_root_capacity(self):
+        """Check the aggregate registered-root envelope before commit."""
+        pending = self.db.execute("SELECT COALESCE(SUM(bytes-materialized),0) FROM reservations WHERE state IN ('RESERVED','WRITING')").fetchone()[0]
+        margin = self.drain_reserve_bytes
+        observed = self._usage()
+        metadata_charge = 0 if self._custom_accounting else self.bootstrap_bytes
+        if (self.quota_bytes is not None and
+                observed + metadata_charge + pending + margin > self.quota_bytes):
+            raise DiskAdmissionError('Registered roots exceed shared disk quota')
+        if self._free() - self._unallocated_metadata_pool() - pending - margin < self.min_free_bytes:
+            raise DiskAdmissionError('Registered roots violate shared minimum free space')
 
     def _set_guard_active(self, active):
         if self._guard is not None and hasattr(self, 'db'):
@@ -262,14 +340,21 @@ class DiskBudget:
         return st.f_bavail * st.f_frsize
 
     def register_roots(self,roots):
-        """Charge immutable prefix/foreign local stores to the same volume ledger."""
+        """Charge local stores; persistent roots are kept as a bounded antichain."""
         incoming=tuple(dict.fromkeys(Path(p).resolve() for p in roots))
+        if len(incoming) > 256:
+            raise DiskAdmissionError('Disk ledger root limit exceeded (input list)')
         device=self.roots[0].stat().st_dev
         if any(p.stat().st_dev!=device for p in incoming):raise ValueError('Roots must stay on one volume')
-        if len(set(self.roots+incoming))>256:raise DiskAdmissionError('Disk ledger root limit exceeded')
         with self._ledger_transaction():
-            self.db.executemany('INSERT OR IGNORE INTO roots VALUES(?)',[(str(p),) for p in incoming])
-        self.roots=tuple(dict.fromkeys(self.roots+incoming))
+            existing = [Path(path) for (path,) in self.db.execute('SELECT path FROM roots')]
+            selected = _root_antichain(existing + list(incoming))
+            if len(selected) > 256:
+                raise DiskAdmissionError('Disk ledger root limit exceeded')
+            self.db.execute('DELETE FROM roots')
+            self.db.executemany('INSERT INTO roots VALUES(?)', [(str(p),) for p in selected])
+            if self.shared_policy:
+                self._check_shared_root_capacity()
 
     @property
     def reserved_bytes(self):
@@ -327,6 +412,8 @@ class DiskBudget:
         with self._path_lock:
             rows = self.db.execute("SELECT state,count(*),COALESCE(sum(bytes),0),COALESCE(sum(materialized),0) FROM reservations GROUP BY state").fetchall()
             return {'reserved_bytes':self.reserved_bytes,'states':{r[0]:{'count':r[1],'bytes':r[2],'materialized_bytes':r[3]} for r in rows},'max_records':self.max_records,
+                    'shared_policy':self.shared_policy,
+                    'registered_root_count':self.db.execute('SELECT count(*) FROM roots').fetchone()[0],
                     'metadata_pool_bytes':self.bootstrap_bytes,'metadata_main_cap_bytes':self._ledger_main_cap,
                     'metadata_side_cap_bytes':self._ledger_side_cap,'ledger_vfs_enforced':self.ledger_vfs_enforced,
                     'accounting_scope':self.accounting_scope,'strict_capacity_guarantee':False}

@@ -6,6 +6,8 @@
 
 [writer監査](../phase4_writer_audit.md)にcallsite、予約／VFS enforcement、精算／回収、SQLite identityの確認範囲、未受入fault matrixを整理した。ソース監査は実fault試験の代わりにはしない。
 
+[共有coordinator実装](../phase4_disk_coordination_implementation.md)で、同volume独立datasetの明示共通ledger、forkのbootstrap前継承、永続policy照合、全root合算admissionを追加した。祖先が覆うsuffixを重複登録せず、非重複root256件に制限する。temporary branchの安全なGCと、全writerのcut結合／faultは残る。
+
 ## 設計時点（6aa8581）の現状とwriter棚卸し
 
 [disk_budget.py](../../src/svsim/disk_budget.py)はlocal SQLite ledgerでquota/free/drain予約を合算する。[storage.py](../../src/svsim/storage.py)、[async_store_io.py](../../src/svsim/async_store_io.py)はextentを予約するが、allocator/versions等のSQLが事前予約外。catalog・Phase2 rule・root/history・lease・checkpoint・GC・trace・ledger自身を対象にする。

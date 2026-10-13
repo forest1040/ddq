@@ -104,3 +104,41 @@ def test_stale_cost_summary_is_deleted_before_lru_fallback(tmp_path):
     engine.close()
     store.close()
     assert budget.used == config.metadata_reserve_bytes
+
+
+def test_foreground_workspace_sheds_optional_metadata_without_excess_eviction(tmp_path):
+    config, store, engine, budget, cache = _cache(tmp_path, extra=32768)
+    for key in ("zero", "initial-one"):
+        with cache.pin(key):
+            pass
+    summary = FutureUseSummary.from_pending_versions(("zero", "initial-one"),
+        snapshot_version="cut-1", context_versions=(("root", "r1"),), window=2)
+
+    def broken_context():
+        raise RuntimeError("context unavailable")
+
+    assert cache.set_cost_hints(summary, context={"root": "r1"},
+        context_getter=broken_context)
+    assert cache.set_future_versions(("zero", "initial-one"))
+    cache._record_policy("before_pressure", "zero")
+    assert cache.metadata.used > 0
+
+    # Keep the declared budget fixed. The next task needs all RAM except the
+    # base metadata and one cached block; optional hints/traces must yield.
+    required = budget.limit - config.metadata_reserve_bytes - cache.buffer_cost
+    before = budget.used
+    cache._record_policy("must_preserve_headroom", headroom=required)
+    assert budget.used == before
+    cache.ensure(required)
+
+    assert list(cache.entries) == ["initial-one"]
+    assert cache.cost_summary is None
+    assert not cache.future_use
+    assert cache.metadata.used == 0
+    assert budget.used + required <= budget.limit
+    assert cache.metadata_shed_count > 0 and cache.cost_trace_dropped > 0
+    cache.clear()
+    cache.close_metadata()
+    engine.close()
+    store.close()
+    assert budget.used == config.metadata_reserve_bytes

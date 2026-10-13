@@ -1,0 +1,294 @@
+.FFFFFF.                                                                 [100%]
+=================================== FAILURES ===================================
+___________ test_shared_volume_dataset_fork_and_gradient[buffered-1] ___________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-57722@1,0]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '1', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-57722@1,0]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+___________ test_shared_volume_dataset_fork_and_gradient[buffered-2] ___________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-57751@1,1]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '2', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-57751@1,1]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+___________ test_shared_volume_dataset_fork_and_gradient[buffered-4] ___________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-57834@1,2]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '4', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-57834@1,2]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+____________ test_shared_volume_dataset_fork_and_gradient[direct-1] ____________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-57984@1,0]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '1', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-57984@1,0]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+____________ test_shared_volume_dataset_fork_and_gradient[direct-2] ____________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-58012@1,1]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '2', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-58012@1,1]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+____________ test_shared_volume_dataset_fork_and_gradient[direct-4] ____________
+tests/test_disk_coordinator.py:25: in test_shared_volume_dataset_fork_and_gradient
+    _run(tmp_path,ranks,'--backend',backend)
+tests/test_disk_coordinator.py:39: in _run
+    assert result.returncode==0,result.stdout+'\n'+result.stderr
+E   AssertionError:
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     Traceback (most recent call last):
+E       File "/Users/tmori/work3/ddq/tests/mpi_disk_coordinator_worker.py", line 59, in <module>
+E         gradient=child.gradient(observable,parameters=[theta],method='parameter-shift')
+E                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/async_scheduler.py", line 576, in gradient
+E         result=execute_gradient(self, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 314, in execute_gradient
+E         return _parameter_shift(sim, observable, requested, schedule)
+E                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       File "/Users/tmori/work3/ddq/src/svsim/phase4_gradient.py", line 242, in _parameter_shift
+E         raise ValueError("Parameter-shift requires the captured initial gradient origin")
+E     ValueError: Parameter-shift requires the captured initial gradient origin
+E     --------------------------------------------------------------------------
+E
+E     prterun detected that one or more processes exited with non-zero status,
+E     thus causing the job to be terminated. The first process to do so was:
+E
+E        Process name: [prterun-ank-58072@1,3]
+E        Exit code:    1
+E     --------------------------------------------------------------------------
+E
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['/opt/homebrew/bin/mpiexec', '-n', '4', '/Users/tmori/work3/ddq/.venv/bin/python', '/Users/tmor...erun-ank-58072@1,3]\n   Exit code:    1\n--------------------------------------------------------------------------\n').returncode
+=========================== short test summary info ============================
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-1]
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-2]
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-4]
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-1]
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-2]
+FAILED tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-4]
+6 failed, 2 passed in 23.17s

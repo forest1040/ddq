@@ -251,7 +251,10 @@ def fork(sim,snapshot,binding,directory=None):
         run=sim.transport.broadcast_json(uuid4().hex if sim.rank == 0 else None)
         directory=str(sim.directory/'suffixes'/run)
     from .distributed import DistributedSimulator
-    child=type(sim)(sim.num_qubits,replace(sim.config,directory=str(directory)),comm=sim.comm,
+    child_config=replace(sim.config,directory=str(directory))
+    if sim.config.storage_scope=='node-local':
+        child_config=replace(child_config,disk_admission_ledger=str(sim.disk_budget._ledger_path))
+    child=type(sim)(sim.num_qubits,child_config,comm=sim.comm,
         **getattr(sim,'_fork_kwargs',lambda: {})())
     new_store=child.store_id; error=None
     try:

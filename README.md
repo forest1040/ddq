@@ -92,6 +92,8 @@ P4-003／005／008の[先行実装](docs/phase4_validation_implementation.md)も
 
 さらに[回収・cache課金・勾配資源検証・監視費用](docs/phase4_safety_monitoring_implementation.md)を補強しました。diskの二重回収拒否、共有RAMへのhint／trace課金、resource upper照合、completion collectorのon/off対照を追加しています。残る受入条件はbacklogで管理しています。
 
+[同volumeの共有disk admission](docs/phase4_disk_coordination_implementation.md)で、独立datasetの明示共通ledgerとforkへの継承、永続policy・合算容量検査を追加しました。cacheの任意診断情報も、最低foreground作業領域を確保するため必要時に精算します。
+
 [Phase 4 設計書](docs/phase4_design.md)と[実装・検証資料](docs/phase4_implementation.md)に、worker I/O、nonblocking MPI、先読み・書き戻し、S2／local fusion／FusedSWAP、Parameter batch、期待値・三方式の勾配、Runtime Guardとpolicy変更、node-local checkpoint／resume／GCを記載しています。[Mac実測比較](docs/phase4_benchmark.md)では同期／非同期／S2を同一回路で比較しています。
 
 Mac上のMPIとlocal scheduler、および許可後のPBS割当内で単一ノード・実2ノードの2／4 rankを検証しました。Linux O_DIRECT、PSM2／OFI／Ethernetで数値一致を確認しています。振幅・catalogはnode-localに保存し、checkpoint／resume／prefix lease／GCはMPI通信で管理します。[クラスタ検証記録](docs/internal/phase4_cluster_validation.md)は内部資料です。optional Linux io_uring adapterはliburingが既存環境になく、native Linux実機では未検証です。運用ETAの自動校正・一般的なtile migration等の拡張範囲は実装資料に明記しています。

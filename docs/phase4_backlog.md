@@ -22,6 +22,8 @@ P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtim
 
 ## 一覧
 
+2026-10-14に[同volume共有disk admissionとforeground RAM](phase4_disk_coordination_implementation.md)を追加した。独立datasetの明示共通ledger、forkのbootstrap前継承、永続policy照合、登録rootの最小祖先集合と合算容量検査を実装した。cacheの任意metadataは最低作業領域を圧迫する際に精算する。Macの独立dataset／fork／勾配とRAMを超えるstateを含む関連回帰107件を確認した。P4-009／007はIN_PROGRESSを維持し、temporary branchの安全なGC、全writerのfault／cut結合、Linux／別hostは残す。
+
 2026-10-14に[回収・cache課金・勾配資源検証・監視費用](phase4_safety_monitoring_implementation.md)を補強した。明示disk回収の二重適用拒否、共有RAMへのhint／trace課金、held-out resource upperの再検証、completion collectorのon/off対照とresolved backend取得を追加した。P4-001／007／008／009はIN_PROGRESSを維持する。collector以外を含む全monitor費用、全future計画の自動接続、認証済みauto性能、全writerのfault／host調停は残る。
 
 2026-10-14に[P4-003／005／008の先行実装](phase4_validation_implementation.md)を追加した。注入とsafe-refusal、paired report、明示勾配校正とstrict adapterをMacで検証し、3項目をIN_PROGRESSとする。関連commit件名：`Implement Phase 4 adaptive evaluation, paired reports and gradient calibration`。実costによるpositive採用／VERIFY、全比較matrix、包括admissionと認証済みauto性能は残り、Phase 4の完了を宣言しない。
@@ -124,7 +126,7 @@ raw／resolved identityとbounded cost hintを追加した。validated・同unit
 
 ### P4-009：SQLite書込み前のdisk admission
 
-catalog open／transaction前の予約と同SQLite VFS、ledger pool、extent・journal・trace・assetへの接続を実装した。実子processの異常終了後に予約とpartial fileを保持し、明示回収の二重適用と既記録byteの減算を拒否する。全writerのfault／recovery、独立datasetを含むhost調停、Linux検証は残る。
+catalog open／transaction前の予約と同SQLite VFS、ledger pool、extent・journal・trace・assetへの接続を実装した。実子processの異常終了後に予約とpartial fileを保持し、明示回収の二重適用と既記録byteの減算を拒否する。同volumeでledgerを共有する独立datasetとforkの合算調停・永続policyをMacで検証した。全writerのfault／recovery、cutへの結合、temporary branch GC、異なるledger／外部jobを含むhost調停、Linux検証は残る。
 
 - catalog／journalの成長をtransaction前に予約し、並行rankのdataset／host／device総予算に含める。
 - commit/rollback後の予約精算と、drain用余裕の保護、容量不足時の一貫した失敗を検証する。

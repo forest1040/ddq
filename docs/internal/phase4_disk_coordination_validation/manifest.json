@@ -1,0 +1,81 @@
+{
+  "kind": "phase4-disk-coordinator-validation",
+  "schema_version": 1,
+  "scope": "same-host",
+  "cluster_used": false,
+  "source_hash": "4d49fe248d7f4691ad3127c17107d9714b52d4ea48eccb5caf890706246fb0a0",
+  "worker_hash": "4e66a20d0b7e59bb1841204b0c3ba9140c569b1959870608af2a4e97c82bdfb3",
+  "lock_hash": "850aa96ac1d868f27530f00f8ef8c9dcf954c60cdaa881ba2d8c2dabb2f6540b",
+  "cases": {
+    "shared-ledger-mpi": {
+      "ranks": [
+        1,
+        2,
+        4
+      ],
+      "backends": [
+        "buffered",
+        "direct"
+      ],
+      "n": 4,
+      "b": 2,
+      "per_runtime_managed_ram_bytes_per_rank": 2097152,
+      "coordinator_quota_bytes": 67108864,
+      "participants": [
+        "dataset-a",
+        "dataset-b",
+        "prefix-fork",
+        "parameter-shift-forks"
+      ],
+      "state_tolerance": 1e-10,
+      "gradient_tolerance": 1e-09
+    },
+    "root-antichain": {
+      "nested_registrations": 300,
+      "nonoverlapping_root_limit": 256
+    },
+    "capacity-refusal": [
+      "combined quota plus one byte",
+      "registered existing data exceeds shared quota",
+      "policy mismatch even with shared_policy=False",
+      "active legacy ledger first bind",
+      "same-host/volume path mismatch before ledger open"
+    ]
+  },
+  "commands": {
+    "full": "UV_CACHE_DIR=/private/tmp/ddq-uv-cache uv run --offline --no-sync pytest -q --tb=short",
+    "related": "UV_CACHE_DIR=/private/tmp/ddq-uv-cache uv run --offline --no-sync pytest -q tests/test_disk_coordinator.py tests/test_disk_reservation_ledger.py tests/test_catalog_admission.py tests/test_phase4_lifecycle.py tests/test_distributed_checkpoint.py tests/test_phase4_gradient.py tests/test_parameter_batch.py tests/test_cache.py tests/test_cache_identity.py tests/test_cache_cost.py tests/test_cache_metadata.py tests/test_phase4_mpi.py --tb=short"
+  },
+  "limitations": [
+    "strict capacity guarantee remains false",
+    "unrelated ledger and external job coordination out of scope",
+    "temporary durable branch data retained",
+    "Linux and cross-host not executed",
+    "fork child parameter shift needs captured full-circuit origin"
+  ],
+  "environment": {
+    "python": "3.12.13 (main, Mar  3 2026, 15:35:03) [Clang 21.1.4 ]",
+    "platform": "macOS-26.7.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "mpi_library": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026",
+    "worker_thread_environment": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1"
+    }
+  },
+  "validation": {
+    "full": {
+      "passed": 650,
+      "skipped": 2,
+      "seconds": 594.15,
+      "log": "pytest-full.txt",
+      "sha256": "af76db154e5243b0922643f6c2d1882809a28f0965917a2ffd3bcd8711bb809e"
+    },
+    "related_before_last_diagnostic_assertions": {
+      "passed": 107,
+      "seconds": 272.82,
+      "log": "pytest-related.txt"
+    }
+  }
+}

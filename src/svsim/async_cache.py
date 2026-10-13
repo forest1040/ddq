@@ -26,6 +26,7 @@ class AsyncBlockCache(BlockCache):
         self.cost_trace = []
         self.cost_reasons = {}
         self.cost_trace_dropped = 0
+        self.metadata_shed_count = 0
 
     def set_future_versions(self, versions):
         """Install bounded recency hints. They never become measured cost evidence."""
@@ -83,7 +84,7 @@ class AsyncBlockCache(BlockCache):
                 current = tuple(sorted(dict(live_context).items())) if live_context is not None else None
                 fresh = (current is not None and current == self.cost_context and
                          self.cost_summary.is_current(live_context))
-            except (TypeError, ValueError):
+            except Exception:
                 fresh = False
             if fresh:
                 return None
@@ -105,18 +106,18 @@ class AsyncBlockCache(BlockCache):
         if score is None: return None, 'unvalidated_cost'
         return (score, cost.units), 'known'
 
-    def _record_policy(self, reason, candidate=None):
+    def _record_policy(self, reason, candidate=None, *, headroom=0):
         if not isinstance(reason, str) or not reason or len(reason) > MAX_ID_LENGTH:
-            self.cost_trace_dropped += 1
+            self._note_trace_dropped()
             return
         if reason not in self.cost_reasons:
             if len(self.cost_reasons) >= 32:
-                self.cost_trace_dropped += 1
+                self._note_trace_dropped()
                 return
             try:
-                self.metadata.reserve('cost-reasons-pool', 4096)
+                self._reserve_optional('cost-reasons-pool', 4096, headroom=headroom)
             except MemoryError:
-                self.cost_trace_dropped += 1
+                self._note_trace_dropped()
                 return
             self.cost_reasons[reason] = 1
         else:
@@ -126,23 +127,57 @@ class AsyncBlockCache(BlockCache):
             snapshot = self.cost_summary.snapshot_version if self.cost_summary else None
             row = {'reason': reason, 'candidate': candidate, 'snapshot': snapshot}
             try:
-                self.metadata.reserve('cost-trace-pool', 4096)
+                self._reserve_optional('cost-trace-pool', 4096, headroom=headroom)
                 # conservative_size includes its fixed pool; account the encoded
                 # payload multiplier per row while charging the fixed pool once.
                 encoded_bytes = ManagedMetadata.conservative_size(row) - 4096
                 amount = 128 + encoded_bytes
             except MemoryError:
-                self.cost_trace_dropped += 1
+                self._note_trace_dropped()
                 return
             key = f'cost-trace:{len(self.cost_trace)}'
             try:
-                self.metadata.reserve(key, amount)
+                self._reserve_optional(key, amount, headroom=headroom)
             except MemoryError:
-                self.cost_trace_dropped += 1
+                self._note_trace_dropped()
                 return
             self.cost_trace.append(row)
         else:
-            self.cost_trace_dropped += 1
+            self._note_trace_dropped()
+
+    def _note_trace_dropped(self):
+        self.cost_trace_dropped = min(self.cost_trace_dropped + 1, (1 << 31) - 1)
+
+    def _reserve_optional(self, key, amount, *, headroom=0):
+        """Reserve trace metadata only from RAM beyond the foreground requirement."""
+        previous = self.metadata.allocations.get(key, 0)
+        if self.budget.used + max(0, amount - previous) + headroom > self.budget.limit:
+            raise MemoryError('Optional cache metadata would consume foreground RAM')
+        return self.metadata.reserve(key, amount)
+
+    def _shed_optional_metadata(self, required):
+        """Drop bounded hints/traces only when they block a required allocation."""
+        if self.budget.used + required <= self.budget.limit:
+            return True
+        if self.metadata.used:
+            self.metadata_shed_count = min(self.metadata_shed_count + 1, (1 << 31) - 1)
+        self.cost_trace_dropped = min(self.cost_trace_dropped + len(self.cost_trace), (1 << 31) - 1)
+        for index in range(len(self.cost_trace)):
+            self.metadata.release(f'cost-trace:{index}')
+        self.cost_trace.clear()
+        if self.budget.used + required <= self.budget.limit:
+            return True
+        self.metadata.release('cost-trace-pool')
+        self.metadata.release('cost-reasons-pool')
+        self.cost_reasons.clear()
+        if self.budget.used + required <= self.budget.limit:
+            return True
+        self.metadata.release('legacy-future-use')
+        self.future_use.clear()
+        if self.budget.used + required <= self.budget.limit:
+            return True
+        self.clear_cost_hints()
+        return self.budget.used + required <= self.budget.limit
 
     def poll(self):
         completed = self.engine.poll()
@@ -205,12 +240,22 @@ class AsyncBlockCache(BlockCache):
         if additional > self.budget.limit - self.store.config.metadata_reserve_bytes:
             raise MemoryError('Minimum task exceeds managed RAM budget')
         self.poll()
-        initial_context = self.context_getter() if self.context_getter is not None else None
+        try:
+            initial_context = self.context_getter() if self.context_getter is not None else None
+        except Exception:
+            initial_context = None
         stale_reason = self._discard_stale_hints(initial_context)
         if stale_reason:
-            self._record_policy('stale_hints_discarded')
+            self._record_policy('stale_hints_discarded', headroom=additional)
         while self.budget.used + additional > self.budget.limit:
             eligible = [k for k, e in self.entries.items() if e.pins == 0 and e.buffer.pins == 0]
+            if eligible:
+                # Let one cache eviction plus only the necessary metadata relief
+                # satisfy the request; otherwise optional metadata would cause
+                # avoidable repeated evictions of the foreground working set.
+                reclaimable = min(self.entries[k].buffer.cost for k in eligible)
+                if self.budget.used + additional - reclaimable > self.budget.limit:
+                    self._shed_optional_metadata(max(0, additional - reclaimable))
             try:
                 live_context = self.context_getter() if self.context_getter is not None else None
             except Exception:
@@ -223,13 +268,15 @@ class AsyncBlockCache(BlockCache):
                 # Lower retained benefit is cheaper to evict; equal cost prefers clean then LRU.
                 candidate = min(zip(eligible, evaluations),
                                 key=lambda item: (item[1][0][0], self.entries[item[0]].dirty))[0]
-                self._record_policy('known_cost', candidate)
+                self._record_policy('known_cost', candidate, headroom=additional)
             else:
                 candidate = next(iter(eligible), None)
                 reason = next((v[1] for v in evaluations if v[0] is None),
                               'mixed_cost_units' if len(units) > 1 else 'no_eligible')
-                self._record_policy('lru_fallback:' + reason, candidate)
+                self._record_policy('lru_fallback:' + reason, candidate, headroom=additional)
             if candidate is None:
+                if self._shed_optional_metadata(additional):
+                    continue
                 if self.errors:
                     self.poll()
                 if not self.engine.pending:

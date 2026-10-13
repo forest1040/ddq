@@ -1,6 +1,6 @@
 # Phase 4：回収・cache・勾配資源・collector費用のMac検証
 
-2026-10-14。対応は[追加実装](../../phase4_safety_monitoring_implementation.md)。cluster／SSH／PBSは使用していない。Luna担当の回収・cache・勾配資源検証を統合した最終関連回帰は **132 passed、92.37秒**：[log](pytest-related.txt)。前回の615件全回帰とは実装時点が異なり、今回のtreeの全件総数と呼ばない。
+2026-10-14。対象実装commitはbb87551。対応は[追加実装](../../phase4_safety_monitoring_implementation.md)。cluster／SSH／PBSは使用していない。Luna担当の回収・cache・勾配資源検証を統合した最終関連回帰は **132 passed、92.37秒**：[log](pytest-related.txt)。前回の615件全回帰とは実装時点が異なり、今回のtreeの全件総数と呼ばない。
 
 ## 再現条件
 
