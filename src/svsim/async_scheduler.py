@@ -1,7 +1,7 @@
 """Mac-first bounded async runtime over the exact distributed block kernels."""
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, replace
-from time import perf_counter
+from time import perf_counter, process_time
 
 from .async_cache import AsyncBlockCache
 from .async_io import WorkerIOEngine, BackpressureError
@@ -66,10 +66,19 @@ class AsyncDistributedSimulator(DistributedSimulator):
         self._gradient_origin = None
         self._angle_overrides = {}
         self._async_errors = []
+        self._measurement_sequence = 0
+        self._measurement_warmup = False
         # Phase 4 uses owner-local lifecycle even on a single Mac.
         config = replace(config, storage_scope='node-local')
         super().__init__(num_qubits, config, **kwargs)
-        self.runtime = RuntimeControl(self)
+        error=None
+        try: self.runtime = RuntimeControl(self)
+        except Exception as exc:error=str(exc)
+        try:self.transport.vote(error)
+        except Exception:
+            if hasattr(self,'runtime'):self.runtime.close_measurements()
+            super().close()
+            raise
         saved = self._saved_runtime_state
         if saved and 'policy' in saved:
             self.policy = AsyncPolicy(**saved['policy'])
@@ -90,6 +99,7 @@ class AsyncDistributedSimulator(DistributedSimulator):
             self.transport.max_requests = self.policy.max_mpi_requests
             self.transport.generations = [0]*self.policy.max_mpi_requests
             self.transport.progress_callback = self._progress_io
+            self.transport.completion_observer = self.runtime.mpi_completion
             self._original_io_poll = self.io_engine.poll
             self.io_engine.poll = self._poll_io
             self.trace.record('async-engine', metadata={'path': 'ASYNC_RUNTIME',
@@ -104,7 +114,8 @@ class AsyncDistributedSimulator(DistributedSimulator):
                 if self.io_engine is not None:
                     self.io_engine.close()
             finally:
-                super().close()
+                try:super().close()
+                finally:self.runtime.close_measurements()
             raise
 
     def _poll_io(self):
@@ -121,6 +132,24 @@ class AsyncDistributedSimulator(DistributedSimulator):
             self.io_engine.poll()
         except Exception as exc:
             self._async_errors.append(exc)
+
+    def _measurement_context(self):
+        return {'configuration_fingerprint': getattr(self.runtime.profile_adapter, 'fingerprint', None),
+                'n': self.num_qubits, 'block_bits': self.block_bits,
+                'backend': self.config.backend, 'engine': self.io_engine.identity,
+                'ranks': self.size, 'threads': self.policy.io_workers}
+
+    def _record_executor_group(self, event_id, group_id, condition, quantity,
+                               wall_seconds, cpu_seconds, *, success, parent_id=None):
+        same_host = len({row['host'] for row in self.environment}) == 1
+        return self.runtime.measurements.complete(
+            event_id, context=self._measurement_context(), condition=condition,
+            parent_id=parent_id, group_id=group_id, stage=condition['operation'],
+            units='groups', quantity=1, protocol_seconds=wall_seconds,
+            service_seconds=None, cpu_seconds=cpu_seconds,
+            success=success, validated=success,
+            warmup=self._measurement_warmup,
+            scope='same-host' if same_host else 'cross-host')
 
     def _admit(self, *args, **kwargs):
         if self.io_engine is not None:
@@ -317,6 +346,19 @@ class AsyncDistributedSimulator(DistributedSimulator):
             self._rollback_root = self.root
             self._private_epoch = True
             begin = perf_counter()
+            cpu_begin = process_time()
+            epoch_number = self._measurement_sequence
+            self._measurement_sequence += 1
+            epoch_event = f'{self.run_id}:executor-epoch:{epoch_number}'
+            epoch_group = epoch_event + ':children'
+            epoch_condition = {'operation': 'executor-epoch', 'n': self.num_qubits,
+                               'block_bits': self.block_bits, 'backend': self.config.backend,
+                               'engine': self.io_engine.identity, 'policy': asdict(self.policy),
+                               'layout': self.layout.logical_to_physical,
+                               'source_operations': [gate_data(g) for g in original]}
+            epoch_success = False
+            measurements = self.runtime.measurements
+            measurements.begin_group(epoch_group)
             ledger = None
             try:
                 error = None
@@ -339,33 +381,61 @@ class AsyncDistributedSimulator(DistributedSimulator):
                     self._prefetch_local()
                     input_root = self.root
                     group = groups.get(source)
-                    if group and tuple(g.op_id for g in group) == tuple(order[cursor:cursor+len(group)]):
-                        self._execute_local_fused(group, prior[1])
-                        ids = tuple(g.op_id for g in group)
-                        cursor += len(group)
-                    else:
-                        gate = self.sequencer.operations[source]
-                        if self.policy.swap_policy == 'S1':
-                            from .distributed_plan import choose_s1
-                            decision = choose_s1(self.num_qubits, self.block_bits, self.size, self.layout,
-                                                 self.sequencer.operations[source:end+1], self.network_profile,
-                                                 self.storage_bandwidth)
-                            self.transport.agree(asdict(decision))
-                            if decision.bits:
-                                self.physical_index_bit_swap(*decision.bits, _pending=True)
-                        physical = self._physical(gate)
-                        self._execute(physical, prior[1])
-                        self.history.append({'kind': 'gate', 'source': source,
-                                             'physical': gate_data(physical), 'layout': self.layout.logical_to_physical})
-                        ids = (source,)
-                        cursor += 1
-                    ledger.stage(ids, input_root, self.root)
+                    is_fused = bool(group and tuple(g.op_id for g in group) ==
+                                    tuple(order[cursor:cursor+len(group)]))
+                    ops = tuple(group) if is_fused else (self.sequencer.operations[source],)
+                    gate_number = self._measurement_sequence
+                    self._measurement_sequence += 1
+                    gate_event = f'{self.run_id}:executor-group:{gate_number}'
+                    gate_group = gate_event + ':children'
+                    gate_begin = perf_counter()
+                    gate_cpu = process_time()
+                    gate_success = False
+                    measurements.begin_group(gate_group)
+                    try:
+                        if is_fused:
+                            self._execute_local_fused(group, prior[1])
+                            ids = tuple(g.op_id for g in group)
+                            cursor += len(group)
+                            executor = 'fused-local'
+                        else:
+                            gate = self.sequencer.operations[source]
+                            if self.policy.swap_policy == 'S1':
+                                from .distributed_plan import choose_s1
+                                decision = choose_s1(self.num_qubits, self.block_bits, self.size, self.layout,
+                                                     self.sequencer.operations[source:end+1], self.network_profile,
+                                                     self.storage_bandwidth)
+                                self.transport.agree(asdict(decision))
+                                if decision.bits:
+                                    self.physical_index_bit_swap(*decision.bits, _pending=True)
+                            physical = self._physical(gate)
+                            self._execute(physical, prior[1])
+                            self.history.append({'kind': 'gate', 'source': source,
+                                                 'physical': gate_data(physical), 'layout': self.layout.logical_to_physical})
+                            ids = (source,)
+                            cursor += 1
+                            executor = 'single-gate'
+                        ledger.stage(ids, input_root, self.root)
+                        gate_success = True
+                    finally:
+                        measurements.end_group(gate_group)
+                        condition = {'operation': 'executor-group' if len(ops) > 1 else 'executor-gate',
+                                     'executor': executor if gate_success else ('fused-local' if is_fused else 'single-gate'),
+                                     'operations': [gate_data(self._physical(g)) for g in ops],
+                                     'n': self.num_qubits, 'block_bits': self.block_bits,
+                                     'backend': self.config.backend, 'engine': self.io_engine.identity,
+                                     'swap_policy': self.policy.swap_policy,
+                                     'layout': self.layout.logical_to_physical}
+                        self._record_executor_group(gate_event, gate_group, condition, len(ops),
+                                                    perf_counter()-gate_begin, process_time()-gate_cpu,
+                                                    success=gate_success, parent_id=epoch_group)
                 ledger.validate_coverage()
                 self.drain()
                 published = self._new_root(self.root)
                 self.local.phase2.progress(published, end)
                 self._commit_stage(published, end)
                 ledger.commit()
+                epoch_success = True
                 self.trace.record('async-epoch', performance_class='scheduler',
                                   metadata={'path': 'ASYNC_EPOCH', 'source_range': [start, end],
                                             'actual_order': order, 'elapsed_seconds': perf_counter()-begin,
@@ -378,10 +448,22 @@ class AsyncDistributedSimulator(DistributedSimulator):
                 del self.history[length:]
                 raise
             finally:
-                self._private_epoch = False
-                self._rollback_root = self.root
-                if ledger is not None:
-                    ledger.close()
+                try:
+                    if ledger is not None:
+                        ledger.close()
+                except BaseException:
+                    epoch_success = False
+                    raise
+                finally:
+                    try:
+                        measurements.end_group(epoch_group)
+                        self._record_executor_group(epoch_event, epoch_group, epoch_condition,
+                                                    len(original), perf_counter()-begin,
+                                                    process_time()-cpu_begin,
+                                                    success=epoch_success)
+                    finally:
+                        self._private_epoch = False
+                        self._rollback_root = self.root
             self.runtime.frontier()
         return self
 
@@ -443,7 +525,8 @@ class AsyncDistributedSimulator(DistributedSimulator):
                 self.cache.errors.clear()
             super().close()
         finally:
-            if self.io_engine is not None:
-                self.io_engine.close()
+            try:
+                if self.io_engine is not None:self.io_engine.close()
+            finally:self.runtime.close_measurements()
         if error:
             raise error

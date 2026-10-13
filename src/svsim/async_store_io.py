@@ -37,6 +37,7 @@ class AsyncStoreIO:
                         raise OSError('Block checksum mismatch')
                     self.store._event('read', version, req.elapsed_seconds, handle=handle,
                                       segment=ref.segment, offset=ref.offset)
+                    req.mark_validated()
             finally:
                 handle.close()
                 self.pending.pop(req.request_id, None)
@@ -54,14 +55,19 @@ class AsyncStoreIO:
         import shutil
         if shutil.disk_usage(store.directory).free < store.slot_bytes: raise OSError('Insufficient disk capacity')
         checksum = sha256(lease.view[:store.payload_bytes]).hexdigest()
-        with store.db:
-            store.db.execute('BEGIN IMMEDIATE')
-            segment, offset = json.loads(store.db.execute("SELECT data FROM settings WHERE key='allocator'").fetchone()[0])
-            if offset + store.slot_bytes > store.config.segment_size_bytes: segment += 1; offset = 0
-            store.db.execute("UPDATE settings SET data=? WHERE key='allocator'", (canonical([segment, offset+store.slot_bytes]),))
-        store.segment, store.offset = segment, offset + store.slot_bytes
         disk_budget = getattr(store, 'disk_budget', None)
-        reservation = disk_budget.reserve(store.slot_bytes) if disk_budget is not None else None
+        reservation = disk_budget.reserve(store.slot_bytes,operation='amplitude-extent',writing=True,
+            drain=bool(getattr(store,'_disk_drain',False))) if disk_budget is not None else None
+        try:
+            with store.db:
+                store.db.execute('BEGIN IMMEDIATE')
+                segment, offset = json.loads(store.db.execute("SELECT data FROM settings WHERE key='allocator'").fetchone()[0])
+                if offset + store.slot_bytes > store.config.segment_size_bytes: segment += 1; offset = 0
+                store.db.execute("UPDATE settings SET data=? WHERE key='allocator'", (canonical([segment, offset+store.slot_bytes]),))
+        except BaseException:
+            if disk_budget is not None:disk_budget.release(reservation)
+            raise
+        store.segment, store.offset = segment, offset + store.slot_bytes
         handle = None
         try:
             handle = self._handle(segment, writing=True)
@@ -75,10 +81,12 @@ class AsyncStoreIO:
         def complete(req):
             try:
                 if req.error is None:
+                    if disk_budget is not None:disk_budget.materialize(reservation,store.slot_bytes)
                     with store.db:
                         store.db.execute('UPDATE versions SET segment=?,offset=?,checksum=? WHERE id=?',
                                          (segment, offset, checksum, version))
                     store._event('write', version, req.elapsed_seconds, handle=handle, segment=segment, offset=offset)
+                    req.mark_validated()
             finally:
                 handle.close()
                 self.pending.pop(req.request_id, None)

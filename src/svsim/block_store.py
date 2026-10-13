@@ -16,8 +16,8 @@ class MemoryBlockStore(FileBlockStore):
     Ordinary flush cannot make resident amplitudes durable. Call
     ``flush_to_file`` before publishing a restartable checkpoint.
     """
-    def __init__(self, config, num_qubits, budget, *, create=True, trace=None):
-        super().__init__(config, num_qubits, create=create, trace=trace)
+    def __init__(self, config, num_qubits, budget, *, create=True, trace=None, disk_budget=None):
+        super().__init__(config, num_qubits, create=create, trace=trace,disk_budget=disk_budget)
         self.budget = budget
         self.resident = {}
         self.db.execute('CREATE TABLE IF NOT EXISTS resident_versions(id TEXT PRIMARY KEY)')

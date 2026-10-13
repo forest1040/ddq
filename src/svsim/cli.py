@@ -52,8 +52,27 @@ def svbench_main(argv=None):
     bench.add_argument('--seed',type=_nonnegative,default=0)
     bench.add_argument('--threads',type=_positive,default=1,help='allocation label; does not set or pin library threads')
     bench.add_argument('--overwrite',action='store_true')
+    runtime = commands.add_parser('runtime',help='finite actual Phase 4 executor calibration; MPI is initialized only here')
+    runtime.add_argument('--output',required=True)
+    runtime.add_argument('--scratch',required=True)
+    runtime.add_argument('--ram-budget',type=_positive,required=True)
+    runtime.add_argument('--disk-budget',type=_positive,required=True)
+    runtime.add_argument('--wall-seconds',type=float,required=True)
+    runtime.add_argument('--num-qubits',type=_positive,default=8)
+    runtime.add_argument('--block-bits',type=_positive,default=4)
+    runtime.add_argument('--ranks',type=_positive,default=1)
+    runtime.add_argument('--repetitions',type=_positive,default=5)
+    runtime.add_argument('--warmup',type=_positive,default=1)
+    runtime.add_argument('--backend',choices=('buffered','direct'),default='buffered')
+    runtime.add_argument('--engine',choices=('worker','cooperative'),default='worker')
+    runtime.add_argument('--max-io-requests',type=_positive,choices=(1,2),default=1)
+    runtime.add_argument('--suites',default='kernel-storage,memory-mpi,storage-mpi')
+    runtime.add_argument('--seed',type=_nonnegative,default=1)
+    runtime.add_argument('--overwrite',action='store_true')
     args = parser.parse_args(argv)
     try:
+        if args.command == 'runtime':
+            return _runtime_command(args)
         if args.command == 'probe':
             profile = probe_profile({'scope':'local','ranks':1,'nodes':1,'threads':args.threads},args.storage_path)
             profile.save(args.output,overwrite=args.overwrite)
@@ -88,7 +107,34 @@ def svbench_main(argv=None):
         return 4 if omitted else 0
     except (ValueError,TypeError,OSError,ArithmeticError,RecursionError) as exc:
         print(f'svbench: {exc}',file=sys.stderr)
-        return 4 if args.command == 'all' else 2
+        return 4 if args.command in {'all','runtime'} else 2
+
+
+def _runtime_command(args):
+    from .runtime_calibration import RuntimeCalibrationSpec, calibrate_runtime, MAX_REPORT_BYTES
+    spec=RuntimeCalibrationSpec(args.scratch,num_qubits=args.num_qubits,block_bits=args.block_bits,
+        ranks=(args.ranks,),seed=args.seed,ram_budget_bytes=args.ram_budget,
+        disk_budget_bytes=args.disk_budget,walltime_seconds=args.wall_seconds,
+        repetitions=args.repetitions,warmup=args.warmup,backend=args.backend,engine=args.engine,
+        max_io_requests=args.max_io_requests,suites=tuple(args.suites.split(',')))
+    from mpi4py import MPI
+    comm=MPI.COMM_WORLD
+    error=None
+    if comm.Get_rank()==0 and Path(args.output).exists() and not args.overwrite:
+        error='output document already exists'
+    error=comm.bcast(error,root=0)
+    if error: raise FileExistsError(error)
+    report=calibrate_runtime(spec,comm=comm)
+    code=0
+    if comm.Get_rank()==0:
+        try:
+            write_document(args.output,report,overwrite=args.overwrite,max_bytes=MAX_REPORT_BYTES)
+            print(f'runtime calibration: {args.output} ({report["status"]})')
+            code=0 if report['status']=='complete' else 4
+        except (ValueError,TypeError,OSError) as exc:
+            print(f'svbench: {exc}',file=sys.stderr)
+            code=4
+    return comm.bcast(code,root=0)
 
 
 def svsim_main(argv=None):

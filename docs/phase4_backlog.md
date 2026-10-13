@@ -1,6 +1,6 @@
 # Phase 4 backlog
 
-更新日：2026-10-13。**Phase 4は未完了**。主要APIとMac／Linux・実2ノードのcorrectness検証は実装・実施済みだが、適応制御と性能評価を含む設計の完了条件には残件がある。
+更新日：2026-10-14。**Phase 4は未完了**。主要APIとMac／Linux・実2ノードのcorrectness検証は実装・実施済みだが、適応制御と性能評価を含む設計の完了条件には残件がある。
 
 基準は[開発計画](../plan/distributed_quantum_circuit_simulator_development.md#phase-4非同期階層スケジューラ)と[設計書 §15](phase4_design.md#15-実装順と完了条件)。現在の挙動・制限は[実装資料](phase4_implementation.md)、既存の性能測定は[Mac比較](phase4_benchmark.md)に記載する。site固有の情報はこのbacklogに書かず、`docs/internal/`で管理する。
 
@@ -8,19 +8,23 @@
 
 [Phase 5設計書](phase5_design.md)で共通profile・校正・静的推定を先行整備し、P4-001／002／003／004／005／007／008へ接続する。容量拡大前にP4-009、必要な転置経路にP4-006を解消する。設計書の作成だけでは本backlogの状態を変更しない。
 
-[Phase 5基盤実装](phase5_implementation.md)で不変profile、完全一致cell、Macの有限mixed計測、容量referenceとstate-free解析を整備した。P4-001のruntime計測とMPI／Frame／metadataの共通化、P4-002以降への接続は引き続きOPEN。全項目の完了状態は変更していない。
+[Phase 5基盤実装](phase5_implementation.md)で不変profile、完全一致cell、Macの有限mixed計測、容量referenceとstate-free解析を整備した。P4-001のruntime計測は基盤に着手し、Frame／metadataの共通化とP4-002以降への接続は残る。完了状態は変更していない。
 
-[残件の全体設計](phase4_remaining_design.md)に共通契約・実装順・milestoneを定義し、各IDの個別設計を作成した。下表のIDから変更箇所、API案、アルゴリズム、失敗処理、受入条件を参照できる。設計済みであり、実装のOPEN/BLOCKEDは維持する。P4-009とP4-001を先行し、ETA→候補探索→tile/cache/gradient→適応/最終比較の順に統合する。
+[残件の全体設計](phase4_remaining_design.md)に共通契約・実装順・milestoneを定義し、各IDの個別設計を作成した。下表のIDから変更箇所、API、アルゴリズム、失敗処理、受入条件を参照できる。設計書の作成だけでは状態を変更せず、実装の進捗を下表で管理する。P4-009とP4-001を先行し、ETA→候補探索→tile/cache/gradient→適応/最終比較の順に統合する。
 
 状態は `OPEN`、`IN_PROGRESS`、`BLOCKED`、`DONE`。優先度P0は完了判定の中心となる課題、P1は設計への適合・評価の補完、P2はoptional実機検証または移行対応。優先度だけを理由に完了条件から除外しない。
 
-着手時に担当・関連commitを追記し、完了時はテスト／reportへのリンクと、測定条件・結果を記録する。scopeを縮小する場合は設計書と開発計画に反映し、項目を黙ってDONEにしない。以下はすべて担当未定。
+P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtime measurement foundations`。Mac回帰469件成功、24構成・336 trialの検証証跡を同変更に含める。
+
+着手時に担当・関連commitを追記し、完了時はテスト／reportへのリンクと、測定条件・結果を記録する。scopeを縮小する場合は設計書と開発計画に反映し、項目を黙ってDONEにしない。P4-001／009の基盤はCodexとLunaが担当し、それ以外は担当未定。
+
+2026-10-14に[容量予約・runtime計測の基盤](phase4_foundation_implementation.md)を実装した。catalogとledgerの同SQLite VFS、writerへの予約接続、validated completion、厳密profile adapter、有限actual-runtime campaignを追加した。Macの検証と残る受入条件は[検証資料](internal/phase4_foundation_validation/README.md)へ記録する。両項目はIN_PROGRESSで、全writerのfault／回収証跡、profile registryの全stage・自動接続、監視overhead、Linux／cross-host校正は残る。M1とPhase 4の完了は宣言しない。
 
 ## 一覧
 
 | ID | 優先度 | 状態 | 残件 | 主な依存 |
 |---|---|---|---|---|
-| [P4-001](phase4_tasks/P4-001_measurement.md) | P0 | OPEN | 条件一致の混合負荷校正とruntime計測 | Phase 5基盤 |
+| [P4-001](phase4_tasks/P4-001_measurement.md) | P0 | IN_PROGRESS | 条件一致の混合負荷校正とruntime計測 | Phase 5基盤 |
 | [P4-002](phase4_tasks/P4-002_remaining_eta.md) | P0 | OPEN | 残DAGからの自動ETA生成 | P4-001 |
 | [P4-003](phase4_tasks/P4-003_adaptive_validation.md) | P0 | OPEN | 性能低下から改善確認までの適応シナリオ | P4-001、002、004、009 |
 | [P4-004](phase4_tasks/P4-004_replanning.md) | P0 | OPEN | 費用に基づく再計画候補の探索と運用制御 | P4-001、002、009。tile採用時006 |
@@ -28,7 +32,7 @@
 | [P4-006](phase4_tasks/P4-006_tile_transpose.md) | P1 | OPEN | 作業予算内のaligned tile転置 | P4-009 |
 | [P4-007](phase4_tasks/P4-007_cache_policy.md) | P1 | OPEN | Frame・Binding共有を含むfuture-aware cache費用 | P4-001、002、009 |
 | [P4-008](phase4_tasks/P4-008_gradient_selection.md) | P1 | OPEN | 勾配方式の自動校正と安全な選択評価 | P4-001、004、009 |
-| [P4-009](phase4_tasks/P4-009_disk_admission.md) | P1 | OPEN | SQLite書込み前のdisk admission | Phase 5基盤 |
+| [P4-009](phase4_tasks/P4-009_disk_admission.md) | P1 | IN_PROGRESS | SQLite書込み前のdisk admission | Phase 5基盤 |
 | [P4-010](phase4_tasks/P4-010_native_uring.md) | P2 | BLOCKED | native io_uringのLinux実機検証 | 利用可能なliburing／kernel環境 |
 | [P4-011](phase4_tasks/P4-011_offline_migration.md) | P2 | OPEN | v3共有treeのoffline node-local移行 | P4-009、対応範囲の確定 |
 
@@ -36,7 +40,7 @@
 
 ### P4-001：条件一致の混合負荷校正とruntime計測
 
-現在はcallerからcost／health sampleを登録でき、I/O時間も記録する。自動mixed-load校正は未実装。
+completion collector、厳密profile adapter、実executorの有限mixed campaignを実装した。全stageのcondition registry、自動cost接続、overheadとcross-host校正は残る。
 
 - read/write/fsync、MPI、compute、queue/progress、Frame/packingを実際のtask completionから有界に収集する。
 - block／payload形状、backend、配置、同時実行条件を識別し、条件不一致のsampleをbaselineと比較しない。
@@ -108,7 +112,7 @@ Guardとpolicy変更API、prefetch credit削減は実装済み。設計が要求
 
 ### P4-009：SQLite書込み前のdisk admission
 
-現在はcatalog page growthを次のadmissionで実使用量へ反映する。SQL statementごとの事前予約はない。
+catalog open／transaction前の予約と同SQLite VFS、ledger pool、extent・journal・trace・assetへの接続を実装した。全writerのfault／recovery、独立datasetを含むhost調停、Linux検証は残る。
 
 - catalog／journalの成長をtransaction前に予約し、並行rankのdataset／host／device総予算に含める。
 - commit/rollback後の予約精算と、drain用余裕の保護、容量不足時の一貫した失敗を検証する。

@@ -182,3 +182,22 @@ def test_profile_rejects_unknown_kind_and_boolean_schema_version():
     invalid["schema_version"] = True
     with pytest.raises(ValueError, match="unsupported"):
         ProfileDocument.from_dict(invalid)
+def test_dirty_snapshot_prioritizes_source_before_large_raw_reports(tmp_path,monkeypatch):
+    from types import SimpleNamespace
+    import hashlib
+    import svsim.profile_document as module
+    (tmp_path/'src').mkdir();(tmp_path/'docs').mkdir()
+    source=tmp_path/'src'/'core.py';source.write_bytes(b'actual source')
+    names=['src/core.py']
+    for index in range(4):
+        name=f'docs/raw-{index}.json'
+        (tmp_path/name).write_bytes(b'x'*(1024**2))
+        names.append(name)
+    def git(command,**kwargs):
+        stdout='revision\n' if command[3:]==['rev-parse','HEAD'] else '\n'.join(names)
+        return SimpleNamespace(stdout=stdout)
+    monkeypatch.setattr(module.subprocess,'run',git)
+    snapshot=module._git_snapshot(tmp_path)
+    manifest=snapshot['dirty_manifest']
+    assert manifest['src/core.py']['sha256']==hashlib.sha256(source.read_bytes()).hexdigest()
+    assert any(manifest[name].get('status')=='omitted-size-or-type' for name in names[1:])

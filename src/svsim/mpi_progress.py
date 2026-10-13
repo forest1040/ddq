@@ -164,6 +164,9 @@ class MPIProgressEngine(MPITransport):
         if remote and self.rank == request.source and self.observer is not None:
             try: self.observer(request.source, request.destination, request.count, elapsed)
             except Exception as exc: self.observer_error = str(exc)
+        completion_observer = getattr(self, 'completion_observer', None)
+        if completion_observer is not None and remote and self.rank == request.source:
+            completion_observer(request, elapsed)
         if self.trace is not None:
             self.trace.record(f"{request.source}->{request.destination}",
                 performance_class=request.performance_class, transfer_ms=elapsed*1000,

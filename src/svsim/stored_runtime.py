@@ -32,7 +32,7 @@ from .unitary import MatrixAssetRegistry
 class StoredSimulator:
     def __init__(self, num_qubits, storage: StorageConfig, *, initial_state=None,
                  initial_blocks=None, profile=None, execution='auto', mode='per-block-frame',
-                 transport_factory=None, frame_policy='auto', alignment_policy='auto', frame_profile=None, _snapshot=None, _create=True):
+                 transport_factory=None, frame_policy='auto', alignment_policy='auto', frame_profile=None, _snapshot=None, _create=True, disk_budget=None):
         if execution not in {'auto','fallback','structured-exact'}: raise ValueError('Unknown gate execution mode')
         if mode not in {'per-block-frame','deferred-no-frame','batching','eager'}: raise ValueError('Unknown materialization mode')
         if frame_policy not in {'auto','keep','materialize'}: raise ValueError('Unknown frame policy')
@@ -57,6 +57,7 @@ class StoredSimulator:
         self.closed = False
         self._readonly_circuit = _snapshot is not None
         self._store_kwargs = {'transport_factory':transport_factory} if transport_factory else {}
+        if disk_budget is not None:self._store_kwargs['disk_budget']=disk_budget
         self.store = FileBlockStore(storage,num_qubits,create=_create,**self._store_kwargs)
         from .phase2_runtime import Phase2Catalog
         try: self.phase2 = Phase2Catalog(self)
@@ -66,16 +67,18 @@ class StoredSimulator:
         self.store.phase2 = self.phase2
         self.budget = MemoryBudget(storage.ram_budget_bytes,storage.metadata_reserve_bytes)
         self.cache = BlockCache(self.store,self.budget)
-        self.journal = Journal(self.store.directory/'journal')
+        disk_kwargs={'disk_budget_getter':lambda:self.store.disk_budget,
+                     'drain_getter':lambda:getattr(self.store,'_disk_drain',False)}
+        self.journal = Journal(self.store.directory/'journal',**disk_kwargs)
         self.journal.protected_cursor = lambda kind: self.store.db.execute(
             'SELECT max(json_extract(data,?)) FROM snapshots',(f'$.journal_cursors.{kind}',)).fetchone()[0] or 0
         self.store.journal = self.journal
         self.run_id = uuid4().hex
-        self.trace = StreamingExecutionTrace(self.store.directory/'traces'/f'{self.run_id}.jsonl',profile_id=self.profile.profile_id,plan_id='unregistered')
+        self.trace = StreamingExecutionTrace(self.store.directory/'traces'/f'{self.run_id}.jsonl',profile_id=self.profile.profile_id,plan_id='unregistered',**disk_kwargs)
         self.store.trace = self.trace
         self.guard = None
-        self.root = self.store.new_root()
         try:
+            self.root = self.store.new_root()
             if _snapshot is not None: self._restore(_snapshot)
             elif initial_state is not None or initial_blocks is not None:
                 size = 1 << storage.block_bits
@@ -119,9 +122,11 @@ class StoredSimulator:
             if not path.exists():
                 temporary = path.with_suffix(f'.{self.run_id}.tmp')
                 try:
-                    with open(temporary,'wb') as stream:
-                        stream.write(asset.data); stream.flush(); os.fsync(stream.fileno())
-                    os.replace(temporary,path)
+                    with self.store.disk_budget.allocation(len(asset.data),drain=getattr(self.store,'_disk_drain',False)):
+                        with open(temporary,'wb') as stream:
+                            if stream.write(asset.data)!=len(asset.data): raise OSError('Incomplete matrix asset write')
+                            stream.flush(); os.fsync(stream.fileno())
+                        os.replace(temporary,path)
                 finally: temporary.unlink(missing_ok=True)
             else:
                 with open(path,'rb') as stream:
@@ -661,7 +666,10 @@ class StoredSimulator:
         self.root = self.store.new_root(manifest.root)
         self.trace.record(manifest.snapshot_id,metadata={'path':'SNAPSHOT_COMMIT','frontier':self.frontier,'root':manifest.root})
         export = self.store.directory/'manifests'/f'snapshot-{manifest.snapshot_id}.json'
-        export.write_text(data+'\n')
+        raw=(data+'\n').encode()
+        with self.store.disk_budget.allocation(len(raw),operation='snapshot-export'):
+            with export.open('wb') as stream:
+                if stream.write(raw)!=len(raw):raise OSError('Incomplete snapshot export')
         return manifest
 
     def commit_prefix(self, variable_parameters, *, binding=None):
@@ -725,14 +733,15 @@ class StoredSimulator:
         run = StoredSimulator(self.num_qubits,self.config,profile=self.profile,execution=self.execution,mode=self.mode,
                               frame_policy=self.frame_policy,alignment_policy=self.alignment_policy,
                               frame_profile=self.frame_profile,
-                              _snapshot=manifest,_create=False,**({'transport_factory':self._store_kwargs['transport_factory']} if self._store_kwargs else {}))
+                              _snapshot=manifest,_create=False,**({'transport_factory':self._store_kwargs['transport_factory']} if 'transport_factory' in self._store_kwargs else {}))
         run.binding = binding
         run.trace.record('prefix-fork',metadata={'path':'PREFIX_FORK','snapshot_id':manifest.snapshot_id,'payload_copy_bytes':0,'binding_id':binding.binding_id})
         return run
 
     @classmethod
     def resume(cls, storage, snapshot, *, profile=None, execution='auto', mode='per-block-frame',frame_policy='auto',alignment_policy='auto'):
-        db = sqlite3.connect(Path(storage.directory)/'metadata/catalog.sqlite3')
+        catalog=(Path(storage.directory)/'metadata/catalog.sqlite3').resolve()
+        db = sqlite3.connect(catalog.as_uri()+'?mode=ro',uri=True)
         try: data = json.loads(db.execute("SELECT data FROM settings WHERE key='config'").fetchone()[0])
         finally: db.close()
         return cls(data['num_qubits'],storage,profile=profile,execution=execution,mode=mode,frame_policy=frame_policy,alignment_policy=alignment_policy,_snapshot=snapshot,_create=False)

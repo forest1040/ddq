@@ -1,0 +1,4307 @@
+{
+  "kind": "runtime-calibration",
+  "schema_version": 1,
+  "scope": "runtime-calibration",
+  "status": "complete",
+  "failure": null,
+  "platform": "macOS-26.7.1-arm64-arm-64bit",
+  "spec": {
+    "scratch": "/private/tmp/ddq-runtime-calibration/p1-worker-buffered",
+    "num_qubits": 4,
+    "block_bits": 2,
+    "ranks": [
+      1
+    ],
+    "seed": 401,
+    "ram_budget_bytes": 67108864,
+    "disk_budget_bytes": 67108864,
+    "walltime_seconds": 600,
+    "repetitions": 2,
+    "warmup": 1,
+    "backend": "buffered",
+    "engine": "worker",
+    "max_io_requests": 1,
+    "suites": [
+      "kernel-storage"
+    ]
+  },
+  "rank_count": 1,
+  "source_identities": {
+    "kernel-storage": "26b0366157e805634f32c10c78b9545a04a647574f35afd87f413adfb7b58593"
+  },
+  "cases": [
+    {
+      "suite": "kernel-storage",
+      "ranks": 1,
+      "backend": "buffered",
+      "engine": "worker",
+      "max_io_requests": 1,
+      "status": "measured",
+      "mpi_payload_observed": false,
+      "storage_activity_observed": true,
+      "resolved_backends": [
+        "buffered"
+      ]
+    }
+  ],
+  "quality": {
+    "correctness": "validated",
+    "statistical": "finite-diagnostics-only",
+    "confidence_interval": null,
+    "candidate_envelope": null
+  },
+  "summary": {
+    "count": 2,
+    "by_suite": {
+      "kernel-storage": {
+        "count": 2,
+        "min_seconds": 0.2630749160889536,
+        "median_seconds": 0.2633390625123866,
+        "max_seconds": 0.26360320893581957,
+        "finite": true
+      }
+    }
+  },
+  "trials": [
+    {
+      "suite": "kernel-storage",
+      "repetition": -1,
+      "warmup": true,
+      "status": "validated",
+      "failure": null,
+      "startup_seconds_max": 0.51084970892407,
+      "execute_seconds_max": 0.30150766705628484,
+      "validation_seconds": 0.011893415939994156,
+      "whole_group_seconds_max": 0.8528752499260008,
+      "norm_error": 2.220446049250313e-16,
+      "rank_count": 1,
+      "storage": "file",
+      "measurements": {
+        "send_bytes_max": 0,
+        "storage_read_bytes_max": 0,
+        "storage_write_bytes_max": 81920,
+        "io_requests_max": 20,
+        "managed_peak_bytes_max": 443136,
+        "scratch_bytes_max": 284005,
+        "resolved_backends": [
+          "buffered"
+        ]
+      },
+      "overlap_evidence": "serial-materialize-no-overlap-claim",
+      "collector": {
+        "observations": [
+          {
+            "event_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-epoch:0",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-epoch",
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "policy": {
+                "mode": "observe",
+                "io_engine": "worker",
+                "max_io_requests": 1,
+                "io_workers": 2,
+                "max_mpi_requests": 4,
+                "prefetch_blocks": 0,
+                "lookahead_gates": 32,
+                "beam_width": 4,
+                "swap_policy": "S0",
+                "max_active_jobs": 1,
+                "cooldown_seconds": 120,
+                "minimum_gain_fraction": 0.1,
+                "candidate_ttl_seconds": 120
+              },
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "source_operations": [
+                {
+                  "kind": "H",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 0,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                },
+                {
+                  "kind": "H",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 1,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                },
+                {
+                  "kind": "RX",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 2,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                },
+                {
+                  "kind": "PAULI_ROT",
+                  "targets": [
+                    0,
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 3,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null,
+                  "paulis": [
+                    "X",
+                    "Z"
+                  ]
+                },
+                {
+                  "kind": "RX",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 4,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ]
+            },
+            "parent_id": null,
+            "group_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-epoch:0:children",
+            "stage": "executor-epoch",
+            "units": "calls",
+            "quantity": 5,
+            "queue_seconds": null,
+            "service_seconds": 0.285787041997537,
+            "protocol_seconds": 0.285787041997537,
+            "cpu_seconds": 0.26135800000000003,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": true,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "5a02b60a7c1c0974c3b8775652f686e58b86d6e0ea4442f4c85aa161d1ea1bc1"
+          },
+          {
+            "event_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:1",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "H",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 0,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-epoch:0:children",
+            "group_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:1:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.05509925005026162,
+            "protocol_seconds": 0.05509925005026162,
+            "cpu_seconds": 0.05046799999999996,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": true,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "3da5722ec80503ccef75a753e637e7b8192d1366cb5146af495c9c7a62f333b0"
+          },
+          {
+            "event_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:2",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "H",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 1,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-epoch:0:children",
+            "group_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:2:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.056159415980800986,
+            "protocol_seconds": 0.056159415980800986,
+            "cpu_seconds": 0.051307999999999965,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": true,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "f0bdfe696fe7792c4092e342b7c49f4fe604bf2eee894f269242162f2dfc2b61"
+          },
+          {
+            "event_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:3",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "RX",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 2,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-epoch:0:children",
+            "group_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:3:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.05556129093747586,
+            "protocol_seconds": 0.05556129093747586,
+            "cpu_seconds": 0.050819999999999976,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": true,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "6732b0cee926c805ee4cfc1f7e686ee201d0a49b1097d1b7d40549dc8b42eeab"
+          },
+          {
+            "event_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:4",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "PAULI_ROT",
+                  "targets": [
+                    0,
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 3,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null,
+                  "paulis": [
+                    "X",
+                    "Z"
+                  ]
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-epoch:0:children",
+            "group_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:4:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.05345741694327444,
+            "protocol_seconds": 0.05345741694327444,
+            "cpu_seconds": 0.048962000000000006,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": true,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "4c8b0e3b91172b9ef9a8190a6023c4ab40386672a28bdd8564a33bc958d84c87"
+          },
+          {
+            "event_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:5",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "RX",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 4,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-epoch:0:children",
+            "group_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:5:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.05510291701648384,
+            "protocol_seconds": 0.05510291701648384,
+            "cpu_seconds": 0.05033600000000005,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": true,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "0e01c02a0e88666218fb88efc1d44261c88c0597dc8ffc3be2ce33d655893410"
+          },
+          {
+            "event_id": "io:0",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:1:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 0.00010479206684976816,
+            "service_seconds": 2.1999934688210487e-05,
+            "protocol_seconds": 0.00531058304477483,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:1",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:1:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 8.858297951519489e-05,
+            "service_seconds": 1.762493047863245e-05,
+            "protocol_seconds": 0.004902249900624156,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:10",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.9542013332247734e-05,
+            "service_seconds": 1.808302477002144e-05,
+            "protocol_seconds": 0.004691791953518987,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:11",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.591598503291607e-05,
+            "service_seconds": 1.4874967746436596e-05,
+            "protocol_seconds": 0.008199541014619172,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:12",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 7.575005292892456e-05,
+            "service_seconds": 2.820801455527544e-05,
+            "protocol_seconds": 0.004627916030585766,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:13",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.812496576458216e-05,
+            "service_seconds": 1.7000013031065464e-05,
+            "protocol_seconds": 0.004551165970042348,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:14",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.745802238583565e-05,
+            "service_seconds": 1.6208970919251442e-05,
+            "protocol_seconds": 0.004500375012867153,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:15",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 0.00010341696906834841,
+            "service_seconds": 2.4582957848906517e-05,
+            "protocol_seconds": 0.007952417014166713,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:16",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 7.420801557600498e-05,
+            "service_seconds": 2.358399797230959e-05,
+            "protocol_seconds": 0.004645250039175153,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:17",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 7.170799653977156e-05,
+            "service_seconds": 1.591700129210949e-05,
+            "protocol_seconds": 0.004905582987703383,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:18",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.133306305855513e-05,
+            "service_seconds": 1.695798709988594e-05,
+            "protocol_seconds": 0.004798708017915487,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:19",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-epoch:0:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.908399518579245e-05,
+            "service_seconds": 1.8249964341521263e-05,
+            "protocol_seconds": 0.008333749952726066,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:2",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:1:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 7.587496656924486e-05,
+            "service_seconds": 1.1041061952710152e-05,
+            "protocol_seconds": 0.0048082079738378525,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:3",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.9458968937397e-05,
+            "service_seconds": 2.0666047930717468e-05,
+            "protocol_seconds": 0.007971875020302832,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:4",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 9.829201735556126e-05,
+            "service_seconds": 2.3250002413988113e-05,
+            "protocol_seconds": 0.0050978329963982105,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:5",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 7.779209408909082e-05,
+            "service_seconds": 2.791592851281166e-05,
+            "protocol_seconds": 0.004777042078785598,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:6",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 7.062510121613741e-05,
+            "service_seconds": 3.991695120930672e-05,
+            "protocol_seconds": 0.004697667085565627,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:7",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 7.145898416638374e-05,
+            "service_seconds": 3.6082929000258446e-05,
+            "protocol_seconds": 0.008020041976124048,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:8",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 2.3916014470160007e-05,
+            "service_seconds": 6.587500683963299e-05,
+            "protocol_seconds": 0.0048498749965801835,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:9",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "9b9c702b595d49e2b6c1d0b23c304599:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.733299233019352e-05,
+            "service_seconds": 1.6750069335103035e-05,
+            "protocol_seconds": 0.00470591604243964,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          }
+        ],
+        "failed_observations": [],
+        "dropped_bytes": 0,
+        "dropped_conditions": 0,
+        "scheduler_completion_counts_by_stage": {
+          "executor-epoch": 1,
+          "executor-gate": 5,
+          "storage-write": 20
+        }
+      }
+    },
+    {
+      "suite": "kernel-storage",
+      "repetition": 0,
+      "warmup": false,
+      "status": "validated",
+      "failure": null,
+      "startup_seconds_max": 0.0508019580738619,
+      "execute_seconds_max": 0.26360320893581957,
+      "validation_seconds": 0.00013441697228699923,
+      "whole_group_seconds_max": 0.34018474991898984,
+      "norm_error": 2.220446049250313e-16,
+      "rank_count": 1,
+      "storage": "file",
+      "measurements": {
+        "send_bytes_max": 0,
+        "storage_read_bytes_max": 0,
+        "storage_write_bytes_max": 81920,
+        "io_requests_max": 20,
+        "managed_peak_bytes_max": 443136,
+        "scratch_bytes_max": 284003,
+        "resolved_backends": [
+          "buffered"
+        ]
+      },
+      "overlap_evidence": "serial-materialize-no-overlap-claim",
+      "collector": {
+        "observations": [
+          {
+            "event_id": "fc44ba591af64454acc73f5f01ca0359:executor-epoch:0",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-epoch",
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "policy": {
+                "mode": "observe",
+                "io_engine": "worker",
+                "max_io_requests": 1,
+                "io_workers": 2,
+                "max_mpi_requests": 4,
+                "prefetch_blocks": 0,
+                "lookahead_gates": 32,
+                "beam_width": 4,
+                "swap_policy": "S0",
+                "max_active_jobs": 1,
+                "cooldown_seconds": 120,
+                "minimum_gain_fraction": 0.1,
+                "candidate_ttl_seconds": 120
+              },
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "source_operations": [
+                {
+                  "kind": "H",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 0,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                },
+                {
+                  "kind": "H",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 1,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                },
+                {
+                  "kind": "RX",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 2,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                },
+                {
+                  "kind": "PAULI_ROT",
+                  "targets": [
+                    0,
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 3,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null,
+                  "paulis": [
+                    "X",
+                    "Z"
+                  ]
+                },
+                {
+                  "kind": "RX",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 4,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ]
+            },
+            "parent_id": null,
+            "group_id": "fc44ba591af64454acc73f5f01ca0359:executor-epoch:0:children",
+            "stage": "executor-epoch",
+            "units": "calls",
+            "quantity": 5,
+            "queue_seconds": null,
+            "service_seconds": 0.2536391250323504,
+            "protocol_seconds": 0.2536391250323504,
+            "cpu_seconds": 0.23177999999999999,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "5a02b60a7c1c0974c3b8775652f686e58b86d6e0ea4442f4c85aa161d1ea1bc1"
+          },
+          {
+            "event_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:1",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "H",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 0,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-epoch:0:children",
+            "group_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:1:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.04836487490683794,
+            "protocol_seconds": 0.04836487490683794,
+            "cpu_seconds": 0.04428399999999999,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "3da5722ec80503ccef75a753e637e7b8192d1366cb5146af495c9c7a62f333b0"
+          },
+          {
+            "event_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:2",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "H",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 1,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-epoch:0:children",
+            "group_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:2:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.04924466705415398,
+            "protocol_seconds": 0.04924466705415398,
+            "cpu_seconds": 0.04502800000000007,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "f0bdfe696fe7792c4092e342b7c49f4fe604bf2eee894f269242162f2dfc2b61"
+          },
+          {
+            "event_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:3",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "RX",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 2,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-epoch:0:children",
+            "group_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:3:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.04919770802371204,
+            "protocol_seconds": 0.04919770802371204,
+            "cpu_seconds": 0.04491400000000001,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "6732b0cee926c805ee4cfc1f7e686ee201d0a49b1097d1b7d40549dc8b42eeab"
+          },
+          {
+            "event_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:4",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "PAULI_ROT",
+                  "targets": [
+                    0,
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 3,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null,
+                  "paulis": [
+                    "X",
+                    "Z"
+                  ]
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-epoch:0:children",
+            "group_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:4:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.04894379200413823,
+            "protocol_seconds": 0.04894379200413823,
+            "cpu_seconds": 0.044677999999999995,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "4c8b0e3b91172b9ef9a8190a6023c4ab40386672a28bdd8564a33bc958d84c87"
+          },
+          {
+            "event_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:5",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "RX",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 4,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-epoch:0:children",
+            "group_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:5:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.04877404193393886,
+            "protocol_seconds": 0.04877404193393886,
+            "cpu_seconds": 0.04459599999999997,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "0e01c02a0e88666218fb88efc1d44261c88c0597dc8ffc3be2ce33d655893410"
+          },
+          {
+            "event_id": "io:0",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:1:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 8.937495294958353e-05,
+            "service_seconds": 6.654101889580488e-05,
+            "protocol_seconds": 0.004422957892529666,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:1",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:1:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.408407352864742e-05,
+            "service_seconds": 1.13749410957098e-05,
+            "protocol_seconds": 0.004307459108531475,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:10",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.220908835530281e-05,
+            "service_seconds": 1.5124911442399025e-05,
+            "protocol_seconds": 0.004219834110699594,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:11",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 4.812504630535841e-05,
+            "service_seconds": 1.862493809312582e-05,
+            "protocol_seconds": 0.007179334061220288,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:12",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.583302117884159e-05,
+            "service_seconds": 1.1582975275814533e-05,
+            "protocol_seconds": 0.004172208020463586,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:13",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.954096559435129e-05,
+            "service_seconds": 1.3459008187055588e-05,
+            "protocol_seconds": 0.004252540995366871,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:14",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.229189991950989e-05,
+            "service_seconds": 2.291705459356308e-05,
+            "protocol_seconds": 0.004214583896100521,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:15",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.495804361999035e-05,
+            "service_seconds": 3.5624951124191284e-05,
+            "protocol_seconds": 0.007158458000048995,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:16",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.537504330277443e-05,
+            "service_seconds": 1.129100564867258e-05,
+            "protocol_seconds": 0.004173625027760863,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:17",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.149992648512125e-05,
+            "service_seconds": 1.1416967026889324e-05,
+            "protocol_seconds": 0.004177624941803515,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:18",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.6666904129087925e-05,
+            "service_seconds": 1.1124997399747372e-05,
+            "protocol_seconds": 0.004145332961343229,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:19",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-epoch:0:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 8.266593795269728e-05,
+            "service_seconds": 1.7042038962244987e-05,
+            "protocol_seconds": 0.0071700409753248096,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:2",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:1:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.087496876716614e-05,
+            "service_seconds": 1.1334079317748547e-05,
+            "protocol_seconds": 0.004183792043477297,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:3",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.408399738371372e-05,
+            "service_seconds": 2.308306284248829e-05,
+            "protocol_seconds": 0.007111249957233667,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:4",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.716702435165644e-05,
+            "service_seconds": 1.1708005331456661e-05,
+            "protocol_seconds": 0.004250291967764497,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:5",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.591707304120064e-05,
+            "service_seconds": 1.4291959814727306e-05,
+            "protocol_seconds": 0.0042885420843958855,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:6",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 7.3749921284616e-05,
+            "service_seconds": 1.5750061720609665e-05,
+            "protocol_seconds": 0.004217499983496964,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:7",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.212496034801006e-05,
+            "service_seconds": 9.416951797902584e-06,
+            "protocol_seconds": 0.007157666957937181,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:8",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.520798731595278e-05,
+            "service_seconds": 1.225003506988287e-05,
+            "protocol_seconds": 0.004257249995134771,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:9",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "fc44ba591af64454acc73f5f01ca0359:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.566701292991638e-05,
+            "service_seconds": 1.1290889233350754e-05,
+            "protocol_seconds": 0.004249832942150533,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          }
+        ],
+        "failed_observations": [],
+        "dropped_bytes": 0,
+        "dropped_conditions": 0,
+        "scheduler_completion_counts_by_stage": {
+          "executor-epoch": 1,
+          "executor-gate": 5,
+          "storage-write": 20
+        }
+      }
+    },
+    {
+      "suite": "kernel-storage",
+      "repetition": 1,
+      "warmup": false,
+      "status": "validated",
+      "failure": null,
+      "startup_seconds_max": 0.04875624994747341,
+      "execute_seconds_max": 0.2630749160889536,
+      "validation_seconds": 0.00011733302380889654,
+      "whole_group_seconds_max": 0.33719295798800886,
+      "norm_error": 2.220446049250313e-16,
+      "rank_count": 1,
+      "storage": "file",
+      "measurements": {
+        "send_bytes_max": 0,
+        "storage_read_bytes_max": 0,
+        "storage_write_bytes_max": 81920,
+        "io_requests_max": 20,
+        "managed_peak_bytes_max": 443136,
+        "scratch_bytes_max": 284001,
+        "resolved_backends": [
+          "buffered"
+        ]
+      },
+      "overlap_evidence": "serial-materialize-no-overlap-claim",
+      "collector": {
+        "observations": [
+          {
+            "event_id": "33f6140f905d460798f1401893adb37d:executor-epoch:0",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-epoch",
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "policy": {
+                "mode": "observe",
+                "io_engine": "worker",
+                "max_io_requests": 1,
+                "io_workers": 2,
+                "max_mpi_requests": 4,
+                "prefetch_blocks": 0,
+                "lookahead_gates": 32,
+                "beam_width": 4,
+                "swap_policy": "S0",
+                "max_active_jobs": 1,
+                "cooldown_seconds": 120,
+                "minimum_gain_fraction": 0.1,
+                "candidate_ttl_seconds": 120
+              },
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "source_operations": [
+                {
+                  "kind": "H",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 0,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                },
+                {
+                  "kind": "H",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 1,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                },
+                {
+                  "kind": "RX",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 2,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                },
+                {
+                  "kind": "PAULI_ROT",
+                  "targets": [
+                    0,
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 3,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null,
+                  "paulis": [
+                    "X",
+                    "Z"
+                  ]
+                },
+                {
+                  "kind": "RX",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 4,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ]
+            },
+            "parent_id": null,
+            "group_id": "33f6140f905d460798f1401893adb37d:executor-epoch:0:children",
+            "stage": "executor-epoch",
+            "units": "calls",
+            "quantity": 5,
+            "queue_seconds": null,
+            "service_seconds": 0.2531342910369858,
+            "protocol_seconds": 0.2531342910369858,
+            "cpu_seconds": 0.2311249999999999,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "5a02b60a7c1c0974c3b8775652f686e58b86d6e0ea4442f4c85aa161d1ea1bc1"
+          },
+          {
+            "event_id": "33f6140f905d460798f1401893adb37d:executor-group:1",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "H",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 0,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-epoch:0:children",
+            "group_id": "33f6140f905d460798f1401893adb37d:executor-group:1:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.047438165987841785,
+            "protocol_seconds": 0.047438165987841785,
+            "cpu_seconds": 0.043365999999999905,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "3da5722ec80503ccef75a753e637e7b8192d1366cb5146af495c9c7a62f333b0"
+          },
+          {
+            "event_id": "33f6140f905d460798f1401893adb37d:executor-group:2",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "H",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": null,
+                  "matrix_asset_ref": null,
+                  "op_id": 1,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": true,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-epoch:0:children",
+            "group_id": "33f6140f905d460798f1401893adb37d:executor-group:2:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.04863258404657245,
+            "protocol_seconds": 0.04863258404657245,
+            "cpu_seconds": 0.04440299999999997,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "f0bdfe696fe7792c4092e342b7c49f4fe604bf2eee894f269242162f2dfc2b61"
+          },
+          {
+            "event_id": "33f6140f905d460798f1401893adb37d:executor-group:3",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "RX",
+                  "targets": [
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 2,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-epoch:0:children",
+            "group_id": "33f6140f905d460798f1401893adb37d:executor-group:3:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.048692791955545545,
+            "protocol_seconds": 0.048692791955545545,
+            "cpu_seconds": 0.04444300000000001,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "6732b0cee926c805ee4cfc1f7e686ee201d0a49b1097d1b7d40549dc8b42eeab"
+          },
+          {
+            "event_id": "33f6140f905d460798f1401893adb37d:executor-group:4",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "PAULI_ROT",
+                  "targets": [
+                    0,
+                    1
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 3,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null,
+                  "paulis": [
+                    "X",
+                    "Z"
+                  ]
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-epoch:0:children",
+            "group_id": "33f6140f905d460798f1401893adb37d:executor-group:4:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.04837933403905481,
+            "protocol_seconds": 0.04837933403905481,
+            "cpu_seconds": 0.044108000000000036,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "4c8b0e3b91172b9ef9a8190a6023c4ab40386672a28bdd8564a33bc958d84c87"
+          },
+          {
+            "event_id": "33f6140f905d460798f1401893adb37d:executor-group:5",
+            "context": {
+              "configuration_fingerprint": null,
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1,
+              "threads": 2
+            },
+            "condition": {
+              "operation": "executor-gate",
+              "executor": "single-gate",
+              "operations": [
+                {
+                  "kind": "RX",
+                  "targets": [
+                    0
+                  ],
+                  "controls": [],
+                  "control_values": [],
+                  "angle": {
+                    "op": "symbol",
+                    "symbol": {
+                      "name": "theta",
+                      "parameter_id": "runtime-calibration-401",
+                      "bounds": null
+                    }
+                  },
+                  "matrix_asset_ref": null,
+                  "op_id": 4,
+                  "diagonal": false,
+                  "permutation": false,
+                  "clifford": false,
+                  "approximation_error": 0.0,
+                  "source_op_id": null
+                }
+              ],
+              "n": 4,
+              "block_bits": 2,
+              "backend": "buffered",
+              "engine": "worker",
+              "swap_policy": "S0",
+              "layout": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-epoch:0:children",
+            "group_id": "33f6140f905d460798f1401893adb37d:executor-group:5:children",
+            "stage": "executor-gate",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": null,
+            "service_seconds": 0.050833916990086436,
+            "protocol_seconds": 0.050833916990086436,
+            "cpu_seconds": 0.04646299999999992,
+            "payload_bytes": null,
+            "storage_bytes": null,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "9b84b8bf0f809027c793d500b6759ff4fc511e858bb8905addce5de16759d550",
+            "condition_hash": "0e01c02a0e88666218fb88efc1d44261c88c0597dc8ffc3be2ce33d655893410"
+          },
+          {
+            "event_id": "io:0",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:1:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 7.90830235928297e-05,
+            "service_seconds": 7.12500186637044e-05,
+            "protocol_seconds": 0.004380083060823381,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:1",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:1:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.6582968682050705e-05,
+            "service_seconds": 1.0375049896538258e-05,
+            "protocol_seconds": 0.004163625068031251,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:10",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.5582961067557335e-05,
+            "service_seconds": 1.3792072422802448e-05,
+            "protocol_seconds": 0.004183540935628116,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:11",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.183403845876455e-05,
+            "service_seconds": 2.2582942619919777e-05,
+            "protocol_seconds": 0.0071019589668139815,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:12",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.308398976922035e-05,
+            "service_seconds": 1.0874937288463116e-05,
+            "protocol_seconds": 0.004157459014095366,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:13",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.020802538841963e-05,
+            "service_seconds": 1.1208001524209976e-05,
+            "protocol_seconds": 0.004198957933112979,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:14",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:4:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.495804361999035e-05,
+            "service_seconds": 1.5625031664967537e-05,
+            "protocol_seconds": 0.00412066699936986,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:15",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.1958952099084854e-05,
+            "service_seconds": 1.0125106200575829e-05,
+            "protocol_seconds": 0.007078750059008598,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:16",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.958295125514269e-05,
+            "service_seconds": 1.3082986697554588e-05,
+            "protocol_seconds": 0.0044009999837726355,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:17",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.695801857858896e-05,
+            "service_seconds": 1.1792057193815708e-05,
+            "protocol_seconds": 0.00429845810867846,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:18",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:5:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.975000724196434e-05,
+            "service_seconds": 1.1541997082531452e-05,
+            "protocol_seconds": 0.004318457911722362,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:19",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-epoch:0:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 0.0005712920101359487,
+            "service_seconds": 1.6417005099356174e-05,
+            "protocol_seconds": 0.007669958984479308,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:2",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:1:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.37909397482872e-05,
+            "service_seconds": 1.066701952368021e-05,
+            "protocol_seconds": 0.004206374986097217,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:3",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.9333979152143e-05,
+            "service_seconds": 9.95793379843235e-06,
+            "protocol_seconds": 0.006942500011064112,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:4",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.754195783287287e-05,
+            "service_seconds": 1.1208001524209976e-05,
+            "protocol_seconds": 0.0041707499185577035,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:5",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.800009239464998e-05,
+            "service_seconds": 1.0958989150822163e-05,
+            "protocol_seconds": 0.0041629170300439,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:6",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:2:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.087496876716614e-05,
+            "service_seconds": 1.0666088201105595e-05,
+            "protocol_seconds": 0.004201040952466428,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:7",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 4.8457994125783443e-05,
+            "service_seconds": 1.591700129210949e-05,
+            "protocol_seconds": 0.00712366693187505,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:8",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 5.495909135788679e-05,
+            "service_seconds": 1.2165983207523823e-05,
+            "protocol_seconds": 0.004121959093026817,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          },
+          {
+            "event_id": "io:9",
+            "context": {
+              "configuration_fingerprint": null,
+              "backend": "buffered",
+              "engine": "worker",
+              "ranks": 1
+            },
+            "condition": {
+              "performance_class": "async-storage-write",
+              "block_bytes": 4096,
+              "io_depth": 1,
+              "read_fraction": null,
+              "mpi_concurrent": false,
+              "ranks": 1,
+              "details": {
+                "backend": "buffered",
+                "engine": "worker",
+                "prefetch_blocks": 0,
+                "scope": "same-host",
+                "flush": "deferred"
+              }
+            },
+            "parent_id": "33f6140f905d460798f1401893adb37d:executor-group:3:children",
+            "group_id": null,
+            "stage": "storage-write",
+            "units": "calls",
+            "quantity": 1,
+            "queue_seconds": 6.76250783726573e-05,
+            "service_seconds": 1.154094934463501e-05,
+            "protocol_seconds": 0.004191666026599705,
+            "cpu_seconds": null,
+            "payload_bytes": 4096,
+            "storage_bytes": 4096,
+            "success": true,
+            "validated": true,
+            "evidence": "measured",
+            "scope": "same-host",
+            "warmup": false,
+            "raw_ref": null,
+            "context_hash": "46df8a6e1fce4899626b90f991dc20b9842ba74c9ebd171d32d959b33f6d9518",
+            "condition_hash": "8b65e07286b425f1830aba547b2b45f039ae60e33ec95eabd08eafc94df58eb6"
+          }
+        ],
+        "failed_observations": [],
+        "dropped_bytes": 0,
+        "dropped_conditions": 0,
+        "scheduler_completion_counts_by_stage": {
+          "executor-epoch": 1,
+          "executor-gate": 5,
+          "storage-write": 20
+        }
+      }
+    }
+  ],
+  "collector": {
+    "observations": 78,
+    "failed_observations": 0,
+    "dropped_bytes": 0,
+    "dropped_conditions": 0
+  },
+  "elapsed_seconds": 1.5471106669865549
+}

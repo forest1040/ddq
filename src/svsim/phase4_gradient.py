@@ -229,7 +229,7 @@ def _share_child_budget(parent, child):
         if hasattr(store, "budget"):
             store.budget = parent.budget
     engine_charge = child.io_engine.metadata_bytes
-    return max(0, charge - engine_charge)
+    return max(0, charge - engine_charge - child.runtime._measurement_budget)
 
 
 def _parameter_shift(sim, observable, requested, schedule):

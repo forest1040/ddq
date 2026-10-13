@@ -64,7 +64,7 @@ class StoredBlockView:
 
 
 class FileBlockStore:
-    def __init__(self, config, num_qubits, *, trace=None, create=True, transport_factory=open_storage):
+    def __init__(self, config, num_qubits, *, trace=None, create=True, transport_factory=open_storage, disk_budget=None):
         if not 1 <= config.block_bits <= num_qubits: raise ValueError('Invalid state/block width')
         self.config, self.num_qubits, self.trace = config, num_qubits, trace
         self.num_blocks = 1 << (num_qubits-config.block_bits)
@@ -79,7 +79,26 @@ class FileBlockStore:
             if (self.directory/'metadata/catalog.sqlite3').exists(): raise FileExistsError('Storage directory already contains a state')
         elif not (self.directory/'metadata/catalog.sqlite3').is_file(): raise FileNotFoundError('Missing state catalog')
         for sub in ('state','metadata','assets','journal','traces','manifests'): (self.directory/sub).mkdir(exist_ok=True)
-        self.db = sqlite3.connect(self.directory/'metadata/catalog.sqlite3')
+        from .disk_budget import DiskBudget
+        from .catalog_admission import CatalogConnection
+        self._owned_disk_budget = None
+        if disk_budget is None:
+            self._owned_disk_budget=DiskBudget(self.directory/'metadata/disk-ledger.sqlite3',[self.directory])
+            disk_budget=self._owned_disk_budget
+        self.disk_budget=disk_budget
+        try:
+            self.db=CatalogConnection(self.directory/'metadata/catalog.sqlite3',
+                budget_getter=lambda:self.disk_budget,drain_getter=lambda:getattr(self,'_disk_drain',False),
+                require_native=self.disk_budget.quota_bytes is not None)
+        except BaseException:
+            if self._owned_disk_budget: self._owned_disk_budget.close()
+            raise
+        try: self._initialize_catalog(config,num_qubits,create)
+        except BaseException:
+            self.close()
+            raise
+
+    def _initialize_catalog(self,config,num_qubits,create):
         self.db.execute('PRAGMA synchronous=FULL')
         self.db.execute(f'PRAGMA cache_size=-{max(1,min(16,config.metadata_reserve_bytes//4096))}')
         self.db.execute('PRAGMA temp_store=FILE')
@@ -259,11 +278,13 @@ class FileBlockStore:
     def write_version(self, version, buffer):
         budget=getattr(self,'disk_budget',None)
         if budget is not None:
-            with budget.allocation(self.slot_bytes,drain=getattr(self,'_disk_drain',False)):
-                return self._write_version(version,buffer)
+            token=budget.reserve(self.slot_bytes,drain=getattr(self,'_disk_drain',False),operation='amplitude-extent',writing=True)
+            try:
+                return self._write_version(version,buffer,reservation=token)
+            finally: budget.release(token)
         return self._write_version(version,buffer)
 
-    def _write_version(self, version, buffer):
+    def _write_version(self, version, buffer, *, reservation=None):
         ref = self.ref(version)
         if ref.segment is not None: raise ValueError('Cannot overwrite immutable Block extent')
         if shutil.disk_usage(self.directory).free < self.slot_bytes: raise OSError('Insufficient disk capacity')
@@ -282,6 +303,7 @@ class FileBlockStore:
         count = handle.write_from(offset,buffer)
         elapsed = getattr(handle,'last_duration_seconds',perf_counter()-start)
         if count != self.slot_bytes: raise OSError('Incomplete Block write')
+        if reservation is not None:self.disk_budget.materialize(reservation,self.slot_bytes)
         self.db.execute('UPDATE versions SET segment=?,offset=?,checksum=? WHERE id=?',(segment,offset,checksum,version)); self.db.commit()
         self._event('write',version,elapsed,handle=handle,segment=segment,offset=offset)
 
@@ -299,3 +321,5 @@ class FileBlockStore:
         for handle in self.files.values(): handle.close()
         self.files.clear()
         self.db.close()
+        if getattr(self,'_owned_disk_budget',None):
+            self._owned_disk_budget.close();self._owned_disk_budget=None

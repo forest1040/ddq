@@ -61,6 +61,45 @@ class RuntimeControl:
         self.remaining_seconds = None
         from .runtime_cost import RuntimeCostModel
         self.cost_model = RuntimeCostModel()
+        self._measurement_budget=0
+        self.measurements=None
+        self.configure_measurements(max_bytes=max(1024,min(64*1024,sim.config.metadata_reserve_bytes//16)))
+        self.profile_adapter = None
+
+    def configure_measurements(self, *, max_bytes, max_conditions=256, per_condition=64):
+        """Reserve bounded observer storage, including indices and snapshot copies."""
+        from .runtime_measurement import RuntimeMeasurementCollector
+        collector=RuntimeMeasurementCollector(max_bytes=max_bytes,max_conditions=max_conditions,per_condition=per_condition)
+        if self.measurements is not None and self.measurements._events:
+            raise ValueError('Measurement limits must be set before collecting events')
+        capacity=min(max_conditions*per_condition,max(1,max_bytes//256))
+        pool=8*max_bytes+256*capacity
+        extra=max(0,pool-self._measurement_budget)
+        self.sim.cache.ensure(extra)
+        self.sim.budget.reserve(extra)
+        if pool<self._measurement_budget:self.sim.budget.release(self._measurement_budget-pool)
+        self._measurement_budget=pool
+        self.measurements=collector
+
+    def close_measurements(self):
+        self.measurements=None
+        if self._measurement_budget:
+            self.sim.budget.release(self._measurement_budget)
+            self._measurement_budget=0
+
+    def attach_profile_document(self, document, *, scope='same-host'):
+        """Attach an immutable profile for exact-condition, exact-build lookup."""
+        from .runtime_profile_adapter import RuntimeProfileAdapter
+        from .profile_document import probe_profile
+        sim=self.sim
+        actual=probe_profile({'scope':'local','ranks':sim.size,
+            'nodes':len({row['host'] for row in sim.environment}),
+            'threads':sim.policy.io_workers},(sim.directory,))
+        if document.configuration_fingerprint!=actual.configuration_fingerprint:
+            raise ValueError('Profile configuration differs from the current runtime allocation/build')
+        self.profile_adapter = RuntimeProfileAdapter(document,
+            configuration_fingerprint=actual.configuration_fingerprint,scope=scope)
+        return self.profile_adapter
 
     def record_cost(self, sample):
         """Register a measured matched task cost, never an assumed link rate."""
@@ -97,20 +136,72 @@ class RuntimeControl:
                                         'profile_version': self.profile_version})
         return report
 
-    def io_condition(self, operation):
+    def io_condition(self, operation, request=None):
         sim = self.sim
+        actual=getattr(request,'storage_metadata',{})
         return BenchmarkCondition('async-storage-'+operation, block_bytes=sim.store.slot_bytes,
                                   io_depth=sim.policy.max_io_requests, ranks=sim.size,
-                                  details={'backend': sim.config.backend, 'engine': sim.io_engine.identity,
+                                  details={'backend': actual.get('resolved_backend',sim.config.backend),
+                                           'requested_backend':sim.config.backend,
+                                           'device_id':actual.get('device_id','unknown'),
+                                           'alignment':actual.get('alignment'),
+                                           'submitted_in_flight':actual.get('submitted_in_flight'),
+                                           'payload_bytes':sim.store.payload_bytes,
+                                           'cache_state':'unknown','working_set':'unknown',
+                                           'engine': sim.io_engine.identity,
                                            'prefetch_blocks': sim.policy.prefetch_blocks,
                                            'scope': 'same-host' if len({r['host'] for r in sim.environment}) == 1 else 'multi-host',
                                            'flush': 'deferred'})
 
     def io_completion(self, request):
-        if request.error is None and request.operation in {'read', 'write'} and request.elapsed_seconds > 0:
-            self.observe(BenchmarkSample(self.io_condition(request.operation),
-                          bandwidth_bytes_per_second=self.sim.store.slot_bytes/request.elapsed_seconds,
-                          latency_ms=request.elapsed_seconds*1000))
+        elapsed = getattr(request, 'wall_seconds', request.elapsed_seconds)
+        successful = request.error is None and request.operation in {'read', 'write'} and bool(getattr(request,'validated',False))
+        condition = self.io_condition(request.operation,request) if request.operation in {'read', 'write'} else None
+        if condition is not None:
+            sim = self.sim
+            same_host = len({r['host'] for r in sim.environment}) == 1
+            self.measurements.complete(
+                f'io:{request.request_id}',
+                context={'configuration_fingerprint': getattr(self.profile_adapter, 'fingerprint', None),
+                         'backend': sim.config.backend, 'engine': sim.io_engine.identity,
+                         'ranks': sim.size},
+                condition=asdict(condition), stage='storage-' + request.operation,
+                units='calls', quantity=1,
+                queue_seconds=getattr(request, 'queue_seconds', None),
+                service_seconds=request.elapsed_seconds, protocol_seconds=elapsed,
+                payload_bytes=sim.store.slot_bytes, storage_bytes=sim.store.slot_bytes,
+                success=successful, validator=lambda: bool(getattr(request, 'validated', False)),
+                warmup=bool(getattr(sim,'_measurement_warmup',False)),
+                scope='same-host' if same_host else 'cross-host')
+        if successful and elapsed > 0:
+            self.observe(BenchmarkSample(condition,
+                          bandwidth_bytes_per_second=self.sim.store.slot_bytes/elapsed,
+                          latency_ms=elapsed*1000))
+
+    def mpi_completion(self, request, elapsed):
+        """Record one source-side whole transfer after protocol acknowledgment."""
+        if request.source != self.sim.rank or request.source == request.destination:
+            return False
+        metadata = request.metadata if isinstance(request.metadata, dict) else {}
+        condition = {'operation': 'mpi-transfer', 'payload_bytes': request.count,
+                     'source_rank': request.source, 'destination_rank': request.destination,
+                     'engine': 'typed-nonblocking', 'scope': metadata.get('scope', 'unknown'),
+                     'packing': metadata.get('packing', 'unknown'),
+                     'peer_class': metadata.get('peer_class', 'unknown'),
+                     'concurrency': metadata.get('concurrency', 'unknown')}
+        scope = metadata.get('scope')
+        if scope not in {'same-host', 'cross-host'}:
+            scope = 'unknown'
+        return self.measurements.complete(
+            f'mpi:{request.slot}:{request.generation}',
+            context={'configuration_fingerprint': getattr(self.profile_adapter, 'fingerprint', None),
+                     'ranks': self.sim.size, 'rank': self.sim.rank},
+            condition=condition, parent_id=metadata.get('group_id'), stage='mpi-transfer',
+            units='calls', quantity=1, protocol_seconds=elapsed,
+            payload_bytes=request.count, success=request.error is None,
+            validated=request.error is None,
+            warmup=bool(getattr(self.sim,'_measurement_warmup',False)),
+            scope=scope)
 
     def set_mode(self, mode):
         return self.apply_policy({'mode': mode}, classification='LIVE_TUNE')

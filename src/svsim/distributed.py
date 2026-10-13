@@ -74,6 +74,7 @@ class DistributedSimulator:
         self.transport = self.transport_class(comm,tile_bytes=config.tile_bytes,metadata_limit=config.metadata_reserve_bytes//2)
         self.rank,self.size = self.transport.rank,self.transport.size
         self.local = None; self.closed = False; self.stores = {}; self.history = []
+        self.disk_budget = None
         error = None
         try:
             self.ownership = OwnershipMap(num_qubits,config.block_bits,self.size)
@@ -83,9 +84,11 @@ class DistributedSimulator:
             self.environment = self.transport.handshake()
             self.block_bits = config.block_bits
             self.directory = Path(config.directory)
+            if config.storage_scope=='node-local':self._bootstrap_disk_budget()
             storage = StorageConfig(str(self.directory/f'rank-{self.rank:04d}'),config.block_bits,
                 config.ram_budget_bytes_per_rank,config.backend,config.alignment,metadata_reserve_bytes=config.metadata_reserve_bytes)
-            self.local = StoredSimulator(num_qubits,storage,_create=_create,frame_policy=config.frame_policy)
+            self.local = StoredSimulator(num_qubits,storage,_create=_create,frame_policy=config.frame_policy,
+                                         disk_budget=self.disk_budget)
             self.store,self.cache,self.budget = self.local.store,self.local.cache,self.local.budget
             self.trace = self.local.trace; self.transport.trace = self.trace
             self.store.db.executescript('''
@@ -98,6 +101,7 @@ class DistributedSimulator:
         try: self.transport.vote(error)
         except Exception:
             if self.local: self.local.close()
+            if self.disk_budget:self.disk_budget.close()
             self.transport.close(); raise
         capacities=self.transport.control.allgather({'host':self.local.profile.hostname,
             'available':self.local.profile.ram_available_bytes,'budget':config.ram_budget_bytes_per_rank})
@@ -123,7 +127,6 @@ class DistributedSimulator:
             settings = {k:json.loads(v) for k,v in self.store.db.execute('SELECT key,data FROM distributed_settings')}
             self.dataset_id,self.store_id,self.registry = settings['dataset_id'],settings['store_id'],settings['registry']
         self.stores[self.store_id] = self.store
-        self.disk_budget = None
         error=None
         try:
             if config.storage_scope == 'node-local':
@@ -140,7 +143,8 @@ class DistributedSimulator:
         if config.amplitude_store == 'ram':
             from .block_store import MemoryBlockStore
             self.cache.discard_unwritten(); self.store.close()
-            self.store = MemoryBlockStore(storage,num_qubits,self.budget,create=False,trace=self.trace)
+            self.store = MemoryBlockStore(storage,num_qubits,self.budget,create=False,trace=self.trace,
+                                          disk_budget=self.disk_budget)
             self.local.store = self.store; self.local.phase2.store = self.store; self.store.phase2 = self.local.phase2
             self.cache.store = self.store; self.stores[self.store_id] = self.store
             if self.disk_budget is not None: self.store.disk_budget = self.disk_budget
@@ -184,32 +188,40 @@ class DistributedSimulator:
         self.transport.agree(content_hash(self.registry))
         self._save_settings()
 
+    def _bootstrap_disk_budget(self):
+        """Admit catalogs and metadata before StoredSimulator's first SQL write."""
+        from .disk_budget import DiskBudget
+        record=None;error=None
+        try:
+            self.directory.mkdir(parents=True,exist_ok=True)
+            from .storage_placement import StoragePlacement
+            StoragePlacement.local('bootstrap',self.rank,self.environment[self.rank]['host'],self.directory)
+            record={'host':self.environment[self.rank]['host'],'volume':os.stat(self.directory).st_dev,
+                    'root':str(self.directory.resolve())}
+        except Exception as exc:error=str(exc)
+        self.transport.vote(error)
+        gathered=self.transport.control.allgather(record)
+        local=[r for r in gathered if r['host']==record['host'] and r['volume']==record['volume']]
+        roots=sorted({r['root'] for r in local})
+        key=content_hash({'host':record['host'],'volume':record['volume'],'roots':roots})
+        ledger=Path(roots[0])/'.disk-admission'/f'{key}.sqlite3'
+        self.disk_budget=DiskBudget(ledger,roots,quota_bytes=self.config.disk_quota_bytes,
+            min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes)
+
     def _attach_disk_budget(self):
         from .disk_budget import DiskBudget
         from .storage_placement import StoragePlacement
-        from tempfile import gettempdir
         entries=self.registry[self.store_id]
         own=StoragePlacement.local(self.store_id,self.rank,self.local.profile.hostname,self.directory)
         roots=sorted({p['root'] for value in self.registry.values() if isinstance(value,list) for p in value
             if p['host']==own.host and p['volume_id']==own.volume_id})
         key=content_hash({'dataset':self.dataset_id,'host':own.host,'volume':own.volume_id})
-        ledger=Path(gettempdir())/f'svsim-disk-{os.getuid()}'/f'{key}.sqlite3'
-        self.disk_budget=DiskBudget(ledger,roots,quota_bytes=self.config.disk_quota_bytes,
-            min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes)
+        if self.disk_budget is None:
+            ledger=Path(own.root)/'.disk-admission'/f'{key}.sqlite3'
+            self.disk_budget=DiskBudget(ledger,roots,quota_bytes=self.config.disk_quota_bytes,
+                min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes)
+        self.disk_budget.register_roots(roots)
         self.store.disk_budget=self.disk_budget
-        if not getattr(self.local,'_disk_admission_attached',False):
-            persist=self.local._persist_assets
-            append=self.local.journal.append
-            def persist_assets():
-                amount=sum(len(a.data) for key,a in self.assets.assets.items()
-                    if not (self.store.directory/'assets'/f'{key}.bin').exists())
-                with self.disk_budget.allocation(amount,drain=getattr(self.store,'_disk_drain',False)): return persist()
-            def append_journal(kind,payload):
-                amount=len(canonical(payload).encode())+256
-                with self.disk_budget.allocation(amount,drain=getattr(self.store,'_disk_drain',False)): return append(kind,payload)
-            self.local._persist_assets=persist_assets
-            self.local.journal.append=append_journal
-            self.local._disk_admission_attached=True
 
     def set_network_profile(self,profile):
         """Collectively select a calibration and attach passive observation."""

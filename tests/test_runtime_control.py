@@ -68,3 +68,27 @@ def test_observe_mode_and_failed_policy_install_preserve_state(tmp_path):
         root = sim.root
         sim.runtime.set_mode('recommend')
         assert sim.root == root
+def test_runtime_warmup_and_observer_budget_cover_io_and_groups(tmp_path):
+    config=DistributedConfig(str(tmp_path),2,frame_policy='materialize')
+    with AsyncDistributedSimulator(4,config,comm=MPI.COMM_SELF,
+            policy=AsyncPolicy(io_engine='cooperative')) as sim:
+        before=sim.budget.used
+        sim.runtime.configure_measurements(max_bytes=128*1024)
+        assert sim.budget.used>before and sim.runtime._measurement_budget>0
+        sim._measurement_warmup=True
+        sim.gate('H',(0,));sim.gate('RX',(1,),angle=.37)
+        sim.materialize()
+        rows=sim.runtime.measurements.snapshot()['observations']
+        assert any(row['stage']=='storage-write' for row in rows)
+        assert all(row['warmup'] for row in rows)
+        assert sim.runtime.measurements.cost_observations()==()
+
+
+def test_runtime_rejects_foreign_profile_configuration(tmp_path):
+    from svsim.profile_document import ProfileDocument
+    with AsyncDistributedSimulator(4,DistributedConfig(str(tmp_path),2),comm=MPI.COMM_SELF,
+            policy=AsyncPolicy(io_engine='cooperative')) as sim:
+        foreign=ProfileDocument.create({}, {}, {'ranks':1})
+        with pytest.raises(ValueError,match='configuration'):
+            sim.runtime.attach_profile_document(foreign)
+        assert sim.runtime.profile_adapter is None

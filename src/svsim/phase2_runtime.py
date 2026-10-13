@@ -114,8 +114,13 @@ class Phase2Catalog:
     def intern(self,asset):
         data = {'tableau':asset.tableau.canonical_bytes().hex()}
         key = asset.content_id
-        self.store.db.execute('INSERT OR IGNORE INTO frames_v2 VALUES(?,?)',(key,canonical(data)))
-        self.store.db.commit()
+        encoded=canonical(data)
+        existing=self.store.db.execute('SELECT data FROM frames_v2 WHERE id=?',(key,)).fetchone()
+        if existing is not None:
+            if existing[0]!=encoded: raise OSError('Existing Clifford asset checksum mismatch')
+        else:
+            self.store.db.execute('INSERT OR IGNORE INTO frames_v2 VALUES(?,?)',(key,encoded))
+            self.store.db.commit()
         self._memo(key,asset,self.asset_cost(asset))
         return key
 

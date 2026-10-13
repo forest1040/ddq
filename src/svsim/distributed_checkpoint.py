@@ -256,7 +256,7 @@ def fork(sim,snapshot,binding,directory=None):
     new_store=child.store_id; error=None
     try:
         source=sqlite3.connect((sim.store.directory/'metadata/catalog.sqlite3').resolve().as_uri()+'?mode=ro',uri=True)
-        try: source.backup(child.store.db)
+        try: child.store.db.backup_from(source)
         finally: source.close()
         with child.store.db:
             child.store.db.execute('DELETE FROM active_runs')
@@ -275,7 +275,7 @@ def fork(sim,snapshot,binding,directory=None):
     try:
         child.binding=child.local.binding=binding; child._save_settings()
         if child.config.storage_scope == 'node-local':
-            child.disk_budget.close(); child._attach_disk_budget()
+            child._attach_disk_budget()
         child.lease_path=sim.directory/'global/leases'/f'{child.run_id}-{sim.rank:04d}.json'
         atomic_json(child.lease_path,{'root':data['root'],'run_id':child.run_id,'size':sim.size,'store_ids':list(data['registry'])},**_disk_kwargs(child))
     except Exception as exc: error=str(exc)
@@ -363,13 +363,15 @@ def migrate_stored_snapshot(sim,source_config,snapshot):
         if len(canonical(history).encode())*4 > sim.config.metadata_reserve_bytes:
             raise MemoryError('Migration history exceeds metadata reserve')
         root = sim._new_root()
-        with TemporaryDirectory(prefix='ddq-migrate-') as temporary:
+        with TemporaryDirectory(prefix='ddq-migrate-',dir=sim.directory) as temporary:
             copied = replace(source_config,directory=temporary,metadata_reserve_bytes=metadata)
             (Path(temporary)/'metadata').mkdir()
-            target_db = sqlite3.connect(Path(temporary)/'metadata/catalog.sqlite3')
-            try: source.db.backup(target_db)
+            from .catalog_admission import CatalogConnection
+            target_db = CatalogConnection(Path(temporary)/'metadata/catalog.sqlite3',
+                budget_getter=lambda:sim.store.disk_budget)
+            try: target_db.backup_from(source.db)
             finally: target_db.close()
-            catalog = FileBlockStore(copied,sim.num_qubits,create=False)
+            catalog = FileBlockStore(copied,sim.num_qubits,create=False,disk_budget=sim.store.disk_budget)
             try:
                 proxy = SimpleNamespace(store=catalog,config=copied,block_bits=sim.block_bits,
                                         assets=sim.assets,binding=binding,trace=sim.trace)

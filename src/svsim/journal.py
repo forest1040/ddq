@@ -4,6 +4,7 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
+from contextlib import nullcontext
 from .ir import GateOp
 from .parameters import Expr, ParameterSymbol, ExactPi
 
@@ -45,11 +46,12 @@ def decode_gate(data):
 
 
 class Journal:
-    def __init__(self, directory):
+    def __init__(self, directory, *, disk_budget_getter=lambda:None, drain_getter=lambda:False):
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
         self.streams = {}
         self.protected_cursor = lambda kind: 0
+        self._disk_budget_getter,self._drain_getter=disk_budget_getter,drain_getter
 
     def append(self, kind, payload):
         if kind not in {'gates','local','shared','joint','commits','frame'}: raise ValueError('Invalid journal')
@@ -76,13 +78,18 @@ class Journal:
         record = {'schema_version':1,'payload':payload}
         record['checksum'] = content_hash(record)
         raw = (canonical(record)+'\n').encode()
-        if stream.write(raw) != len(raw): raise OSError('Incomplete journal write')
+        if len(raw)>1024**2: raise ValueError('Journal record exceeds bounded 1 MiB envelope')
+        budget=self._disk_budget_getter()
+        with (budget.allocation(len(raw),drain=bool(self._drain_getter())) if budget else nullcontext()):
+            if stream.write(raw) != len(raw): raise OSError('Incomplete journal write')
         return stream.tell()
 
     def rollback(self, cursors):
         for path in self.directory.glob('*.jsonl'):
             kind = path.stem
             size = cursors.get(kind,0)
+            if type(size) is not int or not 0<=size<=path.stat().st_size:
+                raise ValueError('Rollback cursor would extend the journal')
             if size < self.protected_cursor(kind): raise RuntimeError('Cannot truncate committed journal')
             stream = self.streams.pop(kind,None)
             if stream: stream.close()

@@ -534,7 +534,10 @@ def _git_snapshot(root: Path) -> dict[str, Any]:
             changed.update(line for line in output.splitlines() if line)
     manifest = {}
     remaining = 4 * 1024 * 1024
-    for relative in sorted(changed):
+    # Large raw reports must not consume the fingerprint budget ahead of code.
+    def priority(path):
+        return (0 if path.startswith('src/') or path in {'pyproject.toml','uv.lock'} else 1,path)
+    for relative in sorted(changed,key=priority):
         candidate = (root / relative).resolve()
         try:
             candidate.relative_to(root.resolve())

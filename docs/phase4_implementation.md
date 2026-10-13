@@ -7,6 +7,8 @@
 
 設計全体の完了条件は未達であり、残件・優先度・完了証跡は[Phase 4 backlog](phase4_backlog.md)で管理する。
 
+2026-10-14にP4-009／001の[容量予約・runtime計測の基盤](phase4_foundation_implementation.md)を追加した。Macで検証し、両backlogはIN_PROGRESS。今回の変更はクラスタでは未実行。
+
 ## 1. 実装範囲
 
 `AsyncDistributedSimulator` は Phase 3 の正確な block kernel、Frame、parameter Binding、MPI owner routing を引き継ぐ。物理 I/O の worker と main thread の MPI progress を追加し、未公開 epoch 内の reordered execution と公開 prefix cut を分ける。CPU kernel 全体を別 thread へ移す方式ではなく、既存の gate kernel を main thread から実行しながら I/O・通信を進める。
@@ -47,9 +49,9 @@ MPI が `THREAD_SINGLE` の場合、`io_engine='auto'` は main thread の coope
 | `min_free_bytes` | 他 job と OS に残す最低空き容量 |
 | `drain_reserve_bytes` | 通常の新規書込みには与えず、checkpoint／drain で利用する余裕 |
 
-同一 host/device の rank と prefix suffix は ledger を共有する。node-local root の segment、metadata、journal、asset、manifest、途中ファイルを実サイズで集計し、重なる親子 directory を二重計上しない。書込み前の予約は SQLite transaction で直列化する。外部 job の消費は `statvfs` の空き容量へ反映される。
+同じdatasetを初期化する同一host/deviceのrankはledgerを共有する。prefix／foreign local rootも実使用量へ登録するが、独立ledger間の未物理化予約の完全な調停はP4-009に残る。segment、metadata、journal、asset、manifest、途中fileを集計し、重なる親子directoryを二重計上しない。書込み前の予約はSQLite transactionで直列化し、外部jobの消費はstatvfsの空きへ反映する。
 
-segment、RAM store の `flush_to_file()`、asset、journal、checkpoint payload と decision に admission を接続した。SQLite catalog の page growth は次の admission で実サイズへ反映されるが、個々の SQL statement に対する事前予約は未実装である。OS cache、MPI library、Python object 全体を managed RAM ledger が完全に追跡するものでもない。これらの余裕を host/job の割当に残す必要がある。
+segment、RAM storeのflush_to_file、asset、journal、trace、checkpoint payload／decisionへadmissionを接続した。2026-10-14からcatalog open／SQL transaction前の予約と同SQLiteのVFSを使用し、ledger自身は固定metadata poolで管理する。全writerのfault／回収証跡は残るためstrict_capacity_guaranteeはfalse。OS cache、MPI library、Python object全体の追跡も対象外で、host/job割当に余裕を残す。詳しくは[基盤実装](phase4_foundation_implementation.md)。
 
 予約中に process が失われた場合、その disk reservation は永続 ledger に残る。自動的な credit 復活は行わず、安全側で停止する。異常終了後の ledger／残骸整理と容量確認は、再開運用の確認項目である。
 

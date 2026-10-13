@@ -6,6 +6,7 @@ import json
 import math
 import os
 import uuid
+from contextlib import nullcontext
 from dataclasses import asdict
 from pathlib import Path
 from statistics import median
@@ -43,7 +44,8 @@ class StreamingExecutionTrace:
     """Append each event directly to JSONL; memory use does not grow with event count."""
 
     def __init__(self, path: str | Path, *, profile_id: str, plan_id: str,
-                 plan_version: int = 1, trace_id: str | None = None, version: int = 1) -> None:
+                 plan_version: int = 1, trace_id: str | None = None, version: int = 1,
+                 disk_budget_getter=lambda:None, drain_getter=lambda:False) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.trace_id = trace_id or f"trace-{uuid.uuid4().hex}"
@@ -55,6 +57,7 @@ class StreamingExecutionTrace:
         self.event_count = 0
         self.read_bytes = self.write_bytes = 0
         self.read_count = self.write_count = self.flush_count = 0
+        self._disk_budget_getter,self._drain_getter=disk_budget_getter,drain_getter
         self._stream = self.path.open("a", encoding="utf-8")
 
     def record(self, task_id: str, **kwargs: Any) -> TraceEvent:
@@ -67,7 +70,14 @@ class StreamingExecutionTrace:
         row = {"trace_id": self.trace_id, "trace_version": self.version,
                "profile_id": self.profile_id, "plan_id": self.plan_id,
                **asdict(event)}
-        self._stream.write(json.dumps(row, separators=(",", ":"), default=_json_default) + "\n")
+        raw=json.dumps(row, separators=(",", ":"), default=_json_default) + "\n"
+        nbytes=len(raw.encode('utf-8'))
+        if nbytes>1024**2: raise ValueError('Trace record exceeds bounded 1 MiB envelope')
+        budget=self._disk_budget_getter()
+        with (budget.allocation(nbytes,drain=bool(self._drain_getter())) if budget else nullcontext()):
+            self._stream.write(raw)
+            # Release credit only after buffered bytes have reached the file.
+            self._stream.flush()
         self.event_count += 1
         meta = event.metadata
         operation = str(meta.get("operation", "")).lower()

@@ -1,8 +1,8 @@
 # P4-001：条件一致の校正とruntime completion計測
 
-状態：設計／backlog OPEN。共通契約は[全体設計](../phase4_remaining_design.md)。Phase 5のprofile codec・condition・有限campaignを拡張し、P4-002/003/004/007/008へ実測costを供給する。
+状態：IN_PROGRESS（2026-10-14）。[基盤実装](../phase4_foundation_implementation.md)でcompletion／adapter／有限runtime campaignを追加した。全受入条件は維持する。共通契約は[全体設計](../phase4_remaining_design.md)。Phase 5のprofile codec・condition・有限campaignを拡張し、P4-002/003/004/007/008へ実測costを供給する。
 
-## 現状と差分
+## 設計時点（6aa8581）の現状と差分
 
 `RuntimeControl.io_completion()`は成功read/writeをlegacy BenchmarkSampleへ変換する。`MPIProgressEngine.wait()`はcontrol/ack込みwhole-transferを観測する。Phase 5 campaignはRAM/kernel/storageと直列mixedを測る。compute、queue/progress、Frame、packing、metadata/commitの共通completion record、実executor構成での混合校正、ProfileDocumentからruntimeへの厳密adapterを追加する。
 

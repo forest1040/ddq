@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, CancelledError
 from dataclasses import dataclass, field
 import threading
 import time
+import os
 
 
 class BackpressureError(RuntimeError):
@@ -18,6 +19,11 @@ class IORequest:
     result: object = None
     error: BaseException | None = None
     elapsed_seconds: float = 0
+    submitted_at: float = 0
+    queue_seconds: float = 0
+    wall_seconds: float = 0
+    validated: bool = False
+    storage_metadata: dict = field(default_factory=dict)
     _function: object = None
     _view: object = None
     _lease: object = None
@@ -26,6 +32,15 @@ class IORequest:
     def add_done_callback(self, callback):
         if self.done: callback(self)
         else: self._callbacks.append(callback)
+        return self
+
+    def mark_validated(self):
+        """Mark completion validated after a done callback checks its result."""
+        if not self.done:
+            raise RuntimeError('I/O validation is only valid after completion callbacks')
+        if self.error is not None:
+            raise RuntimeError('Failed I/O cannot be marked validated')
+        self.validated = True
         return self
 
 
@@ -78,10 +93,19 @@ class WorkerIOEngine:
             if buffer is not None:
                 view = memoryview(lease.view if lease is not None else buffer).cast('B')
                 if operation == 'read' and view.readonly: raise TypeError('Read buffer must be writable')
-            request = IORequest(self._next_id, operation, _view=view, _lease=lease)
+            request = IORequest(self._next_id, operation, _view=view, _lease=lease,
+                                submitted_at=time.perf_counter())
+            path=getattr(handle,'path',None)
+            try:device=f'device-{os.stat(path).st_dev}' if path is not None else 'unknown'
+            except OSError:device='unknown'
+            request.storage_metadata={'resolved_backend':getattr(handle,'backend_identity','unknown'),
+                'device_id':device,'alignment':getattr(handle,'alignment',None),
+                'offset':offset,'transfer_bytes':len(view) if view is not None else 0,
+                'submitted_in_flight':len(self.pending)+1}
             self._next_id += 1
             def execute():
                 start = time.perf_counter()
+                request.queue_seconds = max(0.0, start - request.submitted_at)
                 try:
                     if operation == 'flush': return handle.flush()
                     count = (handle.read_into if operation == 'read' else handle.write_from)(offset, view)
@@ -129,6 +153,7 @@ class WorkerIOEngine:
                     except BaseException as exc:
                         if request.error is None: request.error = exc
             finally:
+                request.wall_seconds = max(0.0, time.perf_counter() - request.submitted_at)
                 request._callbacks.clear()
                 request._function = None
                 if request._view is not None: request._view.release(); request._view = None

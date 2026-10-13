@@ -1,8 +1,8 @@
 # P4-009：SQLiteを含む書込み前disk admission
 
-状態：設計／OPEN。先行実装対象。共通契約は[全体設計](../phase4_remaining_design.md)。現行の「次回admissionでcatalog growthを観測」を、operation前の予約とenforcementへ置き換える。
+状態：IN_PROGRESS（2026-10-14）。[基盤実装](../phase4_foundation_implementation.md)でcatalog／ledgerのVFSとwriter予約を追加した。全受入条件は維持する。共通契約は[全体設計](../phase4_remaining_design.md)。現行の「次回admissionでcatalog growthを観測」を、operation前の予約とenforcementへ置き換える。
 
-## 現状とwriter棚卸し
+## 設計時点（6aa8581）の現状とwriter棚卸し
 
 [disk_budget.py](../../src/svsim/disk_budget.py)はlocal SQLite ledgerでquota/free/drain予約を合算する。[storage.py](../../src/svsim/storage.py)、[async_store_io.py](../../src/svsim/async_store_io.py)はextentを予約するが、allocator/versions等のSQLが事前予約外。catalog・Phase2 rule・root/history・lease・checkpoint・GC・trace・ledger自身を対象にする。
 
