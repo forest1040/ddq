@@ -5,6 +5,7 @@
 - 対応仕様：[開発計画 Phase 4](../plan/distributed_quantum_circuit_simulator_development.md#phase-4非同期階層スケジューラ)、同計画 §4.3〜4.12、§8、§16.3。
 - 前提：[Phase 3 実装](phase3_implementation.md)、[Phase 3 実測](phase3_benchmark.md)、[macOS/Linux I/O 資料](../ref/direct_io_linux_macos.md)。
 - 改訂：研究室クラスタ調査を反映し、node-local 保存、MPI による checkpoint／lease 管理、disk admission、Mac と PBS クラスタの検証分担を追加した。site 固有の接続先・資源・運用条件は内部計画に分離する。
+- 残件の詳細：[全体設計と依存関係](phase4_remaining_design.md)、[タスク別設計一覧](phase4_backlog.md#一覧)。Phase 5基盤後の追加契約・実装順・受入条件を定義した。新しいcontroller/cost/容量保証は設計段階で、実装済みとは扱わない。
 
 ## 1. 到達目標
 

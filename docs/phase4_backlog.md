@@ -10,6 +10,8 @@
 
 [Phase 5基盤実装](phase5_implementation.md)で不変profile、完全一致cell、Macの有限mixed計測、容量referenceとstate-free解析を整備した。P4-001のruntime計測とMPI／Frame／metadataの共通化、P4-002以降への接続は引き続きOPEN。全項目の完了状態は変更していない。
 
+[残件の全体設計](phase4_remaining_design.md)に共通契約・実装順・milestoneを定義し、各IDの個別設計を作成した。下表のIDから変更箇所、API案、アルゴリズム、失敗処理、受入条件を参照できる。設計済みであり、実装のOPEN/BLOCKEDは維持する。P4-009とP4-001を先行し、ETA→候補探索→tile/cache/gradient→適応/最終比較の順に統合する。
+
 状態は `OPEN`、`IN_PROGRESS`、`BLOCKED`、`DONE`。優先度P0は完了判定の中心となる課題、P1は設計への適合・評価の補完、P2はoptional実機検証または移行対応。優先度だけを理由に完了条件から除外しない。
 
 着手時に担当・関連commitを追記し、完了時はテスト／reportへのリンクと、測定条件・結果を記録する。scopeを縮小する場合は設計書と開発計画に反映し、項目を黙ってDONEにしない。以下はすべて担当未定。
@@ -18,17 +20,17 @@
 
 | ID | 優先度 | 状態 | 残件 | 主な依存 |
 |---|---|---|---|---|
-| P4-001 | P0 | OPEN | 条件一致の混合負荷校正とruntime計測 | — |
-| P4-002 | P0 | OPEN | 残DAGからの自動ETA生成 | P4-001 |
-| P4-003 | P0 | OPEN | 性能低下から改善確認までの適応シナリオ | P4-001、P4-002、P4-004 |
-| P4-004 | P0 | OPEN | 費用に基づく再計画候補の探索と運用制御 | P4-001、P4-002 |
-| P4-005 | P0 | OPEN | 完了条件に対応する性能比較・trace report | P4-003、P4-006〜008 |
-| P4-006 | P1 | OPEN | 作業予算内のaligned tile転置 | — |
-| P4-007 | P1 | OPEN | Frame・Binding共有を含むfuture-aware cache費用 | P4-001 |
-| P4-008 | P1 | OPEN | 勾配方式の自動校正と安全な選択評価 | P4-001、P4-004 |
-| P4-009 | P1 | OPEN | SQLite書込み前のdisk admission | — |
-| P4-010 | P2 | BLOCKED | native io_uringのLinux実機検証 | 利用可能なliburing／kernel環境 |
-| P4-011 | P2 | OPEN | v3共有treeのoffline node-local移行 | P4-009、対応範囲の確定 |
+| [P4-001](phase4_tasks/P4-001_measurement.md) | P0 | OPEN | 条件一致の混合負荷校正とruntime計測 | Phase 5基盤 |
+| [P4-002](phase4_tasks/P4-002_remaining_eta.md) | P0 | OPEN | 残DAGからの自動ETA生成 | P4-001 |
+| [P4-003](phase4_tasks/P4-003_adaptive_validation.md) | P0 | OPEN | 性能低下から改善確認までの適応シナリオ | P4-001、002、004、009 |
+| [P4-004](phase4_tasks/P4-004_replanning.md) | P0 | OPEN | 費用に基づく再計画候補の探索と運用制御 | P4-001、002、009。tile採用時006 |
+| [P4-005](phase4_tasks/P4-005_performance_evaluation.md) | P0 | OPEN | 完了条件に対応する性能比較・trace report | P4-001〜004、006〜009 |
+| [P4-006](phase4_tasks/P4-006_tile_transpose.md) | P1 | OPEN | 作業予算内のaligned tile転置 | P4-009 |
+| [P4-007](phase4_tasks/P4-007_cache_policy.md) | P1 | OPEN | Frame・Binding共有を含むfuture-aware cache費用 | P4-001、002、009 |
+| [P4-008](phase4_tasks/P4-008_gradient_selection.md) | P1 | OPEN | 勾配方式の自動校正と安全な選択評価 | P4-001、004、009 |
+| [P4-009](phase4_tasks/P4-009_disk_admission.md) | P1 | OPEN | SQLite書込み前のdisk admission | Phase 5基盤 |
+| [P4-010](phase4_tasks/P4-010_native_uring.md) | P2 | BLOCKED | native io_uringのLinux実機検証 | 利用可能なliburing／kernel環境 |
+| [P4-011](phase4_tasks/P4-011_offline_migration.md) | P2 | OPEN | v3共有treeのoffline node-local移行 | P4-009、対応範囲の確定 |
 
 ## 完了条件と作業内容
 

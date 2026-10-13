@@ -1,0 +1,50 @@
+# P4-002：runtime残workからの自動ETA
+
+状態：設計／OPEN。依存：P4-001。共通契約は[全体設計](../phase4_remaining_design.md)。実行中に未完了gate、actual layout、request、metadata/commitを集計し、baseline/observed/adapted ETAを自動更新する。
+
+## 現状・変更箇所
+
+[runtime_cost.py](../../src/svsim/runtime_cost.py)はcallerの有限CostTask DAGを評価し、未知conditionでは総時間nullを返す。[execution_tasks.py](../../src/svsim/execution_tasks.py)のEpochLedgerはwindow coverage用で、実I/O/MPI/computeの細粒度DAGを生成していない。[async_scheduler.py](../../src/svsim/async_scheduler.py)のactual order/historyとrequest ledgerを接続する。新規予定：`remaining_work.py`、`runtime_eta.py`。
+
+## 入出力
+
+`RemainingWork`にcontext hash、published cut、windowのsource/actual-step対応、in-flight状態、counted tail、layout/Frame/Binding/barrier、残payload/storage/control、unknownを保持する。`ETASnapshot`はsnapshot IDと採用profile set、3種類のcost view、lower/expected/conditional upper、partial component、coverage、model/quality、抽出費用を返す。
+
+現行explicit DAG APIは維持する。新modelはcounted groupを扱うv2 adapterとし、従来RuntimeCostModelの数値意味を黙って変更しない。
+
+## 抽出・集計
+
+1. published frontierでn/b/P、root、layout/history、Binding/witness、plan/policy版をfreezeする。private epoch中は最後のsnapshotにin-flight deltaだけを追加し、公開済みfrontierを進めない。
+2. 次window≤32の実executor経路からread、Frame resolve、packing、MPI、kernel、write、metadata、commitの依存を生成する。fused stepは元source集合を持つ。
+3. suffixはsource scanをchunkで進め、operation/bit階層/mask/Frame/barrierのcounted group≤256へ集計する。全Block、全peer、巨大repeatを列挙しない。初回scanもCPU/metadata budget内でpauseできる。
+4. future S1/S2/layout/Frameが一意に決まらなければbranch/boundsまたはunknownとする。現在のlayoutを末尾まで固定した予測はそのassumptionを持つ別view。semantic countだけを正確なtask countへ置換しない。
+5. 実completionから残countを減らす。STAGEDでも未commitなら必要なvalidate/publish/flushは残す。retry/failed/dropped speculation、checkpoint/recomputeを通常進捗に数えない。
+
+Block ownershipはrange/countを使い、sourceと実行ordinalを区別する。end-to-end対象にobservable/gradient/cleanupがある場合は明示endpointを付け、その費用を除外したgate-only ETAと区別する。
+
+## In-flightとcost
+
+requestの完了済みchunkは除外できる。未完了時間は単に`max(0, mean-elapsed)`へしない。elapsedを超えた条件付きresidualの校正があればそのenvelope、無ければunknownとする。未完了requestがあるのにremaining=0にはしない。
+
+各snapshotに対してbaseline cost、同conditionのobserved cost、候補のadapted costを評価する。mixed groupは構成費用を一回置換し、CPU/main-thread/device/NIC等の共有resource制約を保持する。secondsとして測ったcostを帯域で再除算しない。未検証並列性はserial expected/upper、lowerは根拠のあるcritical/resource boundだけ。
+
+総ETAは必要costが揃った場合のみ数値。unknown critical stageがあればnull＋reason。件数だけでなくpayload/kernel work/critical chainのcoverageを返す。model intervalは条件付き予測で、未来の厳密完了時刻やend-to-end95%保証とはしない。
+
+## 更新・制御
+
+`RemainingWorkExtractor.capture(sim)`、`RuntimeETA.evaluate(snapshot, cost_view)`、`RuntimeControl.update_eta()`を追加予定。更新はepoch境界＋一定時間のlocal progress通知を初期値とし、collective summaryは合意済み順序のみ。profile/policy変更、checkpoint、gradient method変更でsnapshotを無効化・再構築する。
+
+suffix summaryが古ければstaleと表示して自動gainへ使わない。観測が新baselineの状態へ変わった場合は同snapshotで再評価する。baseline viewを新observedで上書きしない。抽出と再評価の時間はmonitor/planning費用へ含める。
+
+## 受入・完了
+
+| case | 判定 |
+|---|---|
+| 小DAG oracle | explicit DAGとcounted summaryのdependency/resource/countが一致 |
+| virtual/fused/S2 | actual source coverageとlayout/history、Frame/logを反映し、単純gate countと区別 |
+| in-flight/retry | 重複除去、未commit費用の残存、時間超過requestで偽のremaining=0がない |
+| unknown/stale/budget | 総ETA null、抽出打切り・不足・version違いを可視化、自動切替しない |
+| 大きいcount | 全Block/occurrence/peer生成禁止、metadata≤64 MiB、summary上限検査 |
+| real runtime | held-out回路のsnapshot時刻から実完了までを照合、rank MAX/短区間もreport |
+
+実装は002A window capture、002B suffix/in-flight、002C profile viewsとheld-out評価に分ける。初期誤差目標median30%以内、p95/worst/絶対誤差とmonitor overheadも保存する。達成しないcaseは残して原因・不足を示す。手動CostTaskの成功だけではDONEにしない。
