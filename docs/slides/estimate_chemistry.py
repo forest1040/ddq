@@ -1,17 +1,16 @@
-"""Capacity/time planning model; this does not run a chemistry calculation.
+"""Iterative QPE / second-order Trotter planning model, not a simulator.
 
 uv run --locked --extra mpi python docs/slides/estimate_chemistry.py \
-    --output docs/slides/chemistry_estimates.json --measure-python-kernel
+  --output docs/slides/chemistry_estimates.json
 """
 import argparse
 from dataclasses import asdict, dataclass
 import json
-from math import comb
+from math import ceil, log2, pi
 from pathlib import Path
-
 GIB=1<<30
 TIB=1<<40
-
+YEAR_SECONDS=365.25*86400
 
 @dataclass(frozen=True)
 class Case:
@@ -25,7 +24,6 @@ class Case:
     ssd_tib_per_node: int
     network_gib_per_second_per_node: float | None
 
-
 CASES=(
     Case('A-RAM','H2O',8,12,1,5000,512,0,None),
     Case('B-SSD','N2',10,14,1,20000,64,32,None),
@@ -33,90 +31,79 @@ CASES=(
     Case('D-InfiniBand','N2',10,16,8,50000,64,64,16),
 )
 
-
-def estimate(case, *, kernel_rate=100_000_000):
-    if kernel_rate<=0: raise ValueError('kernel_rate must be positive')
-    n=2*case.active_spatial_orbitals
-    state=16*(1<<n); shard=state/case.nodes; s=shard/GIB
-    b=min(24,n); upper=n-b; rank_bits=case.nodes.bit_length()-1
-    assert upper>=rank_bits
-    masks=lambda bits: sum(comb(bits,j) for j in range(min(4,bits)+1))
-    groups=masks(upper); remote=groups-masks(upper-rank_bits)
-    # Upper-X grouping is valid for one-/two-body JW Hamiltonians (<=4 X/Y).
-    # Reuse for O psi is a Phase 4 target; Phase 3 does not guarantee this.
-    rotations=128; iterations=100
-    kernel=case.hamiltonian_terms_assumed*(1<<n)/case.nodes/kernel_rate
-    memory=2*case.hamiltonian_terms_assumed*s/32
-    compute=max(kernel,memory)
-    disk=2*groups*s/2 if case.ssd_tib_per_node else 0
-    network=remote*s/case.network_gib_per_second_per_node if remote else 0
-    evaluation=compute+disk+network
-    per_rotation_memory=2*s/32
-    per_rotation_disk=2*s/2 if case.ssd_tib_per_node else 0
-    per_rotation_network=2*s/case.network_gib_per_second_per_node if remote else 0
-    forward=rotations*(per_rotation_memory+per_rotation_disk+per_rotation_network)
-    checkpoint=2*s/2 if case.ssd_tib_per_node else 0
-    generator_cpu=max(rotations*(1<<n)/case.nodes/kernel_rate,2*rotations*s/32)
-    generator_disk=2*rotations*s/2 if case.ssd_tib_per_node else 0
-    generator_network=2*rotations*s/case.network_gib_per_second_per_node if remote else 0
-    generator=generator_cpu+generator_disk+generator_network
-    # One energy, O psi, forward, and two inverse streams per iteration.
-    iteration_raw=3*forward+2*evaluation+generator+checkpoint
-    iteration=1.05*iteration_raw
-    peak_ssd=1.25*(1+3*rotations+1)*shard/TIB if case.ssd_tib_per_node else 0
-    ram_required=1.25*(4*s+16) if not case.ssd_tib_per_node else 64
-    assert peak_ssd<=case.ssd_tib_per_node
-    assert ram_required<=case.ram_gib_per_node
-    return {**asdict(case),'qubits':n,'state_gib':state/GIB,'shard_gib_per_node':s,
-        'block_bits':b,'upper_x_groups_bound':groups,'remote_groups_bound':remote,
-        'selected_double_excitations':16,'pauli_rotations':rotations,'parameters':16,
-        'iterations_assumed':iterations,'peak_ssd_tib_per_node':peak_ssd,
-        'ram_required_gib_per_node':ram_required,'energy_compute_seconds':compute,
-        'energy_disk_seconds':disk,'energy_network_seconds':network,
-        'gradient_generator_inner_seconds':generator,
-        'forward_seconds':forward,'energy_only_seconds':forward+evaluation,
-        'energy_gradient_iteration_seconds':iteration,'total_100_iterations_seconds':iterations*iteration,
-        'kernel_rate_assumed':kernel_rate,
-        'time_model':'planned-parallel-native-kernel; no overlap; unmeasured',
-        'retention':'delete completed Binding scratch before admitting next; keep scalar results',
-        'fit_under_assumptions':True}
-
+def estimate(case, *, energy_target_ha=.001, delta_max=.01, kernel_rate=100_000_000):
+    if min(energy_target_ha,delta_max,kernel_rate)<=0: raise ValueError('Positive model inputs required')
+    lam=100; phase_budget=energy_target_ha/2
+    tau=pi/(2*lam); bits=ceil(log2(4*lam/phase_budget))
+    base_steps=ceil(tau/delta_max); repetitions=32
+    steps=base_steps*((1<<bits)-1)
+    controlled_factors=2*case.hamiltonian_terms_assumed*steps
+    rotations=2*controlled_factors
+    system_qubits=2*case.active_spatial_orbitals; full_qubits=system_qubits+1
+    state=16*(1<<full_qubits); shard=state/case.nodes; s=shard/GIB
+    block_bits=min(24,full_qubits-(case.nodes.bit_length()-1))
+    ram_required=1.25*(2*s+16+1)
+    cache_fit=2*s<=32 or not case.ssd_tib_per_node
+    assert cache_fit and ram_required<=case.ram_gib_per_node
+    per_rotation=max((1<<full_qubits)/case.nodes/kernel_rate,2*s/32)
+    per_rotation_network=2*s/case.network_gib_per_second_per_node if case.nodes>1 else 0
+    checkpoint=(bits+1)*2*s/2 if case.ssd_tib_per_node else 0
+    run_seconds=1.05*(rotations*(per_rotation+per_rotation_network)+checkpoint)
+    disk_peak=1.25*4*shard/TIB if case.ssd_tib_per_node else 0
+    slot_payload=max(4096,16*(1<<block_bits))
+    slot_multiplier=slot_payload/(16*(1<<block_bits))
+    append_peak=1.25*(rotations+1)*shard*slot_multiplier/TIB if case.ssd_tib_per_node else 0
+    assert disk_peak<=case.ssd_tib_per_node
+    return {**asdict(case),'system_qubits':system_qubits,'phase_bits':bits,
+        'simulated_qubits':full_qubits,'qpe_ancillas':1,'state_gib':state/GIB,
+        'shard_gib_per_node':s,'block_bits':block_bits,'energy_target_ha':energy_target_ha,
+        'phase_budget_ha':phase_budget,'trotter_budget_ha':energy_target_ha/2,
+        'phase_grid_ha':4*lam/(1<<bits),'spectral_half_width_ha_assumed':lam,
+        'tau_inverse_ha':tau,'delta_max_inverse_ha':delta_max,
+        'base_trotter_steps':base_steps,'actual_step_inverse_ha':tau/base_steps,
+        'trotter_steps_per_run':steps,'controlled_pauli_factors_per_run':controlled_factors,
+        'native_rotations_per_run':rotations,'independent_runs':repetitions,
+        'assumed_ground_overlap':.25,'assumed_good_phase_probability':.4,
+        'probability_at_least_one_ground_good_phase':1-(1-.25*.4)**repetitions,
+        'ram_required_gib_per_node':ram_required,'planned_disk_peak_tib_per_node':disk_peak,
+        'append_only_disk_peak_tib_per_node':append_peak,
+        'planned_fit_with_reclamation':True,
+        'phase3_append_only_disk_fits':append_peak<=case.ssd_tib_per_node,
+        'qpe_runtime_implemented':False,'trotter_error_certified':False,
+        'per_rotation_compute_memory_seconds':per_rotation,
+        'per_rotation_network_seconds':per_rotation_network,
+        'checkpoint_io_seconds_per_run':checkpoint,'one_run_seconds':run_seconds,
+        'one_run_years':run_seconds/YEAR_SECONDS,
+        'all_runs_years':repetitions*run_seconds/YEAR_SECONDS,
+        'kernel_update_rate_assumed':kernel_rate,
+        'time_model':'planned native / balanced parallel / RAM-resident working states; no overlap',
+        'requires':'IPEA measurement/reset, compressed repeat plan, bounded root retirement / working store'}
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',required=True)
-    parser.add_argument('--measure-python-kernel',action='store_true')
+    parser.add_argument('--energy-mha',type=float,default=1)
+    parser.add_argument('--delta-max',type=float,default=.01)
     args=parser.parse_args()
-    report={'model_version':1,'assumptions':{'kernel_amplitude_terms_per_second_per_node':100_000_000,
-        'memory_gib_per_second_per_node':32,'ssd_gib_per_second_per_node':2,
-        'reserve_ratio':1.25,'time_overhead_ratio':1.05,'overlap_credit':False,
-        'hamiltonian_integrals_generated':False,'convergence_guaranteed':False},
-        'cases':[estimate(case) for case in CASES]}
-    report['throughput_sensitivity']=[{'case':case.name,
-        'total_days_at_50m':estimate(case,kernel_rate=50_000_000)['total_100_iterations_seconds']/86400,
-        'total_days_at_200m':estimate(case,kernel_rate=200_000_000)['total_100_iterations_seconds']/86400}
-        for case in CASES]
-    if args.measure_python_kernel:
-        from time import perf_counter
-        import numpy as np
-        from svsim.distributed_kernels import pauli_inner
-        b=16; a=np.ones(1<<b,dtype=np.complex128); partner=a.copy()
-        pauli_inner(a,partner,3,5,0,b)
-        samples=[]
-        for _ in range(3):
-            start=perf_counter();pauli_inner(a,partner,3,5,0,b)
-            samples.append(perf_counter()-start)
-        elapsed=float(np.median(samples))
-        report['local_python_kernel_measurement']={'block_bits':b,'samples_seconds':samples,
-            'median_seconds':elapsed,'amplitude_terms_per_second':len(a)/elapsed,
-            'scope':'one local Python kernel; excludes MPI/IO/Frame; not a chemistry benchmark'}
-    path=Path(args.output);path.parent.mkdir(parents=True,exist_ok=True)
-    path.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
-    for row in report['cases']:
-        print(row['name'], 'energy min',round(row['energy_only_seconds']/60,2),
-              'E+grad hours',round(row['energy_gradient_iteration_seconds']/3600,2),
-              '100iter days',round(row['total_100_iterations_seconds']/86400,2),
-              'SSD TiB/node',round(row['peak_ssd_tib_per_node'],4))
-
+    rows=[estimate(c,energy_target_ha=args.energy_mha/1000,delta_max=args.delta_max) for c in CASES]
+    report={'model_version':2,'algorithm':'iterative QPE / second-order symmetric Trotter',
+        'assumptions':{'hamiltonian_integrals_generated':False,'precision_certified':False,
+            'controlled_rotation_lowering':2,'rotation_updates_per_second_per_node':100_000_000,
+            'memory_gib_per_second_per_node':32,'ssd_gib_per_second_per_node':2,
+            'reserve_ratio':1.25,'time_overhead_ratio':1.05,'overlap_credit':False,
+            'bounded_working_store_implemented':False,'qpe_runtime_implemented':False},
+        'cases':rows,'sensitivity':[{'case':c.name,
+            'years_32_runs_delta_002':estimate(c,delta_max=.02)['all_runs_years'],
+            'years_32_runs_delta_0005':estimate(c,delta_max=.005)['all_runs_years'],
+            'years_32_runs_energy_10mha':estimate(c,energy_target_ha=.01)['all_runs_years']}
+            for c in CASES]}
+    Path(args.output).write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+    for row in rows:
+        print(row['name'],'qubits',row['simulated_qubits'],'bits',row['phase_bits'],
+            'native rotations',row['native_rotations_per_run'],
+            'one run years',round(row['one_run_years'],2),
+            '32 runs years',round(row['all_runs_years'],2),
+            'planned SSD TiB',row['planned_disk_peak_tib_per_node'],
+            'append SSD TiB',round(row['append_only_disk_peak_tib_per_node'],2))
 
 if __name__=='__main__': main()

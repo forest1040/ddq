@@ -1,0 +1,102 @@
+% Assumptions, formulas and references: resource_estimates.md / estimate_vqe.py
+\begin{frame}{24. 容量に収まる量子化学VQE：活性空間を選ぶ}
+  \smallnote{CAS=(活性電子数, 空間軌道数)。Jordan--Wigner、taperなしで$n=2\times$空間軌道数。項数$M$は未計測の入力仮定。}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{.19\textwidth}p{.22\textwidth}rXr@{}}
+    \toprule 構成 & 量子化学の想定 & qubit & 状態1個 $S$ & Pauli項数 $M$ \\
+    \midrule
+    A：RAM & H$_2$O型 CAS(8e,12o) & 24 & 256 MiB & 5,000 \\
+    B：SSD & N$_2$型 CAS(10e,14o) & 28 & 4 GiB & 20,000 \\
+    C：Ethernet & N$_2$型 CAS(10e,16o) & 32 & 64 GiB（8 GiB/node） & 50,000 \\
+    D：InfiniBand & Cと同じ問題・8 node & 32 & 64 GiB（8 GiB/node） & 50,000 \\
+    \bottomrule
+  \end{tabularx}
+  \medskip
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{共通ansatz・反復条件}\par
+      \small Hartree--Fock＋選択した実double excitation 16個。\par
+      $16\times8=$ \textbf{128 native Pauli rotation}、16 parameter。\par
+      \textbf{100反復}、各反復でenergy＋analytic adjoint。\par
+      full UCCSD・chemical accuracyの保証ではない。
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{append-onlyの容量確認}\par
+      \small 初期1＋Forward 128＋逆伝播256＋$O\psi$生成1。\par
+      余裕込み\textbf{482.5状態分／Binding}を確保。\par
+      B：\textbf{1.885 TiB}、C/D：\textbf{3.770 TiB/node}。\par
+      前頁のSSD予約32／64 TiB/nodeに収まる。
+    \end{column}
+  \end{columns}
+  \takeaway{各反復終了後に\textbf{旧Binding scratchを撤去}してpeakを抑える。100反復の全振幅を保存しない。}
+  \note{cc-pVTZと閉殻を想定する計画用CAS例で、geometry/軌道選択/積分は未生成。Mは量子ビット数から確定しない。spin/particle numberを保つreal double excitationを選ぶ。8 exponentiationsの参照：PennyLane FermionicDoubleExcitation https://docs.pennylane.ai/en/stable/code/api/pennylane.FermionicDoubleExcitation.html 。計算はdocs/slides/estimate_vqe.py。RAM AのAdjointモデル1.25*(4S+16GiB)=21.25GiBで予約512GiB内。B/C/Dは限定working set64GiB/node内。全scratchを残すとB約188.5TiB、C/D約377TiB/nodeで予約を超える。scratch撤去の運用が条件。}
+\end{frame}
+
+\begin{frame}{25. 時間モデル：Hamiltonianの全項走査を数える}
+  \smallnote{\textbf{Phase 4の条件付き計画値}：並列native kernelとlogical Block再利用を仮定。現行Phase 3の速度ではない。}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \begin{block}{energy／$O\psi$の主な費用}
+        \small $s=S/N$、$M$：Pauli項数。\par
+        $T_{\rm CPU}\approx M\,2^n/(N\rho)$\par
+        $T_E\approx\max(T_{\rm CPU},2Ms/\beta_R)$\par
+        $\hfill{}+2Ks/\beta_D+K_rs/\beta_N$
+      \end{block}
+      \small $K$：upper-X maskの取得group数。\par
+      $K_r$：remote group数、$M$とは別。\par
+      A：$1/0$、B：$16/0$、C/D：$163/132$。\par\medskip
+      \smallnote{native rotation／inverse／generator内積、\par
+        Checkpoint・同期の費用も総時間へ加える。}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{計画に使う実効値の仮定}\par\medskip
+      \begin{tabularx}{\linewidth}{@{}Xr@{}}
+        \toprule kernel / 経路 & 仮定値 / node \\
+        \midrule
+        Pauli処理 $\rho$ & \textbf{1億 amplitude-term/s} \\
+        RAM $\beta_R$ & 32 GiB/s \\
+        SSD $\beta_D$ & 2 GiB/s \\
+        Ethernet $\beta_N$ & 8 GiB/s \\
+        InfiniBand $\beta_N$ & 16 GiB/s \\
+        \bottomrule
+      \end{tabularx}
+      \medskip
+      \smallnote{すべて未測定の仮定／目標。NIC公称値ではない。\par
+        同時read/write／peer競合は実機で校正する。\par
+        計算＋I/O＋通信を加算し、overlapの加速は見込まない。}
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{状態を運ぶ回数 $K$ と、Pauliを評価する回数 $M$ を分ける。} $M$が多いとCPUが律速になる。}
+  \note{rhoはcompute-only、RAM rooflineとmax。I/O/MPIを内包した実測rateを加算して二重計数しない。Hamiltonianはone-/two-body JWなのでX/Y個数最大4。K=sum C(n-b,j),j<=4、Krからrank-local-only maskを除く。Opsiの同mask reuseは現行adjointでは未実装の目標である。非該当disk/network項はゼロ。モデルは3*forward+2*energy+generator inner+checkpointに5percent仮定margin。memory partner費用は2Ms項、send/recv二重計数なし。}
+\end{frame}
+
+\begin{frame}{26. 想定処理時間：energy・勾配・100反復を分ける}
+  \smallnote{前頁の\textbf{native並列化目標}に基づく計算値。積分生成／SCF／line search追加評価は除く。100回の収束は保証しない。}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{.24\textwidth}XXX@{}}
+    \toprule 構成 / 化学workload & 1 energy\newline Forward込み & 1 energy＋Adjoint & 100反復合計 \\
+    \midrule
+    A：RAM / 24Q & 約\textbf{14分} & 約\textbf{30分} & 約\textbf{2.1日} \\
+    B：SSD / 28Q & 約\textbf{15.1時間} & 約\textbf{32.1時間} & 約\textbf{134日} \\
+    C：Ethernet / 32Q & 約\textbf{75.3時間} & 約\textbf{159.2時間} & 約\textbf{663日} \\
+    D：InfiniBand / 32Q & 約\textbf{75.3時間} & 約\textbf{159.0時間} & 約\textbf{662日} \\
+    \bottomrule
+  \end{tabularx}
+  \medskip
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{今回の律速}\par
+      \small Hamiltonian 5千〜5万Pauli項の内積／action。\par
+      InfiniBandでもCPU走査量は減らない。\par
+      $M$、kernel実効値、追加評価数で時間は変わる。
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{現行Pythonとの違い}\par
+      \small local内積：約\textbf{160万 amplitude-term/s}。\par
+      表の目標1億は約60倍。\par
+      現行runtimeの量子化学実測として扱わない。
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{容量に収まることと、実用時間で終わることは別。} 計算条件・script・JSONをMarkdownにも保存する。}
+  \note{docs/slides/resource_estimates.md、estimate_vqe.py、vqe_estimates.json。local計測はb16、mask3/5、warmup後3試行のPython pauli_innerで、MPI/SSD/Frameを除く。量子化学積分・ground stateの測定ではない。native目標rhoの0.5〜2倍などの感度と、matched mixed profileで再校正が必要。rho自体が同じでも現行MPIでは全node kernelが均衡並列に動く保証はない。}
+\end{frame}

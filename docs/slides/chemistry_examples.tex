@@ -1,102 +1,128 @@
-% Assumptions, formulas and references: resource_estimates.md / estimate_chemistry.py
-\begin{frame}{24. 容量に収まる量子化学VQE：活性空間を選ぶ}
-  \smallnote{CAS=(活性電子数, 空間軌道数)。Jordan--Wigner、taperなしで$n=2\times$空間軌道数。項数$M$は未計測の入力仮定。}
+% QPE model and references: resource_estimates.md / estimate_chemistry.py
+\begin{frame}{27. 量子化学QPE：1 mHa・逐次位相推定で見積もる}
+  \smallnote{Jordan--Wigner、taperなし。20 phase bitを\textbf{ancilla 1個}で逐次測定・再利用。Hamiltonian項数$M$は仮定。}
   \small
-  \begin{tabularx}{\textwidth}{@{}p{.19\textwidth}p{.22\textwidth}rXr@{}}
-    \toprule 構成 & 量子化学の想定 & qubit & 状態1個 $S$ & Pauli項数 $M$ \\
+  \begin{tabularx}{\textwidth}{@{}p{.18\textwidth}p{.23\textwidth}rrX@{}}
+    \toprule 構成 & 活性空間 & system & ＋ancilla & QPE全状態 / $M$ \\
     \midrule
-    A：RAM & H$_2$O型 CAS(8e,12o) & 24 & 256 MiB & 5,000 \\
-    B：SSD & N$_2$型 CAS(10e,14o) & 28 & 4 GiB & 20,000 \\
-    C：Ethernet & N$_2$型 CAS(10e,16o) & 32 & 64 GiB（8 GiB/node） & 50,000 \\
-    D：InfiniBand & Cと同じ問題・8 node & 32 & 64 GiB（8 GiB/node） & 50,000 \\
+    A：RAM & H$_2$O型 CAS(8e,12o) & 24Q & 25Q & 512 MiB / 5,000 \\
+    B：SSD & N$_2$型 CAS(10e,14o) & 28Q & 29Q & 8 GiB / 20,000 \\
+    C：Ethernet & N$_2$型 CAS(10e,16o) & 32Q & 33Q & 128 GiB / 50,000 \\
+    D：InfiniBand & Cと同じ、8 node & 32Q & 33Q & Cと同じ \\
     \bottomrule
   \end{tabularx}
   \medskip
   \begin{columns}[T,onlytextwidth]
     \begin{column}{.48\textwidth}
-      \textbf{共通ansatz・反復条件}\par
-      \small Hartree--Fock＋選択した実double excitation 16個。\par
-      $16\times8=$ \textbf{128 native Pauli rotation}、16 parameter。\par
-      \textbf{100反復}、各反復でenergy＋analytic adjoint。\par
-      full UCCSD・chemical accuracyの保証ではない。
+      \textbf{RAM-resident working stateの条件}\par
+      \small A：余裕込み22.5 GiB、B：41.25 GiB。\par
+      C/D：61.25 GiB/nodeで、予約RAMに収まる。\par
+      通常QPEで20 ancillaを一度に追加すれば、\par
+      状態はsystemの$2^{20}$倍になる。
     \end{column}
     \begin{column}{.48\textwidth}
-      \textbf{append-onlyの容量確認}\par
-      \small 初期1＋Forward 128＋逆伝播256＋$O\psi$生成1。\par
-      余裕込み\textbf{482.5状態分／Binding}を確保。\par
-      B：\textbf{1.885 TiB}、C/D：\textbf{3.770 TiB/node}。\par
-      前頁のSSD予約32／64 TiB/nodeに収まる。
+      \textbf{SSDはbounded working storeが前提}\par
+      \small B：40 GiB、C/D：80 GiB/node。\par
+      working版を回収し、phase bit境界で保存。\par
+      \alert{全primitive書込では予約量を超える。}\par
+      IPEAのmeasurement/resetも未実装。
     \end{column}
   \end{columns}
-  \takeaway{各反復終了後に\textbf{旧Binding scratchを撤去}してpeakを抑える。100反復の全振幅を保存しない。}
-  \note{cc-pVTZと閉殻を想定する計画用CAS例で、geometry/軌道選択/積分は未生成。Mは量子ビット数から確定しない。spin/particle numberを保つreal double excitationを選ぶ。8 exponentiationsの参照：PennyLane FermionicDoubleExcitation https://docs.pennylane.ai/en/stable/code/api/pennylane.FermionicDoubleExcitation.html 。計算はdocs/slides/estimate_chemistry.py。RAM AのAdjointモデル1.25*(4S+16GiB)=21.25GiBで予約512GiB内。B/C/Dは限定working set64GiB/node内。全scratchを残すとB約188.5TiB、C/D約377TiB/nodeで予約を超える。scratch撤去の運用が条件。}
+  \takeaway{容量は\textbf{ancilla込み}で数える。回収・圧縮repeat plan・途中測定の実装後に収容できる条件付き計画。}
+  \note{resource_estimates.md。CASは電子数/空間軌道数。geometry/integrals/Mは未生成。node RAMは1.25(2s+16GiB work+1GiB meta)、SSDは余裕込み4状態分。sample trajectoryのみ保持し全分岐木を保存しない。基準はunitary+measurement付きQPEでありVQE/Adjointの時間ではない。}
 \end{frame}
 
-\begin{frame}{25. 時間モデル：Hamiltonianの全項走査を数える}
-  \smallnote{\textbf{Phase 4の条件付き計画値}：並列native kernelとlogical Block再利用を仮定。現行Phase 3の速度ではない。}
+\begin{frame}{28. 2次対称トロッターと controlled powers}
+  \smallnote{総目標\textbf{1 mHa}：phaseに0.5、Trotter biasに0.5 mHa。$\Lambda=100$ Haとstep幅は未認証の仮定。}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{.48\textwidth}
-      \begin{block}{energy／$O\psi$の主な費用}
-        \small $s=S/N$、$M$：Pauli項数。\par
-        $T_{\rm CPU}\approx M\,2^n/(N\rho)$\par
-        $T_E\approx\max(T_{\rm CPU},2Ms/\beta_R)$\par
-        $\hfill{}+2Ks/\beta_D+K_rs/\beta_N$
+      \begin{block}{phase分解能と繰返し}
+        \small $U=e^{-i(H-E_{\rm ref})\tau}$、$\tau=\pi/(2\Lambda)$。\par
+        $m=\lceil\log_2(4\Lambda/0.0005)\rceil=20$。\par
+        energy grid：\textbf{0.38147 mHa}。\par
+        step上限0.01 Ha$^{-1}$から$r_0=2$。\par
+        $U_0=S_2(\tau/r_0)^{r_0}$。
       \end{block}
-      \small $K$：upper-X maskの取得group数。\par
-      $K_r$：remote group数、$M$とは別。\par
-      A：$1/0$、B：$16/0$、C/D：$163/132$。\par\medskip
-      \smallnote{native rotation／inverse／generator内積、\par
-        Checkpoint・同期の費用も総時間へ加える。}
+      \small $U_0^{2^j}$は\textbf{同じ$U_0$を繰り返す}。\par
+      非可換termのangleだけ$2^j$倍にしない。\par
+      phase bitを増やしてもTrotter biasは消えない。
     \end{column}
     \begin{column}{.48\textwidth}
-      \textbf{計画に使う実効値の仮定}\par\medskip
+      \textbf{native gate count（未最適化基準）}\par
+      \small Strang：正順half-step＋逆順half-step。\par
+      steps：$r_0(2^{20}-1)=2,097,150$。\par
+      controlled Pauliを\textbf{厳密な2 native回転}にlowering。\par
+      native count $\leq4M\times\mathrm{steps}$。\par\medskip
       \begin{tabularx}{\linewidth}{@{}Xr@{}}
-        \toprule kernel / 経路 & 仮定値 / node \\
-        \midrule
-        Pauli処理 $\rho$ & \textbf{1億 amplitude-term/s} \\
-        RAM $\beta_R$ & 32 GiB/s \\
-        SSD $\beta_D$ & 2 GiB/s \\
-        Ethernet $\beta_N$ & 8 GiB/s \\
-        InfiniBand $\beta_N$ & 16 GiB/s \\
+        \toprule 構成 & native回転 / 1 trajectory \\
+        \midrule A & $4.1943\times10^{10}$ \\
+        B & $1.67772\times10^{11}$ \\
+        C/D & $4.1943\times10^{11}$ \\
         \bottomrule
       \end{tabularx}
-      \medskip
-      \smallnote{すべて未測定の仮定／目標。NIC公称値ではない。\par
-        同時read/write／peer競合は実機で校正する。\par
-        計算＋I/O＋通信を加算し、overlapの加速は見込まない。}
     \end{column}
   \end{columns}
-  \takeaway{\textbf{状態を運ぶ回数 $K$ と、Pauliを評価する回数 $M$ を分ける。} $M$が多いとCPUが律速になる。}
-  \note{rhoはcompute-only、RAM rooflineとmax。I/O/MPIを内包した実測rateを加算して二重計数しない。Hamiltonianはone-/two-body JWなのでX/Y個数最大4。K=sum C(n-b,j),j<=4、Krからrank-local-only maskを除く。Opsiの同mask reuseは現行adjointでは未実装の目標である。非該当disk/network項はゼロ。モデルは3*forward+2*energy+generator inner+checkpointに5percent仮定margin。memory partner費用は2Ms項、send/recv二重計数なし。}
+  \takeaway{T-countでなく\textbf{振幅更新・MPI・Checkpoint}を見積もる。0.5 mHaのTrotter誤差は積分／交換子で検証する。}
+  \note{S2=prod exp(-ihPdelta/2)の正逆積。隣接half-step fusion未加点。Controlled R_P(theta)=R_P(theta/2) R_ZaP(-theta/2)で既存IRのcontrolled PAULI_ROT拒否を回避する計画。identity/Erefもancillaのrelative phaseに残す。signed phaseからErefを復元。delta=.00785398はprecision未認証。Trotter Error Theory arXiv1912.08854、iterative PE quant-ph0610214。}
 \end{frame}
 
-\begin{frame}{26. 想定処理時間：energy・勾配・100反復を分ける}
-  \smallnote{前頁の\textbf{native並列化目標}に基づく計算値。積分生成／SCF／line search追加評価は除く。100回の収束は保証しない。}
+\begin{frame}{29. QPEの想定時間：long powersの費用を隠さない}
+  \smallnote{各Pauliを別passで処理する基準。\textbf{目標native rate 1億 amplitude update/s/node}、RAM32・Eth8・IB16 GiB/s。}
   \small
-  \begin{tabularx}{\textwidth}{@{}p{.24\textwidth}XXX@{}}
-    \toprule 構成 / 化学workload & 1 energy\newline Forward込み & 1 energy＋Adjoint & 100反復合計 \\
+  \begin{tabularx}{\textwidth}{@{}p{.27\textwidth}XX@{}}
+    \toprule 構成 / QPE全状態 & 1 trajectory & 独立32 trajectory \\
     \midrule
-    A：RAM / 24Q & 約\textbf{14分} & 約\textbf{30分} & 約\textbf{2.1日} \\
-    B：SSD / 28Q & 約\textbf{15.1時間} & 約\textbf{32.1時間} & 約\textbf{134日} \\
-    C：Ethernet / 32Q & 約\textbf{75.3時間} & 約\textbf{159.2時間} & 約\textbf{663日} \\
-    D：InfiniBand / 32Q & 約\textbf{75.3時間} & 約\textbf{159.0時間} & 約\textbf{662日} \\
+    A：RAM / 25Q & 約\textbf{468年} & 約\textbf{1.50万年} \\
+    B：SSD / 29Q & 約\textbf{3.00万年} & 約\textbf{95.9万年} \\
+    C：Ethernet / 33Q & 約\textbf{20.6万年} & 約\textbf{658万年} \\
+    D：InfiniBand / 33Q & 約\textbf{17.8万年} & 約\textbf{569万年} \\
     \bottomrule
   \end{tabularx}
   \medskip
   \begin{columns}[T,onlytextwidth]
     \begin{column}{.48\textwidth}
-      \textbf{今回の律速}\par
-      \small Hamiltonian 5千〜5万Pauli項の内積／action。\par
-      InfiniBandでもCPU走査量は減らない。\par
-      $M$、kernel実効値、追加評価数で時間は変わる。
+      \textbf{未測定・未認証の計画値}\par
+      \small CPU/RAM＋保守的な全factor remote転送。\par
+      SSDはbit checkpointのみ。overlap加速なし。\par
+      巨大repeatをGateOp一覧へ展開しない。\par
+      Trotter誤差認証後にstepと時間を再計算する。
     \end{column}
     \begin{column}{.48\textwidth}
-      \textbf{現行Pythonとの違い}\par
-      \small local内積：約\textbf{160万 amplitude-term/s}。\par
-      表の目標1億は約60倍。\par
-      現行runtimeの量子化学実測として扱わない。
+      \textbf{32試行の仮定}\par
+      \small ground overlap 0.25、good-bin確率0.4。\par
+      1回以上のground＋good phase：約96.57\%。\par
+      ground識別・chemical accuracyの保証ではない。\par
+      期待値／Trotter最適化の利益は別途検討する。
     \end{column}
   \end{columns}
-  \takeaway{\textbf{容量に収まることと、実用時間で終わることは別。} 計算条件・script・JSONをMarkdownにも保存する。}
-  \note{docs/slides/resource_estimates.md、estimate_chemistry.py、chemistry_estimates.json。local計測はb16、mask3/5、warmup後3試行のPython pauli_innerで、MPI/SSD/Frameを除く。量子化学積分・ground stateの測定ではない。native目標rhoの0.5〜2倍などの感度と、matched mixed profileで再校正が必要。rho自体が同じでも現行MPIでは全node kernelが均衡並列に動く保証はない。}
+  \takeaway{\textbf{1 mHa QPEの古典simulationは容量だけでは評価できない。} native fusion・group/layout・誤差検証が必要。}
+  \note{script/JSON/MarkdownをQPE model_version2に更新。1trajectoryは20 bitのIPEAで32回独立state prep。全Pauliをfull state passするreferenceであり実際の化学実測ではない。更新rateは旧Pauli inner計測の転用ではなく未測定目標。Tnative=max(2^nfull/(N rho),2s/RAM)、network2s/betaを全factorに保守的課金、Checkpoint21*2s/SSD、5percentmargin。}
+\end{frame}
+
+\begin{frame}{30. 別途最適化：直接期待値・逆再生・配置を比較}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{振幅から直接期待値}\par
+      \small $E=\langle\psi|H|\psi\rangle$：shot測定を繰り返さない。\par
+      partner／Frame／同じX maskを再利用。\par
+      $H\psi$、variance、fermion/RDMの直接kernelを比較。\par\medskip
+      \textbf{最後まで実行してから逆再生}\par
+      \small 中間stateの復元／直接期待値／二stream adjoint。\par
+      $\psi$だけ戻すと\textbf{中間stateの期待値}になる。\par
+      finalの値を保つには作用素の共役かbra/ket両方。
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{トロッター実行と配置}\par
+      \small controlled branch専用kernel、half-step merge、\par
+      commuting/diagonal fusion、group kernel、\par
+      S1/S2/FusedSWAP、bank retirementを比較。\par\medskip
+      \textbf{意味と精度を保つ境界}\par
+      \small 非可換なterm順／step変更は$U_0$を変える。\par
+      IPEA途中で混ぜず、error認証後に再開始。\par
+      measurement前stateは\textbf{逆ゲートだけで復元しない}。
+    \end{column}
+  \end{columns}
+  \takeaway{\textbf{QPE推定と最適化研究を分ける。} 期待値・逆再生の対象observable／cutを固定し、追加費用も計測する。}
+  \smallnote{検討資料：\texttt{docs/quantum\_chemistry\_optimization.md}。上記の新規最適化は未実装。}
+  \note{operator propagationではO_j=V_j^dagger O V_jが必要。lambda_L=O psi_Lを逆再生し<psi_j|lambda_j>を保っても固定Oの中間期待値ではない。IPEA measurementはnonunitaryなのでcheckpoint/branch replayが必要。Kraus作用のdata-onlyシミュレーション候補も別資料に記載。}
 \end{frame}

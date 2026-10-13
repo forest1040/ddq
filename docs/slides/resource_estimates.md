@@ -1,4 +1,4 @@
-# スライド18〜26：構成例と容量・処理時間の計算
+# スライド18〜30：構成例と容量・処理時間・最適化の検討
 
 2026-10-13。4構成は容量計画の例で、実機の性能測定、製品選定、実行時間や大規模実行の保証ではない。数値は complex128 の全状態を圧縮せず保持する前提で計算する。
 
@@ -170,11 +170,110 @@ all Gでfull read/write、分散時は2sの通信も仮定し、metadata-only/lo
 
 ### 現行kernelとの差と再現ファイル
 
-同じMacで現行Python `pauli_inner`をb=16、X/Z mask=3/5、warmup後3回測り、約1.6百万 amplitude-term/sだった（[生データ](chemistry_estimates.json)）。これはI/O／MPI／Frameを含まないlocal microbenchmarkで、量子化学実行の測定ではない。目標ρ=1億は約60倍であり、上の表を現在のPython実装の時間として読まない。現行MPIはkernelをnode数分すべて並列に進める保証もない。
+同じMacで現行Python `pauli_inner`をb=16、X/Z mask=3/5、warmup後3回測り、約1.6百万 amplitude-term/sだった（[生データ](vqe_estimates.json)）。これはI/O／MPI／Frameを含まないlocal microbenchmarkで、量子化学実行の測定ではない。目標ρ=1億は約60倍であり、上の表を現在のPython実装の時間として読まない。現行MPIはkernelをnode数分すべて並列に進める保証もない。
 
-[計算script](estimate_chemistry.py)と[JSON](chemistry_estimates.json)に仮定・算式・容量判定・時間内訳を保存した。geometry／活性積分／実際のM・K・G、matched mixed profileと実kernel throughputが得られたら、目標値を置換して再校正する。
+[計算script](estimate_vqe.py)と[JSON](vqe_estimates.json)に仮定・算式・容量判定・時間内訳を保存した。geometry／活性積分／実際のM・K・G、matched mixed profileと実kernel throughputが得られたら、目標値を置換して再校正する。
+
+```sh
+uv run --locked --extra mpi python docs/slides/estimate_vqe.py \
+  --output docs/slides/vqe_estimates.json --measure-python-kernel
+```
+
+## 量子化学QPE：1 mHa・2次対称トロッター・逐次位相推定
+
+VQEのスライド24〜26と見積もりは保持し、スライド27〜29に**QPE**、30に最適化検討を追加した。期待値とトロッター実行の最適化は[別の検討資料](../quantum_chemistry_optimization.md)に分離する。
+
+活性空間は `(活性電子数, 空間軌道数)`、Jordan–Wigner、taperなし。system qubitは空間軌道数の2倍。H2O/N2型・閉殻・cc-pVTZを想定するが、geometry、活性積分、screening、Pauli項数Mは未生成・未測定。[ActiveSpaceTransformer](https://qiskit-community.github.io/qiskit-nature/stubs/qiskit_nature.second_q.transformers.ActiveSpaceTransformer.html)、[JordanWignerMapper](https://qiskit-community.github.io/qiskit-nature/stubs/qiskit_nature.second_q.mappers.JordanWignerMapper.html)
+
+### 問題と収容容量
+
+| 構成 | 活性空間（仮定） | system qubit | IPEA込みqubit | full state | M（仮定） |
+|---|---|---:|---:|---:|---:|
+| A RAM | H2O型 CAS(8e,12o) | 24 | 25 | 512 MiB | 5,000 |
+| B SSD | N2型 CAS(10e,14o) | 28 | 29 | 8 GiB | 20,000 |
+| C Ethernet | N2型 CAS(10e,16o) | 32 | 33 | 128 GiB、16 GiB/node | 50,000 |
+| D InfiniBand | Cと同じ、8 node | 32 | 33 | Cと同じ | 50,000 |
+
+逐次位相推定（IPEA）はancillaを1個再利用し、20回のmeasurement/reset/feedforwardを1 trajectoryで実行する。通常QPEの20 ancillaを一度に追加すれば状態はsystem-onlyの2^20倍となり、この予約量では収まらない。全分岐木は保存せず、1 trajectoryの条件付き純粋状態を保持する。[iterative phase estimationの論文](https://arxiv.org/abs/quant-ph/0610214)
+
+各nodeで2個のworking stateをRAMに置く条件付きモデル。work16 GiB＋metadata1 GiB＋25%余裕を含め、Aは22.5 GiB、Bは41.25 GiB、C/Dは61.25 GiB/node。以前のRAM予約512/64/64 GiBに収まる。ancillaはBlock-localに配置し、rank bitをsystem側に割り当てる。
+
+SSDは初期／最新bit checkpoint／次出力／reclaim中の予備bankの4状態に25%余裕を加える**bounded working store**を前提にする。Bは40 GiB=0.0391 TiB、C/Dは80 GiB=0.0781 TiB/nodeで、SSD予約32/64 TiB内。Trotterの各primitiveでdiskへ保存せず、各phase bit境界をcheckpointとする。
+
+**このreclaim/bank方式とIPEA measurement/resetは未実装。現行Phase 3のappend-onlyでB/C/Dへの収容を保証できない。** 新規outputを全primitiveで書く保守的モデルでは、1 trajectoryあたりB約1.64×10^9 TiB、C/D約8.19×10^9 TiB/nodeとなり予約量を超える。このモデルのphase3_append_only_disk_fits=falseをJSONに残す。RAMのworking version retirementと圧縮repeat planも必要で、billionsのGateOp/root/journalを展開しない。資源が収まるという表記は、これらの機能を実装・検証した後の条件付き計画である。
+
+### 精度と同一unitaryのpowers
+
+対象active-space Hamiltonian Hに対して総誤差目標1 mHa=0.001 Ha。位相分解能に0.5 mHa、Trotter biasに0.5 mHaを割り当てる。basis／活性空間近似を含む物理分子のchemical accuracy保証ではない。
+
+H−E_refの全spectrumが±Λ、Λ=100 Haに収まると仮定する。実際の積分からspectral boundを検証し、E_refを復元する。`U=exp(-i(H-E_ref)tau)`、`tau=pi/(2Λ)=0.01570796 Ha^-1`。signed phaseは±1/4内に置き、`E=E_ref-2pi*phase_signed/tau`でdecodeする。[QPEのcontrolled powers](https://quantum.cloud.ibm.com/learning/en/courses/utility-scale-quantum-computing/quantum-phase-estimation)
+
+```text
+m = ceil(log2(4Λ / 0.0005)) = 20 phase bits
+energy grid = 4Λ / 2^m = 0.38147 mHa < 0.5 mHa
+delta_max = 0.01 Ha^-1              # 仮定、精度未認証
+r0 = ceil(tau/delta_max) = 2
+delta_actual = tau/r0 = 0.00785398 Ha^-1
+S2(delta) = product(l=1..M) exp(-i h_l P_l delta/2)
+          * product(l=M..1) exp(-i h_l P_l delta/2)
+U0 = S2(tau/r0)^r0
+```
+
+U0^(2^j)は**同じU0の繰返し**で実装する。非可換Hで各rotation angleだけを2^j倍にする置換は同じunitaryのpowerではない。IPEAが測るのはこの近似unitaryのphaseであり、mを増やすだけではTrotter biasは消えない。
+
+delta_maxだけで0.5 mHaを保証できない。係数・項順序・交換子／nested commutator、small-system exact oracle、step-size sweepでbiasを認証する。必要ならdeltaを縮小し、時間を再計算する。[Trotter誤差とcommutatorの解析](https://arxiv.org/abs/1912.08854)
+
+実際のgrid0.38147＋Trotter目標0.5=0.88147 mHa。残り0.11853 mHaを数値誤差等の余裕とするが、長い回路での浮動小数点誤差も別途検証する。QPEのphase distributionにはtailがあるため、gridは全shotの誤差保証ではない。
+
+### native gate countと試行回数
+
+現在のIRはcontrolled PAULI_ROTを拒否する。計画のbaselineは厳密な2 native rotationへのloweringを使う。
+
+```text
+R_P(theta) = exp(-i theta P/2)
+C_a[R_P(theta)] = R_P(theta/2) * R_(Z_a P)(-theta/2)
+Trotter steps/run = r0*(2^m-1) = 2,097,150
+controlled Pauli factors/run <= 2M * steps
+native rotations/run <= 4M * steps
+```
+
+Mにはscalar/identity項も含めた保守的な全項passを想定する。identity／E_refによるphaseはcontrol ancillaのrelative phaseなので捨てない。回転角は直接floatで扱い、Clifford+T合成／T-countを時間へ使わない。隣接half-stepのmerge、commuting group、native controlled kernel、logical-layout最適化の利益はbaselineに加点していない。
+
+| 構成 | native rotations / 1 trajectory |
+|---|---:|
+| A | 4.1943×10^10 |
+| B | 1.67772×10^11 |
+| C/D | 4.1943×10^11 |
+
+独立した32 trajectoryを初期状態から再準備する。近似unitaryのgroundへのoverlap0.25、条件付きgood-bin確率0.4を**仮定**すると、少なくとも1回のground＋good phaseが出る確率は `1-(1-0.25*0.4)^32=96.57%`。これはgroundを識別できる保証ではなく、未知overlap／gap／Trotterによるeigenvector変化は別検証が必要。最小の観測phaseを無条件にgroundと採用しない。
+
+### 条件付き時間：全Pauliを別passで処理するbaseline
+
+目標compute rateρ=1億 amplitude update/s/node、RAM32 GiB/s/node、SSD2 GiB/s/node、Ethernet8／InfiniBand16 GiB/s/nodeを**未測定の仮定**として残す。前版のPauli内積rateを回転kernelの実測値とみなさない。現行Python速度を予測した表ではない。
+
+```text
+s = full-QPE state GiB / N、n_full=system+1
+Tnative = max(2^n_full/(Nρ), 2s/βRAM)
+Tnetwork = 2s/βnetwork   # multi-node全factorがremoteという保守的モデル
+Tcheckpoint = (m+1)*2s/βSSD
+Ttrajectory = 1.05 * (native_count*(Tnative+Tnetwork)+Tcheckpoint)
+Ttotal = 32*Ttrajectory
+```
+
+非該当disk/networkは0。RAM-resident working statesなのでSSD read/writeはbit checkpointで課金する。2s/βSSDはread/write共有bandwidthの保守的な費用で、すべてのsnapshotで必ずfull copyする意味ではない。量子状態のsimulation wall timeと、tauで表した物理的time evolutionを区別する。CPU/ネットワークを加算しoverlapの速度利益は含めない。remote比率、native fusion、device contention、measurement/reduction、state prepとcontrol overheadは実測で置換する。
+
+| 構成 | 1 trajectory | 32 trajectory |
+|---|---:|---:|
+| A RAM、25Q | 約468年 | 約1.50万年 |
+| B SSD、29Q | 約3.00万年 | 約95.9万年 |
+| C Ethernet、33Q/8node | 約20.6万年 | 約658万年 |
+| D InfiniBand、33Q/8node | 約17.8万年 | 約569万年 |
+
+この非常に大きな値は、1 mHa QPEのlong controlled powersと、各Pauli factorで全状態を別々に更新するreferenceの費用を表す。実用時間の保証ではない。係数／Trotter biasが未検証のためcertified estimateでもない。項grouping／diagonal fusion／layout／working-bank reuse／controlled branch処理の検討が必要で、その利益を後付けで仮定しない。
+
+[計算script](estimate_chemistry.py)と[JSON](chemistry_estimates.json)をQPE model_version=2へ更新。delta_max=0.02/0.005、energy目標10 mHaの感度もJSONへ保存する。errorを再認証せず大きなdeltaで高速化を主張しない。
 
 ```sh
 uv run --locked --extra mpi python docs/slides/estimate_chemistry.py \
-  --output docs/slides/chemistry_estimates.json --measure-python-kernel
+  --output docs/slides/chemistry_estimates.json --energy-mha 1 --delta-max 0.01
 ```

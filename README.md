@@ -92,7 +92,7 @@ latexmk -lualatex -interaction=nonstopmode -halt-on-error -outdir=docs/slides do
 
 スライド18〜23に、RAMのみ／Local SSD／複数node Ethernet／複数node InfiniBandの構成例と、Forward・AdjointのRAM/SSD確保量を追加しています。[計算条件](docs/slides/resource_estimates.md)に、状態サイズ、append-onlyの更新回数、容量余裕、生存版GCモデルとの違いを記載しています。
 
-スライド24〜26には、各構成に収まる量子化学VQEのCAS／ansatz／Hamiltonian項数の仮定と、energy・随伴勾配・100反復の処理時間を追加しています。時間はPhase 4のnative並列化目標を使う条件付き計画値です。[Markdown](docs/slides/resource_estimates.md)、[計算script](docs/slides/estimate_chemistry.py)、[JSON](docs/slides/chemistry_estimates.json)に容量判定と計算内訳を保存しています。
+スライド24〜26のVQE見積もりを保持し、27〜29に1 mHa・2次対称トロッター・逐次位相推定（QPE）、30に最適化検討を追加しています。QPE時間は未最適化の全Pauli passとnative並列化目標を使う条件付き計画値で、誤差認証・working store・途中測定は未実装です。[Markdown](docs/slides/resource_estimates.md)に両方の条件を記載し、[VQE script](docs/slides/estimate_vqe.py)・[JSON](docs/slides/vqe_estimates.json)、[QPE script](docs/slides/estimate_chemistry.py)・[JSON](docs/slides/chemistry_estimates.json)を分けて保存しています。[別の検討資料](docs/quantum_chemistry_optimization.md)に、直接期待値、逆ゲート／bra-ket、トロッターのfusion／配置／回収の最適化候補を記載しています。
 
 スライド3〜5は `ref/03-2.tex` のクロネッカー積の図と `ref/10.tex` のストライドアクセスの図をもとに、全体行列・振幅ペア・Block境界・Rank配置の対応を説明しています。
 
