@@ -2,7 +2,7 @@
 
 状態：IN_PROGRESS（2026-10-14）。依存：001、002、009。004へ採用費用を供給する。共通契約は[全体設計](../phase4_remaining_design.md)。
 
-raw／resolved identity descriptor、bounded future hint、validated costとunknown／staleのLRU fallbackを先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#cache-identityと費用fallbackp4-007)。resolved buffer共有は未有効。automatic FutureUse、actual profile供給、hint／trace RAM課金、prefix reader lifetime／公平性とpaired性能評価は残る。
+raw／resolved identity descriptor、bounded future hint、validated costとunknown／staleのLRU fallbackを先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#cache-identityと費用fallbackp4-007)。[追加実装](../phase4_safety_monitoring_implementation.md)でhint／trace／counterの共有RAM課金、stale／close時精算、既知future sequenceのbounded summaryを追加した。resolved buffer共有は未有効。全future計画の自動抽出、actual profile供給、prefix reader lifetime／公平性とpaired性能評価は残る。
 
 ## 現状・責務
 

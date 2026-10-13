@@ -11,12 +11,15 @@ def share_budget(parent, child):
     old = child.budget
     old.release(amount)
     child.budget = child.local.budget = child.cache.budget = parent.budget
+    cache_metadata=getattr(child.cache,'metadata',None)
+    if cache_metadata is not None:cache_metadata.budget=parent.budget
     child.io_engine.budget = parent.budget
     if hasattr(child.store, 'budget'):
         child.store.budget = parent.budget
     child._shared_metadata_bytes = (amount-child.io_engine.metadata_bytes-
                                    child.runtime._measurement_budget-child.runtime._eta_budget-
-                                   child.runtime._injection_budget-child.runtime._gradient_profile_budget)
+                                   child.runtime._injection_budget-child.runtime._gradient_profile_budget-
+                                   (cache_metadata.used if cache_metadata is not None else 0))
     return child
 
 

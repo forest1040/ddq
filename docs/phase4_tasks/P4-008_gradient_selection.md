@@ -5,6 +5,8 @@
 
 明示actual calibration、strict envelope adapter、runtime attachmentと未認証fallbackを実装した。認証済みauto性能、包括admission、generator／Frame／replan／別hostは残る。 [実装範囲と検証](../phase4_validation_implementation.md)。
 
+[追加実装](../phase4_safety_monitoring_implementation.md)で、明示resource_probeによる両peakとcertifierのRAM／disk upperをheld-out rawから再検証する。unknownな資源値を0で補わず、観測maxを保証へ昇格しない。
+
 ## 現状・差分
 
 [gradient_scheduler.py](../../src/svsim/gradient_scheduler.py)はMethodCostをcallerから受け、適用可能な三方式を選ぶ。不足時はadjointへ戻す。[phase4_gradient.py](../../src/svsim/phase4_gradient.py)はadjoint/recompute/occurrence shiftを実行し、actual layout/historyを扱う。async gradient呼出しは主にRAM budgetだけを渡す。

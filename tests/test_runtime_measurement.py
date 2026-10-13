@@ -212,3 +212,20 @@ def test_long_identifiers_are_rejected_before_dedup_storage():
     with pytest.raises(ValueError,match='identifier'):
         collector.submit('x'*257,context={},condition={},validated=True)
     assert not collector._events
+
+
+def test_disabled_collection_skips_validator_and_does_not_create_cost_evidence():
+    collector = RuntimeMeasurementCollector(enabled=False, max_bytes=1024)
+    def unexpected_validator():
+        raise AssertionError("a disabled collector must not evaluate a validator")
+    collector.begin_group("epoch")
+    assert not collector.complete("child", validator=unexpected_validator, context={}, condition={})
+    collector.end_group("epoch")
+    assert not collector.submit("epoch-event", context={}, condition={}, group_id="epoch", validated=True)
+    assert collector.snapshot()["collection_enabled"] is False
+    assert collector.snapshot()["observations"] == []
+    assert collector.cost_observations() == ()
+    assert collector.consumed_children("epoch") == frozenset()
+    assert not collector._events and not collector._group_stack
+    with pytest.raises(ValueError, match="boolean"):
+        RuntimeMeasurementCollector(enabled=1)

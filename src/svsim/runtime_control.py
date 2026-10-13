@@ -80,10 +80,12 @@ class RuntimeControl:
         self.latest_gradient=None
         self.configure_eta(max_bytes=max(1024,min(8192,sim.config.metadata_reserve_bytes//32)))
 
-    def configure_measurements(self, *, max_bytes, max_conditions=256, per_condition=64):
+    def configure_measurements(self, *, max_bytes, max_conditions=256, per_condition=64,
+                               enabled=True):
         """Reserve bounded observer storage, including indices and snapshot copies."""
         from .runtime_measurement import RuntimeMeasurementCollector
-        collector=RuntimeMeasurementCollector(max_bytes=max_bytes,max_conditions=max_conditions,per_condition=per_condition)
+        collector=RuntimeMeasurementCollector(max_bytes=max_bytes,max_conditions=max_conditions,
+            per_condition=per_condition,enabled=enabled)
         if self.measurements is not None and self.measurements._events:
             raise ValueError('Measurement limits must be set before collecting events')
         capacity=min(max_conditions*per_condition,max(1,max_bytes//256))
@@ -405,7 +407,7 @@ class RuntimeControl:
         elapsed = getattr(request, 'wall_seconds', request.elapsed_seconds)
         successful = request.error is None and request.operation in {'read', 'write'} and bool(getattr(request,'validated',False))
         condition = self.io_condition(request.operation,request) if request.operation in {'read', 'write'} else None
-        if condition is not None:
+        if condition is not None and self.measurements.enabled:
             sim = self.sim
             same_host = len({r['host'] for r in sim.environment}) == 1
             self.measurements.complete(
@@ -429,6 +431,8 @@ class RuntimeControl:
 
     def mpi_completion(self, request, elapsed):
         """Record one source-side whole transfer after protocol acknowledgment."""
+        if not self.measurements.enabled:
+            return False
         if request.source != self.sim.rank or request.source == request.destination:
             return False
         metadata = request.metadata if isinstance(request.metadata, dict) else {}

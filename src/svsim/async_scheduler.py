@@ -143,6 +143,8 @@ class AsyncDistributedSimulator(DistributedSimulator):
 
     def _record_executor_group(self, event_id, group_id, condition, quantity,
                                wall_seconds, cpu_seconds, *, success, parent_id=None):
+        if not self.runtime.measurements.enabled:
+            return False
         same_host = len({row['host'] for row in self.environment}) == 1
         return self.runtime.measurements.complete(
             event_id, context=self._measurement_context(), condition=condition,

@@ -1,13 +1,16 @@
 import json
+import hashlib
 
 from svsim.gradient_calibration import GradientCalibrationSpec, calibrate_gradient_methods
 from svsim.gradient_cost_adapter import GradientCostAdapter
 
 
-def _report(context, measurement="runner"):
+def _report(context, measurement="runner", peaks=(2048, 10)):
     return calibrate_gradient_methods(
         GradientCalibrationSpec(context, methods=("adjoint",), warmup_repetitions=0, repetitions=5),
         lambda *_: object(), lambda *_: 2.0, lambda *_: True,
+        resource_probe=lambda *_: ({"peak_ram_bytes": peaks[0], "peak_disk_bytes": peaks[1]}
+                                   if peaks is not None else {}),
         actual_context_getter=lambda *_: context,
         envelope_certifier=lambda method, rows, key: {
             "lower_seconds": 0, "expected_seconds": 2, "upper_seconds": 3,
@@ -59,3 +62,23 @@ def test_serialized_measured_report_roundtrips_and_whole_trial_is_not_adopted():
     assert adapter.adapt(json.loads(json.dumps(whole_trial.to_dict())), context) == {}
     assert adapter.last_reason == "MEASUREMENT_SCOPE_MISMATCH"
     assert adapter.rejected_methods == {"adjoint": "MEASUREMENT_SCOPE_MISMATCH"}
+
+
+def test_adapter_rechecks_explicit_resource_bounds_even_after_report_rehash():
+    context = {"source": "s", "binding": "b"}
+    adapter = GradientCostAdapter()
+    report = _report(context)
+    assert "adjoint" in adapter.adapt(report, context)
+
+    malformed = report.to_dict()
+    malformed["certified_envelopes"]["adjoint"]["ram_bytes"] = 2047
+    malformed.pop("report_hash")
+    malformed["report_hash"] = hashlib.sha256(
+        json.dumps(malformed, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+    assert adapter.adapt(malformed, context) == {}
+    assert adapter.last_reason == "NO_QUALIFIED_HELD_OUT_ENVELOPE"
+
+    unknown = _report(context, peaks=None)
+    assert unknown.certified_envelopes == {}
+    assert adapter.adapt(unknown.to_dict(), context) == {}

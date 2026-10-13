@@ -1,5 +1,7 @@
 """Bounded future hints and same-unit cache eviction cost records."""
 from dataclasses import dataclass
+from dataclasses import asdict
+import json
 import math
 
 MAX_HINTS = 64
@@ -109,6 +111,32 @@ class FutureUseSummary:
             if i >= min(MAX_HINTS, window): break
             if v not in {h.version for h in hints}: hints.append(FutureUseHint(str(v), i))
         return cls(tuple(hints), str(snapshot_version), _bounded_pairs(context_versions), window)
+
+    @classmethod
+    def from_pending_versions(cls, versions, *, snapshot_version, context_versions=(), window=MAX_WINDOW):
+        """Summarize an ordered known-future sequence, bounded to its first window."""
+        if isinstance(window, bool) or not isinstance(window, int) or not 0 <= window <= MAX_WINDOW:
+            raise ValueError('Invalid future window')
+        first, counts = {}, {}
+        iterator = iter(versions)
+        for ordinal in range(window):
+            try:
+                version = next(iterator)
+            except StopIteration:
+                break
+            _identifier(version, 'Future-use version')
+            first.setdefault(version, ordinal)
+            counts[version] = counts.get(version, 0) + 1
+        hints = tuple(FutureUseHint(version, ordinal, reuse_count=counts[version])
+                      for version, ordinal in first.items())
+        return cls(hints, snapshot_version, _bounded_pairs(context_versions), window)
+
+    @property
+    def managed_bytes(self):
+        """Conservative capacity estimate; it is not a process-RSS measurement."""
+        encoded = json.dumps(asdict(self), sort_keys=True, separators=(',', ':'),
+                             ensure_ascii=True, allow_nan=False).encode('ascii')
+        return 4096 + 8 * len(encoded)
 
     def is_current(self, context):
         return tuple(sorted(dict(context or {}).items())) == self.context_versions

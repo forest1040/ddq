@@ -85,10 +85,13 @@ class RuntimeMeasurementCollector:
     """Keeps bounded summaries; only successful validated events enter cost observations."""
 
     def __init__(self, *, max_conditions: int = 256, per_condition: int = 64,
-                 max_bytes: int = 64 * 1024 * 1024, clock=None):
+                 max_bytes: int = 64 * 1024 * 1024, clock=None, enabled: bool = True):
+        if type(enabled) is not bool:
+            raise ValueError("enabled must be boolean")
         if any(type(value) is not int or value<1 for value in (max_conditions,per_condition,max_bytes)):
             raise ValueError("collector limits must be positive")
         self.max_conditions, self.per_condition, self.max_bytes = max_conditions, per_condition, max_bytes
+        self._enabled = enabled
         self._clock = clock
         self._thread = threading.get_ident()
         self._rings: dict[tuple[str, str], deque[CompletionObservation]] = {}
@@ -113,8 +116,14 @@ class RuntimeMeasurementCollector:
         if threading.get_ident() != self._thread:
             raise RuntimeError("measurement collector is main-thread only")
 
+    @property
+    def enabled(self):
+        return self._enabled
+
     def submit(self, event_id: str, **fields):
         self._check_thread()
+        if not self.enabled:
+            return False
         if event_id in self._events:
             self.duplicate_events += 1
             return False
@@ -193,6 +202,8 @@ class RuntimeMeasurementCollector:
 
     def begin_group(self, group_id: str):
         self._check_thread()
+        if not self.enabled:
+            return
         if not isinstance(group_id, str) or not group_id:
             raise ValueError("group_id is required")
         if len(self._group_stack) >= 64:
@@ -201,6 +212,8 @@ class RuntimeMeasurementCollector:
 
     def end_group(self, group_id: str):
         self._check_thread()
+        if not self.enabled:
+            return
         if not self._group_stack or self._group_stack[-1] != group_id:
             raise RuntimeError("measurement groups must end in stack order")
         self._group_stack.pop()
@@ -208,6 +221,8 @@ class RuntimeMeasurementCollector:
     def complete(self, event_id: str, *, validator=None, **fields):
         """Complete after caller validation. A raising validator becomes failed evidence."""
         self._check_thread()
+        if not self.enabled:
+            return False
         validated = False
         error = None
         if fields.get("success", True):
@@ -225,6 +240,7 @@ class RuntimeMeasurementCollector:
         rows = [item for ring in self._rings.values() for item in ring]
         rows.sort(key=lambda item: item.event_id)
         return {"observations": [item.to_dict() for item in deepcopy(rows)],
+                "collection_enabled": self.enabled,
                 "failed_observations": [item.to_dict() for item in deepcopy(self._failures)],
                 "condition_count": len(self._rings),
                 "bytes": self._bytes, "dropped_conditions": self.dropped_conditions,

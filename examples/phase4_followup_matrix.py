@@ -20,6 +20,7 @@ def main():
     parser.add_argument('--backends',nargs='+',choices=('buffered','direct'),default=['buffered','direct'])
     parser.add_argument('--ranks',nargs='+',type=int,choices=(1,2,4),default=[1,2,4])
     parser.add_argument('--wall-seconds',type=float,default=300)
+    parser.add_argument('--action',choices=('all','monitor'),default='all')
     args=parser.parse_args()
     if not 1<=args.repetitions<=20 or not 0<=args.warmup<=10:parser.error('Finite trial limits required')
     if not math.isfinite(args.wall_seconds) or not 0<args.wall_seconds<=3600:parser.error('wall seconds must be finite and <=3600')
@@ -36,7 +37,7 @@ def main():
             for ranks in args.ranks:
                 name=f'{backend}-p{ranks}';destination=output/f'{name}.json'
                 spec=JobSpec(revision,lock_hash,(sys.executable,str(root/'examples/phase4_remaining_campaign.py'),
-                    '--action','all','--scratch',str(Path(args.scratch).resolve()/name),'--output',str(destination),
+                    '--action',args.action,'--scratch',str(Path(args.scratch).resolve()/name),'--output',str(destination),
                     '--repetitions',str(args.repetitions),'--warmup',str(args.warmup),
                     '--backend',backend,'--wall-seconds',str(args.wall_seconds)),
                     ranks=ranks,rank_ram_bytes=8*1024**2,host_ram_bytes=512*1024**2,
@@ -53,15 +54,17 @@ def main():
                 if record.state==JobState.COMPLETED:
                     data=json.loads(destination.read_text())
                     gradient=data.get('gradient',{}).get('calibration',{}).get('observations',[])
+                    sections=('monitor',) if args.action=='monitor' else ('comparison','adaptive')
                     summary['validated']=all(len(data.get(key,{}).get('rows',[]))==2 and all(row['status']=='completed'
                         for row in data[key]['rows']) and all(row['status']=='completed' for row in data[key]['warmup_rows'])
-                        for key in ('comparison','adaptive')) and len(gradient)==3*(args.repetitions+args.warmup) and all(row['success'] and row['validated'] for row in gradient)
+                        for key in sections) and (args.action=='monitor' or
+                        len(gradient)==3*(args.repetitions+args.warmup) and all(row['success'] and row['validated'] for row in gradient))
                     summary['sha256']=sha256(destination.read_bytes()).hexdigest()
                 else:summary['validated']=False
                 rows.append(summary)
                 print(json.dumps(summary),flush=True)
                 (output/'matrix.json').write_text(json.dumps({'kind':'phase4-followup-matrix','revision':revision,
-                    'scope':'same-host','cluster_used':False,'repetitions':args.repetitions,'warmup':args.warmup,
+                    'scope':'same-host','cluster_used':False,'action':args.action,'repetitions':args.repetitions,'warmup':args.warmup,
                     'rows':rows,'elapsed_seconds':perf_counter()-started},indent=2)+'\n')
     if not all(row['validated'] for row in rows):raise SystemExit(1)
 

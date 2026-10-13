@@ -25,6 +25,7 @@ from svsim.ir import GateNormalizer,GlobalSequencer
 from svsim.kernels import eager_reference
 from svsim.performance_injection import InjectionSpec
 from svsim.phase4_evaluation import CaseManifest,Variant,Trial,Campaign,paired_order
+from svsim.runtime_calibration import _resolved_storage_backends
 
 
 def tree_bytes(folder):
@@ -48,12 +49,15 @@ def config(path,args):
         storage_scope='node-local')
 
 
-def run_comparison(comm,folder,args,*,adaptive=False,scenario='sustained'):
+def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='sustained'):
     rank=comm.Get_rank();size=comm.Get_size()
     recipe=([('RX',(0,),.025)]*12 if adaptive else
         [('H',(3,),None)]+[item for _ in range(4) for item in [('RY',(0,),.07),('RZ',(1,),.1)]])
     variants=(Variant('fixed',{'mode':'observe'}),Variant('auto',{'mode':'auto'})) if adaptive else (
         Variant('S0',{'swap_policy':'S0'}),Variant('S2',{'swap_policy':'S2'}))
+    if monitoring:
+        variants=(Variant('collector-off',{'completion_collection':False}),
+                  Variant('collector-on',{'completion_collection':True}))
     starts={'sustained':(4,12),'transient':(4,5),'recovery':(4,8),'missing-baseline':(0,12)}
     start,end=starts[scenario]
     spec=InjectionSpec(1,'compute','work',start,end,.15,('executor-group',),1.5,16,barrier='semantic-prefix') if adaptive else None
@@ -61,7 +65,7 @@ def run_comparison(comm,folder,args,*,adaptive=False,scenario='sustained'):
     normalizer=GateNormalizer(4);sequencer=GlobalSequencer()
     expected_source=content_hash([gate_data(sequencer.append(normalizer.gate(kind,target,
         **({'angle':angle} if angle is not None else {})))) for kind,target,angle in recipe])
-    case=CaseManifest(f'{"adaptive-"+scenario if adaptive else "layout"}-p{size}',
+    case=CaseManifest(f'{"completion-monitor" if monitoring else "adaptive-"+scenario if adaptive else "layout"}-p{size}',
         source={'hash':expected_source,'recipe':shared_recipe},initial_state={'kind':'initial-one'},
         binding={'kind':'empty'},exact_witness={'kind':'none'},observable={'Z':0},
         endpoint='construct+forward+state-validation+checkpoint+close+cleanup',n=4,b=2,ranks=size,
@@ -80,13 +84,17 @@ def run_comparison(comm,folder,args,*,adaptive=False,scenario='sustained'):
             continue
         variant=next(v for v in variants if v.variant_id==variant_id)
         directory=folder/f'owner-{rank}'/f'trial-{serial}'
+        policy_axes={'swap_policy':'S2'} if monitoring else dict(variant.axes)
         policy=AsyncPolicy(io_engine='cooperative',io_workers=1,prefetch_blocks=0,lookahead_gates=4,
-            cooldown_seconds=0,**dict(variant.axes))
+            cooldown_seconds=0,**policy_axes)
         begin=perf_counter();background_load=os.getloadavg()
         session=AdaptiveEvaluation(baseline_groups=0 if scenario=='missing-baseline' else 4)
         failure=None;metrics={};adaptive_report=None;source=source_actual;resolved=[]
         try:
             with AsyncDistributedSimulator(4,config(directory,args),comm=comm,policy=policy) as sim:
+                if monitoring:
+                    sim.runtime.configure_measurements(max_bytes=max(1024,min(64*1024,
+                        sim.config.metadata_reserve_bytes//16)),enabled=variant.axes['completion_collection'])
                 for kind,target,angle in recipe:sim.gate(kind,target,**({'angle':angle} if angle is not None else {}))
                 binding=sim.bind()
                 source=content_hash([gate_data(g) for g in sim.sequencer.operations])
@@ -125,7 +133,12 @@ def run_comparison(comm,folder,args,*,adaptive=False,scenario='sustained'):
                     'scratch_bytes_max':int(sim.transport.max_value(tree_bytes(directory)))}
                 sim.commit_snapshot()
                 metrics['scratch_bytes_max']=int(sim.transport.max_value(tree_bytes(directory)))
-                resolved=sorted({h.backend_identity for h in sim.store.files.values()})
+                resolved=sorted({value for identities in comm.allgather(_resolved_storage_backends(sim))
+                    for value in identities})
+                if monitoring:
+                    sample=sim.runtime.measurements.snapshot()
+                    metrics['completion_observations_max']=int(sim.transport.max_value(len(sample['observations'])))
+                    metrics['completion_collector_pool_bytes_max']=int(sim.transport.max_value(sim.runtime._measurement_budget))
         except Exception as exc:
             failure=f'{type(exc).__name__}: {exc}'[:512]
         try:cleanup(comm,directory)
@@ -137,6 +150,7 @@ def run_comparison(comm,folder,args,*,adaptive=False,scenario='sustained'):
             'scope':'injected-same-host' if adaptive else 'same-host','source_actual_hash':source,
             'validator':'eager-state-rtol-atol-1e-10','gradient':None,'adaptive':adaptive_report,
             'resolved_backends':resolved,
+            'completion_collection':variant.axes['completion_collection'] if monitoring else True,
             'background_load':{'before':background_load,'after':os.getloadavg()}}
         if rank==0:
             if warmup:warmup_rows.append({'variant':variant_id,'index':index,'wall_seconds':max(rank_wall),
@@ -199,7 +213,7 @@ def run_gradient(comm,folder,args):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',required=True);parser.add_argument('--scratch',required=True)
-    parser.add_argument('--action',choices=('comparison','adaptive','gradient','all'),default='all')
+    parser.add_argument('--action',choices=('comparison','adaptive','gradient','monitor','all'),default='all')
     parser.add_argument('--scenario',choices=('sustained','transient','recovery','missing-baseline'),default='sustained')
     parser.add_argument('--repetitions',type=int,default=7);parser.add_argument('--warmup',type=int,default=2)
     parser.add_argument('--backend',choices=('buffered','direct'),default='buffered')
@@ -223,7 +237,8 @@ def main():
     folder=Path(comm.bcast(str(Path(args.scratch)/f'campaign-{uuid4().hex}') if rank==0 else None,root=0))
     reports={}
     campaign_started=perf_counter();total_wall=args.wall_seconds
-    for action in ('comparison','adaptive','gradient'):
+    for action in ('comparison','adaptive','gradient','monitor'):
+        if action=='monitor' and args.action=='all':continue
         if args.action not in {action,'all'}:continue
         remaining=comm.bcast(total_wall-(perf_counter()-campaign_started) if rank==0 else None,root=0)
         if remaining<=0:
@@ -232,7 +247,7 @@ def main():
         args.wall_seconds=remaining
         if action=='gradient':reports[action]=run_gradient(comm,folder/action,args)
         else:reports[action]=run_comparison(comm,folder/action,args,
-            adaptive=action=='adaptive',scenario=args.scenario)
+            adaptive=action=='adaptive',monitoring=action=='monitor',scenario=args.scenario)
     if rank==0:
         reports.update({'schema_version':1,'kind':'phase4-followup-campaign','scope':'same-host',
             'ranks':comm.Get_size(),'backend':args.backend,'build':args.build,'cluster_used':False,

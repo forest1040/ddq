@@ -119,6 +119,12 @@ class GradientCostAdapter:
                 ram, disk = envelope.get("ram_bytes"), envelope.get("disk_bytes")
                 if (any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in (ram, disk))):
                     continue
+                resource_values = [(row.get("peak_ram_bytes"), row.get("peak_disk_bytes")) for row in rows]
+                if any(row.get("resources_measured") is not True or
+                       any(isinstance(value, bool) or not isinstance(value, int) or value < 0
+                           for value in pair) or pair[0] > ram or pair[1] > disk
+                       for row, pair in zip(rows, resource_values)):
+                    continue
                 result[method] = MethodCost(float(mean), float(lower), float(upper), ram, disk,
                                             confidence=float(confidence), measured=True)
             self.last_reason = ("CERTIFIED_HELD_OUT" if result else

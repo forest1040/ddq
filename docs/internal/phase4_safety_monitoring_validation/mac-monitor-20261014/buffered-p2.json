@@ -1,0 +1,1616 @@
+{
+  "monitor": {
+    "schema_version": 1,
+    "kind": "comparison-report",
+    "case_id": "completion-monitor-p2",
+    "manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+    "seed": 1,
+    "rows": [
+      {
+        "variant_id": "collector-off",
+        "axes": {
+          "completion_collection": false
+        },
+        "status": "completed",
+        "statuses": {
+          "completed": 7,
+          "failed": 0,
+          "insufficient-budget": 0,
+          "unmeasured": 0,
+          "unsupported": 0,
+          "validation_failed": 0
+        },
+        "metrics": {
+          "wall_seconds": {
+            "count": 7,
+            "median": 0.6643184169661254,
+            "p95": 0.6708050919114612,
+            "min": 0.6526162920054048,
+            "max": 0.6722816670080647,
+            "variation": 0.029602333008423316
+          },
+          "rank_max_seconds": {
+            "count": 7,
+            "median": 0.6643184169661254,
+            "p95": 0.6708050919114612,
+            "min": 0.6526162920054048,
+            "max": 0.6722816670080647,
+            "variation": 0.029602333008423316
+          },
+          "completion_collector_pool_bytes_max": {
+            "count": 7,
+            "median": 73728.0,
+            "p95": 73728.0,
+            "min": 73728.0,
+            "max": 73728.0,
+            "variation": 0.0
+          },
+          "completion_observations_max": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "execute_seconds": {
+            "count": 7,
+            "median": 0.4347796250367537,
+            "p95": 0.43974317077081654,
+            "min": 0.4276066249003634,
+            "max": 0.4408614579588175,
+            "variation": 0.030486325244274293
+          },
+          "managed_peak_bytes_max": {
+            "count": 7,
+            "median": 419072.0,
+            "p95": 419072.0,
+            "min": 419072.0,
+            "max": 419072.0,
+            "variation": 0.0
+          },
+          "read_bytes_sum": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "scratch_bytes_max": {
+            "count": 7,
+            "median": 236306.0,
+            "p95": 236313.5,
+            "min": 236299.0,
+            "max": 236315.0,
+            "variation": 6.770881822721387e-05
+          },
+          "send_bytes_sum": {
+            "count": 7,
+            "median": 256.0,
+            "p95": 256.0,
+            "min": 256.0,
+            "max": 256.0,
+            "variation": 0.0
+          },
+          "write_bytes_sum": {
+            "count": 7,
+            "median": 65536.0,
+            "p95": 65536.0,
+            "min": 65536.0,
+            "max": 65536.0,
+            "variation": 0.0
+          }
+        },
+        "trials": [
+          {
+            "trial_index": 0,
+            "status": "completed",
+            "wall_seconds": 0.6659849580610171,
+            "rank_wall_seconds": [
+              0.6659844169626012,
+              0.6659849580610171
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "execute_seconds": 0.4361059160437435,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236299,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ],
+                "before": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "execute_seconds": 0.4361059160437435,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236299,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.6659844169626012,
+                  0.6659849580610171
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6659849580610171
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 0,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-off"
+            },
+            "raw_sha256": "b289eade866af9c36f6bf701c7d091d717359d23212638606c9f3c247d86a630",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 1,
+            "status": "completed",
+            "wall_seconds": 0.6643184169661254,
+            "rank_wall_seconds": [
+              0.664316791924648,
+              0.6643184169661254
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "execute_seconds": 0.4347796250367537,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236302,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ],
+                "before": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "execute_seconds": 0.4347796250367537,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236302,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.664316791924648,
+                  0.6643184169661254
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6643184169661254
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 1,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-off"
+            },
+            "raw_sha256": "55fbae98d91ec4c7b2e3e9b2b606432f55d561b36112b14e775551c78510c353",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 2,
+            "status": "completed",
+            "wall_seconds": 0.6573506660060957,
+            "rank_wall_seconds": [
+              0.6573506660060957,
+              0.6573498749639839
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "execute_seconds": 0.4276066249003634,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236306,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ],
+                "before": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "execute_seconds": 0.4276066249003634,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236306,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.6573506660060957,
+                  0.6573498749639839
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6573506660060957
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 2,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-off"
+            },
+            "raw_sha256": "5326b717f95feed1e71196932e3837d1cf94314b0b55b27c4897cf279321dff0",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 3,
+            "status": "completed",
+            "wall_seconds": 0.6590308329323307,
+            "rank_wall_seconds": [
+              0.6590305420104414,
+              0.6590308329323307
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "execute_seconds": 0.428691792069003,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236302,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ],
+                "before": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "execute_seconds": 0.428691792069003,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236302,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.6590305420104414,
+                  0.6590308329323307
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6590308329323307
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 3,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-off"
+            },
+            "raw_sha256": "1e9ffef8761c9797a56c6137dda2a6200364029121111d67b227aca3b6c3932a",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 4,
+            "status": "completed",
+            "wall_seconds": 0.6526162920054048,
+            "rank_wall_seconds": [
+              0.6526158340275288,
+              0.6526162920054048
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "execute_seconds": 0.43434254196472466,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236315,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ],
+                "before": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "execute_seconds": 0.43434254196472466,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236315,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.6526158340275288,
+                  0.6526162920054048
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6526162920054048
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 4,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-off"
+            },
+            "raw_sha256": "dbd510a133137317e61453ab7f2bfa8a37635c8b44984dcab4ad360830038145",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 5,
+            "status": "completed",
+            "wall_seconds": 0.6722816670080647,
+            "rank_wall_seconds": [
+              0.6722816670080647,
+              0.6722816249821335
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "execute_seconds": 0.4408614579588175,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236310,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ],
+                "before": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "execute_seconds": 0.4408614579588175,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236310,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.6722816670080647,
+                  0.6722816249821335
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6722816670080647
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 5,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-off"
+            },
+            "raw_sha256": "a97f17874e74059710035ac51c790477b67fa6252fc29c8c851adbd476b065c2",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 6,
+            "status": "completed",
+            "wall_seconds": 0.6673597500193864,
+            "rank_wall_seconds": [
+              0.667358124977909,
+              0.6673597500193864
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "execute_seconds": 0.4371338339988142,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236307,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.458984375,
+                  5.29150390625,
+                  5.32470703125
+                ],
+                "before": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "execute_seconds": 0.4371338339988142,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236307,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.667358124977909,
+                  0.6673597500193864
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6673597500193864
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 6,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-off"
+            },
+            "raw_sha256": "b2a34d82969addf3eb9f2c9c90485b80d70fb19bd72d02f875eb3f318c031077",
+            "reason": "",
+            "validation_errors": []
+          }
+        ]
+      },
+      {
+        "variant_id": "collector-on",
+        "axes": {
+          "completion_collection": true
+        },
+        "status": "completed",
+        "statuses": {
+          "completed": 7,
+          "failed": 0,
+          "insufficient-budget": 0,
+          "unmeasured": 0,
+          "unsupported": 0,
+          "validation_failed": 0
+        },
+        "metrics": {
+          "wall_seconds": {
+            "count": 7,
+            "median": 0.679345624987036,
+            "p95": 0.6832847955753095,
+            "min": 0.6676879590377212,
+            "max": 0.6837350829737261,
+            "variation": 0.02362144296772525
+          },
+          "rank_max_seconds": {
+            "count": 7,
+            "median": 0.679345624987036,
+            "p95": 0.6832847955753095,
+            "min": 0.6676879590377212,
+            "max": 0.6837350829737261,
+            "variation": 0.02362144296772525
+          },
+          "completion_collector_pool_bytes_max": {
+            "count": 7,
+            "median": 73728.0,
+            "p95": 73728.0,
+            "min": 73728.0,
+            "max": 73728.0,
+            "variation": 0.0
+          },
+          "completion_observations_max": {
+            "count": 7,
+            "median": 7.0,
+            "p95": 7.0,
+            "min": 7.0,
+            "max": 7.0,
+            "variation": 0.0
+          },
+          "execute_seconds": {
+            "count": 7,
+            "median": 0.44751899992115796,
+            "p95": 0.45313539558555926,
+            "min": 0.4456218749983236,
+            "max": 0.453647332964465,
+            "variation": 0.01793322287445962
+          },
+          "managed_peak_bytes_max": {
+            "count": 7,
+            "median": 419072.0,
+            "p95": 419072.0,
+            "min": 419072.0,
+            "max": 419072.0,
+            "variation": 0.0
+          },
+          "read_bytes_sum": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "scratch_bytes_max": {
+            "count": 7,
+            "median": 236304.0,
+            "p95": 236309.09999999998,
+            "min": 236298.0,
+            "max": 236310.0,
+            "variation": 5.078204346942921e-05
+          },
+          "send_bytes_sum": {
+            "count": 7,
+            "median": 256.0,
+            "p95": 256.0,
+            "min": 256.0,
+            "max": 256.0,
+            "variation": 0.0
+          },
+          "write_bytes_sum": {
+            "count": 7,
+            "median": 65536.0,
+            "p95": 65536.0,
+            "min": 65536.0,
+            "max": 65536.0,
+            "variation": 0.0
+          }
+        },
+        "trials": [
+          {
+            "trial_index": 0,
+            "status": "completed",
+            "wall_seconds": 0.6837350829737261,
+            "rank_wall_seconds": [
+              0.68373279098887,
+              0.6837350829737261
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "execute_seconds": 0.453647332964465,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236298,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ],
+                "before": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "execute_seconds": 0.453647332964465,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236298,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.68373279098887,
+                  0.6837350829737261
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6837350829737261
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 0,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-on"
+            },
+            "raw_sha256": "eb171436ecf972f62fe5445abac4e4356f30aa92dfa7c30a8d4db5694c170999",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 1,
+            "status": "completed",
+            "wall_seconds": 0.6676879590377212,
+            "rank_wall_seconds": [
+              0.6676879590377212,
+              0.6676853749668226
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "execute_seconds": 0.4476638750638813,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236301,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ],
+                "before": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "execute_seconds": 0.4476638750638813,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236301,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.6676879590377212,
+                  0.6676853749668226
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6676879590377212
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 1,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-on"
+            },
+            "raw_sha256": "3250e6fc51066866fc1d74a08e0a7e3309b0ed6ce95d4c917f5ad5c6f4e30fdd",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 2,
+            "status": "completed",
+            "wall_seconds": 0.6692857499001548,
+            "rank_wall_seconds": [
+              0.6692857499001548,
+              0.6692850840045139
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "execute_seconds": 0.4456218749983236,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236305,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ],
+                "before": [
+                  5.36865234375,
+                  5.2685546875,
+                  5.31689453125
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "execute_seconds": 0.4456218749983236,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236305,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.6692857499001548,
+                  0.6692850840045139
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6692857499001548
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 2,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-on"
+            },
+            "raw_sha256": "0a931432e3a17ceda0f351b90c8366bcebf7d0bf3a00e886d51147eadb81465d",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 3,
+            "status": "completed",
+            "wall_seconds": 0.6822341249790043,
+            "rank_wall_seconds": [
+              0.6822341249790043,
+              0.6822315000463277
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "execute_seconds": 0.4519408750347793,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236310,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ],
+                "before": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "execute_seconds": 0.4519408750347793,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236310,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.6822341249790043,
+                  0.6822315000463277
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6822341249790043
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 3,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-on"
+            },
+            "raw_sha256": "c4f8b169cc4b2ad4e8a95deb7f1e97e3708a6c16fdf897e008d8d317573a950d",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 4,
+            "status": "completed",
+            "wall_seconds": 0.6810939579736441,
+            "rank_wall_seconds": [
+              0.6810934999957681,
+              0.6810939579736441
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "execute_seconds": 0.44751899992115796,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236307,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ],
+                "before": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "execute_seconds": 0.44751899992115796,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236307,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.6810934999957681,
+                  0.6810939579736441
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6810939579736441
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 4,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-on"
+            },
+            "raw_sha256": "0e0f735b05249ea19573e6d41489fe12f5345e52fd813edbc6ef240cada82873",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 5,
+            "status": "completed",
+            "wall_seconds": 0.6779982500011101,
+            "rank_wall_seconds": [
+              0.6779982500011101,
+              0.6779980420833454
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "execute_seconds": 0.44597000000067055,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236301,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ],
+                "before": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "execute_seconds": 0.44597000000067055,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236301,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.6779982500011101,
+                  0.6779980420833454
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.6779982500011101
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 5,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-on"
+            },
+            "raw_sha256": "43872400c9cfa56fdd05195e9b34e3732436300c6b1166ea2679ea1c0b2b39d6",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 6,
+            "status": "completed",
+            "wall_seconds": 0.679345624987036,
+            "rank_wall_seconds": [
+              0.679345624987036,
+              0.6793453749269247
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "execute_seconds": 0.44606529094744474,
+              "managed_peak_bytes_max": 419072,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 236304,
+              "send_bytes_sum": 256,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ],
+                "before": [
+                  5.4990234375,
+                  5.296875,
+                  5.32666015625
+                ]
+              },
+              "case_manifest_hash": "aebb580207671d52a258f8c5aa61817106f4d3beb6709c5c71309d6682e25d2b",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "execute_seconds": 0.44606529094744474,
+                  "managed_peak_bytes_max": 419072,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 236304,
+                  "send_bytes_sum": 256,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.679345624987036,
+                  0.6793453749269247
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.679345624987036
+              },
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 6,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-on"
+            },
+            "raw_sha256": "a7fad47311d29bb846781458e8ec7c56daa2c892c6f4f8096ea2bf92abc8885c",
+            "reason": "",
+            "validation_errors": []
+          }
+        ]
+      }
+    ],
+    "comparisons": [
+      {
+        "baseline": "collector-off",
+        "variant": "collector-on",
+        "axis": "completion_collection",
+        "matched_pairs": 7,
+        "difference": {
+          "count": 7,
+          "median": 0.011985874967649579,
+          "p95": 0.026895353791769588,
+          "min": 0.003369542071595788,
+          "max": 0.028477665968239307,
+          "variation": 2.094809428966303
+        },
+        "ratio": {
+          "count": 7,
+          "median": 1.0181563425904376,
+          "p95": 1.0411077700336948,
+          "min": 1.0050721792224038,
+          "max": 1.0436361554516684,
+          "variation": 0.03787628148654314
+        },
+        "difference_ci95": [
+          0.005716582993045449,
+          0.023203292046673596
+        ],
+        "claim": "observed-direction-only",
+        "diagnostics": [],
+        "scope_mismatches": 0,
+        "paired_metrics": {
+          "completion_collector_pool_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "completion_observations_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 7.0,
+              "p95": 7.0,
+              "min": 7.0,
+              "max": 7.0,
+              "variation": 0.0
+            },
+            "ratio": null,
+            "difference_ci95": [
+              7.0,
+              7.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "execute_seconds": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.013176457956433296,
+              "p95": 0.021678933105431494,
+              "min": 0.00510854204185307,
+              "max": 0.023249082965776324,
+              "variation": 1.3767388006627597
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0303365585531417,
+              "p95": 1.0506019687661778,
+              "min": 1.011587635865257,
+              "max": 1.0542326291193234,
+              "variation": 0.04138938184815166
+            },
+            "difference_ci95": [
+              0.008931456948630512,
+              0.018015250097960234
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "managed_peak_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "read_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "scratch_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": -1.0,
+              "p95": 5.299999999999994,
+              "min": -9.0,
+              "max": 8.0,
+              "variation": -17.0
+            },
+            "ratio": {
+              "count": 7,
+              "median": 0.9999957680735001,
+              "p95": 1.000022428947187,
+              "min": 0.9999619144344294,
+              "max": 1.000033854982184,
+              "variation": 7.194085220289985e-05
+            },
+            "difference_ci95": [
+              -8.0,
+              -1.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "send_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "write_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          }
+        }
+      }
+    ],
+    "planned_order": [
+      [
+        "collector-on",
+        0
+      ],
+      [
+        "collector-off",
+        0
+      ],
+      [
+        "collector-off",
+        1
+      ],
+      [
+        "collector-on",
+        1
+      ],
+      [
+        "collector-on",
+        2
+      ],
+      [
+        "collector-off",
+        2
+      ],
+      [
+        "collector-off",
+        3
+      ],
+      [
+        "collector-on",
+        3
+      ],
+      [
+        "collector-on",
+        4
+      ],
+      [
+        "collector-off",
+        4
+      ],
+      [
+        "collector-off",
+        5
+      ],
+      [
+        "collector-on",
+        5
+      ],
+      [
+        "collector-on",
+        6
+      ],
+      [
+        "collector-off",
+        6
+      ]
+    ],
+    "extrapolation": "none",
+    "predictive_interval": false,
+    "case": {
+      "source": {
+        "hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+        "recipe": {
+          "injection": null,
+          "recipe": [
+            [
+              "H",
+              [
+                3
+              ],
+              null
+            ],
+            [
+              "RY",
+              [
+                0
+              ],
+              0.07
+            ],
+            [
+              "RZ",
+              [
+                1
+              ],
+              0.1
+            ],
+            [
+              "RY",
+              [
+                0
+              ],
+              0.07
+            ],
+            [
+              "RZ",
+              [
+                1
+              ],
+              0.1
+            ],
+            [
+              "RY",
+              [
+                0
+              ],
+              0.07
+            ],
+            [
+              "RZ",
+              [
+                1
+              ],
+              0.1
+            ],
+            [
+              "RY",
+              [
+                0
+              ],
+              0.07
+            ],
+            [
+              "RZ",
+              [
+                1
+              ],
+              0.1
+            ]
+          ]
+        }
+      },
+      "initial_state": {
+        "kind": "initial-one"
+      },
+      "binding": {
+        "kind": "empty"
+      },
+      "exact_witness": {
+        "kind": "none"
+      },
+      "observable": {
+        "Z": 0
+      },
+      "endpoint": "construct+forward+state-validation+checkpoint+close+cleanup",
+      "n": 4,
+      "b": 2,
+      "ranks": 2,
+      "resources": {
+        "disk_per_rank_bytes": 67108864,
+        "ram_per_rank_bytes": 8388608,
+        "scope": "same-host",
+        "threads": 1
+      },
+      "backend": "buffered",
+      "build": {
+        "lock": "850aa96ac1d868f27530f00f8ef8c9dcf954c60cdaa881ba2d8c2dabb2f6540b",
+        "machine": "arm64",
+        "mpi": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+        "platform": "macOS-26.7.1-arm64-arm-64bit",
+        "python": "3.12.13 (main, Mar  3 2026, 15:35:03) [Clang 21.1.4 ]",
+        "source": "2d7419fb04cd91d5734a0de47d8c8562af8c3507439128e9bda2951f1cedd050",
+        "thread_environment": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": "1",
+          "VECLIB_MAXIMUM_THREADS": "1"
+        },
+        "worker": "442c7616c302aa09344a01399d52019fd33e1a0779c1c0afcefe61766ac48f6c"
+      },
+      "seed": 1,
+      "tolerances": {
+        "atol": 1e-10,
+        "rtol": 1e-10
+      },
+      "warmups": 2,
+      "trials": 7,
+      "budget_seconds": 179.99999554199167
+    },
+    "warmup_rows": [
+      {
+        "variant": "collector-on",
+        "index": 0,
+        "wall_seconds": 1.3174861250445247,
+        "status": "completed",
+        "reason": ""
+      },
+      {
+        "variant": "collector-off",
+        "index": 0,
+        "wall_seconds": 0.6578132919967175,
+        "status": "completed",
+        "reason": ""
+      },
+      {
+        "variant": "collector-off",
+        "index": 1,
+        "wall_seconds": 0.6517088330583647,
+        "status": "completed",
+        "reason": ""
+      },
+      {
+        "variant": "collector-on",
+        "index": 1,
+        "wall_seconds": 0.6753538330085576,
+        "status": "completed",
+        "reason": ""
+      }
+    ],
+    "scope": "same-host",
+    "injection": null,
+    "pilot_positive_gain_verified": false
+  },
+  "schema_version": 1,
+  "kind": "phase4-followup-campaign",
+  "scope": "same-host",
+  "ranks": 2,
+  "backend": "buffered",
+  "build": {
+    "source": "2d7419fb04cd91d5734a0de47d8c8562af8c3507439128e9bda2951f1cedd050",
+    "worker": "442c7616c302aa09344a01399d52019fd33e1a0779c1c0afcefe61766ac48f6c",
+    "lock": "850aa96ac1d868f27530f00f8ef8c9dcf954c60cdaa881ba2d8c2dabb2f6540b",
+    "python": "3.12.13 (main, Mar  3 2026, 15:35:03) [Clang 21.1.4 ]",
+    "platform": "macOS-26.7.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "mpi": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+    "thread_environment": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1"
+    }
+  },
+  "cluster_used": false,
+  "unmeasured_groups": [
+    "cross-host",
+    "storage-mpi-positive-adaptation",
+    "full-control-migration",
+    "large-state-paired",
+    "tile-paired",
+    "cache-fairness-paired",
+    "lifecycle-fault-matrix"
+  ]
+}

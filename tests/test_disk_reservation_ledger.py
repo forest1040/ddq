@@ -1,5 +1,7 @@
 """Persistent disk reservation behavior and bounded ledger admission."""
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -122,3 +124,54 @@ def test_reconciliation_evidence_is_bounded(tmp_path):
         budget.reconcile(key, materialized_bytes=0, evidence='e' * 257)
     budget.release(key)
     budget.close()
+
+
+def test_child_process_crash_keeps_partial_charge_until_explicit_single_recovery(tmp_path):
+    ledger = tmp_path / 'ledger.sqlite'
+    partial = tmp_path / 'partial-extent.bin'
+    script = """\
+import os, sys
+from svsim.disk_budget import DiskBudget
+ledger, root, output = sys.argv[1:]
+budget = DiskBudget(ledger, [root], usage=lambda: 0, free=lambda: 10000)
+key = budget.reserve(100, operation='partial-extent', owner='rank-0', generation='crash-1', writing=True)
+budget.materialize(key, 40)
+with open(output, 'wb') as stream:
+    stream.write(b'x' * 40)
+    stream.flush()
+    os.fsync(stream.fileno())
+print(key, flush=True)
+os._exit(0)
+"""
+    child = subprocess.run([sys.executable, '-c', script, str(ledger), str(tmp_path), str(partial)],
+                           cwd=Path(__file__).resolve().parents[1], capture_output=True,
+                           text=True, timeout=30)
+    assert child.returncode == 0, child.stderr
+    key = child.stdout.strip()
+    assert len(key) == 32
+    assert partial.stat().st_size == 40
+
+    recovered = DiskBudget(ledger, [tmp_path], quota_bytes=100,
+                           usage=lambda: partial.stat().st_size, free=lambda: 10000)
+    row = recovered.reservation(key)
+    assert row['state'] == 'WRITING'
+    assert row['materialized_bytes'] == 40
+    assert recovered.reserved_bytes == 60
+    with pytest.raises(ValueError, match='erase'):
+        recovered.reconcile(key, materialized_bytes=39, evidence='inventory:partial-extent')
+    assert recovered.reserved_bytes == 60
+
+    recovered.reconcile(key, materialized_bytes=40,
+                        evidence='owner-exited;inventory:partial-extent;bytes=40')
+    assert recovered.reserved_bytes == 0
+    row = recovered.reservation(key)
+    assert row['state'] == 'RECONCILED'
+    assert row['materialized_bytes'] == 40
+    assert recovered.snapshot()['states']['RECONCILED']['materialized_bytes'] == 40
+    with pytest.raises(DiskAdmissionError, match='quota'):
+        recovered.reserve(61, operation='would-overbook-partial-extent')
+    with pytest.raises(DiskAdmissionError, match='already terminal'):
+        recovered.reconcile(key, materialized_bytes=40,
+                             evidence='duplicate-recovery-attempt')
+    assert recovered.reserved_bytes == 0
+    recovered.close()

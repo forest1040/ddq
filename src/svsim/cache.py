@@ -3,6 +3,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass
 import mmap
+import json
 import numpy as np
 from .transport import _buffer_address
 
@@ -24,6 +25,66 @@ class MemoryBudget:
     def release(self, count):
         if not 0 <= count <= self.used: raise RuntimeError('Unbalanced RAM reservation')
         self.used -= count
+
+
+class ManagedMetadata:
+    """Bounded estimated metadata charges against the shared managed-RAM budget.
+
+    Charges use conservative fixed overhead and encoded-size multipliers. They
+    are capacity controls, not a measurement or guarantee of process RSS.
+    """
+    MAX_ALLOCATIONS = 512
+    MAX_KEY_LENGTH = 128
+
+    def __init__(self, budget):
+        self.budget = budget
+        self.allocations = {}
+        self.closed = False
+
+    @staticmethod
+    def conservative_size(value):
+        encoded = json.dumps(value, sort_keys=True, separators=(',', ':'),
+                             ensure_ascii=True, allow_nan=False).encode('ascii')
+        return 4096 + 8 * len(encoded)
+
+    def reserve(self, key, count):
+        if self.closed: raise RuntimeError('Metadata accounting is closed')
+        if not isinstance(key, str) or not key or len(key) > self.MAX_KEY_LENGTH:
+            raise ValueError('Invalid metadata allocation key')
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            raise ValueError('Metadata allocation must be a nonnegative integer')
+        if key not in self.allocations and len(self.allocations) >= self.MAX_ALLOCATIONS:
+            raise MemoryError('Managed metadata allocation capacity exceeded')
+        previous = self.allocations.get(key, 0)
+        delta = count - previous
+        if delta > 0:
+            self.budget.reserve(delta)
+        elif delta < 0:
+            self.budget.release(-delta)
+        if count:
+            self.allocations[key] = count
+        else:
+            self.allocations.pop(key, None)
+        return True
+
+    def release(self, key):
+        previous = self.allocations.pop(key, 0)
+        if previous:
+            self.budget.release(previous)
+        return previous
+
+    @property
+    def used(self):
+        return sum(self.allocations.values())
+
+    def close(self):
+        if self.closed:
+            return
+        amount = self.used
+        self.allocations.clear()
+        if amount:
+            self.budget.release(amount)
+        self.closed = True
 
 
 class BufferLease:

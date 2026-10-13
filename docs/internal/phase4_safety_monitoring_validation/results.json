@@ -1,0 +1,174 @@
+{
+  "kind": "phase4-completion-monitor-results",
+  "scope": "same-host",
+  "cluster_used": false,
+  "source_hash": "2d7419fb04cd91d5734a0de47d8c8562af8c3507439128e9bda2951f1cedd050",
+  "worker_hash": "442c7616c302aa09344a01399d52019fd33e1a0779c1c0afcefe61766ac48f6c",
+  "measured_trials": 84,
+  "warmup_trials": 24,
+  "cases": [
+    {
+      "case": "buffered-p1",
+      "raw": "mac-monitor-20261014/buffered-p1.json",
+      "sha256": "8156808787f84889d0594e6406a3b417736a07d8a9cf9dc067d091558028ac2d",
+      "backend_resolved": "buffered",
+      "ranks": 1,
+      "collector_pool_bytes_per_rank": 73728,
+      "managed_peak_bytes_per_rank_max": 550144,
+      "primary_medians_seconds": {
+        "collector-off": 0.2759945000289008,
+        "collector-on": 0.27792450005654246
+      },
+      "paired_difference_ci95_seconds": [
+        0.0007864170474931598,
+        0.0032096250215545297
+      ],
+      "claim": "observed-direction-only",
+      "execute_medians_seconds": {
+        "collector-off": 0.19311087497044355,
+        "collector-on": 0.19467799994163215
+      },
+      "execute_paired_difference_ci95_seconds": [
+        0.0010875840671360493,
+        0.0031687080627307296
+      ]
+    },
+    {
+      "case": "buffered-p2",
+      "raw": "mac-monitor-20261014/buffered-p2.json",
+      "sha256": "0ff8eafce7b887b720a545e3db32d6289fdd0f4cbb7812955dadcf2e7eb0b078",
+      "backend_resolved": "buffered",
+      "ranks": 2,
+      "collector_pool_bytes_per_rank": 73728,
+      "managed_peak_bytes_per_rank_max": 419072,
+      "primary_medians_seconds": {
+        "collector-off": 0.6643184169661254,
+        "collector-on": 0.679345624987036
+      },
+      "paired_difference_ci95_seconds": [
+        0.005716582993045449,
+        0.023203292046673596
+      ],
+      "claim": "observed-direction-only",
+      "execute_medians_seconds": {
+        "collector-off": 0.4347796250367537,
+        "collector-on": 0.44751899992115796
+      },
+      "execute_paired_difference_ci95_seconds": [
+        0.008931456948630512,
+        0.018015250097960234
+      ]
+    },
+    {
+      "case": "buffered-p4",
+      "raw": "mac-monitor-20261014/buffered-p4.json",
+      "sha256": "1669d61b41e430d37ed6a6b785903a6726b27cd67465bdc540580ee5d456ccd4",
+      "backend_resolved": "buffered",
+      "ranks": 4,
+      "collector_pool_bytes_per_rank": 73728,
+      "managed_peak_bytes_per_rank_max": 337152,
+      "primary_medians_seconds": {
+        "collector-off": 2.4121763749280944,
+        "collector-on": 2.438012291910127
+      },
+      "paired_difference_ci95_seconds": [
+        -0.00529787503182888,
+        0.06482491688802838
+      ],
+      "claim": "unconfirmed",
+      "execute_medians_seconds": {
+        "collector-off": 1.5102568750735372,
+        "collector-on": 1.5212408329825848
+      },
+      "execute_paired_difference_ci95_seconds": [
+        -0.018178374972194433,
+        0.03718937502708286
+      ]
+    },
+    {
+      "case": "direct-p1",
+      "raw": "mac-monitor-20261014/direct-p1.json",
+      "sha256": "04bc8f56f7450758967b153bba2ed02e960238fe557b286f9568723bd40abc4e",
+      "backend_resolved": "macos-f-nocache",
+      "ranks": 1,
+      "collector_pool_bytes_per_rank": 73728,
+      "managed_peak_bytes_per_rank_max": 550144,
+      "primary_medians_seconds": {
+        "collector-off": 0.2987694999901578,
+        "collector-on": 0.29328274994622916
+      },
+      "paired_difference_ci95_seconds": [
+        -0.008693084120750427,
+        0.013591625029221177
+      ],
+      "claim": "unconfirmed",
+      "execute_medians_seconds": {
+        "collector-off": 0.20713383296970278,
+        "collector-on": 0.20650129194837064
+      },
+      "execute_paired_difference_ci95_seconds": [
+        -0.007045916048809886,
+        0.013511834084056318
+      ]
+    },
+    {
+      "case": "direct-p2",
+      "raw": "mac-monitor-20261014/direct-p2.json",
+      "sha256": "6fbf0fb1f40ee6b6b153b445b43c0ba51f2d4e58a216d0efb7b46796dfdaf21d",
+      "backend_resolved": "macos-f-nocache",
+      "ranks": 2,
+      "collector_pool_bytes_per_rank": 73728,
+      "managed_peak_bytes_per_rank_max": 419072,
+      "primary_medians_seconds": {
+        "collector-off": 0.7050673329504207,
+        "collector-on": 0.7024250000249594
+      },
+      "paired_difference_ci95_seconds": [
+        -0.014005625038407743,
+        0.0043420420261099935
+      ],
+      "claim": "unconfirmed",
+      "execute_medians_seconds": {
+        "collector-off": 0.47727820894215256,
+        "collector-on": 0.4737984170205891
+      },
+      "execute_paired_difference_ci95_seconds": [
+        -0.009963999036699533,
+        0.003940124879591167
+      ]
+    },
+    {
+      "case": "direct-p4",
+      "raw": "mac-monitor-20261014/direct-p4.json",
+      "sha256": "34c09772bed2c26866dd8a3f01054dae93f36afbf2e52c0765545e915f2fed1c",
+      "backend_resolved": "macos-f-nocache",
+      "ranks": 4,
+      "collector_pool_bytes_per_rank": 73728,
+      "managed_peak_bytes_per_rank_max": 337152,
+      "primary_medians_seconds": {
+        "collector-off": 2.4517517080530524,
+        "collector-on": 2.4562123330542818
+      },
+      "paired_difference_ci95_seconds": [
+        -0.016578333103097975,
+        0.051847832975909114
+      ],
+      "claim": "unconfirmed",
+      "execute_medians_seconds": {
+        "collector-off": 1.5309073330136016,
+        "collector-on": 1.5389210829744115
+      },
+      "execute_paired_difference_ci95_seconds": [
+        -0.026120376074686646,
+        0.05529887496959418
+      ]
+    }
+  ],
+  "scope_limits": [
+    "completion collector and snapshot only",
+    "trace and legacy Guard stay active",
+    "managed pool kept equal across variants",
+    "no extrapolation or production envelope",
+    "external load and OS cache uncontrolled"
+  ]
+}

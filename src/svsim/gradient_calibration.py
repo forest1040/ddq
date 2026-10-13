@@ -107,6 +107,7 @@ class GradientTrialObservation:
     raw_hash: str = ""
     context_before_hash: str | None = None
     context_after_hash: str | None = None
+    resources_measured: bool = False
 
 
 @dataclass(frozen=True)
@@ -221,6 +222,7 @@ def calibrate_gradient_methods(
             error = None
             success = validated = False
             ram = disk = None
+            resources_measured = False
             runner_elapsed = 0.0
             context_before_hash = context_after_hash = None
             try:
@@ -244,11 +246,14 @@ def calibrate_gradient_methods(
                     success = validated
                     if resource_probe is not None:
                         measured = resource_probe(trial, method)
+                        if not isinstance(measured, Mapping):
+                            raise ValueError("resource probe must return a mapping")
                         ram, disk = measured.get("peak_ram_bytes"), measured.get("peak_disk_bytes")
                     if ram is not None and (isinstance(ram, bool) or not isinstance(ram, int) or ram < 0):
                         raise ValueError("resource probe returned invalid peak_ram_bytes")
                     if disk is not None and (isinstance(disk, bool) or not isinstance(disk, int) or disk < 0):
                         raise ValueError("resource probe returned invalid peak_disk_bytes")
+                    resources_measured = ram is not None and disk is not None
                 after_disk = _tree_bytes(scratch)
                 if after_disk is not None:
                     disk = max(disk or 0, after_disk)
@@ -273,7 +278,7 @@ def calibrate_gradient_methods(
             row = GradientTrialObservation(method, repetition, warmup, elapsed, validated,
                                            success, ref, elapsed-runner_elapsed,
                                            runner_elapsed, ram, disk, error, "",
-                                           context_before_hash, context_after_hash)
+                                           context_before_hash, context_after_hash, resources_measured)
             raw_fields = asdict(row)
             raw_fields.pop("raw_hash", None)
             row_hash = hashlib.sha256(json.dumps(raw_fields, sort_keys=True, separators=(",", ":"),
@@ -323,8 +328,12 @@ def calibrate_gradient_methods(
                         declaration.get("held_out_count") != len(refs) or
                         declaration.get("held_out_success_count") != len(held_rows) or
                         declaration.get("held_out_coverage") != coverage or coverage < confidence or
+                        any(not row.resources_measured or row.peak_ram_bytes is None or row.peak_disk_bytes is None
+                            for row in held_rows) or
                         any(isinstance(v, bool) or not isinstance(v, int) or v < 0
                             for v in (resource_ram, resource_disk)) or
+                        any(resource_ram < row.peak_ram_bytes or resource_disk < row.peak_disk_bytes
+                            for row in held_rows) or
                         set(refs).intersection(training_refs) or
                         declaration.get("validation") != "held-out" or
                         not isinstance(declaration.get("method"), str) or not declaration["method"]):
@@ -346,12 +355,14 @@ def calibrate_gradient_methods(
                                   "resource_estimates_are_observed_peaks_not_guarantees": True}
     for method in spec.methods:
         measured = [row for row in frozen_rows if row.method == method and not row.warmup and row.success]
+        ram_peaks = [row.peak_ram_bytes for row in measured if row.peak_ram_bytes is not None]
+        disk_peaks = [row.peak_disk_bytes for row in measured if row.peak_disk_bytes is not None]
         diagnostic[method] = {
             "successful_repetitions": len(measured),
             "wall_seconds_min": min((row.wall_seconds for row in measured), default=None),
             "wall_seconds_max": max((row.wall_seconds for row in measured), default=None),
-            "peak_ram_bytes": max((row.peak_ram_bytes or 0 for row in measured), default=None),
-            "peak_disk_bytes": max((row.peak_disk_bytes or 0 for row in measured), default=None),
+            "peak_ram_bytes": max(ram_peaks) if len(ram_peaks) == len(measured) and measured else None,
+            "peak_disk_bytes": max(disk_peaks) if len(disk_peaks) == len(measured) and measured else None,
         }
     report = GradientCalibrationReport(_freeze(spec.context), identity, frozen_rows, diagnostic, certified)
     if len(json.dumps(report.to_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False).encode()) > 4 * 1024 * 1024:

@@ -224,13 +224,16 @@ def _share_child_budget(parent, child):
     old_budget.release(charge)
     child.budget = child.local.budget = parent.budget
     child.cache.budget = parent.budget
+    cache_metadata=getattr(child.cache,'metadata',None)
+    if cache_metadata is not None:cache_metadata.budget=parent.budget
     child.io_engine.budget = parent.budget
     for store in (child.store, child.local.store):
         if hasattr(store, "budget"):
             store.budget = parent.budget
     engine_charge = child.io_engine.metadata_bytes
     return max(0, charge - engine_charge - child.runtime._measurement_budget - child.runtime._eta_budget
-               - child.runtime._injection_budget - child.runtime._gradient_profile_budget)
+               - child.runtime._injection_budget - child.runtime._gradient_profile_budget
+               - (cache_metadata.used if cache_metadata is not None else 0))
 
 
 def _parameter_shift(sim, observable, requested, schedule):

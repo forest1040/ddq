@@ -1,0 +1,60 @@
+{
+  "kind": "phase4-followup-matrix",
+  "revision": "49fa72243fb6dc70d3b5a75503d7dc789de244cf",
+  "scope": "same-host",
+  "cluster_used": false,
+  "action": "monitor",
+  "repetitions": 7,
+  "warmup": 2,
+  "rows": [
+    {
+      "case": "buffered-p1",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "buffered-p1.json",
+      "validated": true,
+      "sha256": "8156808787f84889d0594e6406a3b417736a07d8a9cf9dc067d091558028ac2d"
+    },
+    {
+      "case": "buffered-p2",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "buffered-p2.json",
+      "validated": true,
+      "sha256": "0ff8eafce7b887b720a545e3db32d6289fdd0f4cbb7812955dadcf2e7eb0b078"
+    },
+    {
+      "case": "buffered-p4",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "buffered-p4.json",
+      "validated": true,
+      "sha256": "1669d61b41e430d37ed6a6b785903a6726b27cd67465bdc540580ee5d456ccd4"
+    },
+    {
+      "case": "direct-p1",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "direct-p1.json",
+      "validated": true,
+      "sha256": "04bc8f56f7450758967b153bba2ed02e960238fe557b286f9568723bd40abc4e"
+    },
+    {
+      "case": "direct-p2",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "direct-p2.json",
+      "validated": true,
+      "sha256": "6fbf0fb1f40ee6b6b153b445b43c0ba51f2d4e58a216d0efb7b46796dfdaf21d"
+    },
+    {
+      "case": "direct-p4",
+      "state": "COMPLETED",
+      "error": null,
+      "raw": "direct-p4.json",
+      "validated": true,
+      "sha256": "34c09772bed2c26866dd8a3f01054dae93f36afbf2e52c0765545e915f2fed1c"
+    }
+  ],
+  "elapsed_seconds": 128.99302204197738
+}

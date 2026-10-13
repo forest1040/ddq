@@ -60,13 +60,14 @@ def test_explicit_certifier_must_reference_five_held_out_raw_observations():
     report = calibrate_gradient_methods(
         spec, lambda *_: object(), lambda *_: 2.0, lambda *_: True,
         actual_context_getter=lambda *_: context,
+        resource_probe=lambda *_: {"peak_ram_bytes": 8192, "peak_disk_bytes": 32},
         envelope_certifier=lambda method, rows, key: {
             "lower_seconds": 0.0, "expected_seconds": 2.0, "upper_seconds": 3.0,
             "confidence": 0.95, "held_out_raw_refs": [row.raw_ref for row in rows],
             "method": "predeclared-heldout-validation-v1", "validation": "held-out",
             "model_id": "heldout-coverage-v1", "training_raw_refs": ["external-training-case-01"],
             "evidence": "measured", "scope": "same-host", "units": "seconds/gradient",
-            "ram_bytes": 8192, "disk_bytes": 0,
+            "ram_bytes": 8192, "disk_bytes": 32,
             "measurement": "runner", "held_out_count": len(rows),
             "held_out_success_count": len(rows),
             "held_out_coverage": sum(0 <= row.runner_seconds <= 3 for row in rows) / len(rows),
@@ -191,6 +192,7 @@ def test_certificate_rejects_false_coverage_injected_context_and_bad_clock():
                                 repetitions=5),
         lambda *_: object(), lambda *_: 1, lambda *_: True,
         actual_context_getter=lambda *_: clean_context,
+        resource_probe=lambda *_: {"peak_ram_bytes": 10, "peak_disk_bytes": 0},
         envelope_certifier=lambda method, rows, key: {**certificate(method, rows, key),
                                                        "held_out_raw_refs": [row.raw_ref for row in rows],
                                                        "held_out_coverage": 1.0},
@@ -222,6 +224,54 @@ def test_missing_certified_resource_bound_prevents_envelope():
         GradientCalibrationSpec(context, methods=("adjoint",), warmup_repetitions=0, repetitions=5),
         lambda *_: object(), lambda *_: 1, lambda *_: True,
         actual_context_getter=lambda *_: context, envelope_certifier=cert,
+    )
+    assert report.certified_envelopes == {}
+
+
+@pytest.mark.parametrize("bounds", [(8192, 32), (8191, 32), (8192, 31)])
+def test_certified_resource_envelope_must_cover_all_measured_peaks(bounds):
+    context = {"source": "resource-bounds"}
+    def cert(method, rows, key):
+        lower, upper = 0.0, 3.0
+        return {"lower_seconds": lower, "expected_seconds": 1.0, "upper_seconds": upper,
+                "confidence": .95, "held_out_raw_refs": [row.raw_ref for row in rows],
+                "training_raw_refs": ["independent"], "model_id": "resource-model",
+                "method": "heldout-v1", "validation": "held-out", "evidence": "measured",
+                "scope": "same-host", "units": "seconds/gradient", "measurement": "runner",
+                "held_out_count": len(rows), "held_out_success_count": len(rows),
+                "held_out_coverage": sum(lower <= row.runner_seconds <= upper for row in rows) / len(rows),
+                "ram_bytes": bounds[0], "disk_bytes": bounds[1]}
+    report = calibrate_gradient_methods(
+        GradientCalibrationSpec(context, methods=("adjoint",), warmup_repetitions=0, repetitions=5),
+        lambda *_: object(), lambda *_: 1, lambda *_: True,
+        actual_context_getter=lambda *_: context,
+        resource_probe=lambda *_: {"peak_ram_bytes": 8192, "peak_disk_bytes": 32},
+        envelope_certifier=cert,
+    )
+    if bounds == (8192, 32):
+        assert "adjoint" in report.certified_envelopes
+    else:
+        assert report.certified_envelopes == {}
+
+
+def test_unknown_peak_resources_cannot_be_certified():
+    context = {"source": "unknown-resource"}
+    def cert(method, rows, key):
+        return {"lower_seconds": 0, "expected_seconds": 1, "upper_seconds": 3,
+                "confidence": .95, "held_out_raw_refs": [row.raw_ref for row in rows],
+                "training_raw_refs": ["independent"], "model_id": "model", "method": "v1",
+                "validation": "held-out", "evidence": "measured", "scope": "same-host",
+                "units": "seconds/gradient", "measurement": "runner",
+                "held_out_count": len(rows), "held_out_success_count": len(rows),
+                "held_out_coverage": sum(0 <= row.runner_seconds <= 3 for row in rows) / len(rows),
+                "ram_bytes": 100, "disk_bytes": 100}
+    report = calibrate_gradient_methods(
+        GradientCalibrationSpec(context, methods=("adjoint",), warmup_repetitions=0, repetitions=5),
+        lambda *_: object(), lambda *_: 1, lambda *_: True,
+        actual_context_getter=lambda *_: context,
+        envelope_certifier=cert,
+        # Both fields missing is unknown evidence, not zero usage.
+        resource_probe=lambda *_: {},
     )
     assert report.certified_envelopes == {}
 

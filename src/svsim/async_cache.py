@@ -4,8 +4,8 @@ from time import sleep
 
 from .async_io import BackpressureError
 from .async_store_io import AsyncStoreIO
-from .cache import BlockCache, BufferLease, CacheEntry
-from .cache_cost import FutureUseSummary, resolve_cost
+from .cache import BlockCache, BufferLease, CacheEntry, ManagedMetadata
+from .cache_cost import FutureUseSummary, MAX_HINTS, MAX_CONTEXT_ITEMS, MAX_ID_LENGTH, resolve_cost
 
 
 class AsyncBlockCache(BlockCache):
@@ -18,29 +18,78 @@ class AsyncBlockCache(BlockCache):
         self.errors = []
         self.prefetch_hits = self.prefetch_submitted = 0
         self.future_use = {}
+        self.metadata = ManagedMetadata(budget)
         self.cost_summary = None
         self.cost_context = None
         self.context_getter = None
         self.cost_resolver = None
         self.cost_trace = []
         self.cost_reasons = {}
+        self.cost_trace_dropped = 0
 
     def set_future_versions(self, versions):
-        """Legacy bounded hints; retained for callers, never used as cost evidence."""
-        self.future_use.clear()
-        for ordinal, version in enumerate(versions):
-            if ordinal >= 64:
+        """Install bounded recency hints. They never become measured cost evidence."""
+        result = {}
+        iterator = iter(versions)
+        for ordinal in range(MAX_HINTS):
+            try:
+                version = next(iterator)
+            except StopIteration:
                 break
-            self.future_use.setdefault(version, ordinal)
+            if not isinstance(version, str) or not version or len(version) > MAX_ID_LENGTH:
+                return False
+            result.setdefault(version, ordinal)
+        amount = ManagedMetadata.conservative_size(result)
+        try:
+            self.metadata.reserve('legacy-future-use', amount if result else 0)
+        except MemoryError:
+            return False
+        self.future_use = result
+        return True
 
     def set_cost_hints(self, summary, *, context=(), cost_resolver=None, context_getter=None):
         """Install strict cost hints. Context must include all policy/root/layout/binding/profile versions."""
         if not isinstance(summary, FutureUseSummary):
             raise TypeError('summary must be a FutureUseSummary')
+        pairs = tuple(sorted(dict(context).items()))
+        if len(pairs) > MAX_CONTEXT_ITEMS or any(
+                not isinstance(key, str) or not isinstance(value, str) or
+                not key or not value or len(key) > MAX_ID_LENGTH or len(value) > MAX_ID_LENGTH
+                for key, value in pairs):
+            raise ValueError('Cache cost context exceeds bounded limits')
+        amount = summary.managed_bytes + ManagedMetadata.conservative_size(pairs)
+        try:
+            self.metadata.reserve('cost-summary', amount)
+        except MemoryError:
+            return False
         self.cost_summary = summary
-        self.cost_context = tuple(sorted(dict(context).items()))
+        self.cost_context = pairs
         self.cost_resolver = cost_resolver
         self.context_getter = context_getter
+        return True
+
+    def clear_cost_hints(self):
+        self.metadata.release('cost-summary')
+        self.cost_summary = self.cost_context = None
+        self.cost_resolver = self.context_getter = None
+
+    def _discard_stale_hints(self, live_context):
+        if self.cost_summary is None:
+            return None
+        if self.context_getter is None:
+            reason = 'missing_context_getter'
+        else:
+            try:
+                current = tuple(sorted(dict(live_context).items())) if live_context is not None else None
+                fresh = (current is not None and current == self.cost_context and
+                         self.cost_summary.is_current(live_context))
+            except (TypeError, ValueError):
+                fresh = False
+            if fresh:
+                return None
+            reason = 'stale_context'
+        self.clear_cost_hints()
+        return reason
 
     def _cost_candidate(self, key, entry, live_context):
         summary = self.cost_summary
@@ -57,10 +106,43 @@ class AsyncBlockCache(BlockCache):
         return (score, cost.units), 'known'
 
     def _record_policy(self, reason, candidate=None):
-        self.cost_reasons[reason] = self.cost_reasons.get(reason, 0) + 1
+        if not isinstance(reason, str) or not reason or len(reason) > MAX_ID_LENGTH:
+            self.cost_trace_dropped += 1
+            return
+        if reason not in self.cost_reasons:
+            if len(self.cost_reasons) >= 32:
+                self.cost_trace_dropped += 1
+                return
+            try:
+                self.metadata.reserve('cost-reasons-pool', 4096)
+            except MemoryError:
+                self.cost_trace_dropped += 1
+                return
+            self.cost_reasons[reason] = 1
+        else:
+            self.cost_reasons[reason] = min(self.cost_reasons[reason] + 1, (1 << 31) - 1)
         if len(self.cost_trace) < 256:
-            self.cost_trace.append({'reason': reason, 'candidate': str(candidate) if candidate is not None else None,
-                                    'snapshot': self.cost_summary.snapshot_version if self.cost_summary else None})
+            candidate = str(candidate)[:MAX_ID_LENGTH] if candidate is not None else None
+            snapshot = self.cost_summary.snapshot_version if self.cost_summary else None
+            row = {'reason': reason, 'candidate': candidate, 'snapshot': snapshot}
+            try:
+                self.metadata.reserve('cost-trace-pool', 4096)
+                # conservative_size includes its fixed pool; account the encoded
+                # payload multiplier per row while charging the fixed pool once.
+                encoded_bytes = ManagedMetadata.conservative_size(row) - 4096
+                amount = 128 + encoded_bytes
+            except MemoryError:
+                self.cost_trace_dropped += 1
+                return
+            key = f'cost-trace:{len(self.cost_trace)}'
+            try:
+                self.metadata.reserve(key, amount)
+            except MemoryError:
+                self.cost_trace_dropped += 1
+                return
+            self.cost_trace.append(row)
+        else:
+            self.cost_trace_dropped += 1
 
     def poll(self):
         completed = self.engine.poll()
@@ -123,10 +205,19 @@ class AsyncBlockCache(BlockCache):
         if additional > self.budget.limit - self.store.config.metadata_reserve_bytes:
             raise MemoryError('Minimum task exceeds managed RAM budget')
         self.poll()
+        initial_context = self.context_getter() if self.context_getter is not None else None
+        stale_reason = self._discard_stale_hints(initial_context)
+        if stale_reason:
+            self._record_policy('stale_hints_discarded')
         while self.budget.used + additional > self.budget.limit:
             eligible = [k for k, e in self.entries.items() if e.pins == 0 and e.buffer.pins == 0]
-            live_context = self.context_getter() if self.context_getter is not None else None
-            evaluations = [self._cost_candidate(k, self.entries[k], live_context) for k in eligible]
+            try:
+                live_context = self.context_getter() if self.context_getter is not None else None
+            except Exception:
+                live_context = None
+            stale_reason = self._discard_stale_hints(live_context) or stale_reason
+            evaluations = ([(None, stale_reason)] * len(eligible) if stale_reason else
+                           [self._cost_candidate(k, self.entries[k], live_context) for k in eligible])
             units = {value[0][1] for value in evaluations if value[0] is not None}
             if eligible and evaluations and all(value[0] is not None for value in evaluations) and len(units) == 1:
                 # Lower retained benefit is cheaper to evict; equal cost prefers clean then LRU.
@@ -223,5 +314,19 @@ class AsyncBlockCache(BlockCache):
 
     def discard_unwritten(self):
         # Never delete a version while a write still owns its extent/buffer.
-        self.engine.drain()
-        super().discard_unwritten()
+        try:
+            self.engine.drain()
+            super().discard_unwritten()
+        finally:
+            self.close_metadata()
+
+    def close_metadata(self):
+        """Release hint/trace reservations after cache shutdown; safe to call repeatedly."""
+        if self.metadata.closed:
+            return
+        self.metadata.close()
+        self.future_use.clear()
+        self.cost_summary = self.cost_context = None
+        self.context_getter = self.cost_resolver = None
+        self.cost_trace.clear()
+        self.cost_reasons.clear()

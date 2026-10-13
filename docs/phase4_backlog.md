@@ -22,6 +22,8 @@ P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtim
 
 ## 一覧
 
+2026-10-14に[回収・cache課金・勾配資源検証・監視費用](phase4_safety_monitoring_implementation.md)を補強した。明示disk回収の二重適用拒否、共有RAMへのhint／trace課金、held-out resource upperの再検証、completion collectorのon/off対照とresolved backend取得を追加した。P4-001／007／008／009はIN_PROGRESSを維持する。collector以外を含む全monitor費用、全future計画の自動接続、認証済みauto性能、全writerのfault／host調停は残る。
+
 2026-10-14に[P4-003／005／008の先行実装](phase4_validation_implementation.md)を追加した。注入とsafe-refusal、paired report、明示勾配校正とstrict adapterをMacで検証し、3項目をIN_PROGRESSとする。関連commit件名：`Implement Phase 4 adaptive evaluation, paired reports and gradient calibration`。実costによるpositive採用／VERIFY、全比較matrix、包括admissionと認証済みauto性能は残り、Phase 4の完了を宣言しない。
 
 2026-10-14に[P4-002／004／006／007の先行実装](phase4_remaining_implementation.md)を追加した。Mac内の実MPIでsnapshotと候補合意を確認し、P=1 tile route、cache identity／unknown fallbackを検証した。4項目をIN_PROGRESSへ変更する。関連commit件名：`Implement Phase 4 remaining-work ETA, proposals, tile and cache foundations`。細粒度cost、自動safe切替、P>1 tile、cache共有／公平性／RAM課金と性能評価は残す。M2／M3の完了条件は維持する。
@@ -44,7 +46,7 @@ P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtim
 
 ### P4-001：条件一致の混合負荷校正とruntime計測
 
-completion collector、厳密profile adapter、実executorの有限mixed campaignを実装した。全stageのcondition registry、自動cost接続、overheadとcross-host校正は残る。
+completion collector、厳密profile adapter、実executorの有限mixed campaign、同じpoolを予約したcollector on/off対照とtrace由来のresolved backend取得を実装した。全stageのcondition registry、自動cost接続、全monitorのoverheadとcross-host校正は残る。
 
 - read/write/fsync、MPI、compute、queue/progress、Frame/packingを実際のtask completionから有界に収集する。
 - block／payload形状、backend、配置、同時実行条件を識別し、条件不一致のsampleをbaselineと比較しない。
@@ -103,7 +105,7 @@ P=1／local FileBlockStore／identity Frame＋empty logのaligned tile routeを�
 
 ### P4-007：Frame・Binding共有を含むfuture-aware cache費用
 
-raw／resolved identityとbounded cost hintを追加した。validated・同unit・freshnessが揃う場合のみ費用を使い、それ以外はLRUへ戻る。automatic FutureUse／actual cost、hintとtraceのRAM課金、Binding共有／公平性とpaired実測は残る。
+raw／resolved identityとbounded cost hintを追加した。validated・同unit・freshnessが揃う場合のみ費用を使い、それ以外はLRUへ戻る。hint／trace／counterは共有RAMへ課金し、stale／close時に精算する。既知のfuture sequenceを有界summaryへ変換できるが、全future計画の自動抽出／actual cost、Binding共有／公平性とpaired実測は残る。
 
 - bounded lookaheadで取得／再取得、Frame materialization、Binding間の合法なprefix共有を費用評価する。
 - stale hint、未知cost、reader/writer競合では安全なfallbackを維持する。logical amplitudeとBindingを混同しない。
@@ -111,7 +113,7 @@ raw／resolved identityとbounded cost hintを追加した。validated・同unit
 
 ### P4-008：勾配方式の自動校正と安全な選択評価
 
-明示actual calibration、strict envelope adapter、runtime attachmentと未認証fallbackを実装した。認証済みauto性能、包括admission、generator／Frame／replan／別hostは残る。
+明示actual calibration、strict envelope adapter、runtime attachmentと未認証fallbackを実装した。明示resource upperが全held-out測定peakを覆うかをcalibrator／adapter双方で再検証する。認証済みauto性能、包括admission、generator／Frame／replan／別hostは残る。
 
 三方式の数値一致と明示costによる選択は検証済み。実測costの自動校正と運用評価が残る。
 
@@ -122,7 +124,7 @@ raw／resolved identityとbounded cost hintを追加した。validated・同unit
 
 ### P4-009：SQLite書込み前のdisk admission
 
-catalog open／transaction前の予約と同SQLite VFS、ledger pool、extent・journal・trace・assetへの接続を実装した。全writerのfault／recovery、独立datasetを含むhost調停、Linux検証は残る。
+catalog open／transaction前の予約と同SQLite VFS、ledger pool、extent・journal・trace・assetへの接続を実装した。実子processの異常終了後に予約とpartial fileを保持し、明示回収の二重適用と既記録byteの減算を拒否する。全writerのfault／recovery、独立datasetを含むhost調停、Linux検証は残る。
 
 - catalog／journalの成長をtransaction前に予約し、並行rankのdataset／host／device総予算に含める。
 - commit/rollback後の予約精算と、drain用余裕の保護、容量不足時の一貫した失敗を検証する。

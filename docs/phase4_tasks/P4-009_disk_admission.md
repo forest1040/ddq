@@ -2,6 +2,10 @@
 
 状態：IN_PROGRESS（2026-10-14）。[基盤実装](../phase4_foundation_implementation.md)でcatalog／ledgerのVFSとwriter予約を追加した。全受入条件は維持する。共通契約は[全体設計](../phase4_remaining_design.md)。現行の「次回admissionでcatalog growthを観測」を、operation前の予約とenforcementへ置き換える。
 
+[追加実装](../phase4_safety_monitoring_implementation.md)で実子process異常終了後のtoken／partial file保持、active stateからの明示reconcile、二重回収と既記録byte減算の拒否を確認した。owner停止／journal／cutの外部確認はcallerの責務で、全writerのfaultとhost調停は残る。
+
+[writer監査](../phase4_writer_audit.md)にcallsite、予約／VFS enforcement、精算／回収、SQLite identityの確認範囲、未受入fault matrixを整理した。ソース監査は実fault試験の代わりにはしない。
+
 ## 設計時点（6aa8581）の現状とwriter棚卸し
 
 [disk_budget.py](../../src/svsim/disk_budget.py)はlocal SQLite ledgerでquota/free/drain予約を合算する。[storage.py](../../src/svsim/storage.py)、[async_store_io.py](../../src/svsim/async_store_io.py)はextentを予約するが、allocator/versions等のSQLが事前予約外。catalog・Phase2 rule・root/history・lease・checkpoint・GC・trace・ledger自身を対象にする。

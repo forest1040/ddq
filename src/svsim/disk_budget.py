@@ -332,16 +332,32 @@ class DiskBudget:
                     'accounting_scope':self.accounting_scope,'strict_capacity_guarantee':False}
 
     def reconcile(self, key, *, materialized_bytes, evidence, terminal_state='RECONCILED'):
+        """Explicitly settle one live reservation after external recovery checks.
+
+        This method does not infer owner death from a PID or lease and does not
+        inspect catalog cuts. The caller must supply bounded evidence from its
+        recovery procedure. Only RESERVED/WRITING rows may be settled, and the
+        state transition is conditional so concurrent or repeated recovery is
+        rejected rather than silently releasing the same token twice.
+        """
         _integer(materialized_bytes, 'materialized bytes')
         if not isinstance(evidence,str) or not evidence.strip(): raise ValueError('Explicit recovery evidence is required')
         evidence = _bounded_text(evidence, 'recovery evidence', 256)
         if terminal_state not in ('DURABLE','ROLLED_BACK','RECONCILED'): raise ValueError('Invalid terminal state')
-        row = self.reservation(key)
-        if row is None: raise KeyError(key)
-        if materialized_bytes > row['bytes']: raise ValueError('Materialized bytes exceed reservation')
         with self._ledger_transaction():
-            self.db.execute("UPDATE reservations SET materialized=?,state=?,evidence=? WHERE id=?",
-                            (materialized_bytes,terminal_state,evidence,key))
+            row = self.db.execute('SELECT bytes,materialized,state FROM reservations WHERE id=?', (key,)).fetchone()
+            if row is None: raise KeyError(key)
+            reserved, previous_materialized, state = row
+            if state not in ('RESERVED', 'WRITING'):
+                raise DiskAdmissionError('Reservation is already terminal; recovery was already applied')
+            if materialized_bytes > reserved: raise ValueError('Materialized bytes exceed reservation')
+            if materialized_bytes < previous_materialized:
+                raise ValueError('Recovery cannot erase previously materialized byte accounting')
+            changed = self.db.execute(
+                "UPDATE reservations SET materialized=?,state=?,evidence=? WHERE id=? AND state IN ('RESERVED','WRITING')",
+                (materialized_bytes,terminal_state,evidence,key)).rowcount
+            if changed != 1:
+                raise DiskAdmissionError('Reservation changed during recovery')
 
     def release(self, key):
         # Idempotent for old callers; completed tokens are removed only at this
