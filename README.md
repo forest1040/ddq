@@ -95,9 +95,11 @@ uv run --locked --extra mpi pytest -q
 
 保存先は毎回新しいディレクトリを指定します。`LocalDevelopmentRunner`はMacの有限job queue、`PBSAdapter`はscript生成だけを提供し、クラスタへの自動投入は行いません。
 
-## Phase 5：Resource Estimatorと実機ベンチマークの設計
+## Phase 5：計測・静的推定の基盤
 
-[Phase 5設計書](docs/phase5_design.md)に、条件付きhardware profile、svbench／svsim estimateのCLI案、RAM／disk／時間の推定、parameter／gradient比較、32〜36Q実測と40／50Q dry-runの開発順をまとめています。まず計測・静的推定の基盤を整え、Phase 4のETA・適応制御の残件へ接続します。新CLIと統合推定器は未実装です。
+[Phase 5設計書](docs/phase5_design.md)に沿って、`svbench probe/all`、`svsim register/estimate`、条件付きprofileとraw trial、RAM／disk／trafficの静的reference、40／50Qの状態を確保しない解析を実装しました。[使い方と実装範囲](docs/phase5_implementation.md)、[Mac計測](docs/phase5_benchmark.md)を参照してください。未校正の総実行時間はnullで返し、容量・実行対応・coverageを別々に表示します。統合時間評価、大規模実測、Phase 4のETA・適応制御への接続は残件です。
+
+Phase 5の詳細profile／rawにもlocal path・ソフトウェア構成が含まれます。`docs/internal/phase5_mac_calibration/`は内部資料として扱い、リポジトリを外部共有する際には非公開化または匿名化exportの対象にします。
 
 ## スライドのビルド
 

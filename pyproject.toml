@@ -8,6 +8,10 @@ dependencies = [
     "numpy>=2.5.4",
 ]
 
+[project.scripts]
+svbench = "svsim.cli:svbench_main"
+svsim = "svsim.cli:svsim_main"
+
 [project.optional-dependencies]
 mpi = ["mpi4py>=4.1.1"]
 

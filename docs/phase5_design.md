@@ -1,7 +1,7 @@
 # Phase 5 設計書：Resource Estimatorと実機ベンチマーク
 
 - 作成日：2026-10-13。
-- 状態：設計。以下の新CLI、schema、統合推定器、校正campaignは未実装。本設計の作成では計測・クラスタ接続・job投入を行わない。
+- 状態：計測・静的推定の初期基盤を実装済み。[実装範囲と残件](phase5_implementation.md)、[Mac計測](phase5_benchmark.md)を参照。以下には今後追加する全Phase 5の設計も含む。総時間モデル／大規模実測／適応接続は未完了。クラスタ接続・job投入は今回の基盤検証では行っていない。
 - 対応仕様：[開発計画 Phase 5](../plan/distributed_quantum_circuit_simulator_development.md#phase-5resource-estimatorと実機ベンチマーク)、同計画§4、§13、§14、§19。
 - 前提：[Phase 4実装](phase4_implementation.md)、[Phase 4 backlog](phase4_backlog.md)、[再計測とQulacs比較](slides/performance_remeasurement.md)、[量子化学最適化の検討](quantum_chemistry_optimization.md)。
 - Pythonはuv。MacのMPI・local schedulerを開発環境とし、Linux・実複数nodeの評価はPBS割当内で行う。site固有情報は[内部計画](internal/lab_cluster_execution_plan.md)に分離する。

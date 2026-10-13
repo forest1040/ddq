@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "workload",
+  "qubits": 16,
+  "dtype": "complex128",
+  "initial_state": "zero",
+  "policies": {"storage": "ram", "frame": "materialize", "swap": "S0"},
+  "operations": [
+    {"kind": "H", "targets": [0]},
+    {"kind": "RX", "targets": [0], "angle": 0.37},
+    {"kind": "PAULI_ROT", "targets": [0, 1, 2], "paulis": ["Y", "X", "Z"], "angle": 0.37}
+  ]
+}

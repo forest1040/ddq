@@ -8,6 +8,8 @@
 
 [Phase 5設計書](phase5_design.md)で共通profile・校正・静的推定を先行整備し、P4-001／002／003／004／005／007／008へ接続する。容量拡大前にP4-009、必要な転置経路にP4-006を解消する。設計書の作成だけでは本backlogの状態を変更しない。
 
+[Phase 5基盤実装](phase5_implementation.md)で不変profile、完全一致cell、Macの有限mixed計測、容量referenceとstate-free解析を整備した。P4-001のruntime計測とMPI／Frame／metadataの共通化、P4-002以降への接続は引き続きOPEN。全項目の完了状態は変更していない。
+
 状態は `OPEN`、`IN_PROGRESS`、`BLOCKED`、`DONE`。優先度P0は完了判定の中心となる課題、P1は設計への適合・評価の補完、P2はoptional実機検証または移行対応。優先度だけを理由に完了条件から除外しない。
 
 着手時に担当・関連commitを追記し、完了時はテスト／reportへのリンクと、測定条件・結果を記録する。scopeを縮小する場合は設計書と開発計画に反映し、項目を黙ってDONEにしない。以下はすべて担当未定。
