@@ -1,7 +1,7 @@
 # Phase 4 設計書：非同期実行と階層スケジューラ
 
 - 作成日：2026-10-13
-- 状態：設計。以下の新規 module、API、設定値、性能目標は未実装・未測定。
+- 状態：設計と実装方針。[実装・検証](phase4_implementation.md)、[Mac実測比較](phase4_benchmark.md)を追加した。許可後、Linux worker I/O／O_DIRECTと実2ノードの2／4 rank、PSM2／OFI／Ethernetを検証した。実装済みAPIと残る拡張・未検証範囲は実装資料で区別する。
 - 対応仕様：[開発計画 Phase 4](../plan/distributed_quantum_circuit_simulator_development.md#phase-4非同期階層スケジューラ)、同計画 §4.3〜4.12、§8、§16.3。
 - 前提：[Phase 3 実装](phase3_implementation.md)、[Phase 3 実測](phase3_benchmark.md)、[macOS/Linux I/O 資料](../ref/direct_io_linux_macos.md)。
 - 改訂：研究室クラスタ調査を反映し、node-local 保存、MPI による checkpoint／lease 管理、disk admission、Mac と PBS クラスタの検証分担を追加した。site 固有の接続先・資源・運用条件は内部計画に分離する。
@@ -275,6 +275,8 @@ MPI process loss、communication error 後の継続が保証されない状態�
 
 ## 15. 実装順と完了条件
 
+現在の未完了項目と完了証跡は[Phase 4 backlog](phase4_backlog.md)で追跡する。主要API・クラスタcorrectnessの成功だけで、以下の適応・性能評価を含む完了条件を達成したとは扱わない。
+
 | 段階 | 実装 | 必須検証 |
 |---|---|---|
 | 4A0 | owner-local placement、同期 collective checkpoint／resume／lease／GC、disk ledger、local runner | Mac の rank 別 root で他 rank の直接 open を禁止、decision 配布前後 fault、欠落 shard、disk admission。次に PBS 2 node で同じ検証 |
@@ -326,6 +328,4 @@ PBS adapter は割当内の node／CPU／memory と local scratch を検査し�
 
 公開可能な設計はこのファイルに記載し、接続先、queue の値、node 名、実容量、scratch 許可、利用規約、環境導入状況と実験 report は内部資料へ分離する。site profile を設計の固定値にせず実行時に検査し、report の公開版では匿名化する。
 
-本改訂は設計と検証計画の更新であり、ジョブ投入・環境導入を実施しない。将来の実装でクラスタを使用する場合は、内部計画の運用条件と scratch／queue 条件を解決してから段階的に実施する。
-
-この設計段階では native dependency 導入、runtime API の実装、MPI/性能実験は行わない。
+実装の初期検証はMac StudioのMPIとlocal schedulerで行う。Macのテストが終わった後、実施する資源・保存先・job内容を提示して利用者の許可を得てからクラスタを使用する。内部計画の運用条件とscratch／queue条件を確認し、段階的に実施する。Linux native dependencyの導入もこの許可とsite条件に従う。

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "scope": "same-host",
+  "hosts": [
+    "CPUcluster008",
+    "CPUcluster008",
+    "CPUcluster008",
+    "CPUcluster008"
+  ],
+  "ranks": 4,
+  "backend": "direct",
+  "elapsed_seconds_max": 21.243978340178728,
+  "expectation": -7.773656774934246e-05,
+  "expected_expectation": -7.773656774947169e-05,
+  "gradients": {
+    "adjoint": 0.08162344868110978,
+    "recompute": 0.08162344868110978,
+    "parameter-shift": 0.0816234486811099
+  },
+  "finite_difference": 0.08162344866105217,
+  "checkpoint_schema": 4,
+  "rank_metrics": [
+    {
+      "rank": 0,
+      "host": "CPUcluster008",
+      "managed_peak_bytes": 1715200,
+      "io_peak_requests": 2,
+      "mpi_peak_requests": 1,
+      "read_bytes": 16384,
+      "write_bytes": 524288,
+      "send_bytes": 5888
+    },
+    {
+      "rank": 1,
+      "host": "CPUcluster008",
+      "managed_peak_bytes": 1705984,
+      "io_peak_requests": 2,
+      "mpi_peak_requests": 1,
+      "read_bytes": 16384,
+      "write_bytes": 524288,
+      "send_bytes": 5888
+    },
+    {
+      "rank": 2,
+      "host": "CPUcluster008",
+      "managed_peak_bytes": 1715200,
+      "io_peak_requests": 2,
+      "mpi_peak_requests": 1,
+      "read_bytes": 16384,
+      "write_bytes": 524288,
+      "send_bytes": 5888
+    },
+    {
+      "rank": 3,
+      "host": "CPUcluster008",
+      "managed_peak_bytes": 1705984,
+      "io_peak_requests": 2,
+      "mpi_peak_requests": 1,
+      "read_bytes": 16384,
+      "write_bytes": 524288,
+      "send_bytes": 5888
+    }
+  ],
+  "rss_peak_bytes": [
+    76443648,
+    74764288,
+    74874880,
+    76288000
+  ],
+  "transfer_bytes": 1048576,
+  "transfer_seconds_max": [
+    0.0018039457499980927,
+    0.0006620902568101883,
+    0.00042736344039440155
+  ],
+  "transfer_median_seconds": 0.0006620902568101883,
+  "mpi_library": "Open MPI v5.0.6, package: Open MPI root@CPUcluster001 Distribution, ident: 5.0.6, repo rev: v5.0.6, Nov 15, 2024",
+  "mpi_component_request": "psm2",
+  "native_liburing_found": false
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "scope": "multi-host",
+  "hosts": [
+    "CPUcluster008",
+    "CPUcluster009"
+  ],
+  "ranks": 2,
+  "backend": "direct",
+  "elapsed_seconds_max": 10.844451172277331,
+  "expectation": -7.773656774934246e-05,
+  "expected_expectation": -7.773656774947169e-05,
+  "gradients": {
+    "adjoint": 0.08162344868110978,
+    "recompute": 0.08162344868110978,
+    "parameter-shift": 0.08162344868110982
+  },
+  "finite_difference": 0.08162344866105217,
+  "checkpoint_schema": 4,
+  "rank_metrics": [
+    {
+      "rank": 0,
+      "host": "CPUcluster008",
+      "managed_peak_bytes": 2870272,
+      "io_peak_requests": 2,
+      "mpi_peak_requests": 1,
+      "read_bytes": 32768,
+      "write_bytes": 1048576,
+      "send_bytes": 8192
+    },
+    {
+      "rank": 1,
+      "host": "CPUcluster009",
+      "managed_peak_bytes": 2870272,
+      "io_peak_requests": 2,
+      "mpi_peak_requests": 1,
+      "read_bytes": 32768,
+      "write_bytes": 1048576,
+      "send_bytes": 8192
+    }
+  ],
+  "rss_peak_bytes": [
+    89026560,
+    89325568
+  ],
+  "transfer_bytes": 1048576,
+  "transfer_seconds_max": [
+    0.0019235704094171524,
+    0.0006902767345309258,
+    0.0005239779129624367
+  ],
+  "transfer_median_seconds": 0.0006902767345309258,
+  "mpi_library": "Open MPI v5.0.6, package: Open MPI root@CPUcluster001 Distribution, ident: 5.0.6, repo rev: v5.0.6, Nov 15, 2024",
+  "mpi_component_request": "psm2",
+  "native_liburing_found": false
+}

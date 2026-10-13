@@ -44,10 +44,17 @@ class DistributedConfig:
     amplitude_store: str = 'file'
     storage_budget_bytes_per_rank: int | None = None
     frame_policy: str = 'keep'
+    storage_scope: str = 'shared'
+    disk_quota_bytes: int | None = None
+    min_free_bytes: int = 0
+    drain_reserve_bytes: int = 0
 
     def __post_init__(self):
         StorageConfig(self.directory,self.block_bits,self.ram_budget_bytes_per_rank,self.backend,self.alignment,
                       metadata_reserve_bytes=self.metadata_reserve_bytes)
+        if self.storage_scope not in {'shared','node-local'}: raise ValueError('Invalid storage scope')
+        if self.disk_quota_bytes is not None and self.disk_quota_bytes <= 0: raise ValueError('Invalid disk quota')
+        if self.min_free_bytes < 0 or self.drain_reserve_bytes < 0: raise ValueError('Invalid disk reserve')
         if self.tile_bytes < 16 or self.tile_bytes%16: raise ValueError('tile_bytes must be a positive multiple of 16')
         if self.swap_policy not in {'S0','S1'} or self.mcx_exchange not in {'auto','packed','full'}: raise ValueError('Unknown distributed policy')
         if self.amplitude_store not in {'file','ram'}: raise ValueError('Unknown amplitude store')
@@ -56,6 +63,7 @@ class DistributedConfig:
 
 
 class DistributedSimulator:
+    transport_class = MPITransport
     def __init__(self,num_qubits,config,*,comm=None,initial_state=None,initial_blocks=None,network_profile=None,storage_bandwidth=None,_create=True,_snapshot=None):
         if comm is None:
             from mpi4py import MPI
@@ -63,13 +71,15 @@ class DistributedSimulator:
         self.config,self.num_qubits = config,num_qubits
         self.comm = comm
         self.network_profile,self.storage_bandwidth = network_profile,storage_bandwidth
-        self.transport = MPITransport(comm,tile_bytes=config.tile_bytes,metadata_limit=config.metadata_reserve_bytes//2)
+        self.transport = self.transport_class(comm,tile_bytes=config.tile_bytes,metadata_limit=config.metadata_reserve_bytes//2)
         self.rank,self.size = self.transport.rank,self.transport.size
         self.local = None; self.closed = False; self.stores = {}; self.history = []
         error = None
         try:
             self.ownership = OwnershipMap(num_qubits,config.block_bits,self.size)
-            self.transport.agree({'num_qubits':num_qubits,'config':asdict(config),'schema':3})
+            common_config=asdict(config)
+            if config.storage_scope == 'node-local': common_config.pop('directory')
+            self.transport.agree({'num_qubits':num_qubits,'config':common_config,'schema':3})
             self.environment = self.transport.handshake()
             self.block_bits = config.block_bits
             self.directory = Path(config.directory)
@@ -107,12 +117,23 @@ class DistributedSimulator:
         if _create:
             self.dataset_id = self.transport.broadcast_json(uuid4().hex if self.rank == 0 else None)
             self.store_id = self.transport.broadcast_json(uuid4().hex if self.rank == 0 else None)
-            self.registry = {self.store_id:str(self.directory)}
+            self.registry = {self.store_id:self._placement_entry()}
             self._save_settings()
         else:
             settings = {k:json.loads(v) for k,v in self.store.db.execute('SELECT key,data FROM distributed_settings')}
             self.dataset_id,self.store_id,self.registry = settings['dataset_id'],settings['store_id'],settings['registry']
         self.stores[self.store_id] = self.store
+        self.disk_budget = None
+        error=None
+        try:
+            if config.storage_scope == 'node-local':
+                self._upgrade_legacy_registry()
+                self._attach_disk_budget()
+        except Exception as exc: error=str(exc)
+        try: self.transport.vote(error)
+        except Exception:
+            if self.disk_budget is not None: self.disk_budget.close()
+            self.local.close(); self.transport.close(); raise
         self.layout = QubitLayout.identity(num_qubits); self.frontier = -1; self.binding = None
         self.placement_epoch = 0
         self.root = self._new_root(basis=1)
@@ -122,10 +143,73 @@ class DistributedSimulator:
             self.store = MemoryBlockStore(storage,num_qubits,self.budget,create=False,trace=self.trace)
             self.local.store = self.store; self.local.phase2.store = self.store; self.store.phase2 = self.local.phase2
             self.cache.store = self.store; self.stores[self.store_id] = self.store
+            if self.disk_budget is not None: self.store.disk_budget = self.disk_budget
         if _snapshot is not None: self._restore(_snapshot)
         elif initial_state is not None or initial_blocks is not None: self._import(initial_state,initial_blocks)
         self.initial_state_hash = getattr(self,'initial_state_hash',content_hash({'initial-one':num_qubits}))
         self.set_network_profile(network_profile)
+
+    def _placement_entry(self):
+        if self.config.storage_scope == 'shared': return str(self.directory)
+        from .storage_placement import StoragePlacement
+        entry=None; error=None
+        try: entry=StoragePlacement.local(self.store_id,self.rank,self.local.profile.hostname,self.directory)
+        except Exception as exc: error=str(exc)
+        self.transport.vote(error)
+        entries=self.transport.control.allgather(entry.to_data())
+        self.transport.agree(content_hash(entries))
+        return entries
+
+    def _upgrade_legacy_registry(self):
+        """Upgrade a v3 cut only where its existing owner volumes are local.
+
+        Copying a shared cluster dataset to different volumes remains an
+        explicit offline operation, never an implicit shared-disk reader.
+        """
+        if all(isinstance(value,list) for value in self.registry.values()): return
+        from .storage_placement import StoragePlacement
+        self.transport.agree(sorted(self.registry))
+        entries=[]; error=None
+        try:
+            for store_id,value in sorted(self.registry.items()):
+                if isinstance(value,str):
+                    if store_id == self.store_id and Path(value).resolve() != self.directory.resolve():
+                        raise OSError('v3 owner root moved; explicit offline migration required')
+                    entries.append(StoragePlacement.local(store_id,self.rank,self.local.profile.hostname,value).to_data())
+        except Exception as exc: error=str(exc)
+        self.transport.vote(error)
+        gathered=self.transport.control.allgather(entries)
+        for store_id,value in list(self.registry.items()):
+            if isinstance(value,str): self.registry[store_id]=[p for group in gathered for p in group if p['store_id']==store_id]
+        self.transport.agree(content_hash(self.registry))
+        self._save_settings()
+
+    def _attach_disk_budget(self):
+        from .disk_budget import DiskBudget
+        from .storage_placement import StoragePlacement
+        from tempfile import gettempdir
+        entries=self.registry[self.store_id]
+        own=StoragePlacement.local(self.store_id,self.rank,self.local.profile.hostname,self.directory)
+        roots=sorted({p['root'] for value in self.registry.values() if isinstance(value,list) for p in value
+            if p['host']==own.host and p['volume_id']==own.volume_id})
+        key=content_hash({'dataset':self.dataset_id,'host':own.host,'volume':own.volume_id})
+        ledger=Path(gettempdir())/f'svsim-disk-{os.getuid()}'/f'{key}.sqlite3'
+        self.disk_budget=DiskBudget(ledger,roots,quota_bytes=self.config.disk_quota_bytes,
+            min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes)
+        self.store.disk_budget=self.disk_budget
+        if not getattr(self.local,'_disk_admission_attached',False):
+            persist=self.local._persist_assets
+            append=self.local.journal.append
+            def persist_assets():
+                amount=sum(len(a.data) for key,a in self.assets.assets.items()
+                    if not (self.store.directory/'assets'/f'{key}.bin').exists())
+                with self.disk_budget.allocation(amount,drain=getattr(self.store,'_disk_drain',False)): return persist()
+            def append_journal(kind,payload):
+                amount=len(canonical(payload).encode())+256
+                with self.disk_budget.allocation(amount,drain=getattr(self.store,'_disk_drain',False)): return append(kind,payload)
+            self.local._persist_assets=persist_assets
+            self.local.journal.append=append_journal
+            self.local._disk_admission_attached=True
 
     def set_network_profile(self,profile):
         """Collectively select a calibration and attach passive observation."""
@@ -173,6 +257,8 @@ class DistributedSimulator:
 
     def _open(self):
         if self.closed: raise ValueError('Distributed simulator is closed')
+        if getattr(self,'checkpoint_requires_recovery',None):
+            raise RuntimeError('Authoritative checkpoint committed; decision delivery failed. Resume before executing.')
 
     @contextmanager
     def _lease(self,size):
@@ -337,7 +423,9 @@ class DistributedSimulator:
     def _reader(self,store_id):
         if store_id not in self.stores:
             from .block_store import ReadOnlyBlockStore
-            storage = replace(self.local.config,directory=str(Path(self.registry[store_id])/f'rank-{self.rank:04d}'))
+            from .storage_placement import resolve_owner_root
+            root=resolve_owner_root(self.registry[store_id],self.rank,host=self.local.profile.hostname)
+            storage = replace(self.local.config,directory=str(root/f'rank-{self.rank:04d}'))
             self.stores[store_id] = ReadOnlyBlockStore(storage,self.num_qubits)
         return self.stores[store_id]
 
@@ -738,8 +826,19 @@ class DistributedSimulator:
     @classmethod
     def resume(cls,config,snapshot=None,*,comm=None):
         from .distributed_checkpoint import load_global
-        data=load_global(config.directory,snapshot)
-        return cls(data['num_qubits'],config,comm=comm,_create=False,_snapshot=data)
+        if comm is None:
+            from mpi4py import MPI
+            comm=MPI.COMM_WORLD
+        transport=MPITransport(comm,tile_bytes=config.tile_bytes,metadata_limit=config.metadata_reserve_bytes//2)
+        data=None; error=None
+        try:
+            if transport.rank == 0:
+                try: data=load_global(config.directory,snapshot)
+                except Exception as exc: error=str(exc)
+            transport.vote(error)
+            header=transport.broadcast_json({'num_qubits':data['num_qubits'],'snapshot_id':data['snapshot_id']} if transport.rank == 0 else None)
+        finally: transport.close()
+        return cls(header['num_qubits'],config,comm=comm,_create=False,_snapshot=header['snapshot_id'])
 
     def fork(self,snapshot,*,binding,directory=None):
         from .distributed_checkpoint import fork
@@ -757,9 +856,14 @@ class DistributedSimulator:
         if any(e.pins for e in self.cache.entries.values()): error='Pinned cache prohibits garbage collection'
         self.transport.vote(error)
         roots={self.root}|self.committed_roots
-        for path in (self.directory/'global/manifests').glob('*.json'):
-            from .distributed_checkpoint import _read
-            roots.add(_read(path)['root'])
+        error=None
+        try:
+            for path in (self.directory/'global/manifests').glob('*.json'):
+                from .distributed_checkpoint import _read
+                roots.add(_read(path)['root'])
+        except Exception as exc: error=str(exc)
+        self.transport.vote(error)
+        roots=set().union(*(set(r) for r in self.transport.control.allgather(sorted(roots))))
         self.transport.agree(sorted(roots))
         if hasattr(self.store,'reclaim_versions'): self._memory_reclaim(roots)
         self.cache.flush(); self.cache.clear()
@@ -797,6 +901,7 @@ class DistributedSimulator:
             for key,reader in self.stores.items():
                 if reader is not self.store: reader.close()
             self.local.close(); self.transport.close(); self.closed=True
+            if getattr(self,'disk_budget',None): self.disk_budget.close()
             if getattr(self,'lease_path',None): self.lease_path.unlink(missing_ok=True)
 
     def __enter__(self): return self

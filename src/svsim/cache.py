@@ -42,6 +42,8 @@ class BufferLease:
             raise
         self.closed = False
         self.cached = False
+        self.pins = 0
+        self._close_requested = False
 
     @staticmethod
     def allocation_cost(size, alignment):
@@ -55,7 +57,18 @@ class BufferLease:
         if readonly: array.setflags(write=False)
         return array
 
+    def acquire_pin(self):
+        if self.closed or self._close_requested: raise ValueError("Closed buffer owner")
+        self.pins += 1
+
+    def release_pin(self):
+        if self.pins <= 0: raise RuntimeError("Unbalanced buffer pin")
+        self.pins -= 1
+        if not self.pins and self._close_requested: self.close()
+
     def close(self):
+        self._close_requested = True
+        if self.pins: return
         if not self.closed:
             self.view.release()
             self.region.close()

@@ -257,6 +257,13 @@ class FileBlockStore:
         self._event('read',version,elapsed,handle=handle,segment=ref.segment,offset=ref.offset)
 
     def write_version(self, version, buffer):
+        budget=getattr(self,'disk_budget',None)
+        if budget is not None:
+            with budget.allocation(self.slot_bytes,drain=getattr(self,'_disk_drain',False)):
+                return self._write_version(version,buffer)
+        return self._write_version(version,buffer)
+
+    def _write_version(self, version, buffer):
         ref = self.ref(version)
         if ref.segment is not None: raise ValueError('Cannot overwrite immutable Block extent')
         if shutil.disk_usage(self.directory).free < self.slot_bytes: raise OSError('Insufficient disk capacity')

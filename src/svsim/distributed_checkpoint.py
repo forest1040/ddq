@@ -1,6 +1,7 @@
 """Durable rank prepare records and one authoritative global commit file."""
 from dataclasses import replace
 import json
+from contextlib import nullcontext
 import os
 from pathlib import Path
 import sqlite3
@@ -11,11 +12,13 @@ from .parameters import ParameterBinding,ExactPi
 from .layout import QubitLayout
 
 
-def atomic_json(path,data):
+def atomic_json(path,data,*,disk_budget=None):
     path=Path(path); path.parent.mkdir(parents=True,exist_ok=True)
     temporary=path.with_suffix('.'+uuid4().hex+'.tmp')
+    raw=canonical(data)+'\n'
     try:
-        with open(temporary,'w') as f: f.write(canonical(data)+'\n'); f.flush(); os.fsync(f.fileno())
+        with disk_budget.allocation(len(raw.encode()),drain=True) if disk_budget is not None else nullcontext():
+            with open(temporary,'w') as f: f.write(raw); f.flush(); os.fsync(f.fileno())
         os.replace(temporary,path)
         fd=os.open(path.parent,os.O_RDONLY)
         try: os.fsync(fd)
@@ -23,25 +26,34 @@ def atomic_json(path,data):
     finally: temporary.unlink(missing_ok=True)
 
 
+def _disk_kwargs(sim):
+    budget=getattr(sim,'disk_budget',None)
+    return {'disk_budget':budget} if budget is not None else {}
+
+
 def commit_snapshot(sim,prefix_fingerprint=None):
-    sim._open(); sim.transport.agree({'root':sim.root,'frontier':sim.frontier,'binding':sim.binding.binding_id if sim.binding else '',
+    sim._open(); sim._checkpoint_decision_durable=False
+    sim.transport.agree({'root':sim.root,'frontier':sim.frontier,'binding':sim.binding.binding_id if sim.binding else '',
         'layout':sim.layout.logical_to_physical,'placement':sim.placement_epoch})
+    version=4 if sim.config.storage_scope == 'node-local' or hasattr(sim,'_checkpoint_state') else 3
     snapshot_id=sim.transport.broadcast_json(uuid4().hex if sim.rank == 0 else None)
     prepared=None; error=None
     try:
+        sim.store._disk_drain=True
         sim.local._persist_assets(); sim.cache.flush()
         if hasattr(sim.store,'flush_to_file'): sim.store.flush_to_file()
         sim.local.journal.flush(); sim.store.flush(); sim.local.phase2.validate_root(sim.root); sim.store.seal(sim.root)
-        prepared={'schema_version':3,'snapshot_id':snapshot_id,'rank':sim.rank,'root':sim.root,
+        prepared={'schema_version':version,'snapshot_id':snapshot_id,'rank':sim.rank,'root':sim.root,
                   'frontier':sim.frontier,'store_id':sim.store_id,'journal_cursors':sim.local.journal.cursors()}
         path=sim.directory/f'rank-{sim.rank:04d}'/'manifests'/f'prepare-{snapshot_id}.json'
-        atomic_json(path,{'manifest':prepared,'checksum':content_hash(prepared)})
+        atomic_json(path,{'manifest':prepared,'checksum':content_hash(prepared)},**_disk_kwargs(sim))
         with sim.store.db:
             sim.store.db.execute('INSERT OR REPLACE INTO snapshots VALUES(?,?)',(snapshot_id,canonical(prepared)))
     except Exception as exc: error=str(exc)
+    finally: sim.store._disk_drain=False
     sim.transport.vote(error)
     prepares=sim.transport.control.allgather({'rank':sim.rank,'hash':content_hash(prepared)})
-    data={'schema_version':3,'semantics_version':3,'snapshot_id':snapshot_id,'dataset_id':sim.dataset_id,
+    data={'schema_version':version,'semantics_version':version,'snapshot_id':snapshot_id,'dataset_id':sim.dataset_id,
           'num_qubits':sim.num_qubits,'block_bits':sim.block_bits,'size':sim.size,'root':sim.root,'frontier':sim.frontier,
           'layout':sim.layout.logical_to_physical,'layout_id':sim.layout.layout_id,'placement_epoch':sim.placement_epoch,
           'binding_values':sim.binding.values if sim.binding else (),
@@ -50,14 +62,40 @@ def commit_snapshot(sim,prefix_fingerprint=None):
           'circuit_hash':sim.circuit_hash,'gates':[gate_data(g) for g in sim.sequencer.operations],
           'assets':sorted(sim.assets.assets),'registry':sim.registry,'initial_state_hash':sim.initial_state_hash,
           'history':sim.history,'prefix_fingerprint':prefix_fingerprint,'prepares':prepares}
+    if version == 4:
+        data['storage_scope']=sim.config.storage_scope
+        data['commit_decision']='COMMIT'
+        data['phase4_runtime']=getattr(sim,'_checkpoint_state',lambda: {'execution':'synchronous-S0'})()
     sim.transport.agree(content_hash(data)); error=None
+    from .checkpoint_payload import exchange_payload,decision_record
+    if version == 4:
+        data=exchange_payload(sim.transport,data if sim.rank == 0 else None,sim.directory,
+            disk_budget=getattr(sim,'disk_budget',None),budget=sim.budget,cache=sim.cache)
+    decision=decision_record(data) if version == 4 else data
+    if version == 4: sim.transport.agree(decision)
     if sim.rank == 0:
-        try: atomic_json(sim.directory/'global/manifests'/f'{snapshot_id}.json',{'manifest':data,'checksum':content_hash(data)})
+        try: atomic_json(sim.directory/'global/manifests'/f'{snapshot_id}.json',{'manifest':decision,'checksum':content_hash(decision)},**_disk_kwargs(sim))
         except Exception as exc: error=str(exc)
     sim.transport.vote(error)
+    sim._checkpoint_decision_durable=True
+    if version == 4:
+        # The coordinator file above is authoritative even if copying fails.
+        try: decision=sim.transport.broadcast_json(decision if sim.rank == 0 else None)
+        except Exception:
+            sim.checkpoint_requires_recovery=snapshot_id
+            raise
+        error=None
+        try:
+            atomic_json(sim.directory/f'rank-{sim.rank:04d}'/'manifests'/f'decision-{snapshot_id}.json',
+                {'manifest':decision,'checksum':content_hash(decision)},**_disk_kwargs(sim))
+        except Exception as exc: error='Committed decision copy failed; stop and recover: '+str(exc)
+        try: sim.transport.vote(error)
+        except Exception:
+            sim.checkpoint_requires_recovery=snapshot_id
+            raise
     sim.trace.record(snapshot_id,metadata={'path':'DISTRIBUTED_CHECKPOINT','root':sim.root,'frontier':sim.frontier,'rank':sim.rank})
     sim.committed_roots = getattr(sim,'committed_roots',set())|{sim.root}
-    return sim.transport.broadcast_json(data if sim.rank == 0 else None)
+    return data if version == 4 else sim.transport.broadcast_json(data if sim.rank == 0 else None)
 
 
 def _read(path):
@@ -75,16 +113,21 @@ def load_global(directory,snapshot=None):
         key=snapshot['snapshot_id'] if isinstance(snapshot,dict) else str(snapshot)
         candidates=[directory/'global/manifests'/f'{key}.json']
     failure=None
+    v4_history=any((directory/'rank-0000/manifests').glob('payload-*.json'))
     for path in candidates:
         try:
             data=_read(path)
-            if data.get('schema_version') != 3 or data.get('semantics_version') != 3: raise ValueError('Unsupported distributed checkpoint schema')
+            if data.get('schema_version') == 4 and 'metadata_payload' in data:
+                from .checkpoint_payload import read_payload
+                data=read_payload(directory,data)
+            if data.get('schema_version') not in {3,4} or data.get('semantics_version') != data.get('schema_version'): raise ValueError('Unsupported distributed checkpoint schema')
+            if data['schema_version'] == 4 and data.get('commit_decision') != 'COMMIT': raise OSError('Missing authoritative commit decision')
             from .ownership import OwnershipMap
             OwnershipMap(data['num_qubits'],data['block_bits'],data['size'])
             if sorted(prepare['rank'] for prepare in data['prepares']) != list(range(data['size'])):
                 raise OSError('Checkpoint requires exactly one prepare per rank')
             if isinstance(snapshot,dict) and canonical(data) != canonical(snapshot): raise ValueError('Snapshot fingerprint mismatch')
-            for prepare in data['prepares']:
+            for prepare in (data['prepares'] if data['schema_version'] == 3 else []):
                 payload=_read(directory/f"rank-{prepare['rank']:04d}"/'manifests'/f"prepare-{data['snapshot_id']}.json")
                 if (content_hash(payload) != prepare['hash'] or payload['root'] != data['root']
                     or payload['rank'] != prepare['rank'] or payload['snapshot_id'] != data['snapshot_id']
@@ -94,27 +137,73 @@ def load_global(directory,snapshot=None):
         except Exception as exc:
             failure=exc
             if snapshot is not None: raise
+            if v4_history:
+                raise OSError('Authoritative checkpoint is unreadable; refusing an older cut') from exc
     raise OSError('No valid committed distributed checkpoint') from failure
+
+
+def load_owner_global(sim,snapshot):
+    """Locate a named source cut on this coordinator's owner volumes only."""
+    if sim.rank != 0: raise ValueError('Only the coordinator reads a global decision')
+    if snapshot is None: return load_global(sim.directory,snapshot)
+    from .storage_placement import resolve_owner_root
+    roots=[sim.directory]
+    for entry in sim.registry.values():
+        root=resolve_owner_root(entry,0,host=sim.local.profile.hostname)
+        if root not in roots: roots.append(root)
+    failure=None
+    for root in roots:
+        try: return load_global(root,snapshot)
+        except FileNotFoundError as exc: failure=exc
+    raise FileNotFoundError('Checkpoint absent from coordinator owner volumes') from failure
 
 
 def restore(sim,snapshot,*,validate=True):
     data=None; error=None
     try:
-        data=load_global(sim.directory,snapshot) if validate else snapshot
-        if data['num_qubits'] != sim.num_qubits or data['block_bits'] != sim.block_bits or data['size'] != sim.size:
+        if validate and sim.rank == 0:
+            data=load_global(sim.directory,snapshot)
+        elif not validate: data=snapshot
+        if data is not None and (data['num_qubits'] != sim.num_qubits or data['block_bits'] != sim.block_bits or data['size'] != sim.size):
             raise ValueError('Checkpoint rank/dimensions mismatch; offline repartition required')
     except Exception as exc: error=str(exc)
     sim.transport.vote(error)
+    if validate:
+        version=sim.transport.broadcast_json(data['schema_version'] if sim.rank == 0 else None)
+        if version == 4:
+            from .checkpoint_payload import exchange_payload
+            data=exchange_payload(sim.transport,data if sim.rank == 0 else None,sim.directory,
+                disk_budget=getattr(sim,'disk_budget',None),budget=sim.budget,cache=sim.cache)
+        else: data=sim.transport.broadcast_json(data if sim.rank == 0 else None)
     sim.transport.agree(content_hash(data)); error=None
     try:
         if validate:
             prepared=_read(sim.directory/f'rank-{sim.rank:04d}'/'manifests'/f"prepare-{data['snapshot_id']}.json")
+            expected=next(p for p in data['prepares'] if p['rank']==sim.rank)
+            if (content_hash(prepared) != expected['hash'] or prepared['rank'] != sim.rank or prepared['root'] != data['root']
+                or prepared['frontier'] != data['frontier'] or prepared['schema_version'] != data['schema_version']
+                or prepared['snapshot_id'] != data['snapshot_id'] or prepared['store_id'] != sim.store_id):
+                raise OSError('Rank prepare mismatch')
+            if data['schema_version'] == 4:
+                from .storage_placement import resolve_owner_root
+                if isinstance(data['registry'][sim.store_id],list):
+                    root=resolve_owner_root(data['registry'][sim.store_id],sim.rank,host=sim.local.profile.hostname)
+                    if root.resolve() != sim.directory.resolve(): raise OSError('Owner root changed; explicit migration required')
+                copy=sim.directory/f'rank-{sim.rank:04d}'/'manifests'/f"decision-{data['snapshot_id']}.json"
+                from .checkpoint_payload import decision_record
+                decision=decision_record(data)
+                if copy.exists() and content_hash(_read(copy)) != content_hash(decision): raise OSError('Decision copy conflicts with authoritative commit')
+                # Repair a missing copy only after authority and prepare validate.
+                if not copy.exists(): atomic_json(copy,{'manifest':decision,'checksum':content_hash(decision)},**_disk_kwargs(sim))
             for kind,cursor in prepared['journal_cursors'].items():
                 for _ in sim.local.journal.replay(kind,cursor): pass
         sim.sequencer.operations[:] = [decode_gate(g) for g in data['gates']]
-        sim.registry=dict(data['registry'])|{sim.store_id:str(sim.directory)}
+        sim.registry=dict(data['registry'])
+        if sim.store_id not in sim.registry: sim.registry[sim.store_id]=sim._placement_entry()
+        if sim.config.storage_scope == 'node-local': sim._upgrade_legacy_registry()
         for key in data['assets']:
-            paths=[Path(p)/f'rank-{sim.rank:04d}/assets/{key}.bin' for p in sim.registry.values()]
+            from .storage_placement import resolve_owner_root
+            paths=[resolve_owner_root(p,sim.rank,host=sim.local.profile.hostname)/f'rank-{sim.rank:04d}/assets/{key}.bin' for p in sim.registry.values()]
             path=next((p for p in paths if p.is_file()),None)
             if path is None: raise OSError('Missing checkpoint matrix asset')
             raw=path.read_bytes(); n=int((len(raw)//16)**.5)
@@ -128,6 +217,7 @@ def restore(sim,snapshot,*,validate=True):
         sim.layout=sim.local.layout=QubitLayout(tuple(data['layout']),data['layout_id']); sim.placement_epoch=data['placement_epoch']
         sim.history=list(data['history']); sim.initial_state_hash=data['initial_state_hash']; sim.dataset_id=data['dataset_id']
         sim.local._readonly_circuit=True; sim.local.phase2.validate_root(sim.root); sim._save_settings()
+        if hasattr(sim,'_restore_checkpoint_state'): sim._restore_checkpoint_state(data.get('phase4_runtime'))
     except Exception as exc: error=str(exc)
     sim.transport.vote(error)
     sim.committed_roots={sim.root}
@@ -137,7 +227,17 @@ def restore(sim,snapshot,*,validate=True):
 def fork(sim,snapshot,binding,directory=None):
     data=None; error=None
     try:
-        data=load_global(sim.directory,snapshot)
+        data=load_owner_global(sim,snapshot) if sim.rank == 0 else None
+    except Exception as exc: error=str(exc)
+    sim.transport.vote(error)
+    version=sim.transport.broadcast_json(data['schema_version'] if sim.rank == 0 else None)
+    if version == 4:
+        from .checkpoint_payload import exchange_payload
+        data=exchange_payload(sim.transport,data if sim.rank == 0 else None,sim.directory,
+            disk_budget=getattr(sim,'disk_budget',None),budget=sim.budget,cache=sim.cache)
+    else: data=sim.transport.broadcast_json(data if sim.rank == 0 else None)
+    error=None
+    try:
         if binding.circuit_hash != sim.circuit_hash or data['circuit_hash'] != sim.circuit_hash: raise ValueError('Prefix source mismatch')
         fixed=dict(data['binding_values']); witnesses={k:ExactPi(n,d) for k,n,d in data['binding_witnesses']}
         for key in data['parameter_dependencies']:
@@ -151,7 +251,8 @@ def fork(sim,snapshot,binding,directory=None):
         run=sim.transport.broadcast_json(uuid4().hex if sim.rank == 0 else None)
         directory=str(sim.directory/'suffixes'/run)
     from .distributed import DistributedSimulator
-    child=DistributedSimulator(sim.num_qubits,replace(sim.config,directory=str(directory)),comm=sim.comm)
+    child=type(sim)(sim.num_qubits,replace(sim.config,directory=str(directory)),comm=sim.comm,
+        **getattr(sim,'_fork_kwargs',lambda: {})())
     new_store=child.store_id; error=None
     try:
         source=sqlite3.connect((sim.store.directory/'metadata/catalog.sqlite3').resolve().as_uri()+'?mode=ro',uri=True)
@@ -173,8 +274,10 @@ def fork(sim,snapshot,binding,directory=None):
     error=None
     try:
         child.binding=child.local.binding=binding; child._save_settings()
+        if child.config.storage_scope == 'node-local':
+            child.disk_budget.close(); child._attach_disk_budget()
         child.lease_path=sim.directory/'global/leases'/f'{child.run_id}-{sim.rank:04d}.json'
-        atomic_json(child.lease_path,{'root':data['root'],'run_id':child.run_id,'size':sim.size,'store_ids':list(data['registry'])})
+        atomic_json(child.lease_path,{'root':data['root'],'run_id':child.run_id,'size':sim.size,'store_ids':list(data['registry'])},**_disk_kwargs(child))
     except Exception as exc: error=str(exc)
     try: sim.transport.vote(error)
     except Exception: child.close(); raise

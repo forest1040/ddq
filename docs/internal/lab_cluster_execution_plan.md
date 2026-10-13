@@ -202,3 +202,20 @@ site profile は queue、CPU/mem、MPI prefix/provider、許可された scratch
 cluster の kernel 4.18でio_uring利用可否は未確認のためworker I/Oを必須経路とする。root SSDでは総上限にソフトウェア環境・metadataも含め、100 GiBの空き下限とdrain用予約を保つ。共有mirrorは既定off、onにする場合は64 MiB/job以下の小さなcommit情報・結果要約のみ。通常実行と再開はmirrorなしで成立させる。
 
 最終reportはMacのsame-host、delay等のinjected、クラスタのcross-hostを区別する。2 nodeでの検証が未実施ならPhase 4完了とは記載しない。調査時の空きnodeを固定予約とは扱わず、実施時のPBS割当を使用する。
+
+## 12. Phase 4実装後のクラスタ検証（許可後に実施）
+
+Macで実装とテストを行い、全体回帰は378 passed／2 skippedだった。その後、利用者の明示許可を得て、以下の資源上限内でクラスタ接続・Linux環境配布・PBS検証を実施した。単一ノードと実2ノードの2／4 rank、Linux O_DIRECT、PSM2／OFI／Ethernetの結果は[Phase 4クラスタ検証記録](phase4_cluster_validation.md)に保存した。前節までの調査時点の記述は履歴であり、現在の予約可能量とは扱わない。
+
+| 順序 | 実施内容 | 資源の上限案 |
+|---|---|---|
+| 1 | 読み取りでqueue／割当候補／scratch／MPI／disk空きを再確認。node-localコード・uv・Python3.12・MPI bindingの配布方法を確認 | ログインnodeで量子状態の計算・負荷測定をしない。共有homeへの大きな配布・cache作成をしない |
+| 2 | PBS単一nodeでLinux buffered／O_DIRECT、1/2/4 rank、v4 checkpoint／resume、期待値／勾配 | 1 node、最大4 CPU、mem 8gb、1 job当たりwalltime10分、環境を含むlocal disk8 GiB以下 |
+| 3 | PBS実2 nodeで2/4 rank、owner-local保存、複数partner転送、prefix／remote lease／GC、三方式の勾配 | 各node最大4 CPU、mem 8gb、1 job当たりwalltime10分、各node local disk8 GiB以下 |
+| 4 | 同じ小規模oracleでPSM2／OFI／Ethernetの選択確認、worker I/Oとの混合観測 | 2／3の予算内。provider／interfaceの選択と実効値を記録。大規模状態・化学計算は投入しない |
+
+停止nodeの起動、未マウントNVMeのmount／format、管理者権限での設定変更、外部jobに影響する負荷注入はこの検証案に含めない。native io_uringはcompiler／liburingが既に利用できる場合だけcapabilityを確認し、kernel未対応ならworker経路を使って理由を記録する。liburing等の新規導入はこの小規模検証に含めない。
+
+環境準備とjob起動は確定revision／lock／Linux用artifactを使用し、node-local cwd、venv、cache、store、reportを設定する。PBS TMPDIRがローカルで適切な保存寿命を持つかを確認し、不明なら許可された`/var/tmp`等を使う。詳細reportはローカルに保存し、回収は小さな要約から行う。root filesystem空き100 GiBの下限を維持できないnodeでは実行しない。
+
+同じPBS割当・owner volumeを保てる範囲でprocess再投入を検証する。次のjobが別nodeへ割り当てられた場合は、既存checkpointの再開に必要なowner shardの移行を勝手に行わない。node喪失・別媒体へのoffline dataset移行・大容量RAM/SSDの拡大検証は別途計画する。

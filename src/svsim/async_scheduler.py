@@ -1,0 +1,449 @@
+"""Mac-first bounded async runtime over the exact distributed block kernels."""
+from contextlib import contextmanager
+from dataclasses import asdict, dataclass, replace
+from time import perf_counter
+
+from .async_cache import AsyncBlockCache
+from .async_io import WorkerIOEngine, BackpressureError
+from .distributed import DistributedSimulator
+from .execution_tasks import EpochLedger
+from .fused_swap import execute_fused_swap
+from .journal import decode_gate, gate_data
+from .mpi_progress import MPIProgressEngine
+from .runtime_control import RuntimeControl
+from .s2_planner import plan_window
+from .storage import StoredBlockView
+from .streaming_kernels import apply_local
+
+
+@dataclass(frozen=True)
+class AsyncPolicy:
+    mode: str = 'observe'
+    io_engine: str = 'auto'
+    max_io_requests: int = 2
+    io_workers: int = 2
+    max_mpi_requests: int = 4
+    prefetch_blocks: int = 2
+    lookahead_gates: int = 32
+    beam_width: int = 4
+    swap_policy: str = 'S0'
+    max_active_jobs: int = 1
+    cooldown_seconds: float = 120
+    minimum_gain_fraction: float = 0.1
+    candidate_ttl_seconds: float = 120
+
+    def __post_init__(self):
+        if self.mode not in {'observe', 'recommend', 'auto'}:
+            raise ValueError('Unknown runtime mode')
+        if self.io_engine not in {'auto', 'worker', 'cooperative', 'io_uring'}:
+            raise ValueError('Unknown I/O engine')
+        if self.swap_policy not in {'S0', 'S1', 'S2'}:
+            raise ValueError('Unknown swap policy')
+        for name in ('max_io_requests', 'io_workers', 'max_mpi_requests', 'lookahead_gates', 'beam_width', 'max_active_jobs'):
+            if type(getattr(self, name)) is not int or getattr(self, name) < 1:
+                raise ValueError('Positive integer limits required')
+        if self.lookahead_gates > 32 or self.beam_width > 16:
+            raise ValueError('DAG window/beam exceed bounded search limits')
+        if self.max_io_requests > 64 or self.max_mpi_requests > 64 or self.max_active_jobs > 16:
+            raise ValueError('Request/job count exceeds bounded runtime limits')
+        if type(self.prefetch_blocks) is not int or self.prefetch_blocks < 0:
+            raise ValueError('Invalid prefetch limit')
+        import math
+        if any(not math.isfinite(v) or v < 0 for v in (self.cooldown_seconds, self.candidate_ttl_seconds)):
+            raise ValueError('Invalid runtime interval')
+        if not 0 <= self.minimum_gain_fraction < 1:
+            raise ValueError('Invalid gain threshold')
+
+
+class AsyncDistributedSimulator(DistributedSimulator):
+    transport_class = MPIProgressEngine
+
+    def __init__(self, num_qubits, config, *, policy=None, **kwargs):
+        self.policy = policy or AsyncPolicy()
+        self.io_engine = None
+        self._private_epoch = False
+        self._saved_runtime_state = None
+        self._gradient_origin = None
+        self._angle_overrides = {}
+        self._async_errors = []
+        # Phase 4 uses owner-local lifecycle even on a single Mac.
+        config = replace(config, storage_scope='node-local')
+        super().__init__(num_qubits, config, **kwargs)
+        self.runtime = RuntimeControl(self)
+        saved = self._saved_runtime_state
+        if saved and 'policy' in saved:
+            self.policy = AsyncPolicy(**saved['policy'])
+            self.runtime.plan_version = saved['plan_version']
+            self.runtime.policy_epoch = saved['policy_epoch']
+            self.runtime.profile_version = saved['profile_version']
+            self._gradient_origin = saved.get('gradient_origin')
+        error = None
+        try:
+            self.transport.agree(asdict(self.policy))
+            self.cache.clear()
+            self.io_engine = WorkerIOEngine(max_requests=self.policy.max_io_requests,
+                              workers=self.policy.io_workers, engine=self.policy.io_engine,
+                              mpi_thread_level=self.transport.thread_level, budget=self.budget)
+            if self.config.amplitude_store == 'file':
+                self.cache = self.local.cache = AsyncBlockCache(self.store, self.budget, self.io_engine,
+                                                  prefetch_blocks=self.policy.prefetch_blocks)
+            self.transport.max_requests = self.policy.max_mpi_requests
+            self.transport.generations = [0]*self.policy.max_mpi_requests
+            self.transport.progress_callback = self._progress_io
+            self._original_io_poll = self.io_engine.poll
+            self.io_engine.poll = self._poll_io
+            self.trace.record('async-engine', metadata={'path': 'ASYNC_RUNTIME',
+                              'io_engine': self.io_engine.identity, 'policy': asdict(self.policy),
+                              'storage_scope': self.config.storage_scope})
+        except Exception as exc:
+            error = str(exc)
+        try:
+            self.transport.vote(error)
+        except BaseException:
+            try:
+                if self.io_engine is not None:
+                    self.io_engine.close()
+            finally:
+                super().close()
+            raise
+
+    def _poll_io(self):
+        completed = self._original_io_poll()
+        for request in completed:
+            self.runtime.io_completion(request)
+            if request.error is not None:
+                self._async_errors.append(request.error)
+        return completed
+
+    def _progress_io(self):
+        # Defer ordinary local I/O errors to the next ordered collective vote.
+        try:
+            self.io_engine.poll()
+        except Exception as exc:
+            self._async_errors.append(exc)
+
+    def _admit(self, *args, **kwargs):
+        if self.io_engine is not None:
+            self._progress_io()
+            self.transport.vote(str(self._async_errors[0]) if self._async_errors else None)
+        return super()._admit(*args, **kwargs)
+
+    def _publish(self, *args, **kwargs):
+        super()._publish(*args, **kwargs)
+        if isinstance(self.cache, AsyncBlockCache):
+            for version, entry in self.cache.entries.items():
+                if entry.dirty and not entry.pins:
+                    try:
+                        self.cache.writeback(version)
+                    except BackpressureError:
+                        break
+
+    def _install_policy(self, policy):
+        if policy.io_engine != self.policy.io_engine or policy.io_workers != self.policy.io_workers:
+            raise ValueError('Changing I/O engine/worker count requires restart')
+        if hasattr(self.io_engine, 'capacity') and policy.max_io_requests > self.io_engine.capacity:
+            raise ValueError('Growing native queue capacity requires restart')
+        tag_ub = self.transport.data.Get_attr(self.transport._MPI.TAG_UB) or 32767
+        if policy.max_mpi_requests-1 > tag_ub:
+            raise ValueError('MPI slots exceed TAG_UB')
+        difference = (policy.max_io_requests-self.policy.max_io_requests)*512
+        if difference > 0:
+            self.budget.reserve(difference)
+        elif difference < 0:
+            self.budget.release(-difference)
+        self.io_engine.metadata_bytes += difference
+        if policy.max_mpi_requests != self.policy.max_mpi_requests:
+            self.transport.generations = [0]*policy.max_mpi_requests
+            self.transport.max_requests = policy.max_mpi_requests
+        self.io_engine.max_requests = policy.max_io_requests
+        if isinstance(self.cache, AsyncBlockCache):
+            self.cache.prefetch_blocks = policy.prefetch_blocks
+        self.policy = policy
+
+    def _fork_kwargs(self):
+        return {'policy': self.policy}
+
+    def _checkpoint_state(self):
+        if self._angle_overrides:
+            raise ValueError('Shifted occurrence workspace cannot be committed as semantic source')
+        state = self.runtime.state() if hasattr(self, 'runtime') else {
+            'policy': asdict(self.policy), 'plan_version': 1, 'policy_epoch': 1, 'profile_version': 1}
+        state['gradient_origin'] = self._gradient_origin
+        return state
+
+    def _restore_checkpoint_state(self, state):
+        self._saved_runtime_state = state
+
+    def _prefetch_local(self):
+        if not isinstance(self.cache, AsyncBlockCache) or not self.policy.prefetch_blocks:
+            return
+        error = None
+        try:
+            versions = []
+            for index, h in enumerate(self.ownership.local_blocks(self.rank)):
+                if index >= self.policy.prefetch_blocks:
+                    break
+                data = self._locate(self.root, h)
+                view = data.get('view')
+                if view and view['storage_rank'] == self.rank and view['store_id'] == self.store_id:
+                    version = view['version']
+                    versions.append(version)
+                    if version not in self.cache.entries:
+                        self.cache.prefetch(version)
+            self.cache.set_future_versions(versions)
+        except Exception as exc:
+            error = str(exc)
+        self.transport.vote(error)
+
+    def _physical(self, gate):
+        if gate.op_id in self._angle_overrides:
+            from .parameters import expression
+            gate = replace(gate, angle=expression(self._angle_overrides[gate.op_id]))
+        return replace(gate, targets=tuple(self.layout.logical_to_physical[q] for q in gate.targets),
+                       controls=tuple(self.layout.logical_to_physical[q] for q in gate.controls))
+
+    def _execute_local_fused(self, originals, end):
+        self._admit(4, output_blocks=self.ownership.blocks_per_rank)
+        parent = self.root
+        new = self._new_root(parent)
+        physical = [self._physical(g) for g in originals]
+        for h in range(self.ownership.num_blocks):
+            owner = self.ownership.shard_owner(h)
+            with self.fetch(h, owner, root=parent) as fetched:
+                error = None
+                if fetched is not None:
+                    arr = fetched.array(self.store.payload_bytes)
+                    try:
+                        for gate in physical:
+                            if self.local._upper_ok(gate, h):
+                                apply_local(arr, self.local._local(gate), self.assets, self.binding,
+                                            block_id=h, block_bits=self.block_bits)
+                        self._publish(new, h, StoredBlockView(self.cache.adopt(fetched), end, end))
+                    except Exception as exc:
+                        error = str(exc)
+                    finally:
+                        del arr
+                self.transport.vote(error)
+        self.local.phase2.progress(new, end)
+        self._commit_stage(new, end)
+        for original, gate in zip(originals, physical):
+            self.history.append({'kind': 'gate', 'source': original.op_id,
+                                 'physical': gate_data(gate), 'layout': self.layout.logical_to_physical,
+                                 'fused_group': [g.op_id for g in originals]})
+        self.trace.record(str(originals[0].op_id), performance_class='fusion',
+                          metadata={'path': 'LOCAL_GATE_FUSION', 'source_ids': [g.op_id for g in originals],
+                                    'state_passes': 1, 'sequential_passes': len(originals)})
+
+    def _execute(self, gate, end, *, physical_swap=False):
+        from .planner import group_bits
+        bits = group_bits(gate, self.block_bits)
+        if not bits or gate.kind in {'MCX', 'SWAP'} or physical_swap:
+            return super()._execute(gate, end, physical_swap=physical_swap)
+        from .async_exchange import fetch_partners
+        from .pauli_rotation import apply_pauli_pair
+        from .phase2_runtime import pauli_of
+        from .streaming_kernels import apply_group
+        b = self.block_bits
+        p = pauli_of(gate) if gate.kind == 'PAULI_ROT' else None
+        count = 2 if p else 1 << len(bits)
+        self._admit(2*count+3, output_blocks=self.ownership.blocks_per_rank)
+        parent = self.root
+        new = self._new_root(parent)
+        mask = (p.x_mask >> b) if p else sum(1 << (q-b) for q in bits)
+        for base in range(self.ownership.num_blocks):
+            if p:
+                if base > (base ^ mask):
+                    continue
+                partners = [base, base ^ mask]
+            else:
+                if base & mask or not self.local._upper_ok(gate, base):
+                    continue
+                partners = [base | sum(((j >> i) & 1) << (q-b) for i, q in enumerate(bits))
+                            for j in range(count)]
+            owner = self.ownership.shard_owner(partners[0])
+            with self._buffers(count, owner) as buffers:
+                with fetch_partners(self, partners, owner, root=parent) as inputs:
+                    error = None
+                    arrays = [v.array(self.store.payload_bytes) for v in inputs if v is not None]
+                    outputs = [v.array(self.store.payload_bytes) for v in buffers]
+                    try:
+                        if self.rank == owner:
+                            if p:
+                                apply_pauli_pair(*arrays, *outputs, p, gate.angle.evaluate(self.binding),
+                                                 *partners, b)
+                            else:
+                                apply_group(arrays, outputs, self.local._local(gate), b, bits,
+                                            self.assets, self.binding)
+                    except Exception as exc:
+                        error = str(exc)
+                    finally:
+                        arrays.clear()
+                        outputs.clear()
+                    self.transport.vote(error)
+                for index, h in enumerate(partners):
+                    destination = self.ownership.shard_owner(h)
+                    with self._buffers(1, destination) as final:
+                        if owner == destination:
+                            if final:
+                                final[0].view[:] = buffers[index].view
+                        else:
+                            self.transport.transfer(buffers[index].view[:self.store.payload_bytes] if self.rank == owner else None,
+                                    final[0].view[:self.store.payload_bytes] if final else None, owner, destination,
+                                    metadata={'root': new, 'h': h, 'stream': 'joint-output'})
+                        error = None
+                        if final:
+                            try:
+                                self._publish(new, h, StoredBlockView(self.cache.adopt(final[0]), end, end))
+                            except Exception as exc:
+                                error = str(exc)
+                        self.transport.vote(error)
+        self.local.phase2.progress(new, end)
+        self._commit_stage(new, end)
+
+    def materialize(self, frontier=None, binding=None):
+        self._open()
+        last = len(self.sequencer.operations)-1 if frontier is None else frontier
+        if last < self.frontier or last >= len(self.sequencer.operations):
+            raise ValueError('Invalid frontier')
+        self.transport.agree({'last': last, 'policy': asdict(self.policy)})
+        self._set_binding(binding or self.binding or self.bind(), last)
+        if self.frontier == -1 and self._gradient_origin is None and any(g.dependencies for g in self.sequencer.operations):
+            self._gradient_origin = self.commit_snapshot()['snapshot_id']
+        while self.frontier < last:
+            start = self.frontier+1
+            end = min(last, start+self.policy.lookahead_gates-1)
+            original = self.sequencer.operations[start:end+1]
+            prior = (self.root, self.frontier, self.layout, self.placement_epoch, len(self.history))
+            self._rollback_root = self.root
+            self._private_epoch = True
+            begin = perf_counter()
+            ledger = None
+            try:
+                error = None
+                try:
+                    self.cache.ensure(len(original)*256)
+                    ledger = EpochLedger(tuple(g.op_id for g in original), budget=self.budget,
+                                 binding_id=self.binding.binding_id, layout_id=self.layout.layout_id,
+                                 placement_epoch=self.placement_epoch, plan_version=self.runtime.plan_version,
+                                 policy_version=self.runtime.policy_epoch)
+                except Exception as exc:
+                    error = str(exc)
+                self.transport.vote(error)
+                plan = plan_window(original, self.layout, self.block_bits, self.policy.beam_width)
+                order = plan.source_ids if self.policy.swap_policy == 'S2' else tuple(g.op_id for g in original)
+                groups = {g[0].op_id: g for g in plan.groups if len(g) > 1} if self.policy.swap_policy == 'S2' else {}
+                self.transport.agree({'order': order, 'groups': [tuple(g.op_id for g in group) for group in groups.values()]})
+                cursor = 0
+                while cursor < len(order):
+                    source = order[cursor]
+                    self._prefetch_local()
+                    input_root = self.root
+                    group = groups.get(source)
+                    if group and tuple(g.op_id for g in group) == tuple(order[cursor:cursor+len(group)]):
+                        self._execute_local_fused(group, prior[1])
+                        ids = tuple(g.op_id for g in group)
+                        cursor += len(group)
+                    else:
+                        gate = self.sequencer.operations[source]
+                        if self.policy.swap_policy == 'S1':
+                            from .distributed_plan import choose_s1
+                            decision = choose_s1(self.num_qubits, self.block_bits, self.size, self.layout,
+                                                 self.sequencer.operations[source:end+1], self.network_profile,
+                                                 self.storage_bandwidth)
+                            self.transport.agree(asdict(decision))
+                            if decision.bits:
+                                self.physical_index_bit_swap(*decision.bits, _pending=True)
+                        physical = self._physical(gate)
+                        self._execute(physical, prior[1])
+                        self.history.append({'kind': 'gate', 'source': source,
+                                             'physical': gate_data(physical), 'layout': self.layout.logical_to_physical})
+                        ids = (source,)
+                        cursor += 1
+                    ledger.stage(ids, input_root, self.root)
+                ledger.validate_coverage()
+                self.drain()
+                published = self._new_root(self.root)
+                self.local.phase2.progress(published, end)
+                self._commit_stage(published, end)
+                ledger.commit()
+                self.trace.record('async-epoch', performance_class='scheduler',
+                                  metadata={'path': 'ASYNC_EPOCH', 'source_range': [start, end],
+                                            'actual_order': order, 'elapsed_seconds': perf_counter()-begin,
+                                            'private_cut': False, 'plan_version': self.runtime.plan_version})
+            except BaseException:
+                if ledger is not None and not ledger.committed:
+                    ledger.fail('epoch-failed')
+                self.root, self.frontier, self.layout, self.placement_epoch, length = prior
+                self.local.root, self.local.frontier, self.local.layout = self.root, self.frontier, self.layout
+                del self.history[length:]
+                raise
+            finally:
+                self._private_epoch = False
+                self._rollback_root = self.root
+                if ledger is not None:
+                    ledger.close()
+            self.runtime.frontier()
+        return self
+
+    def drain(self):
+        error = None
+        try:
+            self.transport.drain()
+            if self.io_engine is not None:
+                self.io_engine.drain()
+            if self._async_errors:
+                raise self._async_errors[0]
+        except Exception as exc:
+            error = str(exc)
+        self.transport.vote(error)
+
+    def commit_snapshot(self, **kwargs):
+        if self._private_epoch:
+            raise ValueError('Cannot checkpoint an unpublished epoch')
+        self.drain()
+        return super().commit_snapshot(**kwargs)
+
+    def fused_index_bit_swap(self, pairs):
+        self.materialize(binding=self.binding)
+        self.drain()
+        return execute_fused_swap(self, pairs)
+
+    def collect_garbage(self):
+        self.drain()
+        return super().collect_garbage()
+
+    def gradient(self, observable, *, parameters=None, binding=None, method='auto', costs=None):
+        from .gradient_scheduler import GradientScheduler
+        from .phase4_gradient import execute_gradient
+        self.materialize(binding=binding)
+        requested = list(parameters) if parameters is not None else sorted(
+            set().union(*(g.dependencies for g in self.sequencer.operations)))
+        error = None
+        try:
+            schedule = GradientScheduler().choose(self.sequencer.operations, requested, self.binding,
+                        method, costs, available_ram_bytes=self.budget.limit)
+        except Exception as exc:
+            error = str(exc)
+        self.transport.vote(error)
+        self.transport.agree(asdict(schedule))
+        self.trace.record('gradient-schedule', metadata={'path': 'GRADIENT_SCHEDULE', **asdict(schedule)})
+        return execute_gradient(self, observable, requested, schedule)
+
+    def close(self):
+        if self.closed:
+            return
+        error = None
+        try:
+            self.drain()
+        except BaseException as exc:
+            error = exc
+        try:
+            self._async_errors.clear()
+            if isinstance(self.cache, AsyncBlockCache):
+                self.cache.errors.clear()
+            super().close()
+        finally:
+            if self.io_engine is not None:
+                self.io_engine.close()
+        if error:
+            raise error
