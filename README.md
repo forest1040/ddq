@@ -82,6 +82,8 @@ MPI は optional dependency です。全 rank が同じ collective API 順序で
 
 [Phase 4 設計書](docs/phase4_design.md)に、macOS/Linux の非同期 I/O、nonblocking MPI と progress、予算付き prefetch／Parameter batch、Runtime Guard／ETA、LIVE_TUNE と safe frontier 再計画、S2／FusedSWAP、I/O-aware Gradient Scheduler の設計と検証条件を記載しています。Phase 4 の新規 API は未実装です。
 
+Mac 上の MPI とスケジューラを主開発環境とし、研究室クラスタの PBS 割当内でも実複数ノードを検証します。振幅・catalog は node-local に保存し、checkpoint／resume／prefix lease／GC は MPI 通信で成立させる設計です。非同期化に先立つ保存方式の改修と、host/device ごとの SSD 容量予約を実装順に追加しています。
+
 ## スライドのビルド
 
 リポジトリ直下で実行します。LuaLaTeX、LuaTeX-ja、原ノ味フォント、Beamer、およびテンプレートで使用するパッケージ（quantikz等）が必要です。

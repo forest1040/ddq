@@ -4,6 +4,7 @@
 - 状態：設計。以下の新規 module、API、設定値、性能目標は未実装・未測定。
 - 対応仕様：[開発計画 Phase 4](../plan/distributed_quantum_circuit_simulator_development.md#phase-4非同期階層スケジューラ)、同計画 §4.3〜4.12、§8、§16.3。
 - 前提：[Phase 3 実装](phase3_implementation.md)、[Phase 3 実測](phase3_benchmark.md)、[macOS/Linux I/O 資料](../ref/direct_io_linux_macos.md)。
+- 改訂：研究室クラスタ調査を反映し、node-local 保存、MPI による checkpoint／lease 管理、disk admission、Mac と PBS クラスタの検証分担を追加した。site 固有の接続先・資源・運用条件は内部計画に分離する。
 
 ## 1. 到達目標
 
@@ -13,12 +14,13 @@
 |---|---|
 | 非同期 I/O／MPI | request と buffer の寿命を管理する progress loop、macOS worker I/O、Linux optional io_uring |
 | prefetch／background | 未実行 DAG に基づく先読み、pin・writeback・予約量の上限、foreground の starvation 防止 |
-| Parameter batch | immutable prefix と Binding 別 COW、rank ごとの統合予算、共有 disk／MPI の公平な割当 |
+| Parameter batch | immutable prefix と Binding 別 COW、rank／host ごとの統合予算、同一 host の local SSD／MPI の公平な割当 |
+| node-local 保存 | 振幅／catalog／journal を local に置き、checkpoint／resume／prefix／GC は owner との MPI 通信で成立する |
 | Runtime Guard | 条件一致、持続判定、hysteresis、alert、版付き RuntimeProfile、ETA の再予測 |
 | 運用と切替 | observe／recommend／auto、手動 policy／dry-run、LIVE_TUNE→FRONTIER_REPLAN→検証 |
 | S2／FusedSWAP | 証明できる DAG 順序変更、streaming 複数 bit 転置、S0/S1 と費用込み比較 |
 | Gradient Scheduler | unitary adjoint、checkpoint/recompute、適用可能な parameter-shift job の I/O-aware 選択 |
-| 完了 | 2/4 rank MPI＋SSD の数値一致と、性能低下注入から改善確認までの再現可能な trace |
+| 完了 | Mac の 1/2/4 rank と、PBS 割当内の実複数 node・local SSD で数値一致。性能低下注入から改善確認までの再現可能な trace |
 
 固定 rank 数・complex128・既存 gate semantics を継続する。rank 脱落後の communicator 継続、GPU、任意の近似 commuting、実行中の Block 幅変更は対象外。大規模推定・HPC の 40/50Q dry-run を製品 CLI として整備する作業は Phase 5。
 
@@ -27,6 +29,8 @@
 Phase 3 の 16Q／状態 1 MiB／rank RAM 256 KiB の一回の測定では、materialize は P=1 が約 7.055 秒、P=4 packed が約 11.193 秒。4 rank packed は full より send payload を 25% 減らしたが、全体時間の大きな改善は確認していない。背景負荷を隔離した scaling 実験ではなく、同期 coordinator、collective metadata lookup、SQLite／Frame 解消の改善を優先する根拠として扱う。[測定条件と結果](phase3_benchmark.md)
 
 現在の `fetch()` は collective な metadata lookup＋source resolve＋Sendrecv を一回ずつ行い、`BlockCache.ensure()` は dirty eviction を同期書込みする。`BufferLease` の context 終了と buffer 解放を同一視できるのは、この同期実行だからである。既存関数を worker から呼ぶだけでは非同期化しない。
+
+さらに Phase 3 の `load_global()` は一つの directory から全 rank の prepare を直接読み、global manifest は rank 0 の保存先だけに書く。同一 Mac では成立しても、同じ path 名を使う別 host の local disk では成立しない。`resume()` の communicator 構築前の読込み、registry の path 解決、fork／prefix lease、GC の生存 root 集合も合わせて改修する。**複数 node の非同期・batch 検証に先立って、同期経路で node-local ライフサイクルを成立させる。**
 
 | module 案 | 責務 |
 |---|---|
@@ -38,7 +42,9 @@ Phase 3 の 16Q／状態 1 MiB／rank RAM 256 KiB の一回の測定では、mat
 | `safe_replanner.py`／`runtime_control.py` | policy epoch、dry-run、safe frontier、計画 commit／fallback |
 | `s2_planner.py`／`fused_swap.py` | bounded dependency window、合法な reorder、合成 index permutation |
 | `parameter_batch.py`／`gradient_scheduler.py` | Binding job admission、prefix lease、gradient 候補と job group |
-| `distributed_checkpoint.py`／`lifecycle.py` | 実行 tape・plan/policy/profile 版と checkpoint extension |
+| `storage_placement.py`／`disk_budget.py` | owner-local path 解決、host/device 単位の disk reservation と空き監視 |
+| `distributed_checkpoint.py`／`lifecycle.py` | MPI による prepare／commit／resume／lease／GC、実行 tape・plan/policy/profile 版 |
+| `development_runner.py`／`pbs_adapter.py` | Mac local launcher と PBS の資源記述・起動・回収境界。runtime の task scheduler から分離 |
 | `examples/phase4*.py`／tests | correctness、fault injection、固定計画との比較、完了条件 report |
 
 Phase 3 の同期経路を correctness reference として残す。通常の `import svsim` は MPI／native I/O を初期化しない。Python は uv、mpi4py は既存 `mpi` extra。Linux native backend は optional build とし、必須 Python dependency にしない。
@@ -103,7 +109,13 @@ io_uring cancel の completion と元 request の completion を区別し、元 
 
 ## 6. RAM、cache と backpressure
 
-rank budget を process 全体で一つにし、job ごとの quota はその予約 ledger の内訳とする。host 予算も共有 SSD／NUMA domain／MPI staging／worker stack／native ring の余裕を考慮する。caller-owned output と MPI 内部 memory／OS cache の accounting 境界は report へ明記する。
+rank budget を process 全体で一つにし、job ごとの quota はその予約 ledger の内訳とする。host 予算も同一 host 内の local SSD／NUMA domain／MPI staging／worker stack／native ring の余裕を考慮する。caller-owned output と MPI 内部 memory／OS cache の accounting 境界は report へ明記する。
+
+同じ host 上の rank／job が一つの local device を使う場合も予算を合算する。NFS 等の共有 filesystem を振幅 backend の前提にしない。host RAM admission は OS の空きと launcher／PBS の割当上限の小さい方から process／MPI の余裕を引く。NUMA binding と domain 内容量も記録する。
+
+disk は `(host, device/volume-id)` 単位で全 rank／Binding の segment、catalog、journal、asset、ソフトウェア環境、checkpoint、staged migration、失敗残骸を合算する。append-only の新 version を保存前に予約し、commit／GC 後に確認した量だけ予約を戻す。GC による回収見込みを未確定の空きとして使用しない。snapshot／RAM backend の `flush_to_file()` も disk admission を必須とする。
+
+`disk_quota_bytes`、`min_free_bytes`、`drain_reserve_bytes` を site profile で設定し、statvfs の実空きと ledger の双方で検査する。同一 device の複数 rank に全空きをそれぞれ与えず host coordinator が配分する。他の PBS job の書込みは ledger 外なので定期的に実空きを確認する。余裕が低下したら新規 task／prefetch を止め、予約済み領域で drain する。checkpoint の追加領域もなければ最後の durable cut を保持して停止し、共有ディスクへの振幅退避はしない。
 
 block buffer の page/alignment cost を L(B)、tile を L(T) とし、live peak を次で admission する。
 
@@ -121,11 +133,11 @@ prefetch は immutable base extent を優先する。resolved amplitude の再�
 
 最初は同じ n/b/P／semantic source の Binding job を、同じ rank group の scheduler が交互に進める。job ごとの main-loop 呼出しを独立 Python thread に任せない。`BatchJob` は job/run/binding ID、quota、private root、source frontier、plan/profile/policy 版、prefix lease、結果宛先を持つ。複数 rank group の並列は、communicator と catalog path が分離できる次の実装段階に限定する。
 
-prefix は Phase 3 の durable immutable snapshot を利用し、固定 parameter／exact witness、initial state、source、frontier、layout／placement を検証する。read-only 元 extent と各 job の COW 出力を分ける。prefix の reader は共有 budget を使い、既存 `fork()` の simulator ごとの独立 budget をそのまま batch の総予算として合算しない。
+prefix は §12.1 の node-local 対応を経た durable immutable snapshot を利用し、固定 parameter／exact witness、initial state、source、frontier、layout／placement を検証する。read-only 元 extent と各 job の COW 出力を分ける。prefix の reader は共有 budget を使い、既存 `fork()` の simulator ごとの独立 budget をそのまま batch の総予算として合算しない。遠隔 prefix は extent owner へ通信し、lease の取得・解放も MPI で合意する。
 
 batch の active job 数は最小 foreground working-set＋prefix/cache＋adjoint streams＋COW/SSD headroom で admission する。共通 prefix read を coalesce しても全 job の logical result が共有可能とは限らない。checkpoint/writeback／prefix read の混合負荷を device queue で制御し、writer saturation が reader を止めない配分にする。
 
-pending job は Binding を差し替え可能、実行開始後は不変。一 job の失敗は、既に posted な通信を drain して全 rank が同じ終端を確認してから batch から外す。失敗 job の control/collective slot はその window 終端まで維持し、rank-local な判断で reduction 順序を詰めない。共有 communicator の rank そのものが失われた場合は batch 全体を停止・checkpoint restart とする。
+pending job は Binding を差し替え可能、実行開始後は不変。一 job の失敗は、既に posted な通信を drain して全 rank が同じ終端を確認してから batch から外す。失敗 job の control/collective slot はその window 終端まで維持し、rank-local な判断で reduction 順序を詰めない。共有 communicator の rank そのものが失われた場合は batch 全体を停止し、§12.1 の保存データ検査に成功した場合だけ checkpoint restart とする。
 
 ## 8. S2：依存を守る reorder
 
@@ -181,7 +193,7 @@ DEGRADED になったらまず該当 critical path の低リスク LIVE_TUNE を
 
 safe frontier は source prefix、全 Block の実行 step coverage、Binding/witness、root、layout/placement が一致し、対象 root／slot に未完了 I/O／MPI／compute がなく、reduction と journal registration も完了した点。async request が参照する input/output root と lease は cache／GC の生存参照閉包へ含める。tape、journal、layout、Binding と reduction cursor を同じ cut に固定する。初期実装は全 rank の epoch 境界で合意する。計測のために毎 gate barrier を追加しない。局所 subset commit は catalog／ownership 依存閉包の証明ができた後の最適化とする。
 
-commit は `propose/dry-run → stop affected admission → drain → reserve/vote → stage migration → validate/vote → durable plan+cut commit → activate`。rank ごとの prepare に旧/new root、candidate/plan/policy/profile hash、layout/inverse、tape cursor を含め、global manifest の atomic replace／directory fsync を唯一の durable commit point にする。
+commit は `propose/dry-run → stop affected admission → drain → reserve/vote → stage migration → validate/vote → durable plan+cut commit → activate`。rank ごとの prepare に旧/new root、candidate/plan/policy/profile hash、layout/inverse、tape cursor を含める。durable commit point と local decision copy の配布・再開規則は §12.1 と共通にし、全 host から一つの filesystem が見えることを要求しない。
 
 global commit 前の失敗は staged root を採用せず旧 cut/plan から継続する。commit 後に通知／verification が失敗しても、新 manifest を authoritative とし旧 plan の計算済み gate を再適用しない。悪化した場合は新 cut から前進する別候補を作るか、明示した durable checkpoint から再開する。
 
@@ -193,7 +205,32 @@ observe は monitor/ETA/候補提示のみ。recommend は dry-run 結果を保�
 
 Phase 4 checkpoint を schema/semantics v4 とし、v3 の field に ExecutionStep tape／epoch coverage、plan snapshot、policy/profile version、runtime state を追加する。未完了 request や FD／worker は永続化せず drain 後の cut だけ保存する。stage directory／prepare のみの candidate は recovery で無視する。
 
+4A0 では node-local 配置と commit decision を含む v4 の基本形を導入し、同期 S0 の tape／policy を記録する。4E で非同期 epoch と再計画の field を拡張する。配置と commit の意味が異なる形式を v3 と偽って保存しない。
+
 v3 distributed checkpoint は P/n/b を一致させて読み、保存された gate/layout history から actual tape を構築し、root／Binding／現在の layout を保持した v4 state に変換する。未実行 suffix は S0/synchronous policy で開始する。v1/v2 は Phase 3 の P=1 migration adapter を経由する。v4 を Phase 3 reader が誤読しないよう schema を明示拒否する。再開時に host/backend/MPI 条件が変わった profile は無効化し、再校正まで保守的経路を使う。
+
+### 12.1 node-local checkpoint と owner 通信
+
+`StoragePlacement` は store-id、logical owner-rank、host／volume-id、owner-local root と版を持つ。各 rank は合意した配置記述から自分の path を解決し、他 host の path を直接 open しない。Mac で rank ごとに異なる local root を使えるよう、rank 別 root 全体の hash を合意し、既存 config 全体の同一性検査を path 以外の共通条件と配置記述の合意へ分ける。
+
+管理情報は main thread の control protocol で bounded な chunk に分割して交換する。manifest に全 gate／全 extent 表を無制限に詰めず、hash 付き local metadata chunk／asset の参照を持たせる。descriptor、credit、再送／検証 buffer も RAM ledger に含める。振幅の typed MPI と管理情報の byte 数は別に記録する。
+
+checkpoint は次の順で進める。
+
+1. 一致 cut で全 request を drain し、各 owner が振幅、asset、catalog、journal と local prepare を flush／fsync する。必要な disk 容量は事前に予約する。
+2. 全 rank が prepare の hash、cut／plan 版、保存場所識別子を MPI で交換し、成功を vote する。catalog 全体や振幅はこの vote のために集約しない。
+3. coordinator（rank 0）が全 prepare hash を含む COMMIT decision を自分の local disk に atomic replace／directory fsync で保存する。これを唯一の authoritative commit point とする。保存前の失敗は旧 cut、保存後の失敗は新 cut が再開対象となる。
+4. decision を MPI で配送し、各 rank が hash を確認して local decision copy を fsync する。全 rank の acknowledgment 後に実行へ公開する。copy の配送・fsync 失敗時は旧 cut に戻さず、停止して decision を照合する。
+
+resume は filesystem を読む前に communicator と配置記述を構築する。coordinator の durable decision と各 rank の local copy／prepare を通信で照合し、各 owner が必要な shard／asset／journal を検査して collective vote する。通知前の coordinator process 失敗でも、その local disk が残っていれば authoritative decision を再配送できる。prepare だけの candidate は採用しない。初期版は同じ rank 数と owner volume を要求し、別 host に移す場合は checksum と容量予約を伴う明示転送を前提にする。
+
+process failure 後の再投入と node／disk 喪失を区別する。必要 shard と authoritative decision が読めない場合は復旧成功とせず停止する。decision copy だけでは振幅の喪失に対応できない。node 障害用の shard 複製と coordinator の自動交代は初期版の対象外とし、ローカルデータが失われたケースは再計算する。
+
+fork は各 owner の local catalog と immutable extent への参照を作り、外部 prefix lease の集合を control protocol で管理する。GC は committed root、全 rank／Binding の lease、in-flight pin の生存集合と版を合意し、その epoch 中に新規 lease を追加しない。owner が自分の local extent だけを回収する。remote lease を参照できない状態では回収しない。
+
+v3 移行は元 checkpoint が読める配置で各 rank の prepare／asset を取得して明示配布する。共有ディスク上の v3 ファイルを計算時に参照し続ける互換経路にはしない。
+
+小さな manifest／結果要約の共有 filesystem mirror は既定 off の補助とする。on の場合は commit 時に限定し、容量上限を検査する。mirror の有無で owner routing／resume の意味を変えず、catalog、振幅、大きな asset は共有へ出さない。site の具体的な上限・保存先は内部計画で管理する。
 
 ```python
 # 未実装 API 案。全 rank は collective entry を同じ順で呼ぶ。
@@ -234,17 +271,18 @@ method/schedule は parameter job 開始時か完了 segment の safe frontier �
 
 発行前 cancel は予約を戻す。発行済み I/O/MPI は Cancel が成功したと仮定せず、元 request の終端と matching peer の結果を確認してから buffer を解放する。close は admission stop→compute/I/O/MPI drain→catalog registration→lease release→FD／communicator close。duplicated communicator の解放は全 rank が同じ順で行う。library は MPI.Finalize を呼ばない。
 
-MPI process loss、communication error 後の継続が保証されない状態、drain timeout は安全な job 停止と durable checkpoint restart にする。ERRORS_RETURN を communicator recovery と扱わない。[Open MPI の error semantics](https://docs.open-mpi.org/en/main/man-openmpi/man3/MPI_Isend.3.html)
+MPI process loss、communication error 後の継続が保証されない状態、drain timeout は安全な job 停止にする。必要な local volume が残る場合だけ §12.1 の検査を経て durable checkpoint restart を行う。node／disk 喪失時の再計算を再開成功と扱わない。ERRORS_RETURN を communicator recovery と扱わない。[Open MPI の error semantics](https://docs.open-mpi.org/en/main/man-openmpi/man3/MPI_Isend.3.html)
 
 ## 15. 実装順と完了条件
 
 | 段階 | 実装 | 必須検証 |
 |---|---|---|
+| 4A0 | owner-local placement、同期 collective checkpoint／resume／lease／GC、disk ledger、local runner | Mac の rank 別 root で他 rank の直接 open を禁止、decision 配布前後 fault、欠落 shard、disk admission。次に PBS 2 node で同じ検証 |
 | 4A | request/lease ledger、fake completion engine、worker I/O | arbitrary completion order、short I/O、pin/FD lifetime、予算・backpressure、SINGLE fallback |
 | 4B | main-thread nonblocking MPI、batched metadata、async epoch | P=1/2/4、複数 slot、rendezvous-sized payload、stale generation、peer failure protocol、Phase 3 と一致 |
 | 4C | prefetch/writeback、parameter batch、prefix | Binding/witness 分離、共通 read、quota 公平性、reader/writer 競合、job failure、GC lease |
 | 4D | mixed calibration、Guard/ETA、LIVE_TUNE | SSD／MPI／CPU を別々に低下、条件不一致、連続窓・復旧・cooldown、mode と control log |
-| 4E | safe replan、S2／fused transpose、v4 checkpoint | DAG 証明、global commit 前後 fault、cost 込み採否、inverse/layout、v3 migration |
+| 4E | safe replan、S2／fused transpose、v4 checkpoint 拡張 | 4A0 の保存 protocol を継承、DAG 証明、global commit 前後 fault、cost 込み採否、inverse/layout、v3 migration |
 | 4F | gradient schedule、最終比較 | shared Expr／controlled Pauli／exact witness、checkpoint/recompute、合法 shift、fault/replan 後の gradient |
 | Linux 専用 | optional io_uring adapter | worker と同じ結果、CQE error/cancel、buffer/alignment、fsync、未対応 capability の明示拒否 |
 
@@ -259,5 +297,35 @@ fault injection は reserve/read/write/fsync/Isend completion/kernel/prepare/glo
 必須の適応シナリオは、固定計画・同じ劣化時刻／量を持つ対照から、SSD/MPI の持続低下→Guard 検出→LIVE_TUNE→必要なら frontier replan→新条件での VERIFYING を追跡する。減速しても利益下界がないケース、短い残回路、未知 baseline、復旧・再悪化では無益な切替を抑える。改善を再現できる positive case と、変更を拒否する negative case の双方を合格条件にする。
 
 report は compile/metadata/planning、queue/progress、Frame、packing、MPI payload、SSD read/write/fsync、swap passes、COW live peak、pin/RAM peak、checkpoint/restore、期待値／勾配、monitor／migration と end-to-end を分ける。検出遅延、誤検出、切替回数、ETA 誤差、予測利益と実利益も保存する。計測・探索・移行込みで改善しない条件も残し、同一 Mac の結果から multi-node scaling を推測しない。
+
+完了には §16 の Mac suite と実クラスタの 2 node／2・4 rank suite の両方を必要とする。クラスタ未検証の段階は Mac 検証済みとだけ報告し、Phase 4 完了としない。io_uring が site で利用不可でも worker I/O による Linux 必須項目は実施する。
+
+## 16. Mac と研究室クラスタでの開発・検証
+
+### 16.1 Mac：MPI とスケジューラの主開発環境
+
+Mac 上の Open MPI＋mpi4py＋uv（Python 3.12）で runtime の task scheduler、Parameter batch、Gradient Scheduler を開発する。開発用 local job runner は MPI process group の起動、host RAM／disk 上限、walltime、cancel、JSON report の回収を担当する。PBS は外側で計算資源を割り当てるシステムであり、runtime の task scheduler と別の層として扱う。
+
+local runner と PBS adapter は共通の `JobSpec`（revision／lock hash、rank 数、rank/host budget、worker/thread 数、walltime、scratch policy、test case）から実行設定を作る。local runner は単一 host の予約・待機・起動・終了を管理し、`QUEUED/RUNNING/COMPLETED/FAILED/CANCELLED` と exit code を保存する。Mac に PBS Pro を導入する前提は置かず、PBS 固有の queue、nodefile、job ID は adapter の外側に限定する。runtime Guard の mode／safe replan と job の投入・cancel を混同しない。
+
+fake completion engine による決定的な scheduler 試験を先に行い、その後実 MPI の P=1/2/4、buffered／F_NOCACHE、worker／cooperative、RAM／file を検証する。rank 別 scratch root と filesystem access guard で、各 rank が他 rank の root を直接 open すると失敗するケースを必須にする。単に directory を分けても Mac 上では他 rank の file が読めるため、分離しただけで multi-node 対応を証明しない。
+
+Mac の NUMA／NIC／disk 容量をクラスタと同じものとして模擬しない。fault／slow-rank／低帯域注入は protocol と適応の検証に使い、report の scope を `same-host`／`injected` とする。現実の cross-host 帯域・Linux alignment・PBS 起動はクラスタで確認する。
+
+### 16.2 PBS クラスタ：実複数 node と Linux の検証環境
+
+Mac で通過した同じ revision／test case を研究室クラスタに配布する。uv／Python／wheel／MPI binding は Linux 用に準備し、Mac の `.venv` をコピーしない。コード、cwd、cache、venv、振幅、catalog、journal、checkpoint と詳細 report を許可された node-local scratch に置く。環境配布・依存 library の shared mount 参照も site profile に記録する。
+
+PBS adapter は割当内の node／CPU／memory と local scratch を検査し、停止・offline node を対象にしない。`free` 表示だけで空きと判断せず assigned resource を確認する。MPI の PBS 対応、選択された通信 component、mpi4py の実際の libmpi を記録し、PBS の nodefile を変更しない。計算と I/O 校正は割当内で行い、ログイン node では実行しない。
+
+順序は単一 node の Linux correctness → 2 node の同期 local lifecycle → 2 node の async／batch／gradient → 通信経路と mixed I/O 校正とする。2 node に各 1 rank と各 2 rank を配置して、同一 host の結果と別 report に保存する。Ethernet と site の高速 fabric は provider／interface を明示して比較し、物理 link rate を実効性能と扱わない。Linux kernel／io_uring capability の確認後、worker を baseline として optional native engine を比較する。
+
+正しさの比較では全状態 Gather を必須にせず、小さい oracle case と分散 norm／期待値／勾配を使う。missing prepare、decision copy 配送失敗、disk 容量低下、remote prefix lease と GC、MPI progress の停止を試験する。cluster では他利用者の資源に影響する障害注入をせず、自 job の delay／credit 制限／quota 制限で再現する。
+
+### 16.3 site 情報と実施の境界
+
+公開可能な設計はこのファイルに記載し、接続先、queue の値、node 名、実容量、scratch 許可、利用規約、環境導入状況と実験 report は内部資料へ分離する。site profile を設計の固定値にせず実行時に検査し、report の公開版では匿名化する。
+
+本改訂は設計と検証計画の更新であり、ジョブ投入・環境導入を実施しない。将来の実装でクラスタを使用する場合は、内部計画の運用条件と scratch／queue 条件を解決してから段階的に実施する。
 
 この設計段階では native dependency 導入、runtime API の実装、MPI/性能実験は行わない。

@@ -184,3 +184,21 @@ file store は append-only 更新のため `Snode` だけを確保しない。�
 SSH 認証や PBS 自体が参照する site 管理ファイルと、アプリケーションの I/O は区別する。既存の共有 `/home` を廃止する計画ではなく、アプリの大量アクセスと実行時依存を取り除く。PBS spool／stdout の site 配置も実施前に確認する。
 
 今回用いた主な読み取りコマンドは `pbsnodes -aS` と各 node の詳細、`qstat -Qf`／`-Bf`、`findmnt`、`df -B1`、`lsblk -b`、`lscpu`、`/proc/meminfo`、`numactl --hardware`、HFI port 情報、`ompi_info`／`prte_info`。他利用者の job ID、内部 IP、鍵情報はこの資料に保存していない。
+
+## 11. Phase 4 開発への反映
+
+[Phase 4 設計書](../phase4_design.md)の §12.1／§15／§16 に、通信を基本とする node-local lifecycle を先に作り、Mac とこのクラスタの両方で検証する方針を反映した。この追記時点でもジョブは投入していない。
+
+| 環境 | 分担 | 初期の上限・実施条件 |
+|---|---|---|
+| Mac MPI＋runtime scheduler／local runner | fake completion、実1/2/4 rank、F_NOCACHE、rank別rootのアクセス分離、checkpointとGC、適応・batch・gradient | Macの実空きとlocal runnerの割当から予算を設定。PBSをMacに導入する前提なし |
+| workq 単一node | Linux buffered／O_DIRECT、uvとMPI binding、local checkpoint | §9の初期4 CPU以下、8gb、10分、disk8 GiB以下 |
+| workq 2 node | owner通信、2/4 rank、checkpoint／resume／prefix／GC、worker I/OとMPI overlap | 同期node-local改修とMac試験の通過後。初期各4 CPU以下、8gb、10分、disk各8 GiB以下 |
+| 2 node 通信校正 | Omni-Path100のPSM2／OFIと10Gb Ethernetを比較 | §5のcomponent候補と各nodeの実interfaceを確認。同条件3回以上、最初のテストファイル1 GiB以下 |
+| large／容量拡大 | NUMA、大容量RAM、必要なら許可済みNVMe | 初期correctness後、§8の容量予算を再検査。未マウントNVMeは算入しない |
+
+site profile は queue、CPU/mem、MPI prefix/provider、許可された scratch、disk quota／空き下限、cleanup寿命、環境配布経路、共有mirrorの上限を持たせる。Macとクラスタは同じrevision／lock／test caseを使うが、実行環境・profileは分ける。runtime task schedulerの設定はJobSpecで共通化し、PBSの資源予約と内部のtask/Binding admissionは別々に記録する。
+
+cluster の kernel 4.18でio_uring利用可否は未確認のためworker I/Oを必須経路とする。root SSDでは総上限にソフトウェア環境・metadataも含め、100 GiBの空き下限とdrain用予約を保つ。共有mirrorは既定off、onにする場合は64 MiB/job以下の小さなcommit情報・結果要約のみ。通常実行と再開はmirrorなしで成立させる。
+
+最終reportはMacのsame-host、delay等のinjected、クラスタのcross-hostを区別する。2 nodeでの検証が未実施ならPhase 4完了とは記載しない。調査時の空きnodeを固定予約とは扱わず、実施時のPBS割当を使用する。
