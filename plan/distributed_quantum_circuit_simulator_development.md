@@ -2116,6 +2116,7 @@ critical bottleneck / uncertainty
 
 ### Phase 5：Resource Estimatorと実機ベンチマーク
 
+- **実装設計**：[Phase 5 設計書](../docs/phase5_design.md) に、profile／workload／plan／report schema、bounded校正・静的推定、Phase 4残件への接続、CLIと大規模評価の段階を具体化する。Phase 4の未完了項目を完了扱いにせず、計測・静的推定を先行整備する。
 - `svbench`→`hardware-profile.json`、`svsim estimate`→`execution-plan.json`。
 - Stage 1で採取したprofileを再校正し、Stage 2の静的推定値とStage 3の逐次残時間推定の両方を評価する。
 - **パラメータ反復実行について、素朴な全回路K回実行と、Plan再利用／prefix snapshot・COW／Parameter-shift／Adjointを同一精度・同一ハードウェアで比較**する。全iterationのwall-clock、I/O、Checkpoint容量、勾配誤差を報告する。

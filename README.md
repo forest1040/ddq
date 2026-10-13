@@ -95,6 +95,10 @@ uv run --locked --extra mpi pytest -q
 
 保存先は毎回新しいディレクトリを指定します。`LocalDevelopmentRunner`はMacの有限job queue、`PBSAdapter`はscript生成だけを提供し、クラスタへの自動投入は行いません。
 
+## Phase 5：Resource Estimatorと実機ベンチマークの設計
+
+[Phase 5設計書](docs/phase5_design.md)に、条件付きhardware profile、svbench／svsim estimateのCLI案、RAM／disk／時間の推定、parameter／gradient比較、32〜36Q実測と40／50Q dry-runの開発順をまとめています。まず計測・静的推定の基盤を整え、Phase 4のETA・適応制御の残件へ接続します。新CLIと統合推定器は未実装です。
+
 ## スライドのビルド
 
 リポジトリ直下で実行します。LuaLaTeX、LuaTeX-ja、原ノ味フォント、Beamer、およびテンプレートで使用するパッケージ（quantikz等）が必要です。
