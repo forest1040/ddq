@@ -102,6 +102,15 @@ ent Dockerで、`svbench runtime`（8 qubit、b=4、O_DIRECT、5回、warmup 1�
 - **品質。** すべて`partial`で、品質は「finite diagnostics only」だった。held-outからenvelopeを作るには、反復数が足りない。数値検証はすべて合格した。
 - **未実施。** 1 rankではMPI系のsuiteは対象外である。
 
+## P4-001の完了証跡（2026-10-15）
+
+`examples/p4_001_evidence.py`（Geminiが実装し、Sonnetが検証、私が生のrunと照合）で、内部証跡ディレクトリ群から再現用の一式を生成した。[manifest](internal/p4_001_evidence/manifest.json)と[report](internal/p4_001_evidence/README.md)の内容は次のとおり。
+- **manifest。** 1,317ファイルすべてのSHA256、生成時のgit revision（clean）、bundle SHA256（`3fc90807…`）。
+- **benchmark run。** 条件classごとのmedian、p95、worst、workload間のばらつき、run内の試行間ばらつき。
+- **その他の要約。** time model、runtime ETAの精度、比較report（監視overheadの4段を含む）、不変profileのID／fingerprint、runtime校正。
+
+**新しく分かったこと。** run内の試行間ばらつき（(max−min)/median の中央値）は、Macで0.02〜0.05、Linux O_DIRECTで0.06〜0.10、クラスタ2 node（O_DIRECT）で0.08だった。Linux bufferedだけが0.8〜2.9と大きい。Linuxで装置状態が切り替わる影響は、page cacheを経由するbufferedのdurable同期で特に大きく現れ、O_DIRECTではMac並みに小さい。
+
 ## 検証
 
 `tests/test_runtime_cost_registry.py`（6件）で次を確認した。
