@@ -32,7 +32,7 @@ Catalog／checkpoint の処理には有用な cut 保護がある。`CatalogConn
 
 [設計](phase4_checkpoint_recovery_design.md)と[実装](phase4_checkpoint_recovery_implementation.md)で、P4-009 checkpoint JSON writerが作るintentに限定した明示offline recoveryを追加した。最新committed v4 global decisionとowner prepare、read-only catalogのsemantic metadata、committed journal prefix、root/device/inode、generation-bound target/temp inventoryをrank vote前に検査する。通常runtimeのshared leaseが残るとkernel exclusive leaseを取得できない。dry runが既定で、適用時はexact reservation/link CASとcanonical evidence receiptをtokenごとのSQLite transactionで保存する。
 
-これは全rank・全tokenのdistributed atomic transactionではない。rank vote後の適用中断では一部tokenがterminalになり得る。partial temporaryは削除・truncateせず、prepare/global decisionの必須targetがない場合はactive tokenを残す。decision-copy targetは欠損を許し、partial tempがあれば観測byteをmaterialized accountingへ加えてRECONCILEDにし、proofに残す。通常resume/restoreは欠けたdecision-copyを再作成し、recovery後のpartial tempを削除・cleanupしない。振幅payloadや全physical closureを確認せず、unlinked/uncommitted reservation、extent、catalog/journal、payload、trace、asset、export writerは回収しない。適用は同一persistent ledgerを共有するnode-local volumeに限る。dry runでもledgerを開きDiskBudgetを初期化するためschema初期化、root登録、shared policy bind等は更新し得るが、reservationの精算とrecovery receipt保存はapply時のみ行う。
+これは全rank・全tokenのdistributed atomic transactionではない。rank vote後の適用中断では一部tokenがterminalになり得る。partial temporaryは削除・truncateせず、prepare/global decisionの必須targetがない場合はactive tokenを残す。decision-copy targetは欠損を許し、partial tempがあれば観測byteをmaterialized accountingへ加えてRECONCILEDにし、proofに残す。通常resume/restoreは欠けたdecision-copyを再作成し、recovery後のpartial tempを削除・cleanupしない。振幅payloadや全physical closureを確認せず、unlinked/uncommitted reservation、extent、catalog/journal、payload、trace、asset、export writerは回収しない。適用は同一persistent ledgerを共有するnode-local volumeに限る。dry runもrecovery-only openを使い、schema migration/create、root登録、shared policy変更を行わない。reservation精算とreceipt保存はapply時だけ行う。recovery-only poolはlogical quota/pending/drainを除外する一方、min_free、未割当pool、native page/journal capを保つ。hot sidefile、schema/policy/root mismatch、pool不足、実I/O errorは拒否する。
 
 ## VFS の識別情報と機能の証拠
 
@@ -42,7 +42,7 @@ Catalog／checkpoint の処理には有用な cut 保護がある。`CatalogConn
 
 ## `strict_capacity_guarantee` が false の理由
 
-ledger と管理対象 catalog には明示的な上限があるが、監査した namespace にはソフトウェアだけの予約と未予約の writer が残る。State segment、journal、trace、payload、JSON sidecar、asset、export が、書き込み／truncate を強制する単一の VFS をすべて共有するわけではない。新しいrecoveryはcheckpoint sidecar intentの一部だけをcutとinventoryへ結び付け、全writerのtoken recoveryは行わない。同じledgerに登録したdataset／suffixは合算調停するが、異なるledgerや外部jobまで自動調停しない。`statvfs`／quota の観測値は外部 job、filesystem metadata、無関係な process、システム動作によって変わり得る。現在の capability／status field は適切に `strict_capacity_guarantee: false` を報告する。GC、別ledger／外部jobの調停、cross-host、電源断耐久性は未受入であり、P4-009とPhase 4は未完了である。
+ledger と管理対象 catalog には明示的な上限があるが、監査した namespace にはソフトウェアだけの予約と未予約の writer が残る。State segment、journal、trace、payload、JSON sidecar、asset、export が、書き込み／truncate を強制する単一の VFS をすべて共有するわけではない。新しいrecoveryはcheckpoint sidecar intentの一部だけをcutとinventoryへ結び付け、全writerのtoken recoveryは行わない。同じledgerに登録したdataset／suffixは合算調停するが、異なるledgerや外部jobまで自動調停しない。`statvfs`／quota の観測値は外部 job、filesystem metadata、無関係な process、システム動作によって変わり得る。recovery-only poolも実hardware ENOSPCや電源断耐久性を封じない。現在の capability／status field は適切に `strict_capacity_guarantee: false` を報告する。GC、別ledger／外部jobの調停、cross-host、電源断耐久性は未受入であり、P4-009とPhase 4は未完了である。
 
 ## 残る障害試験と受け入れマトリクス
 
@@ -53,6 +53,6 @@ ledger と管理対象 catalog には明示的な上限があるが、監査し�
 | Crash recovery | 予約、allocator SQL、segment の部分／完全書き込み、fsync、version 公開、journal 追記、prepare、authoritative decision、decision-copy 書き込みの前後でプロセスを停止する。hot-journal recovery、orphan accounting、部分 bytes の保持、明示的な一度限りの reconcile、証拠／cut が不確かな場合の拒否を検証する。 |
 | Shared volume | Mac同volumeの明示共通ledger、dataset／fork／parameter-shiftの合算と1 byte超過拒否を検証した。Linuxの一部検証は済んでいる。全batch／Binding／failure matrix、temporary branchの安全なGC、別volume／別hostの実証とLinuxを含む全recovery matrixは残る。別volumeは空き容量の観測を共有しないことを追加検証する。 |
 | 未管理 writer | trace、外部 export、すべての JSON／temp sidecar、すべての segment path を admission と強制の対象にするか、strict claim の対象外であることを明記する。maintenance、migration、campaign report、ユーザー作成の出力 path も監査する。 |
-| 運用環境 | ENOSPC と外部要因による空き容量の減少、ledger-full 時の recovery slot、rollback／decision recovery、対応する全 storage backend を安全に試験する。Cross-host／Linux／O_DIRECT の受け入れは未完了であり、ソース監査で実行試験を代替できない。 |
+| 運用環境 | ENOSPC と外部要因による空き容量の減少、ledger-full 時の recovery slot、rollback／decision recovery、対応する全 storage backend を安全に試験する。Cross-host、Linuxを含む全recovery matrix、O_DIRECT の受け入れは未完了であり、ソース監査で実行試験を代替できない。Linuxの一部機能検証は済んでいる。 |
 
 この監査によって P4-009 が完了したことにはならない。特に、catalog の VFS 強制は volume 全体の強制ではなく、catalog test の合格だけでは strict capacity guarantee を立証できない。

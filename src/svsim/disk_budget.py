@@ -24,6 +24,48 @@ _LEDGER_PATH_LOCKS = {}
 _LEDGER_PATH_LOCKS_LOCK = threading.RLock()
 
 
+_LEDGER_TABLES = {
+    'reservations': """CREATE TABLE IF NOT EXISTS reservations(
+                        id TEXT PRIMARY KEY, bytes INTEGER NOT NULL, materialized INTEGER NOT NULL DEFAULT 0,
+                        operation TEXT NOT NULL DEFAULT 'legacy', owner TEXT, generation TEXT,
+                        state TEXT NOT NULL DEFAULT 'RESERVED', evidence TEXT)""",
+    'roots': """CREATE TABLE IF NOT EXISTS roots(path TEXT PRIMARY KEY)""",
+    'checkpoint_reservations': """CREATE TABLE IF NOT EXISTS checkpoint_reservations(
+                        id TEXT PRIMARY KEY, link TEXT NOT NULL CHECK(length(CAST(link AS BLOB))<=4096),
+                        FOREIGN KEY(id) REFERENCES reservations(id) ON DELETE CASCADE)""",
+    'checkpoint_recovery_receipts': """CREATE TABLE IF NOT EXISTS checkpoint_recovery_receipts(
+                        id TEXT PRIMARY KEY, proof TEXT NOT NULL CHECK(length(CAST(proof AS BLOB))<=8192),
+                        FOREIGN KEY(id) REFERENCES reservations(id) ON DELETE CASCADE)""",
+    'shared_policy': """CREATE TABLE IF NOT EXISTS shared_policy(
+                        singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+                        quota_bytes INTEGER, min_free_bytes INTEGER NOT NULL,
+                        drain_reserve_bytes INTEGER NOT NULL, bootstrap_bytes INTEGER NOT NULL,
+                        max_page_count INTEGER NOT NULL, max_records INTEGER NOT NULL,
+                        volume_device INTEGER NOT NULL, custom_accounting INTEGER NOT NULL)""",
+}
+
+_LABEL_TRIGGERS = {
+    'reservation_labels_insert': """CREATE TRIGGER IF NOT EXISTS reservation_labels_insert
+                        BEFORE INSERT ON reservations
+                        WHEN length(CAST(NEW.operation AS BLOB))>64
+                          OR (NEW.owner IS NOT NULL AND length(CAST(NEW.owner AS BLOB))>256)
+                          OR (NEW.generation IS NOT NULL AND length(CAST(NEW.generation AS BLOB))>128)
+                          OR (NEW.evidence IS NOT NULL AND length(CAST(NEW.evidence AS BLOB))>256)
+                        BEGIN SELECT RAISE(ABORT,'reservation metadata exceeds byte limit'); END""",
+    'reservation_labels_update': """CREATE TRIGGER IF NOT EXISTS reservation_labels_update
+                        BEFORE UPDATE OF operation,owner,generation,evidence ON reservations
+                        WHEN length(CAST(NEW.operation AS BLOB))>64
+                          OR (NEW.owner IS NOT NULL AND length(CAST(NEW.owner AS BLOB))>256)
+                          OR (NEW.generation IS NOT NULL AND length(CAST(NEW.generation AS BLOB))>128)
+                          OR (NEW.evidence IS NOT NULL AND length(CAST(NEW.evidence AS BLOB))>256)
+                        BEGIN SELECT RAISE(ABORT,'reservation metadata exceeds byte limit'); END""",
+}
+
+
+def _schema_text(sql):
+    return re.sub(r"\s+", "", sql.lower()).replace("ifnotexists", "").rstrip(";")
+
+
 def _path_lock(path):
     key = str(path)
     with _LEDGER_PATH_LOCKS_LOCK:
@@ -66,7 +108,7 @@ class DiskBudget:
     def __init__(self, ledger, roots, *, quota_bytes=None, min_free_bytes=0,
                  drain_reserve_bytes=0, usage=None, free=None,
                  max_page_count=1024, max_records=4096, bootstrap_bytes=8*1024*1024,
-                 shared_policy=False):
+                 shared_policy=False, recovery_only=False):
         _integer(min_free_bytes, 'minimum free bytes')
         _integer(drain_reserve_bytes, 'drain reserve bytes')
         _integer(quota_bytes, 'disk quota', minimum=1, optional=True)
@@ -75,6 +117,10 @@ class DiskBudget:
         _integer(bootstrap_bytes, 'ledger bootstrap bytes', minimum=1)
         if type(shared_policy) is not bool:
             raise ValueError('Invalid shared ledger policy flag')
+        if type(recovery_only) is not bool:raise ValueError('Invalid recovery-only flag')
+        if recovery_only and (not shared_policy or usage is not None or free is not None):
+            raise ValueError('Recovery-only requires a bound production shared ledger')
+        self.recovery_only=recovery_only
         self.roots = tuple(dict.fromkeys(Path(p).resolve() for p in roots))
         if not self.roots:
             raise ValueError('Disk budget needs a local root')
@@ -103,9 +149,15 @@ class DiskBudget:
         self._ledger_side_cap = bootstrap_bytes - self._ledger_main_cap
         if self._ledger_side_cap <= 0:
             raise ValueError('Ledger metadata pool must include rollback journal space')
-        ledger = Path(ledger).resolve()
+        ledger = Path(ledger)
+        if recovery_only:
+            info=ledger.lstat()
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1:
+                raise DiskAdmissionError('Recovery requires an existing exclusively named ledger')
+            self._recovery_identity=(info.st_dev,info.st_ino)
+        ledger = ledger.resolve()
         self._ledger_path = ledger
-        ledger.parent.mkdir(parents=True, exist_ok=True)
+        if not recovery_only:ledger.parent.mkdir(parents=True, exist_ok=True)
         if ledger.parent.stat().st_dev not in devices:
             raise ValueError('Disk ledger must be on the budgeted volume')
         self._path_lock = _path_lock(ledger)
@@ -120,6 +172,8 @@ class DiskBudget:
             except (ImportError, NotImplementedError, OSError, sqlite3.Error) as exc:
                 raise DiskAdmissionError(f'Bounded ledger VFS unavailable: {exc}') from exc
         self.ledger_vfs_enforced = self._guard is not None
+        if recovery_only and not self.ledger_vfs_enforced:
+            raise DiskAdmissionError('Recovery-only requires the native bounded ledger VFS')
         self.accounting_scope = ('injected' if self._custom_accounting else
                                  'observed-with-bounded-ledger-vfs' if self.ledger_vfs_enforced else
                                  'observed-soft')
@@ -128,6 +182,9 @@ class DiskBudget:
             raise DiskAdmissionError('Existing disk ledger exceeds its bounded metadata pool')
         if self._metadata_allocated_bytes()>self.bootstrap_bytes:
             raise DiskAdmissionError('Existing ledger and journal exceed the metadata pool')
+        if recovery_only:
+            self._open_recovery_ledger()
+            return
         # Account for the bounded local metadata pool before its first write.
         # Injected accounting hooks are deterministic test/accounting scopes.
         if not self._custom_accounting:
@@ -152,10 +209,7 @@ class DiskBudget:
                 # constructor's pre-page-size estimate, in shared policy.
                 self.max_page_count = actual_cap
                 with self._ledger_transaction(active_already=True):
-                    self.db.execute('''CREATE TABLE IF NOT EXISTS reservations(
-                        id TEXT PRIMARY KEY, bytes INTEGER NOT NULL, materialized INTEGER NOT NULL DEFAULT 0,
-                        operation TEXT NOT NULL DEFAULT 'legacy', owner TEXT, generation TEXT,
-                        state TEXT NOT NULL DEFAULT 'RESERVED', evidence TEXT)''')
+                    self.db.execute(_LEDGER_TABLES['reservations'])
                     cols = {row[1] for row in self.db.execute('PRAGMA table_info(reservations)')}
                     for name, decl in (('materialized','INTEGER NOT NULL DEFAULT 0'),
                                        ('operation',"TEXT NOT NULL DEFAULT 'legacy'"), ('owner','TEXT'),
@@ -163,33 +217,11 @@ class DiskBudget:
                                        ('evidence','TEXT')):
                         if name not in cols:
                             self.db.execute(f'ALTER TABLE reservations ADD COLUMN {name} {decl}')
-                    self.db.execute('CREATE TABLE IF NOT EXISTS roots(path TEXT PRIMARY KEY)')
-                    self.db.execute('''CREATE TABLE IF NOT EXISTS checkpoint_reservations(
-                        id TEXT PRIMARY KEY, link TEXT NOT NULL CHECK(length(CAST(link AS BLOB))<=4096),
-                        FOREIGN KEY(id) REFERENCES reservations(id) ON DELETE CASCADE)''')
-                    self.db.execute('''CREATE TABLE IF NOT EXISTS checkpoint_recovery_receipts(
-                        id TEXT PRIMARY KEY, proof TEXT NOT NULL CHECK(length(CAST(proof AS BLOB))<=8192),
-                        FOREIGN KEY(id) REFERENCES reservations(id) ON DELETE CASCADE)''')
-                    self.db.execute('''CREATE TABLE IF NOT EXISTS shared_policy(
-                        singleton INTEGER PRIMARY KEY CHECK(singleton=1),
-                        quota_bytes INTEGER, min_free_bytes INTEGER NOT NULL,
-                        drain_reserve_bytes INTEGER NOT NULL, bootstrap_bytes INTEGER NOT NULL,
-                        max_page_count INTEGER NOT NULL, max_records INTEGER NOT NULL,
-                        volume_device INTEGER NOT NULL, custom_accounting INTEGER NOT NULL)''')
-                    self.db.execute('''CREATE TRIGGER IF NOT EXISTS reservation_labels_insert
-                        BEFORE INSERT ON reservations
-                        WHEN length(CAST(NEW.operation AS BLOB))>64
-                          OR (NEW.owner IS NOT NULL AND length(CAST(NEW.owner AS BLOB))>256)
-                          OR (NEW.generation IS NOT NULL AND length(CAST(NEW.generation AS BLOB))>128)
-                          OR (NEW.evidence IS NOT NULL AND length(CAST(NEW.evidence AS BLOB))>256)
-                        BEGIN SELECT RAISE(ABORT,'reservation metadata exceeds byte limit'); END''')
-                    self.db.execute('''CREATE TRIGGER IF NOT EXISTS reservation_labels_update
-                        BEFORE UPDATE OF operation,owner,generation,evidence ON reservations
-                        WHEN length(CAST(NEW.operation AS BLOB))>64
-                          OR (NEW.owner IS NOT NULL AND length(CAST(NEW.owner AS BLOB))>256)
-                          OR (NEW.generation IS NOT NULL AND length(CAST(NEW.generation AS BLOB))>128)
-                          OR (NEW.evidence IS NOT NULL AND length(CAST(NEW.evidence AS BLOB))>256)
-                        BEGIN SELECT RAISE(ABORT,'reservation metadata exceeds byte limit'); END''')
+                    self.db.execute(_LEDGER_TABLES['roots'])
+                    self.db.execute(_LEDGER_TABLES['checkpoint_reservations'])
+                    self.db.execute(_LEDGER_TABLES['checkpoint_recovery_receipts'])
+                    self.db.execute(_LEDGER_TABLES['shared_policy'])
+                    for sql in _LABEL_TRIGGERS.values():self.db.execute(sql)
                     self._check_or_bind_shared_policy(devices.pop())
                     existing_roots = [Path(path) for (path,) in self.db.execute('SELECT path FROM roots')]
                     selected_roots = _root_antichain(existing_roots + list(self.roots))
@@ -216,14 +248,16 @@ class DiskBudget:
             entry = _LEDGER_REGISTRY.get(self._registry_key)
             if self._guard is not None:
                 if entry is None:
+                    kwargs={'existing_only':True} if self.recovery_only else {}
                     db = self._guard.connect(self._ledger_path,
                                              main_cap_bytes=self._ledger_main_cap,
-                                             side_cap_bytes=self._ledger_side_cap)
+                                             side_cap_bytes=self._ledger_side_cap,**kwargs)
                     _LEDGER_REGISTRY[self._registry_key] = [self._guard, 1]
                 else:
                     if entry[0] is not self._guard:
                         raise DiskAdmissionError('Ledger is registered with a different SQLite guard')
-                    db = self._guard.connect(self._ledger_path)
+                    kwargs={'existing_only':True} if self.recovery_only else {}
+                    db = self._guard.connect(self._ledger_path,**kwargs)
                     entry[1] += 1
             else:
                 if entry is not None and entry[0] is not None:
@@ -235,6 +269,85 @@ class DiskBudget:
                     entry[1] += 1
             self._registry_acquired = True
             return db
+
+    def _require_writer(self):
+        if self.recovery_only:
+            raise DiskAdmissionError('Recovery-only ledger permits checkpoint CAS with receipts only')
+
+    def _check_recovery_headroom(self, *, check_side_files=True):
+        info=self._ledger_path.lstat()
+        if (not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 or
+                (info.st_dev,info.st_ino)!=self._recovery_identity):
+            raise DiskAdmissionError('Recovery ledger identity changed')
+        if info.st_size>self._ledger_main_cap or self._metadata_allocated_bytes()>self.bootstrap_bytes:
+            raise DiskAdmissionError('Recovery ledger exceeds the precharged metadata pool')
+        if check_side_files:
+            for suffix in ('-journal','-wal','-shm'):
+                try:side=Path(str(self._ledger_path)+suffix).lstat()
+                except FileNotFoundError:continue
+                if not stat.S_ISREG(side.st_mode) or side.st_nlink!=1 or side.st_size:
+                    raise DiskAdmissionError('Recovery ledger side file requires separate recovery')
+        # The pool was already charged by the persisted policy. Recovery spends
+        # no new data credit and no drain margin, but preserves min-free and
+        # requires physical room for the whole remaining metadata envelope.
+        if self._free()-self._unallocated_metadata_pool()<self.min_free_bytes:
+            raise DiskAdmissionError('Recovery metadata pool lacks physical headroom')
+
+    def _validate_recovery_ledger(self, con):
+        if con.execute('PRAGMA user_version').fetchone()[0]!=3:
+            raise DiskAdmissionError('Recovery requires the existing ledger schema')
+        for table,expected in _LEDGER_TABLES.items():
+            row=con.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?",(table,)).fetchone()
+            if row is None or _schema_text(row[0])!=_schema_text(expected):
+                raise DiskAdmissionError('Recovery ledger schema is incomplete or changed')
+        triggers=con.execute("SELECT name,sql FROM sqlite_master WHERE type='trigger' AND tbl_name IN ('reservations','roots','checkpoint_reservations','checkpoint_recovery_receipts','shared_policy')").fetchall()
+        if {r[0] for r in triggers}!=set(_LABEL_TRIGGERS):
+            raise DiskAdmissionError('Recovery ledger trigger schema changed')
+        if any(_schema_text(sql)!=_schema_text(_LABEL_TRIGGERS[name]) for name,sql in triggers):
+            raise DiskAdmissionError('Recovery ledger label trigger changed')
+        if con.execute('PRAGMA journal_mode').fetchone()[0]!='delete':
+            raise DiskAdmissionError('Recovery requires existing DELETE journal mode')
+        page_size=con.execute('PRAGMA page_size').fetchone()[0]
+        self.max_page_count=self._ledger_main_cap//page_size
+        if self.max_page_count<1 or con.execute('PRAGMA page_count').fetchone()[0]>self.max_page_count:
+            raise DiskAdmissionError('Recovery ledger exceeds its page envelope')
+        expected=(self.quota_bytes,self.min_free_bytes,self.drain_reserve_bytes,self.bootstrap_bytes,
+                  self.max_page_count,self.max_records,self.roots[0].stat().st_dev,0)
+        policy=con.execute('''SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,bootstrap_bytes,
+            max_page_count,max_records,volume_device,custom_accounting FROM shared_policy WHERE singleton=1''').fetchone()
+        if policy is None or tuple(policy)!=expected:
+            raise DiskAdmissionError('Recovery requires a matching bound shared policy')
+        registered=[Path(p) for (p,) in con.execute('SELECT path FROM roots LIMIT 257')]
+        if not registered or len(registered)>256 or any(not p.is_absolute() or p.resolve()!=p or
+                not p.is_dir() or p.stat().st_dev!=expected[-2] for p in registered):
+            raise DiskAdmissionError('Recovery registered roots changed or are unavailable')
+        if any(not any(root.is_relative_to(p) for p in registered) for root in self.roots):
+            raise DiskAdmissionError('Recovery cannot register a new root')
+
+    def _open_recovery_ledger(self):
+        # Hold a read snapshot until the guarded existing-only connection is
+        # initialized. No schema migration, policy bind, or root rewrite occurs.
+        with self._path_lock:
+            self._check_recovery_headroom()
+            con=sqlite3.connect(self._ledger_path.as_uri()+'?mode=ro',uri=True)
+            try:
+                con.execute('BEGIN')
+                self._validate_recovery_ledger(con)
+                if con.execute('PRAGMA quick_check').fetchall()!=[('ok',)]:
+                    raise DiskAdmissionError('Recovery ledger integrity check failed')
+                self._check_recovery_headroom()
+                self.db=self._open_ledger()
+                self._set_guard_active(False)
+                self.db.execute('PRAGMA synchronous=FULL')
+                if self.db.execute(f'PRAGMA max_page_count={self.max_page_count}').fetchone()[0]!=self.max_page_count:
+                    raise DiskAdmissionError('Recovery ledger page cap could not be enforced')
+                self._validate_recovery_ledger(self.db)
+            except BaseException:
+                if hasattr(self,'db'):
+                    try:self.db.close()
+                    finally:self._release_registry()
+                raise
+            finally:con.close()
 
     def _release_registry(self):
         if not self._registry_acquired:
@@ -296,10 +409,14 @@ class DiskBudget:
     @contextmanager
     def _ledger_transaction(self, *, active_already=False):
         with self._path_lock:
+            if self.recovery_only:self._check_recovery_headroom()
             if not active_already:
                 self._set_guard_active(True)
             try:
                 self.db.execute('BEGIN IMMEDIATE')
+                if self.recovery_only:
+                    self._check_recovery_headroom(check_side_files=False)
+                    self._validate_recovery_ledger(self.db)
                 yield
                 self.db.execute('COMMIT')
             except BaseException:
@@ -349,6 +466,7 @@ class DiskBudget:
 
     def register_roots(self,roots):
         """Charge local stores; persistent roots are kept as a bounded antichain."""
+        self._require_writer()
         incoming=tuple(dict.fromkeys(Path(p).resolve() for p in roots))
         if len(incoming) > 256:
             raise DiskAdmissionError('Disk ledger root limit exceeded (input list)')
@@ -475,6 +593,7 @@ class DiskBudget:
         return encoded
 
     def reserve(self, amount, *, drain=False, operation='unspecified', owner=None, generation=None, writing=False, checkpoint_link=None):
+        self._require_writer()
         _integer(amount, 'reservation bytes')
         if not isinstance(drain, bool): raise ValueError('Invalid drain flag')
         if type(writing) is not bool: raise ValueError('Invalid writing flag')
@@ -502,12 +621,14 @@ class DiskBudget:
         return key
 
     def mark_writing(self, key):
+        self._require_writer()
         with self._ledger_transaction():
             cur = self.db.execute("UPDATE reservations SET state='WRITING' WHERE id=? AND state='RESERVED'", (key,))
             if cur.rowcount == 0 and self.reservation(key) is None:
                 raise KeyError(key)
 
     def materialize(self, key, amount):
+        self._require_writer()
         _integer(amount, 'materialized bytes')
         with self._ledger_transaction():
             row = self.db.execute("SELECT bytes,materialized,state FROM reservations WHERE id=?", (key,)).fetchone()
@@ -527,7 +648,7 @@ class DiskBudget:
         with self._path_lock:
             rows = self.db.execute("SELECT state,count(*),COALESCE(sum(bytes),0),COALESCE(sum(materialized),0) FROM reservations GROUP BY state").fetchall()
             return {'reserved_bytes':self.reserved_bytes,'states':{r[0]:{'count':r[1],'bytes':r[2],'materialized_bytes':r[3]} for r in rows},'max_records':self.max_records,
-                    'shared_policy':self.shared_policy,
+                    'shared_policy':self.shared_policy,'recovery_only':self.recovery_only,
                     'registered_root_count':self.db.execute('SELECT count(*) FROM roots').fetchone()[0],
                     'metadata_pool_bytes':self.bootstrap_bytes,'metadata_main_cap_bytes':self._ledger_main_cap,
                     'metadata_side_cap_bytes':self._ledger_side_cap,'ledger_vfs_enforced':self.ledger_vfs_enforced,
@@ -543,6 +664,7 @@ class DiskBudget:
         state transition is conditional so concurrent or repeated recovery is
         rejected rather than silently releasing the same token twice.
         """
+        self._require_writer()
         _integer(materialized_bytes, 'materialized bytes')
         if not isinstance(evidence,str) or not evidence.strip(): raise ValueError('Explicit recovery evidence is required')
         evidence = _bounded_text(evidence, 'recovery evidence', 256)
@@ -577,6 +699,8 @@ class DiskBudget:
         return result
 
     def reconcile_checkpoint(self,key,*,expected_reservation,expected_link,materialized_bytes,evidence,terminal_state='RECONCILED',evidence_document=None):
+        if self.recovery_only and evidence_document is None:
+            raise DiskAdmissionError('Recovery-only checkpoint CAS requires a persisted proof receipt')
         _integer(materialized_bytes,'materialized bytes')
         if not isinstance(evidence,str) or not evidence.strip(): raise ValueError('Explicit recovery evidence is required')
         evidence=_bounded_text(evidence,'recovery evidence',256)
@@ -607,6 +731,7 @@ class DiskBudget:
         return None if row is None else json.loads(row[0])
 
     def release(self, key):
+        self._require_writer()
         # Idempotent for old callers; completed tokens are removed only at this
         # explicit quiescent boundary. A process crash never invokes this path.
         with self._ledger_transaction():

@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-14",
+  "scope": "P4-009 existing recovery-only metadata pool, single-host correctness",
+  "source_matches_workspace": true,
+  "results": {
+    "mac": {
+      "passed": 174,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 95.074
+    },
+    "linux": {
+      "passed": 171,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 318.815
+    },
+    "linux-native": {
+      "passed": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 99.418
+    }
+  },
+  "recovery_receipts": 21,
+  "actual_native_catalogs": 4,
+  "resources": {
+    "cpus": 4,
+    "memory_bytes": 8589934592,
+    "pids": 512,
+    "shm_bytes": 268435456,
+    "network": "none"
+  },
+  "artifacts": {
+    "README.md": "2133e1dd9c8961ebe9801ee44d03197f6e4142270681c968f3b0f7980cff87ac",
+    "capture-ent.sh": "8ecd930260b7850d614b0b7d81bbe05e59bf31e5d14b839508478b20c9cedd2e",
+    "linux/capability-probe.json": "082215166183ac53a8ab923840d55727bcd1b3ba58d8d91dffc7104d0af7ffca",
+    "linux/collection.txt": "fba911158a0955d79703e1e29b4fe717c21ead90caad0f25ab5df5cbd898f272",
+    "linux/filesystem.txt": "d8ee0365d991ef92c169d2760f3dd4daab1fb9fe7a89cd6e9fc7733c75d1ee1b",
+    "linux/image.json": "d1d1ac3be13fd120fc4eb5e84f82cc638d292c3bbd8e9e0ba690a5855c958474",
+    "linux/kernel.txt": "5124d2622afe69deb3f66ef15aa225dbb9dd1b8c31727ff8ca414d8bf43af060",
+    "linux/native-catalog-capabilities.json": "e19a1701c71ed3b0cae9b9c12fd684355ef5e0f2fa4073694a7e0fc1a7132ff6",
+    "linux/native.txt": "6ee7f42b8016b7b82fedbd621ed299e7dc4279d45d2eed1ecfb1afbad65c0294",
+    "linux/native.xml": "ecbd8055c2f6066f75c0ad4865629b2d673f212089f3fca1a5a653c746cec741",
+    "linux/recovery-receipts.json": "bbf3c6fe80bffa59f9b7e44d6d6ef50b96acd0a8cb7556658a249a090eb49520",
+    "linux/regression.txt": "92a9722c3fb22efd403ea3e1c59e6378564421f7af6566ec62a1e930d8d658f0",
+    "linux/regression.xml": "f57451183469ddf43e6fb798968570ebc18c0258fe3d7978451740ca148af473",
+    "linux/source-hashes.txt": "38db7164332757e7105faf6bda5cc4fe1e0140ca381382bd84d909d3721d1474",
+    "linux/status.tsv": "abbf219d1a7eb97755f3224d99e4b441080abc3e8fe399cd4ab2710e3cf141b2",
+    "mac/collection.txt": "a19443e05ca9d71f420ee35899e3528fc5858adee82c22b8ce42fcff6a617395",
+    "mac/regression.txt": "883834c7f5a9d20c8e150706b8e9d0e52cf7b9ef5b6fdbbf023902be9f9a54e6",
+    "mac/regression.xml": "8a71b1b81957c239dac99fc0b4b66cba77dfad3d31bf1be9db404ff699bef5e7",
+    "mac/source-hashes.json": "1261b722d9f5db419fa4f6255b00b9241b94daad308cab7feacd4305c9dd01ab",
+    "merged-results.json": "589cdf7b3b576357c46deda6c3dc59684fb0722791f5b398909757f687281ba5",
+    "run-ent.sh": "11476615716b6feaeede3bf6c4cf4278191224bb7a5eb896b4b7df6a79c49d92",
+    "verify-results.py": "737666dfff393438ba3ef6dbe5eda32229fddfbe0d72ae5d3a3521419093c561"
+  }
+}

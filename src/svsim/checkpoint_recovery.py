@@ -253,7 +253,8 @@ def recover_checkpoint_reservations(config, *, comm=None, snapshot=None, apply=F
                         raise DiskAdmissionError('Recovery ranks on one volume require the same ledger')
             local_roots=sorted({r['root'] for r in records if r['host']==environment[rank]['host'] and r['device']==info.st_dev})
             budget=DiskBudget(ledger,local_roots,quota_bytes=config.disk_quota_bytes,
-                              min_free_bytes=config.min_free_bytes,drain_reserve_bytes=config.drain_reserve_bytes,shared_policy=True)
+                              min_free_bytes=config.min_free_bytes,drain_reserve_bytes=config.drain_reserve_bytes,
+                              shared_policy=True,recovery_only=True)
         except Exception as exc:error=str(exc)
         transport.vote(error)
         error=None;authority=None
@@ -316,7 +317,8 @@ def recover_checkpoint_reservations(config, *, comm=None, snapshot=None, apply=F
         transport.vote(error)
         reports=transport.control.allgather({'rank':rank,'receipts':receipts,'already_terminal':settled})
         return {'kind':'checkpoint-reservation-recovery','apply':apply,'snapshot_id':authority['decision']['snapshot_id'],
-                'metadata_only':True,'artifacts_preserved':True,'ranks':reports,'strict_capacity_guarantee':False}
+                'metadata_only':True,'artifacts_preserved':True,'ranks':reports,'strict_capacity_guarantee':False,
+                'ledger_open_mode':'recovery-only','metadata_pool_bytes':budget.bootstrap_bytes}
     finally:
         if budget is not None:budget.close()
         for lease in leases.values():lease.close()

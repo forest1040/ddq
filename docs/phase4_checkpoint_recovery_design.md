@@ -8,7 +8,7 @@
 
 回収時にはnode-local datasetのrootと各rank shardにkernel flockのexclusive leaseを取得する。通常runtimeのshared leaseが残っていればexclusive leaseを取得できず、回収は始まらない。全writer processを終了し、すべての対象volumeで同じ状態を確認してから、MPI communicatorを使って全rankの検査と適用を進める。leaseは協調するsvsim process間の排他であり、他のOS processや外部jobを停止させるものではない。
 
-APIはdry runを既定とする。dry runでも既存ledgerを開いてDiskBudgetを初期化するため、ledger schemaの初期化、root登録、shared policyのbind等のmetadata更新は起こり得る。予約状態の精算とrecovery receiptの保存はapply=Trueの場合だけ行う。storage_scope='node-local'、既存dataset、最新cutとの一致を必須にする。古いsnapshotを指定して最新cutの代わりに回収することは認めない。
+APIはdry runを既定とする。dry runもrecovery-only modeで既存ledgerを開くが、schema migration/create、root登録、shared policy変更は行わない。予約状態の精算とrecovery receiptの保存はapply=Trueの場合だけ行う。既存poolのschema/policy/root/volume/native VFSとphysical headroom検査はdry runにも適用する。storage_scope='node-local'、既存dataset、最新cutとの一致を必須にする。古いsnapshotを指定して最新cutの代わりに回収することは認めない。recovery-only poolの境界は[別設計](phase4_recovery_pool_design.md)を参照する。
 
 ## 対象cutとmetadata検査
 

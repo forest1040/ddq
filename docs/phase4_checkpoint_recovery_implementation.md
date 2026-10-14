@@ -6,7 +6,7 @@
 
 src/svsim/checkpoint_recovery.pyのrecover_checkpoint_reservations(config, comm=None, snapshot=None, apply=False, ...)が入口である。呼び出し側は全関連runtime/writer processが終了した明示offline時点で実行する。関数はnode-local設定と既存datasetを確認し、rootおよび各rank shardのDirectoryLease exclusive flockを得る。runtimeが持つshared leaseと競合すれば処理を拒否する。全rankが同じcollective sequenceを実行する必要がある。
 
-apply=Falseが既定で、検査結果とwould-settle receiptだけを返す。dry runでも既存ledgerを開いてDiskBudgetを初期化するため、ledger schemaの初期化、root登録、shared policyのbind等のmetadata更新は起こり得る。reservation状態の精算とrecovery receiptの保存はapply=Trueの場合だけ行う。入力snapshotが指定された場合も最新committed v4 decisionのIDと一致させ、以前のcutへ戻すことはしない。scope不一致、lease取得失敗、ledger locator不一致、どれかのrankでmetadata検査失敗があれば、vote後の適用段階へ進まない。
+apply=Falseが既定で、検査結果とwould-settle receiptだけを返す。dry runも既存ledgerをrecovery-only modeで開くが、schema migration/create、root登録、shared policy変更は行わない。reservation状態の精算とrecovery receipt保存はapply=TrueのCAS時だけ行う。recovery-only openはschema/policy/root/volume/native VFSとphysical headroomを確認し、logical quota・pending・drain marginを回収拒否条件から除く。pool/page/journal上限や実I/O errorは引き続き拒否する。詳細は[recovery pool実装](phase4_recovery_pool_implementation.md)を参照。入力snapshotが指定された場合も最新committed v4 decisionのIDと一致させ、以前のcutへ戻すことはしない。scope不一致、lease取得失敗、ledger locator不一致、どれかのrankでmetadata検査失敗があれば、vote後の適用段階へ進まない。
 
 ## 検査と適用の流れ
 
@@ -47,4 +47,4 @@ checkpoint_linksはbounded cursor scanでterminal行を含む一致rootのintent
 
 volume内rankはpersisted catalog locatorまたは明示locatorを同一にし、同じpersistent ledgerを共有する。DiskBudgetの既存metadata poolとrecord/page boundsを使うが、すべてのwriterがhard guardで覆われるわけではない。statusはstrict_capacity_guarantee=falseを維持する。全writer fault/recoveryと容量保証が揃うまではP4-009およびPhase 4を完了扱いにしない。
 
-回収時のledger openにも既存DiskBudgetのcapacity／policy検査が必要である。未記録のpartial writeやdrain領域消費により観測usage＋pendingが限界を超える場合、回収の検査前に保守的に拒否することがある。満杯状態でも回収専用metadata操作を進める経路は、全writerの容量境界recoveryとともに残件である。
+recovery-only openはprecharged metadata pool内でcheckpoint CAS/receiptだけを許す。logical quota/pending/drain margin超過は回収を止めないが、min_freeと未割当pool、page/journal capは維持する。schema migration、root/policy変更や通常のadmission mutationは行わない。実hardware ENOSPC、電源断耐久性、全writer recoveryは未受入である。

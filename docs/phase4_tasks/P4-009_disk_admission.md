@@ -10,11 +10,13 @@
 
 [共有coordinator実装](../phase4_disk_coordination_implementation.md)で、同volume独立datasetの明示共通ledger、forkのbootstrap前継承、永続policy照合、全root合算admissionを追加した。祖先が覆うsuffixを重複登録せず、非重複root256件に制限する。temporary branchの安全なGCと、全writerのcut結合／faultは残る。
 
-[checkpoint reservation recovery設計](../phase4_checkpoint_recovery_design.md)と[実装資料](../phase4_checkpoint_recovery_implementation.md)で、明示offline/node-local recoveryを追加した。全writerの終了とkernel exclusive leaseを前提に、最新committed v4 sidecar intentだけをmetadata/cut/inventory照合する。dry runでもledgerを開きroot/policy metadataを初期化・更新する場合があるが、reservation精算とproof receipt保存はapply時だけ行う。prepare/global decisionは必須target、decision-copyは欠損を許す。partial temporaryは削除せず、decision-copy欠損時は観測byteを精算して通常resumeがcopyを再作成し、temporaryを保持する。intent不在/uncommitted、振幅/全physical closure、全writer、GC、別ledger/外部job、cross-host、電源断は対象外。内部記録は[validation資料](../internal/phase4_checkpoint_recovery_validation/README.md)。P4-009はIN_PROGRESSのままであり、全writer fault/recoveryとstrict capacity保証は未達。
+[checkpoint reservation recovery設計](../phase4_checkpoint_recovery_design.md)と[実装資料](../phase4_checkpoint_recovery_implementation.md)で、明示offline/node-local recoveryを追加した。全writerの終了とkernel exclusive leaseを前提に、最新committed v4 sidecar intentだけをmetadata/cut/inventory照合する。dry runを含むrecovery-only openはschema migration/create、root登録、policy変更を行わず、reservation精算とproof receipt保存はapply時だけ行う。prepare/global decisionは必須target、decision-copyは欠損を許す。partial temporaryは削除せず、decision-copy欠損時は観測byteを精算して通常resumeがcopyを再作成し、temporaryを保持する。intent不在/uncommitted、振幅/全physical closure、全writer、GC、別ledger/外部job、cross-host、電源断は対象外。内部記録は[validation資料](../internal/phase4_checkpoint_recovery_validation/README.md)。P4-009はIN_PROGRESSのままであり、全writer fault/recoveryとstrict capacity保証は未達。
+
+[recovery-only metadata pool](../phase4_recovery_pool_design.md)と[実装](../phase4_recovery_pool_implementation.md)を追加した。dry runを含むrecovery openは既存production shared ledgerのschema/policy/root/volume/native VFSを検証し、migration/create/root登録/policy変更を行わない。logical quota・pending・drain marginを除外してcheckpoint CAS/receiptだけを許し、min_freeと未割当metadata pool、page/journal capは維持する。schema不一致、hot sidefile、pool/page full、physical headroom不足、実I/O errorは拒否する。検証記録は[recovery pool validation](../internal/phase4_recovery_pool_validation/README.md)。
 
 ## 設計時点（6aa8581）の現状とwriter棚卸し
 
-checkpoint回収helperはledger open時の既存capacity／policy検査を維持する。未記録partial writeやdrain消費によるobserved usage＋pendingの保守的超過では、精算前に拒否され得る。満杯時にも回収専用metadata操作を進める経路と、そのmetadata pool／durabilityの証明を009Cの残件として検証する。
+上記recovery-only metadata poolはlogical quota/pending/drain超過を越えて既存pool内のcheckpoint CASを許す。物理headroom、min_free、native journal/page capは引き続き強制する。実hardware ENOSPCや電源断時durability、全writer回収は009Cの残件である。
 
 [disk_budget.py](../../src/svsim/disk_budget.py)はlocal SQLite ledgerでquota/free/drain予約を合算する。[storage.py](../../src/svsim/storage.py)、[async_store_io.py](../../src/svsim/async_store_io.py)はextentを予約するが、allocator/versions等のSQLが事前予約外。catalog・Phase2 rule・root/history・lease・checkpoint・GC・trace・ledger自身を対象にする。
 
@@ -59,4 +61,4 @@ ledger自身のbootstrap/成長/rollback journalは予約の再帰を起こす�
 | 009C crash/lifecycle | reserve/SQL/commit/fsync/decision前後kill、hot journal、partial extent、orphan、drain pool、二重回収拒否 |
 | 009D 接続 | async completion、RAM flush_to_file、prefix/gradient/replan/tile/offline copy、全writer audit |
 
-faultはfake byte backend→Mac実SQLite/worker I/O→許可されたLinux/O_DIRECT環境の順。Linuxの一部機能検証は済んでいるが、quota境界を1 byte/page単位で掃引し、書込み前の拒否と書込み途中の安全な失敗を区別する全writer fault/durability matrixは未完了である。全writerのenforced reservationとrecovery証跡が揃ってDONE。自由SQL、未証明temp growth、native guard不在で厳密保証を出す実装は受け入れない。
+faultはfake byte backend→Mac実SQLite/worker I/O→許可されたLinux/O_DIRECT環境の順。Linuxの一部機能検証は済んでいる。Linuxを含む全recovery／writer fault-durability matrixとquota境界を1 byte/page単位で掃引し、書込み前の拒否と書込み途中の安全な失敗を区別する証跡は未完了である。全writerのenforced reservationとrecovery証跡が揃ってDONE。自由SQL、未証明temp growth、native guard不在で厳密保証を出す実装は受け入れない。

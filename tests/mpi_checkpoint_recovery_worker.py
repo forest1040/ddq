@@ -9,12 +9,12 @@ import numpy as np
 from mpi4py import MPI
 from svsim import DistributedConfig,DistributedSimulator
 from svsim.checkpoint_recovery import recover_checkpoint_reservations
-from svsim.disk_budget import DiskBudget
+from svsim.disk_budget import DiskAdmissionError,DiskBudget
 from svsim.mpi_transport import CollectiveError
 import svsim.checkpoint_recovery as recovery
 
 comm=MPI.COMM_WORLD;rank=comm.Get_rank()
-base=Path(sys.argv[1]);shared='--same-root' in sys.argv
+base=Path(sys.argv[1]);shared='--same-root' in sys.argv;pressure='--pressure' in sys.argv
 root=base/('same-root' if shared else f'owner-{rank}')
 config=DistributedConfig(str(root),2,storage_scope='node-local',metadata_reserve_bytes=256*1024,
     ram_budget_bytes_per_rank=2*1024**2,disk_quota_bytes=32*1024**2,drain_reserve_bytes=1024**2)
@@ -42,6 +42,21 @@ key=budget.reserve(len(raw),writing=True,drain=True,operation='atomic-json',owne
         'target':str(target.resolve()),'temporary':str(temporary.resolve()),'digest':sha256(raw).hexdigest()})
 temporary.write_bytes(raw[:13]);budget.materialize(key,13);budget.close()
 comm.Barrier()
+if pressure:
+    if rank==0:
+        budget=DiskBudget(config.disk_admission_ledger,[root],quota_bytes=config.disk_quota_bytes,
+            drain_reserve_bytes=config.drain_reserve_bytes,shared_policy=True)
+        amount=config.disk_quota_bytes-budget.bootstrap_bytes-config.drain_reserve_bytes-budget._usage()-budget.reserved_bytes+1
+        assert amount>0
+        budget.close()
+        with (root/'pressure.bin').open('wb') as stream:stream.truncate(amount)
+    comm.Barrier()
+    try:
+        candidate=DiskBudget(config.disk_admission_ledger,[root],quota_bytes=config.disk_quota_bytes,
+            drain_reserve_bytes=config.drain_reserve_bytes,shared_policy=True)
+    except DiskAdmissionError:pass
+    else:
+        candidate.close();raise AssertionError('Ordinary admission accepted pressure fixture')
 report=recover_checkpoint_reservations(config,comm=comm)
 assert len(report['ranks'])==comm.Get_size()
 assert all(r['receipts'][0]['status']=='would-settle' for r in report['ranks'])
@@ -52,7 +67,7 @@ try:recover_checkpoint_reservations(config,comm=comm,apply=True)
 except CollectiveError:pass
 else:raise AssertionError('Conflicting owner artifact accepted')
 budget=DiskBudget(config.disk_admission_ledger,[root],quota_bytes=config.disk_quota_bytes,
-                  drain_reserve_bytes=config.drain_reserve_bytes,shared_policy=True)
+                  drain_reserve_bytes=config.drain_reserve_bytes,shared_policy=True,recovery_only=pressure)
 assert budget.reservation(key)['state']=='WRITING'
 assert budget.recovery_receipt(key) is None
 budget.close()
@@ -61,7 +76,10 @@ comm.Barrier()
 report=recover_checkpoint_reservations(config,comm=comm,apply=True)
 assert all(r['receipts'][0]['status']=='settled' for r in report['ranks'])
 assert temporary.read_bytes()==raw[:13]
+if pressure:
+    if rank==0:(root/'pressure.bin').unlink()
+    comm.Barrier()
 with DistributedSimulator.resume(config,snapshot,comm=comm) as restored:
     observed=restored.state(allow_gather=True)
     if rank==0:np.testing.assert_allclose(observed,expected,atol=1e-12)
-if rank==0:print('checkpoint reservation recovery PASS',comm.Get_size(),'shared' if shared else 'distinct',flush=True)
+if rank==0:print('checkpoint reservation recovery PASS',comm.Get_size(),'shared' if shared else 'distinct','pressure' if pressure else 'ordinary',flush=True)

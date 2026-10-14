@@ -14,6 +14,8 @@
 
 同日更新：[checkpoint reservation recovery設計](phase4_checkpoint_recovery_design.md)と[実装資料](phase4_checkpoint_recovery_implementation.md)を追加した。最新committed v4 sidecar intentだけを対象に、明示offline/node-local時のmetadata/cut/inventory検査とper-token CAS receiptを行う。P4-009の限定範囲であり、全writer recovery、GC、host調停、strict capacity guaranteeの完了条件は維持する。
 
+同日更新：[recovery-only metadata pool設計](phase4_recovery_pool_design.md)と[実装資料](phase4_recovery_pool_implementation.md)を追加した。既存production shared ledgerのprecharged poolから、logical quota/pending/drain超過時もcheckpoint CAS/receiptを許す。schema/policy/root/volume/native VFSの一致、min_free、pool/page/journal capは維持し、migrationやadmission mutationは行わない。actual hardware ENOSPC、電源断、cross-host、全writer回収は未受入で、M1/P4-009の完了条件は維持する。
+
 backlog IDごとに設計書を作り、各項目を個別に実装・review・検証できるようにする。依存関係、データ形式、資源上限、MPI合意、commitと運用境界は本書で共有する。個別書は現状との差、入出力、アルゴリズム、失敗時の処理、受入条件を定義する。共通契約の変更を伴う場合は本書と関係する個別書を同じ変更で改訂する。
 
 設計作成と実装完了は別に管理する。設計書の作成だけではbacklogの状態を変えず、実装着手・検証の進捗をbacklogへ反映する。各設計は以下の成果物で対応づける。

@@ -15,7 +15,7 @@ from svsim import DistributedConfig, DistributedSimulator
 from svsim.checkpoint_payload import decision_record
 from svsim.checkpoint_recovery import recover_checkpoint_reservations
 from svsim.dataset_lease import DirectoryLease
-from svsim.disk_budget import DiskBudget
+from svsim.disk_budget import DiskAdmissionError,DiskBudget
 from svsim.journal import canonical,content_hash
 from svsim.mpi_transport import CollectiveError
 
@@ -227,6 +227,36 @@ def test_checkpoint_writer_and_recovery_accept_root_external_symlink_parent_trav
     assert report['ranks'][0]['receipts'][0]['reservation_id']==key
     with DistributedSimulator.resume(aliased,new,comm=MPI.COMM_SELF) as sim:
         np.testing.assert_allclose(sim.state(allow_gather=True),expected,atol=1e-12)
+
+
+def test_checkpoint_settlement_can_spend_precharged_pool_at_pending_quota_boundary(saved):
+    config,snapshot,expected=saved
+    key,temporary,raw=_reserve(saved,target_missing=True)
+    temporary.write_bytes(raw[:13])  # crash window before materialize()
+    budget=_budget(config)
+    try:
+        pressure_bytes=config.disk_quota_bytes-budget.bootstrap_bytes-config.drain_reserve_bytes-budget._usage()-budget.reserved_bytes+1
+        assert pressure_bytes>0
+    finally:budget.close()
+    pressure=Path(config.directory)/'pressure.bin'
+    with pressure.open('wb') as stream:stream.truncate(pressure_bytes)
+    with pytest.raises(DiskAdmissionError,match='quota'):_budget(config)
+    ledger=Path(config.disk_admission_ledger)
+    before=sha256(ledger.read_bytes()).hexdigest()
+    recover_checkpoint_reservations(config,comm=MPI.COMM_SELF)
+    assert sha256(ledger.read_bytes()).hexdigest()==before
+    report=recover_checkpoint_reservations(config,comm=MPI.COMM_SELF,apply=True)
+    assert report['ranks'][0]['receipts'][0]['released_pending_bytes']==len(raw)
+    assert temporary.read_bytes()==raw[:13] and pressure.stat().st_size==pressure_bytes
+    budget=_budget(config)
+    try:
+        assert budget.reservation(key)['state']=='RECONCILED'
+        assert budget.reservation(key)['materialized_bytes']==13
+        assert budget.recovery_receipt(key) is not None
+    finally:budget.close()
+    pressure.unlink()  # remove test pressure before ordinary runtime admission
+    with DistributedSimulator.resume(config,snapshot,comm=MPI.COMM_SELF) as restored:
+        np.testing.assert_allclose(restored.state(allow_gather=True),expected,atol=1e-12)
 
 
 @pytest.mark.parametrize('crash',['reserved','partial','renamed'])

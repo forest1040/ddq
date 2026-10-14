@@ -109,14 +109,15 @@ class SQLiteGuard:
                     raise CatalogAdmissionError('SQLite VFS identity changed between connections')
         return identity
 
-    def connect(self,path,*,main_cap_bytes=None,side_cap_bytes=None):
+    def connect(self,path,*,main_cap_bytes=None,side_cap_bytes=None,existing_only=False):
         path = Path(path).resolve()
         prepared = main_cap_bytes is not None
         if prepared:
             self.loader.execute('SELECT svsim_disk_guard_prepare(?,?,?)',
                                 (str(path),main_cap_bytes,side_cap_bytes)).fetchone()
         try:
-            db = sqlite3.connect(path.as_uri()+'?vfs=svsim-budget-v1',uri=True,timeout=30)
+            mode='&mode=rw' if existing_only else ''
+            db = sqlite3.connect(path.as_uri()+'?vfs=svsim-budget-v1'+mode,uri=True,timeout=30)
             try: self._load(db)
             except BaseException: db.close(); raise
             return db
