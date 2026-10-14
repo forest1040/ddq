@@ -25,6 +25,8 @@
 | 同上、校正median sync | 同上 | 40 | 25.3% | — | 71.0% | — |
 | 同上、安定filter導入前（[v1](internal/phase5_timing_validation/eta-linux-v1/)、直前probe） | 52件×3回 | 40 | 19.0% | 64.9% | 133.5% | 47.5% |
 
+> 2026-10-15追記：[catalog commitの集約](phase4_catalog_batch_implementation.md)後、Linuxの再評価では1／2 rank RAMと2 rank fileのmedianが6.8％／18.5％／22.5％、coverageが全て100％になった（下表は集約前の値）。
+
 ### rank数とstorageのmatrix
 
 rank bitを対象とするgateは、MPI交換を伴う`remote` route classとして別に校正する（`calibration-suite --ranks`）。multi-rankでは全rankが1つのdatasetを共有し、disk計上とcleanupはrank 0が行う。手順は[run_matrix.sh](internal/phase5_timing_validation/run_matrix.sh)、証跡は[Mac](internal/phase5_timing_validation/matrix-mac/)と[Linux](internal/phase5_timing_validation/matrix-linux/)。各条件40 checkで、Linuxは直前probeで予測した。

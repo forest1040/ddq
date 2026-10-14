@@ -75,6 +75,7 @@ class FileBlockStore:
         self._last_offsets = {}
         self.guard = None
         self.transport_factory = transport_factory
+        self._pending_extents = {}
         if create:
             self.directory.mkdir(parents=True,exist_ok=True)
             if (self.directory/'metadata/catalog.sqlite3').exists(): raise FileExistsError('Storage directory already contains a state')
@@ -281,7 +282,39 @@ class FileBlockStore:
     def delete_unwritten(self, version):
         self.db.execute('DELETE FROM versions WHERE id=? AND segment IS NULL',(version,)); self.db.commit()
 
+    def _in_batch(self):
+        return getattr(self.db, '_batch', None) is not None
+
+    def _catalog_extent(self, version, segment, offset, checksum):
+        """Record a completed extent; inside a gate batch, after the batch ends.
+
+        The bytes already exist, so the address must survive a batch rollback;
+        ``ref`` serves pending addresses until the separate update commits.
+        """
+        if not self._in_batch():
+            with self.db:
+                self.db.execute('UPDATE versions SET segment=?,offset=?,checksum=? WHERE id=?',(segment,offset,checksum,version))
+            return
+        self._pending_extents[version] = (segment, offset, checksum)
+        def apply():
+            row = self._pending_extents.pop(version, None)
+            if row is not None:
+                self.db.execute('UPDATE versions SET segment=?,offset=?,checksum=? WHERE id=?',(*row,version))
+        self.db.after_batch(apply)
+
+    def _allocator_floor(self):
+        """After a gate batch, never let a rolled-back allocator reuse handed-out slots."""
+        if not self._in_batch(): return
+        def floor():
+            segment, offset = json.loads(self.db.execute("SELECT data FROM settings WHERE key='allocator'").fetchone()[0])
+            if (self.segment, self.offset) > (segment, offset):
+                self.db.execute("UPDATE settings SET data=? WHERE key='allocator'",(canonical([self.segment,self.offset]),))
+        self.db.after_batch(floor)
+
     def ref(self, version):
+        pending = getattr(self, '_pending_extents', {}).get(version)
+        if pending is not None:
+            return BlockRef(version,pending[0],pending[1],self.payload_bytes,self.slot_bytes,pending[2])
         row = self.db.execute('SELECT segment,offset,checksum FROM versions WHERE id=?',(version,)).fetchone()
         if row is None: raise OSError('Missing Block version')
         return BlockRef(version,row[0],row[1],self.payload_bytes,self.slot_bytes,row[2])
@@ -354,6 +387,7 @@ class FileBlockStore:
                 segment += 1; offset = 0
             self.db.execute("UPDATE settings SET data=? WHERE key='allocator'",(canonical([segment,offset+self.slot_bytes]),))
         self.segment,self.offset = segment,offset+self.slot_bytes
+        self._allocator_floor()
         checksum = sha256(buffer[:self.payload_bytes]).hexdigest()
         handle = self._file(segment)
         start = perf_counter()
@@ -361,7 +395,7 @@ class FileBlockStore:
         elapsed = getattr(handle,'last_duration_seconds',perf_counter()-start)
         if count != self.slot_bytes: raise OSError('Incomplete Block write')
         if reservation is not None:self.disk_budget.materialize(reservation,self.slot_bytes)
-        self.db.execute('UPDATE versions SET segment=?,offset=?,checksum=? WHERE id=?',(segment,offset,checksum,version)); self.db.commit()
+        self._catalog_extent(version,segment,offset,checksum)
         self._event('write',version,elapsed,handle=handle,segment=segment,offset=offset)
 
     def flush(self):

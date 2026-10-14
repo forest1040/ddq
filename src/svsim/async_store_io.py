@@ -68,6 +68,7 @@ class AsyncStoreIO:
             if disk_budget is not None:disk_budget.release(reservation)
             raise
         store.segment, store.offset = segment, offset + store.slot_bytes
+        store._allocator_floor()
         handle = None
         try:
             handle = self._handle(segment, writing=True)
@@ -82,9 +83,7 @@ class AsyncStoreIO:
             try:
                 if req.error is None:
                     if disk_budget is not None:disk_budget.materialize(reservation,store.slot_bytes)
-                    with store.db:
-                        store.db.execute('UPDATE versions SET segment=?,offset=?,checksum=? WHERE id=?',
-                                         (segment, offset, checksum, version))
+                    store._catalog_extent(version, segment, offset, checksum)
                     store._event('write', version, req.elapsed_seconds, handle=handle, segment=segment, offset=offset)
                     req.mark_validated()
             finally:

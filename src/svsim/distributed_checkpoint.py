@@ -80,6 +80,7 @@ def commit_snapshot(sim,prefix_fingerprint=None):
     prepared=None; error=None
     try:
         sim.store._disk_drain=True
+        if getattr(sim.store.db,'_batch',None) is not None: raise RuntimeError('Snapshot cannot start inside a catalog batch')
         sim.local._persist_assets(); sim.cache.flush()
         if hasattr(sim.store,'flush_to_file'): sim.store.flush_to_file()
         sim.local.journal.flush(); sim.store.flush(); sim.local.phase2.validate_root(sim.root); sim.store.seal(sim.root)

@@ -5,6 +5,7 @@ Native loading/building happens only when a writable catalog is opened.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from hashlib import sha256
 from copy import deepcopy
 import json
@@ -201,6 +202,17 @@ class CatalogLedgerLease:
         if key is not None and not getattr(budget,'_closed',False): budget.release(key)
 
 
+class CatalogBatch:
+    def __init__(self):
+        self.on_commit,self.on_rollback,self.after=[],[],[]
+        self.broken=False
+
+    def run(self,name):
+        hooks=getattr(self,name)
+        setattr(self,name,[])
+        for hook in (reversed(hooks) if name=='on_rollback' else hooks): hook()
+
+
 class CatalogConnection:
     """A main-thread connection that reserves before BEGIN, not after SQL.
 
@@ -218,6 +230,8 @@ class CatalogConnection:
         self._thread=threading.get_ident()
         self._token=self._budget=None
         self._lease=CatalogLedgerLease()
+        self._batch=None
+        self.batch_count=self.absorbed_commit_count=self.batch_split_count=0
         self._depth=0
         self._guard=None
         self._closed=False
@@ -302,6 +316,8 @@ class CatalogConnection:
                 'capability':self._guard.capability() if self._guard else None,
                 'strict_capacity_guarantee':False,'reservation_count':self.reservation_count,
                 'ledger_reservation_count':self._lease.ledger_reservation_count,
+                'batch_count':self.batch_count,'absorbed_commit_count':self.absorbed_commit_count,
+                'batch_split_count':self.batch_split_count,
                 'mutation_count':self.mutation_count,'temp_file_support':False}
 
     def _release(self):
@@ -323,6 +339,9 @@ class CatalogConnection:
             raise CatalogAdmissionError('Catalog guard controls are internal')
         if not stripped: return AdmissionCursor(self,self._conn.execute(sql,parameters))
         keyword=stripped.split(None,1)[0].upper()
+        if self._batch is not None:
+            if self._batch.broken: raise CatalogAdmissionError('Catalog batch was rolled back')
+            if keyword=='BEGIN': return AdmissionCursor(self,self._conn.cursor())
         if keyword in ('COMMIT','END'):
             self.commit(); return AdmissionCursor(self,self._conn.cursor())
         if keyword=='ROLLBACK':
@@ -352,6 +371,8 @@ class CatalogConnection:
             amount=len(sql.encode())+_payload_bytes(parameters)
             if amount>self.growth_bytes//4: raise CatalogAdmissionError('SQL input exceeds predeclared transaction envelope')
             self._start()
+            if self._input_bytes+amount>self.growth_bytes//4 and self._batch is not None and self._input_bytes:
+                self._split_batch()
             if self._input_bytes+amount>self.growth_bytes//4:
                 raise CatalogAdmissionError('Transaction input exceeds its reserved envelope')
             self._input_bytes+=amount
@@ -408,6 +429,10 @@ class CatalogConnection:
     def in_transaction(self): return self._conn.in_transaction
     def commit(self):
         self._check()
+        if self._batch is not None:
+            # Inner commits join the enclosing gate batch; only its exit is durable.
+            self.absorbed_commit_count+=1
+            return
         try: self._conn.commit()
         except BaseException:
             self._conn.rollback()
@@ -416,8 +441,78 @@ class CatalogConnection:
         self._finish()
     def rollback(self):
         self._check()
+        if self._batch is not None: self._batch.broken=True
         try: self._conn.rollback()
         finally: self._finish()
+
+    @contextmanager
+    def batch(self):
+        """Group a gate stage's catalog writes into durable transactions.
+
+        Recovery resumes only from committed snapshots, so intermediate commits
+        inside a stage add fsync cost without recovery value. Statements keep
+        their envelope checks; when the input envelope fills, the work so far
+        commits and a new transaction continues (split). ``on_commit`` hooks run
+        after each durable commit, ``on_rollback`` hooks restore process state
+        when the batch is rolled back, and ``after`` hooks always run once the
+        batch transaction has ended, in their own transaction.
+        """
+        self._check()
+        if self._batch is not None:
+            yield self._batch
+            return
+        if self._conn.in_transaction or self._depth: raise CatalogAdmissionError('Catalog batch needs a quiescent connection')
+        state=CatalogBatch()
+        self._start()
+        try: self._conn.execute('BEGIN IMMEDIATE')
+        except BaseException:
+            self._finish(); raise
+        self._batch=state;self._depth+=1;self.batch_count+=1
+        ok=False
+        try:
+            yield state
+            ok=not state.broken
+        finally:
+            self._depth-=1;self._batch=None
+            try:
+                if ok:
+                    try:
+                        self.commit()
+                    except BaseException:
+                        state.run('on_rollback'); raise
+                    state.run('on_commit')
+                else:
+                    try:
+                        if self._conn.in_transaction: self._conn.rollback()
+                    finally:
+                        self._finish(); state.run('on_rollback')
+            finally:
+                if state.after:
+                    with self:
+                        for hook in state.after: hook()
+
+    def _split_batch(self):
+        self._conn.commit()
+        self._finish()
+        self._batch.run('on_commit')
+        self._batch.on_rollback.clear()
+        self.batch_split_count+=1
+        self._start()
+        self._conn.execute('BEGIN IMMEDIATE')
+
+    def on_commit(self,hook):
+        """Run now outside a batch, else after the batch's durable commit."""
+        if self._batch is None: hook()
+        else: self._batch.on_commit.append(hook)
+
+    def on_rollback(self,hook):
+        if self._batch is not None: self._batch.on_rollback.append(hook)
+
+    def after_batch(self,hook):
+        """Run now outside a batch, else once the batch transaction has ended (commit or rollback)."""
+        if self._batch is None:
+            with self: hook()
+        else: self._batch.after.append(hook)
     def close(self):
         if self._closed:return
         try: self.rollback()

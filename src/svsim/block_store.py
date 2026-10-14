@@ -64,10 +64,15 @@ class MemoryBlockStore(FileBlockStore):
                 self.db.execute('UPDATE versions SET checksum=? WHERE id=?',(checksum,version))
                 self.db.execute('INSERT INTO resident_versions VALUES(?)',(version,))
             self.resident[version] = lease
+            self.db.on_rollback(lambda: self._drop_resident(version))
         except BaseException:
             lease.close()
             raise
         self._memory_event('write',version,perf_counter()-start)
+
+    def _drop_resident(self, version):
+        lease = self.resident.pop(version, None)
+        if lease is not None: lease.close()
 
     def delete_unwritten(self, version):
         if version in self.resident: return
@@ -107,11 +112,12 @@ class MemoryBlockStore(FileBlockStore):
         released = 0
         for version in doomed:
             lease = self.resident[version]
-            # The store never exports resident arrays, so closing this owned
-            # lease does not invalidate any caller-owned read buffer.
-            lease.close()
             released += lease.cost
-            del self.resident[version]
+            # The store never exports resident arrays, so closing this owned
+            # lease does not invalidate any caller-owned read buffer. Inside a
+            # gate batch the release waits for the durable commit, so a
+            # rollback still finds the catalogued payload.
+            self.db.on_commit(lambda version=version: self._drop_resident(version))
             with self.db:
                 self.db.execute('DELETE FROM resident_versions WHERE id=?',(version,))
                 # A spill may already have written an extent before fsync

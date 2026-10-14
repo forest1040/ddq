@@ -209,7 +209,14 @@ class BlockCache:
         version = self.store.new_version()
         buffer.cached = True
         self.entries[version] = CacheEntry(buffer, dirty=True)
+        hook = getattr(self.store.db, 'on_rollback', None)
+        if hook is not None: hook(lambda: self._forget(version))
         return version
+
+    def _forget(self, version):
+        """Drop a version whose catalog row was rolled back with its gate batch."""
+        entry = self.entries.pop(version, None)
+        if entry is not None and not entry.pins: entry.buffer.close()
 
     def flush(self):
         for key, entry in self.entries.items():

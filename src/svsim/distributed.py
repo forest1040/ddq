@@ -530,6 +530,12 @@ class DistributedSimulator:
                             'layout':self.layout.layout_id,'placement':self.placement_epoch,'representation':'logical-identity'})
             yield out
 
+    def _catalog_batch(self):
+        """One durable catalog transaction per gate stage; recovery uses snapshots only."""
+        from contextlib import nullcontext
+        batch=getattr(self.store.db,'batch',None)
+        return batch() if batch is not None else nullcontext()
+
     def _rule(self,rule):
         new = self._new_root(self.root); error = None
         try:
@@ -594,7 +600,7 @@ class DistributedSimulator:
                     if decision.bits: self.physical_index_bit_swap(*decision.bits,_pending=True)
                 gate = replace(original,targets=tuple(self.layout.logical_to_physical[q] for q in original.targets),
                     controls=tuple(self.layout.logical_to_physical[q] for q in original.controls))
-                self._execute(gate,original.op_id)
+                with self._catalog_batch(): self._execute(gate,original.op_id)
                 self.history.append({'kind':'gate','source':original.op_id,'physical':gate_data(gate),'layout':self.layout.logical_to_physical})
         except Exception:
             self.root,self.frontier,self.binding,self.layout,self.placement_epoch,length = prior

@@ -1,6 +1,6 @@
 # P4-009／Phase 4性能：materialize中のcatalog commitのgate単位集約（設計案）
 
-作成日：2026-10-15。状態：設計確定、実装中。[ledger lease](phase4_ledger_lease_implementation.md)でdisk予約ledgerのcommitは減った。残るLinux実行時間の大半と、装置状態による変動の主因はcatalog（`synchronous=FULL`、`journal_mode=DELETE`）のcommitである（[runtime ETA matrix](phase4_time_model_eta_implementation.md)）。ここではその集約を設計する。
+作成日：2026-10-15。状態：実装済み（[実装資料](phase4_catalog_batch_implementation.md)）。[ledger lease](phase4_ledger_lease_implementation.md)でdisk予約ledgerのcommitは減った。残るLinux実行時間の大半と、装置状態による変動の主因はcatalog（`synchronous=FULL`、`journal_mode=DELETE`）のcommitである（[runtime ETA matrix](phase4_time_model_eta_implementation.md)）。ここではその集約を設計する。
 
 ## 1. 現状の計測
 

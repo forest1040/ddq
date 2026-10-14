@@ -418,28 +418,29 @@ class AsyncDistributedSimulator(DistributedSimulator):
                     try:
                         injection_ticket=self.runtime.before_executor(gate_event,len(ops))
                         service_begin=perf_counter()
-                        if is_fused:
-                            self._execute_local_fused(group, prior[1])
-                            ids = tuple(g.op_id for g in group)
-                            cursor += len(group)
-                            executor = 'fused-local'
-                        else:
-                            gate = self.sequencer.operations[source]
-                            if self.policy.swap_policy == 'S1':
-                                from .distributed_plan import choose_s1
-                                decision = choose_s1(self.num_qubits, self.block_bits, self.size, self.layout,
-                                                     self.sequencer.operations[source:end+1], self.network_profile,
-                                                     self.storage_bandwidth)
-                                self.transport.agree(asdict(decision))
-                                if decision.bits:
-                                    self.physical_index_bit_swap(*decision.bits, _pending=True)
-                            physical = self._physical(gate)
-                            self._execute(physical, prior[1])
-                            self.history.append({'kind': 'gate', 'source': source,
-                                                 'physical': gate_data(physical), 'layout': self.layout.logical_to_physical})
-                            ids = (source,)
-                            cursor += 1
-                            executor = 'single-gate'
+                        with self._catalog_batch():
+                            if is_fused:
+                                self._execute_local_fused(group, prior[1])
+                                ids = tuple(g.op_id for g in group)
+                                cursor += len(group)
+                                executor = 'fused-local'
+                            else:
+                                gate = self.sequencer.operations[source]
+                                if self.policy.swap_policy == 'S1':
+                                    from .distributed_plan import choose_s1
+                                    decision = choose_s1(self.num_qubits, self.block_bits, self.size, self.layout,
+                                                         self.sequencer.operations[source:end+1], self.network_profile,
+                                                         self.storage_bandwidth)
+                                    self.transport.agree(asdict(decision))
+                                    if decision.bits:
+                                        self.physical_index_bit_swap(*decision.bits, _pending=True)
+                                physical = self._physical(gate)
+                                self._execute(physical, prior[1])
+                                self.history.append({'kind': 'gate', 'source': source,
+                                                     'physical': gate_data(physical), 'layout': self.layout.logical_to_physical})
+                                ids = (source,)
+                                cursor += 1
+                                executor = 'single-gate'
                         ledger.stage(ids, input_root, self.root)
                         gate_success = True
                     finally:
@@ -465,10 +466,11 @@ class AsyncDistributedSimulator(DistributedSimulator):
                                                     perf_counter()-gate_begin, process_time()-gate_cpu,
                                                     success=gate_success, parent_id=epoch_group)
                 ledger.validate_coverage()
-                self.drain()
-                published = self._new_root(self.root)
-                self.local.phase2.progress(published, end)
-                self._commit_stage(published, end)
+                with self._catalog_batch():
+                    self.drain()
+                    published = self._new_root(self.root)
+                    self.local.phase2.progress(published, end)
+                    self._commit_stage(published, end)
                 ledger.commit()
                 epoch_success = True
                 self.trace.record('async-epoch', performance_class='scheduler',
