@@ -33,9 +33,12 @@ class EstimateOptions:
     os_reserve_bytes_per_host: int = 512 * 1024**2
     disk_extra_bytes_per_host: int = 16 * 1024**2
     drain_reserve_bytes_per_rank: int = 0
+    backend: str = 'buffered'
 
     def __post_init__(self):
+        if self.backend not in {'buffered','direct'}: raise ValueError('backend must be buffered or direct')
         for key, value in asdict(self).items():
+            if key == 'backend': continue
             if value is not None: integer(value, key, 0)
             if value is not None and type(value) is not int: raise ValueError(f'{key} must be a Python integer')
         integer(self.segment_size_bytes,'segment_size_bytes',1)
@@ -70,8 +73,12 @@ def _seconds(record, count, field):
     return result if math.isfinite(result) else None
 
 
-def estimate(workload: WorkloadSpec, profile: ProfileDocument, options: EstimateOptions) -> dict:
-    """Return a bounded report without constructing simulators, blocks or scratch."""
+def estimate(workload: WorkloadSpec, profile: ProfileDocument, options: EstimateOptions, time_model=None) -> dict:
+    """Return a bounded report without constructing simulators, blocks or scratch.
+
+    A fitted end-to-end time model supplies total time only for its exact
+    configuration and condition class; it is never mixed with kernel cells.
+    """
     ownership = OwnershipMap(workload.qubits, options.block_bits, options.ranks)
     b, block_count, local = options.block_bits, ownership.num_blocks, ownership.blocks_per_rank
     ranks_host = options.ranks // options.nodes
@@ -181,12 +188,32 @@ def estimate(workload: WorkloadSpec, profile: ProfileDocument, options: Estimate
     if workload.algorithm['kind'] != 'circuit': missing_components.append('algorithm-endpoint-and-error-model')
     if unsupported: missing_components.append('unsupported-work-not-costed')
     passes = gate_count * block_count
+    time_report = {'lower_seconds':None,'expected_seconds':None,'conditional_upper_seconds':None,'phases':None,
+                   'evidence':'derived','scope':'planning-only','model_id':None,
+                   'reason':'end-to-end components are uncalibrated; standalone kernel sum is not total runtime'}
+    coverage_status = 'partial' if calibrated_calls else 'unknown'
+    if time_model is not None:
+        from .time_model import workload_features
+        features, _ = workload_features(workload, b, options.ranks)
+        target = {'block_bits':b,'ranks':options.ranks,'nodes':options.nodes,'threads':options.threads,'storage':workload.policies['storage'],
+                  'backend':options.backend,'mode':'distributed-sync','frame':workload.policies['frame'],
+                  'swap':workload.policies['swap'],'execution':workload.policies['execution'],
+                  'initial_state':workload._data.get('initial_state','zero')}
+        predicted = time_model.predict(features, target, profile.configuration_fingerprint)
+        if workload.algorithm['kind'] != 'circuit':
+            predicted = {**predicted,'lower_seconds':None,'expected_seconds':None,'conditional_upper_seconds':None,
+                         'phases':None,'evidence':'unknown','reason':'algorithm endpoint is outside the fitted circuit model'}
+        time_report = {**predicted,'scope':'same-host' if predicted['evidence'] == 'derived' else 'planning-only'}
+        if predicted['expected_seconds'] is not None:
+            missing_components = [] if predicted['evidence'] == 'derived' and not unsupported else missing_components
+            coverage_status = 'complete' if not missing_components else 'partial'
+            if unsupported: time_report['reason'] += '; executor support is missing, so this is a planning reference only'
     report = {
         'schema_version':1,'kind':'execution-plan','model_version':'static-eager-reference-v1',
         'workload_id':workload.workload_id,'profile_id':profile.profile_id,
         'configuration_fingerprint':profile.configuration_fingerprint,'options':asdict(options),
         'capacity_feasible':capacity,'execution_supported':not unsupported,
-        'calibration_coverage':{'status':'partial' if calibrated_calls else 'unknown',
+        'calibration_coverage':{'status':coverage_status,
                                 'kernel_call_fraction':None if lowering_incomplete else calibrated_calls / total_calls if total_calls else 1.0,
                                 'kernel_payload_fraction':None if lowering_incomplete else calibrated_calls / total_calls if total_calls else 1.0,
                                 'coverage_reason':'unsupported lowering has unknown invocation count' if lowering_incomplete else 'same block payload per invocation; excludes all uncalibrated lifecycle costs',
@@ -222,11 +249,11 @@ def estimate(workload: WorkloadSpec, profile: ProfileDocument, options: Estimate
                 'storage_read_bytes':passes * slot if workload.policies['storage']=='file' else 0,
                 'storage_write_bytes':(passes+block_count)*slot if workload.policies['storage']=='file' else 0,
                 'mpi_send_bytes':None,'mpi_send_reason':'protocol route and peer class adapter not calibrated' if options.ranks>1 else 'no MPI in single rank'},
-        'time':{'lower_seconds':None,'expected_seconds':None,'conditional_upper_seconds':None,
+        'time':{**time_report,
                 'reference_kernel_seconds':None if overflow or (not calibrated_calls and total_calls) else seconds_known,
-                'components':component_rows,'evidence':'derived','scope':'planning-only',
-                'reason':'end-to-end components are uncalibrated; standalone kernel sum is not total runtime',
-                'interval_kind':'raw sample extrema, not confidence or end-to-end bounds'},
+                'components':component_rows,
+                'interval_kind':'model fits to per-run sample median/min/max; not a confidence interval' if time_report['model_id']
+                                else 'raw sample extrema, not confidence or end-to-end bounds'},
         'algorithm':workload.algorithm,'provenance':p['provenance'],
         'source_templates':workload.source_templates,
         'analysis':{'allocated_amplitudes':False,'enumerated_blocks':False,'expanded_repetitions':False,

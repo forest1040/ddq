@@ -75,6 +75,16 @@ def _angle(value):
     return decode_expr(value)
 
 
+def gate_arguments(node):
+    """Decode one validated source gate node into runtime gate() arguments."""
+    kwargs = {key: node[key] for key in ('controls', 'control_values', 'paulis') if key in node}
+    if 'angle' in node: kwargs['angle'] = _angle(node['angle'])
+    if node.get('matrix') is not None:
+        import numpy as np
+        kwargs['matrix'] = np.array([[complex(*v) if isinstance(v, list) else complex(v) for v in row] for row in node['matrix']])
+    return node['kind'], node['targets'], kwargs
+
+
 @dataclass(frozen=True)
 class CountedGate:
     gate: GateOp
@@ -190,6 +200,17 @@ class WorkloadSpec:
     def load(cls, path): return cls(read_document(path, MAX_INPUT_BYTES))
 
     def to_dict(self): return wire_encode({**deepcopy(self._data), 'workload_id': self.workload_id})
+
+    def expanded_operations(self, limit=MAX_NODES):
+        """Yield source gate nodes in program order; only bounded real runs may expand repeats."""
+        total = sum(entry.count for entry in self.gates)
+        if total > limit: raise ValueError(f'expanded execution needs {total} gates; limit is {limit}')
+        def walk(nodes):
+            for node in nodes:
+                if node.get('kind') == 'REPEAT':
+                    for _ in range(integer(node['count'], 'repeat count')): yield from walk(node['body'])
+                else: yield deepcopy(node)
+        for _ in range(self.iterations): yield from walk(self._data['operations'])
 
     def lowered(self):
         """Return bounded counted lowered IR and explicit unsupported capabilities."""

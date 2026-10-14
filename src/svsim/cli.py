@@ -159,8 +159,68 @@ def svsim_main(argv=None):
     est.add_argument('--disk-budget-per-host',type=_positive)
     est.add_argument('--alignment',type=_positive,default=4096)
     est.add_argument('--segment-bytes',type=_positive,default=1<<30)
+    est.add_argument('--backend',choices=('buffered','direct'),default='buffered')
+    est.add_argument('--time-model',help='fitted end-to-end model from svsim calibrate-time')
+    bench = commands.add_parser('benchmark',help='budgeted real runs of small workloads in explicit scratch; MPI is initialized only here')
+    bench.add_argument('--workload',action='append',required=True,help='repeat for interleaved A/B cases')
+    bench.add_argument('--label',action='append',default=[],help='one per workload; defaults to the file stem')
+    bench.add_argument('--variant',action='append',default=[],help='one per workload; defaults to "default"')
+    bench.add_argument('--plan',action='append',default=[],help='optional execution plan per workload, same order')
+    bench.add_argument('--profile',required=True)
+    bench.add_argument('--scratch',required=True)
+    bench.add_argument('--output-dir',required=True)
+    bench.add_argument('--ram-budget-per-rank',type=_positive,required=True,help='bytes')
+    bench.add_argument('--disk-budget',type=_positive,required=True,help='bytes for all ranks of one trial')
+    bench.add_argument('--wall-seconds',type=float,required=True)
+    bench.add_argument('--block-bits',type=_positive,default=4)
+    bench.add_argument('--repetitions',type=_positive,default=5)
+    bench.add_argument('--warmup',type=_nonnegative,default=1)
+    bench.add_argument('--backend',choices=('buffered','direct'),default='buffered')
+    bench.add_argument('--threads',type=_positive,default=1,help='allocation label; does not set or pin library threads')
+    bench.add_argument('--seed',type=_nonnegative,default=0)
+    bench.add_argument('--oracle-max-qubits',type=_nonnegative,default=14)
+    bench.add_argument('--overwrite',action='store_true')
+    suite = commands.add_parser('calibration-suite',help='write single-class calibration workloads for svsim benchmark')
+    suite.add_argument('--block-bits',type=_positive,default=4)
+    suite.add_argument('--qubits',default='5,6,7,8')
+    suite.add_argument('--counts',default='1,4,16')
+    suite.add_argument('--storage',choices=('ram','file'),default='ram')
+    suite.add_argument('--output-dir',required=True)
+    suite.add_argument('--overwrite',action='store_true')
+    fit = commands.add_parser('calibrate-time',help='fit the phase time model from validated benchmark runs')
+    fit.add_argument('--run',action='append',required=True)
+    fit.add_argument('--output',required=True)
+    fit.add_argument('--overwrite',action='store_true')
+    rep = commands.add_parser('report',help='compare execution plans with observed benchmark runs')
+    rep.add_argument('--campaign',required=True)
+    rep.add_argument('--output',required=True)
+    rep.add_argument('--markdown')
+    rep.add_argument('--overwrite',action='store_true')
     args = parser.parse_args(argv)
+    if args.command == 'benchmark': return _benchmark_command(args)
     try:
+        if args.command == 'calibration-suite':
+            from .benchmark_run import calibration_suite
+            numbers = lambda text: tuple(_positive(v) for v in text.split(','))
+            documents = calibration_suite(args.block_bits,numbers(args.qubits),numbers(args.counts),args.storage)
+            for name, document in documents.items():
+                _output(str(Path(args.output_dir)/f'{name}.json'),WorkloadSpec(document).to_dict(),args.overwrite)
+            print(f'{len(documents)} workloads: {args.output_dir}')
+            return 0
+        if args.command == 'calibrate-time':
+            from .profile_document import read_document
+            from .time_model import fit as fit_time
+            model = fit_time([read_document(path,max_bytes=4*1024**2) for path in args.run])
+            model.save(args.output,overwrite=args.overwrite)
+            return 0
+        if args.command == 'report':
+            from .comparison_report import build_report, render_markdown, save_report
+            if not args.overwrite and any(p and Path(p).exists() for p in (args.output,args.markdown)):
+                raise FileExistsError('output document already exists')
+            report = build_report(args.campaign)
+            save_report(report,args.output,overwrite=args.overwrite)
+            if args.markdown: Path(args.markdown).write_text(render_markdown(report),encoding='utf-8')
+            return 0
         if args.command == 'register':
             workload = WorkloadSpec.load(args.input)
             _output(args.output,workload.to_dict(),args.overwrite)
@@ -171,8 +231,12 @@ def svsim_main(argv=None):
                                   ram_budget_bytes_per_rank=args.ram_budget_per_rank,
                                   ram_budget_bytes_per_host=args.ram_budget_per_host,
                                   disk_budget_bytes_per_host=args.disk_budget_per_host,alignment=args.alignment,
-                                  segment_size_bytes=args.segment_bytes)
-        report = estimate(workload,profile,options)
+                                  segment_size_bytes=args.segment_bytes,backend=args.backend)
+        time_model = None
+        if args.time_model:
+            from .time_model import TimeModelDocument
+            time_model = TimeModelDocument.load(args.time_model)
+        report = estimate(workload,profile,options,time_model=time_model)
         report = ExecutionPlanDocument(report).to_dict()
         _output(args.output,report,args.overwrite)
         if args.planning_only: return 0
@@ -182,3 +246,52 @@ def svsim_main(argv=None):
     except (ValueError,TypeError,OSError,ArithmeticError,RecursionError,KeyError) as exc:
         print(f'svsim: {exc}',file=sys.stderr)
         return 2
+
+
+def _benchmark_command(args):
+    from .benchmark_run import CapacityError, RunCase, RunOptions, run_cases
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+    error, code, cases, profile, options = None, 2, [], None, None
+    try:
+        count = len(args.workload)
+        for name, values in (('label',args.label),('variant',args.variant),('plan',args.plan)):
+            if values and len(values) != count: raise ValueError(f'--{name} must be given once per --workload')
+        profile = ProfileDocument.load(args.profile)
+        current = probe_profile({'scope':'local','ranks':comm.Get_size(),'nodes':1,'threads':args.threads},(args.scratch,))
+        if current.configuration_fingerprint != profile.configuration_fingerprint:
+            raise ValueError('profile configuration differs from current host/build/allocation; run svbench probe with the same scratch')
+        for i, path in enumerate(args.workload):
+            plan = ExecutionPlanDocument.load(args.plan[i]).data if args.plan else None
+            cases.append(RunCase(WorkloadSpec.load(path),args.label[i] if args.label else Path(path).stem,
+                                 args.variant[i] if args.variant else 'default',plan))
+        options = RunOptions(block_bits=args.block_bits,repetitions=args.repetitions,warmup=args.warmup,
+                             ram_budget_bytes_per_rank=args.ram_budget_per_rank,disk_budget_bytes=args.disk_budget,
+                             walltime_seconds=args.wall_seconds,backend=args.backend,seed=args.seed,
+                             threads=args.threads,oracle_max_qubits=args.oracle_max_qubits)
+        outputs = [Path(args.output_dir)/f'{case.label}.run.json' for case in cases]
+        if not args.overwrite and any(p.exists() for p in outputs): raise FileExistsError('output document already exists')
+    except (ValueError,TypeError,OSError,KeyError,RecursionError) as exc: error = str(exc)
+    errors = [e for e in comm.allgather(error) if e]
+    if errors:
+        if comm.Get_rank() == 0: print(f'svsim: {errors[0]}',file=sys.stderr)
+        return 2
+    try:
+        documents = run_cases(cases,profile,args.scratch,options,comm)
+    except CapacityError as exc:
+        if comm.Get_rank() == 0: print(f'svsim: {exc}',file=sys.stderr)
+        return 3
+    except (ValueError,OSError,ArithmeticError,MemoryError,RuntimeError) as exc:
+        if comm.Get_rank() == 0: print(f'svsim: {exc}',file=sys.stderr)
+        return 4
+    code = 0
+    if comm.Get_rank() == 0:
+        try:
+            for path, document in zip(outputs,documents):
+                write_document(path,document,overwrite=args.overwrite)
+                print(f'{path}: {document["status"]} validation={document["validation"]["passed"]}')
+            if any(d['status'] != 'completed' or d['validation']['passed'] is False for d in documents): code = 4
+        except (ValueError,TypeError,OSError) as exc:
+            print(f'svsim: {exc}',file=sys.stderr)
+            code = 4
+    return comm.bcast(code,root=0)

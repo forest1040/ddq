@@ -1,0 +1,1 @@
+{"schema_version": 1, "kind": "workload", "qubits": 6, "policies": {"storage": "ram"}, "operations": [{"kind": "REPEAT", "count": 5, "body": [{"kind": "H", "targets": [0]}, {"kind": "RX", "targets": [5], "angle": 0.37}]}]}

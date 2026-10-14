@@ -12,7 +12,10 @@
 | `workload_spec` | GateOp意味検証、Expr／ExactPi／stable parameter ID、4Q以下のinline dense asset、REPEATの圧縮集計 |
 | `resource_estimator` | 単一候補のrank/host容量、cache・workspace・rollback・pin・metadata・append-only disk、trafficと対応可否 |
 | `estimate_report` | 不変plan ID、未知値、wire integer、保存・再読込時の内容hash検証 |
-| `cli` | `svbench probe/all`、`svsim register/estimate`。自動benchmark、SSH、qsubは行わない |
+| `cli` | `svbench probe/all`、`svsim register/estimate/calibration-suite/benchmark/calibrate-time/report`。自動benchmark、SSH、qsubは行わない |
+| `benchmark_run` | 実DistributedSimulatorでのworkload実行計測。phase別rank MAX wall、oracle検証、seed付き交互順序、予算preflight |
+| `time_model` | 実測runから条件class別のphase時間モデルをNNLSで適合、derived／extrapolated／unknownの総時間予測 |
+| `comparison_report` | 予測planと実測runの照合、held-out誤差・interval coverage・bottleneck・A/B比較のJSON／Markdown（Geminiへ委譲して作成・検証） |
 
 byte量と大きなcountはJSONの10進文字列、qubits/ranks/threads等の小さい構成数は整数。unknownはnullと理由を保持する。profile IDは時刻・raw trialも含む文書の同一性、configuration fingerprintはhost ID・CPU・OS・package・build・thread環境・割当の同一性である。空き容量・観測時刻は構成fingerprintから除く。revision、dirty source hash、変更ファイルのhash manifest、uv.lock hashを記録する。checkpoint／既存lifecycleのschemaは変更していない。
 
@@ -79,10 +82,33 @@ file payloadはinitial＋全eager passのnew extentをappend-onlyで計上し、
 
 CLI終了codeは、正常登録/明示planning=0、schema/入出力=2、予算または対応不足=3、campaign失敗/省略=4、総時間baseline不足=5。`estimate`は不足時もplanを保存する。`--planning-only`はpartial/unsupported planの作成成功を0で返すので、容量flagの確認が必要。
 
+## 計測・時間推定・比較評価（2026-10-14追加）
+
+```sh
+uv run --locked --extra mpi svsim calibration-suite --block-bits 4 --qubits 5,6,7,8 --counts 1,4,12 --output-dir suite
+uv run --locked --extra mpi svsim benchmark --workload suite/<case>.json ... --profile probe.json \
+  --scratch <probeと同じscratch> --output-dir cal --ram-budget-per-rank 67108864 --disk-budget 67108864 \
+  --wall-seconds 400 --block-bits 4 --repetitions 3
+uv run --locked --extra mpi svsim calibrate-time --run cal/<case>.run.json ... --output time-model.json
+uv run --locked --extra mpi svsim estimate ... --time-model time-model.json --output held.plan.json
+uv run --locked --extra mpi svsim benchmark --workload held.json --plan held.plan.json --label held ... --output-dir held
+uv run --locked --extra mpi svsim report --campaign campaign.json --output report.json --markdown report.md
+```
+
+**計測。** `svsim benchmark`は明示scratch内のtrialごとの新規datasetで、実`DistributedSimulator`（S0、Frame materialize、auto-native、RAM／file store）を実行する。setup（store作成・初期状態import）、compile（gate登録・bind）、execute（materialize）、flush（cache flush、fileはstore flush）、cleanup（close・削除）を各rankのlocal wallで測り、rank MAXを保存する。totalはphase MAXの和。oracle gather・誤差計算・disk走査は時間外。n≤`--oracle-max-qubits`（既定14、上限20）では毎trialでeager referenceと最大絶対誤差1e-10以内を確認し、超える場合はvalidation `not-run`としてtime model入力に使えない。複数`--workload`はround単位でseed付きshuffleした順に交互実行し、warmup roundを破棄する。実行前に静的推定でmanaged peakとdisk参照量を予算と照合し、trial後の実disk使用量も検査する。展開実行は4096 gate、case数は256まで。現在のhost/build/allocationとprofileのconfiguration fingerprintが異なれば拒否する（source変更後はprobeから再実行）。出力は`benchmark-run`／`workload-execution`文書で、raw trial、phase summary、work feature、制限、provenanceを持つ。
+
+**時間推定。** featureは`workload_features`がlowered IRから厳密に数えるrank当たりの量：constant、blocks、gates、passes（全pass）、`passes:<gate>:<local|joint>`（route class別pass）。phase別に、setup・flushはconstant＋blocks、compileはconstant＋gates、executeはconstant＋gates＋route class別pass、cleanupはconstant＋blocks＋passesの非負線形モデルを、run別median／min／maxへそれぞれNNLSで適合する。`calibration-suite`はclassを1種類ずつ含むworkload（空回路を含む）を作り、featureの共線性を避ける。fitは同一configuration fingerprint・同一条件class（block_bits、ranks、threads、storage、backend、mode、frame、swap、execution、initial_state）の完了・oracle合格runだけを受け付ける。
+
+予測は条件・fingerprintが一致した場合だけ行う。未校正のroute classを含めばunknown（`UNCALIBRATED_WORK_FEATURES`）でゼロにしない。いずれかのfeatureが校正範囲外ならevidence=`extrapolated`、scope=planning-onlyでcoverageはpartial、範囲内なら`derived`／same-hostでcoverage completeとなる。conditional upperは`max(max fit, expected×(1+最大相対残差)+最大絶対残差)`。相対残差は観測1 ms以上のrunだけで計算する。これは信頼区間ではない。circuit以外のalgorithmはunknownのまま。巨大repeat等のexecutor未対応workloadはextrapolated参考値とし、`execution_supported=false`を維持する。rank数・thread数・Block幅・backendをまたいだscalingは行わない。
+
+**比較評価。** `svsim report`はcampaignの各caseのplan／runをSHA-256付きで1回だけ読み、workload・plan_id・configurationの不一致、未完了・oracle不合格、予測なしを理由付きで`not_compared`へ分ける。符号付き誤差（予測−実測median）、held-out／calibrationを分けた|相対誤差|のmedian・p95・worst、observed 0.05秒未満の絶対誤差集計、interval coverage、phase別誤差と観測／予測bottleneck、baseline variantとのA/B比（勝敗、trial範囲の重なり）を出す。30% median目標は評価目標で保証ではない。
+
+Mac（M系、1 rank、b=4、RAM store、buffered）で52件のsuiteを各3回測り、held-out 4件を5回測った。3件は|相対誤差|0.65〜2.5%（median 0.71%）で、3件ともintervalに入った。joint RXを含む1件は未校正classとして予測なしになった。b=4ではpass当たり約6 ms、gate当たり約7 msで、Python／metadataのoverheadが支配的だった。kernel帯域モデルとは別物で、大きなBlockや別backendへ外挿しない。証跡は[内部記録](internal/phase5_timing_validation/)に置いた。
+
 ## 検証と次の作業
 
 最終回帰：uv環境、Mac上のローカルMPIを含む420 passed／2 skipped。新しい基盤の42件は、strict JSON／hash、raw summary再現、未知値・2^53超、50Qの割当禁止、repeat/condition上限、CLI exit、quota、実ストアの振幅・disk・managed peakとの照合を含む。Linux専用skipの扱いは既存と同じ。
 
 [Mac計測・dry-run資料](phase5_benchmark.md)と[内部raw](internal/phase5_mac_calibration/)を保存した。クラスタ接続／job投入、大規模振幅実行は行っていない。
 
-次はFrame/metadata/lifecycle/MPI/gradient cellと既存MPIProfile adapter、storage cache/working-set grid、case順序randomization／paired A/B、複数候補比較、end-to-end held-out時間評価、report/benchmark/run CLIを追加する。その後、共通profileをPhase 4のruntime cost／残DAG／適応候補へ接続する。P4-001〜009をこの基盤だけでDONEへ変更しない。32〜36Q実測・QPE/VQE endpoint・合成・匿名化export・Linux実機校正も別の残件である。
+case順序randomization／交互A/B、end-to-end held-out時間評価、report/benchmark CLIは上記で追加した。残りはFrame/metadata/lifecycle/MPI/gradient cellと既存MPIProfile adapter、storage cache/working-set grid、複数候補比較、multi-rank／file store／大Blockでのtime model校正である。その後、共通profileをPhase 4のruntime cost／残DAG／適応候補へ接続する。P4-001〜009をこの基盤だけでDONEへ変更しない。32〜36Q実測・QPE/VQE endpoint・合成・匿名化export・Linux実機校正も別の残件である。
