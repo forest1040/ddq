@@ -1,0 +1,3678 @@
+{
+  "monitor": {
+    "schema_version": 1,
+    "kind": "comparison-report",
+    "case_id": "completion-monitor-p1",
+    "manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+    "seed": 1,
+    "rows": [
+      {
+        "variant_id": "all-off",
+        "axes": {
+          "monitor": "all-off"
+        },
+        "status": "completed",
+        "statuses": {
+          "completed": 7,
+          "failed": 0,
+          "insufficient-budget": 0,
+          "unmeasured": 0,
+          "unsupported": 0,
+          "validation_failed": 0
+        },
+        "metrics": {
+          "wall_seconds": {
+            "count": 7,
+            "median": 0.09359458298422396,
+            "p95": 0.09473581240745262,
+            "min": 0.0892066250089556,
+            "max": 0.09495512500870973,
+            "variation": 0.0614191528661769
+          },
+          "rank_max_seconds": {
+            "count": 7,
+            "median": 0.09359458298422396,
+            "p95": 0.09473581240745262,
+            "min": 0.0892066250089556,
+            "max": 0.09495512500870973,
+            "variation": 0.0614191528661769
+          },
+          "completion_collector_pool_bytes_max": {
+            "count": 7,
+            "median": 73728.0,
+            "p95": 73728.0,
+            "min": 73728.0,
+            "max": 73728.0,
+            "variation": 0.0
+          },
+          "completion_observations_max": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "epoch_summary_count": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "eta_captured": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "execute_seconds": {
+            "count": 7,
+            "median": 0.040569207980297506,
+            "p95": 0.04093735011992976,
+            "min": 0.03878412500489503,
+            "max": 0.041031125001609325,
+            "variation": 0.05538683421686597
+          },
+          "managed_peak_bytes_max": {
+            "count": 7,
+            "median": 550144.0,
+            "p95": 550144.0,
+            "min": 550144.0,
+            "max": 550144.0,
+            "variation": 0.0
+          },
+          "raw_spill_bytes_max": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "read_bytes_sum": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "scratch_bytes_max": {
+            "count": 7,
+            "median": 287232.0,
+            "p95": 287235.4,
+            "min": 287228.0,
+            "max": 287236.0,
+            "variation": 2.785204991087344e-05
+          },
+          "send_bytes_sum": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "write_bytes_sum": {
+            "count": 7,
+            "median": 65536.0,
+            "p95": 65536.0,
+            "min": 65536.0,
+            "max": 65536.0,
+            "variation": 0.0
+          }
+        },
+        "trials": [
+          {
+            "trial_index": 0,
+            "status": "completed",
+            "wall_seconds": 0.09495512500870973,
+            "rank_wall_seconds": [
+              0.09495512500870973
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.041031125001609325,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287234,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.041031125001609325,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287234,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09495512500870973
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09495512500870973
+              },
+              "monitor_level": "all-off",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 0,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-off"
+            },
+            "raw_sha256": "29cbf7b6aa4872fa180f2ee1167ecb3182d8b579add39a364a650434238b6f81",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 1,
+            "status": "completed",
+            "wall_seconds": 0.09359458298422396,
+            "rank_wall_seconds": [
+              0.09359458298422396
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.040569207980297506,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287228,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.040569207980297506,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287228,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09359458298422396
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09359458298422396
+              },
+              "monitor_level": "all-off",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 1,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-off"
+            },
+            "raw_sha256": "19277cfe40964cd6de4e9273d149574c863c1e6febf87a5cf038bc11cabc8699",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 2,
+            "status": "completed",
+            "wall_seconds": 0.09383512497879565,
+            "rank_wall_seconds": [
+              0.09383512497879565
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.04066304094158113,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287234,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04066304094158113,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287234,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09383512497879565
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09383512497879565
+              },
+              "monitor_level": "all-off",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 2,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-off"
+            },
+            "raw_sha256": "109a3fd74668f04017675526fa0f43301c44eeacafa906b4c3d3d1db46f3ee9d",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 3,
+            "status": "completed",
+            "wall_seconds": 0.09316549997311085,
+            "rank_wall_seconds": [
+              0.09316549997311085
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.04071854206267744,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287236,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04071854206267744,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287236,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09316549997311085
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09316549997311085
+              },
+              "monitor_level": "all-off",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 3,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-off"
+            },
+            "raw_sha256": "4e900fbb9ee5b632edb0aa45da2d191b1b375b4677d653a6e80410498a80deb6",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 4,
+            "status": "completed",
+            "wall_seconds": 0.09422408300451934,
+            "rank_wall_seconds": [
+              0.09422408300451934
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.040370124974288046,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287230,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.040370124974288046,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287230,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09422408300451934
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09422408300451934
+              },
+              "monitor_level": "all-off",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 4,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-off"
+            },
+            "raw_sha256": "ec1c66d387d55629154fa046b4d9428108431b65b805f3e7bf785cabccab4554",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 5,
+            "status": "completed",
+            "wall_seconds": 0.09329529106616974,
+            "rank_wall_seconds": [
+              0.09329529106616974
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.040428750100545585,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287232,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.040428750100545585,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287232,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09329529106616974
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09329529106616974
+              },
+              "monitor_level": "all-off",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 5,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-off"
+            },
+            "raw_sha256": "f97adf55254db5f5f0bee18a928e50ca507e838d15c2331901b90cffa2b2d007",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 6,
+            "status": "completed",
+            "wall_seconds": 0.0892066250089556,
+            "rank_wall_seconds": [
+              0.0892066250089556
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 0,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.03878412500489503,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287230,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": false,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 0,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.03878412500489503,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287230,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.0892066250089556
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.0892066250089556
+              },
+              "monitor_level": "all-off",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 6,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-off"
+            },
+            "raw_sha256": "66bbd51823fd89c6dd969ef2c4dfd5dc79c9c08543422c7413ff9a9a8157b6f9",
+            "reason": "",
+            "validation_errors": []
+          }
+        ]
+      },
+      {
+        "variant_id": "collector",
+        "axes": {
+          "monitor": "collector"
+        },
+        "status": "completed",
+        "statuses": {
+          "completed": 7,
+          "failed": 0,
+          "insufficient-budget": 0,
+          "unmeasured": 0,
+          "unsupported": 0,
+          "validation_failed": 0
+        },
+        "metrics": {
+          "wall_seconds": {
+            "count": 7,
+            "median": 0.09783366590272635,
+            "p95": 0.09852451254846528,
+            "min": 0.09400616702623665,
+            "max": 0.09865925007034093,
+            "variation": 0.047561164157241397
+          },
+          "rank_max_seconds": {
+            "count": 7,
+            "median": 0.09783366590272635,
+            "p95": 0.09852451254846528,
+            "min": 0.09400616702623665,
+            "max": 0.09865925007034093,
+            "variation": 0.047561164157241397
+          },
+          "completion_collector_pool_bytes_max": {
+            "count": 7,
+            "median": 73728.0,
+            "p95": 73728.0,
+            "min": 73728.0,
+            "max": 73728.0,
+            "variation": 0.0
+          },
+          "completion_observations_max": {
+            "count": 7,
+            "median": 7.0,
+            "p95": 7.0,
+            "min": 7.0,
+            "max": 7.0,
+            "variation": 0.0
+          },
+          "epoch_summary_count": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "eta_captured": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "execute_seconds": {
+            "count": 7,
+            "median": 0.04381620802450925,
+            "p95": 0.04453088368754834,
+            "min": 0.042558791930787265,
+            "max": 0.04464870900847018,
+            "variation": 0.04769735154885804
+          },
+          "managed_peak_bytes_max": {
+            "count": 7,
+            "median": 550144.0,
+            "p95": 550144.0,
+            "min": 550144.0,
+            "max": 550144.0,
+            "variation": 0.0
+          },
+          "raw_spill_bytes_max": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "read_bytes_sum": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "scratch_bytes_max": {
+            "count": 7,
+            "median": 287232.0,
+            "p95": 287232.7,
+            "min": 287226.0,
+            "max": 287233.0,
+            "variation": 2.437054367201426e-05
+          },
+          "send_bytes_sum": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "write_bytes_sum": {
+            "count": 7,
+            "median": 65536.0,
+            "p95": 65536.0,
+            "min": 65536.0,
+            "max": 65536.0,
+            "variation": 0.0
+          }
+        },
+        "trials": [
+          {
+            "trial_index": 0,
+            "status": "completed",
+            "wall_seconds": 0.09865925007034093,
+            "rank_wall_seconds": [
+              0.09865925007034093
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.04464870900847018,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287232,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04464870900847018,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287232,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09865925007034093
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09865925007034093
+              },
+              "monitor_level": "collector",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 0,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector"
+            },
+            "raw_sha256": "ad2c82baede6341d240550bf2c2012f075551de616898d483ce9bf1eeffe2a46",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 1,
+            "status": "completed",
+            "wall_seconds": 0.09686416597105563,
+            "rank_wall_seconds": [
+              0.09686416597105563
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.043677167035639286,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287232,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.043677167035639286,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287232,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09686416597105563
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09686416597105563
+              },
+              "monitor_level": "collector",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 1,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector"
+            },
+            "raw_sha256": "2e5f79bc0d75e461ac2eae73f56430cc08480190e0f0ea9a20115534c3af65a1",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 2,
+            "status": "completed",
+            "wall_seconds": 0.09783366590272635,
+            "rank_wall_seconds": [
+              0.09783366590272635
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.04381620802450925,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287232,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04381620802450925,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287232,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09783366590272635
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09783366590272635
+              },
+              "monitor_level": "collector",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 2,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector"
+            },
+            "raw_sha256": "4d1bf73e7ab605ca6c1952a487655e984823c08d23219d7a83f162261291d9e1",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 3,
+            "status": "completed",
+            "wall_seconds": 0.0979172500083223,
+            "rank_wall_seconds": [
+              0.0979172500083223
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.04425595793873072,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287233,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04425595793873072,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287233,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.0979172500083223
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.0979172500083223
+              },
+              "monitor_level": "collector",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 3,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector"
+            },
+            "raw_sha256": "712e93c64241dc731bb2ed43f315d8ee5bfcc9cdca66195e71280ba7be534445",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 4,
+            "status": "completed",
+            "wall_seconds": 0.0982101249974221,
+            "rank_wall_seconds": [
+              0.0982101249974221
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.0441794169601053,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287232,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.0441794169601053,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287232,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.0982101249974221
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.0982101249974221
+              },
+              "monitor_level": "collector",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 4,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector"
+            },
+            "raw_sha256": "85c6dc0c5c2507c90f5e070df5d5419d0605840992b4e41e15a0b470ef6ee6cd",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 5,
+            "status": "completed",
+            "wall_seconds": 0.09459541598334908,
+            "rank_wall_seconds": [
+              0.09459541598334908
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.042558791930787265,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287226,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.042558791930787265,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287226,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09459541598334908
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09459541598334908
+              },
+              "monitor_level": "collector",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 5,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector"
+            },
+            "raw_sha256": "e3eaf3bd59f7a939867aa58c3ef34f279d80d2188a3b3de7668e6f82d68e053f",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 6,
+            "status": "completed",
+            "wall_seconds": 0.09400616702623665,
+            "rank_wall_seconds": [
+              0.09400616702623665
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 0,
+              "eta_captured": 0,
+              "execute_seconds": 0.04270537500269711,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 0,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 287229,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 0,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04270537500269711,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 0,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 287229,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09400616702623665
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09400616702623665
+              },
+              "monitor_level": "collector",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 6,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector"
+            },
+            "raw_sha256": "ae58c5190f79b0a6c39c609fd2ede48f5c6a5a47b9fe5181d413e4b9aca1db7e",
+            "reason": "",
+            "validation_errors": []
+          }
+        ]
+      },
+      {
+        "variant_id": "collector-summary",
+        "axes": {
+          "monitor": "collector-summary"
+        },
+        "status": "completed",
+        "statuses": {
+          "completed": 7,
+          "failed": 0,
+          "insufficient-budget": 0,
+          "unmeasured": 0,
+          "unsupported": 0,
+          "validation_failed": 0
+        },
+        "metrics": {
+          "wall_seconds": {
+            "count": 7,
+            "median": 0.10057762498036027,
+            "p95": 0.16350707483943547,
+            "min": 0.09771341702435166,
+            "max": 0.18800225004088134,
+            "variation": 0.8977029735406888
+          },
+          "rank_max_seconds": {
+            "count": 7,
+            "median": 0.10057762498036027,
+            "p95": 0.16350707483943547,
+            "min": 0.09771341702435166,
+            "max": 0.18800225004088134,
+            "variation": 0.8977029735406888
+          },
+          "completion_collector_pool_bytes_max": {
+            "count": 7,
+            "median": 73728.0,
+            "p95": 73728.0,
+            "min": 73728.0,
+            "max": 73728.0,
+            "variation": 0.0
+          },
+          "completion_observations_max": {
+            "count": 7,
+            "median": 7.0,
+            "p95": 7.0,
+            "min": 7.0,
+            "max": 7.0,
+            "variation": 0.0
+          },
+          "epoch_summary_count": {
+            "count": 7,
+            "median": 3.0,
+            "p95": 3.0,
+            "min": 3.0,
+            "max": 3.0,
+            "variation": 0.0
+          },
+          "eta_captured": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "execute_seconds": {
+            "count": 7,
+            "median": 0.04626770899631083,
+            "p95": 0.04760767151601612,
+            "min": 0.044454250019043684,
+            "max": 0.04801608400885016,
+            "variation": 0.07698315017262854
+          },
+          "managed_peak_bytes_max": {
+            "count": 7,
+            "median": 550144.0,
+            "p95": 550144.0,
+            "min": 550144.0,
+            "max": 550144.0,
+            "variation": 0.0
+          },
+          "raw_spill_bytes_max": {
+            "count": 7,
+            "median": 23591.0,
+            "p95": 23592.7,
+            "min": 23589.0,
+            "max": 23593.0,
+            "variation": 0.00016955618668136155
+          },
+          "read_bytes_sum": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "scratch_bytes_max": {
+            "count": 7,
+            "median": 310820.0,
+            "p95": 310825.4,
+            "min": 310816.0,
+            "max": 310826.0,
+            "variation": 3.217296184286725e-05
+          },
+          "send_bytes_sum": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "write_bytes_sum": {
+            "count": 7,
+            "median": 65536.0,
+            "p95": 65536.0,
+            "min": 65536.0,
+            "max": 65536.0,
+            "variation": 0.0
+          }
+        },
+        "trials": [
+          {
+            "trial_index": 0,
+            "status": "completed",
+            "wall_seconds": 0.10109845898114145,
+            "rank_wall_seconds": [
+              0.10109845898114145
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 0,
+              "execute_seconds": 0.04665470903273672,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23590,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 310821,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04665470903273672,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23590,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 310821,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.10109845898114145
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.10109845898114145
+              },
+              "monitor_level": "collector-summary",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 0,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-summary"
+            },
+            "raw_sha256": "14a374829cdffac8c665ee1cf07144c67d994a9c071285d7b46c83b15f80d0e8",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 1,
+            "status": "completed",
+            "wall_seconds": 0.10057762498036027,
+            "rank_wall_seconds": [
+              0.10057762498036027
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 0,
+              "execute_seconds": 0.04599670798052102,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23592,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 310824,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04599670798052102,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23592,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 310824,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.10057762498036027
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.10057762498036027
+              },
+              "monitor_level": "collector-summary",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 1,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-summary"
+            },
+            "raw_sha256": "0c2f4f4aca052c6b7607a01eb7731af5dba718d093a9cc137dbe53d06f39f39a",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 2,
+            "status": "completed",
+            "wall_seconds": 0.1005448749056086,
+            "rank_wall_seconds": [
+              0.1005448749056086
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 0,
+              "execute_seconds": 0.04626770899631083,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23593,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 310826,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04626770899631083,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23593,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 310826,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.1005448749056086
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.1005448749056086
+              },
+              "monitor_level": "collector-summary",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 2,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-summary"
+            },
+            "raw_sha256": "2c874d57b2ad581315ba54fee9dbe6d3ec9b4c32a05110c7f177ad125124487b",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 3,
+            "status": "completed",
+            "wall_seconds": 0.09983912494499236,
+            "rank_wall_seconds": [
+              0.09983912494499236
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 0,
+              "execute_seconds": 0.04585479199886322,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23591,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 310820,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04585479199886322,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23591,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 310820,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09983912494499236
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09983912494499236
+              },
+              "monitor_level": "collector-summary",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 3,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-summary"
+            },
+            "raw_sha256": "f4bd259e07c99b2072c5a162f4006190c8f5f6f2aed3370f3f07bc5c2bd64138",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 4,
+            "status": "completed",
+            "wall_seconds": 0.10635166603606194,
+            "rank_wall_seconds": [
+              0.10635166603606194
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 0,
+              "execute_seconds": 0.04664012498687953,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23591,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 310816,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04664012498687953,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23591,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 310816,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.10635166603606194
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.10635166603606194
+              },
+              "monitor_level": "collector-summary",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 4,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-summary"
+            },
+            "raw_sha256": "e2db4f6976332a074f5b716c76c4047a796896a003057ef3c969d421bd0ff4dd",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 5,
+            "status": "completed",
+            "wall_seconds": 0.18800225004088134,
+            "rank_wall_seconds": [
+              0.18800225004088134
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 0,
+              "execute_seconds": 0.04801608400885016,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23592,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 310820,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.04801608400885016,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23592,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 310820,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.18800225004088134
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.18800225004088134
+              },
+              "monitor_level": "collector-summary",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 5,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-summary"
+            },
+            "raw_sha256": "8570b827aad69c90661f63488edcaef82e3e71c83d100b1e9a9085c559a243f0",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 6,
+            "status": "completed",
+            "wall_seconds": 0.09771341702435166,
+            "rank_wall_seconds": [
+              0.09771341702435166
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 0,
+              "execute_seconds": 0.044454250019043684,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23589,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 310817,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 0,
+                  "execute_seconds": 0.044454250019043684,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23589,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 310817,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09771341702435166
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09771341702435166
+              },
+              "monitor_level": "collector-summary",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 6,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "collector-summary"
+            },
+            "raw_sha256": "fa9acbcd86f84076154a2afe4cad26c18642d7de437c05c6d7e2e439b99c9d00",
+            "reason": "",
+            "validation_errors": []
+          }
+        ]
+      },
+      {
+        "variant_id": "all-on",
+        "axes": {
+          "monitor": "all-on"
+        },
+        "status": "completed",
+        "statuses": {
+          "completed": 7,
+          "failed": 0,
+          "insufficient-budget": 0,
+          "unmeasured": 0,
+          "unsupported": 0,
+          "validation_failed": 0
+        },
+        "metrics": {
+          "wall_seconds": {
+            "count": 7,
+            "median": 0.10243783390615135,
+            "p95": 0.10361655009910464,
+            "min": 0.09880095801781863,
+            "max": 0.10388162499293685,
+            "variation": 0.049597563530803315
+          },
+          "rank_max_seconds": {
+            "count": 7,
+            "median": 0.10243783390615135,
+            "p95": 0.10361655009910464,
+            "min": 0.09880095801781863,
+            "max": 0.10388162499293685,
+            "variation": 0.049597563530803315
+          },
+          "completion_collector_pool_bytes_max": {
+            "count": 7,
+            "median": 73728.0,
+            "p95": 73728.0,
+            "min": 73728.0,
+            "max": 73728.0,
+            "variation": 0.0
+          },
+          "completion_observations_max": {
+            "count": 7,
+            "median": 7.0,
+            "p95": 7.0,
+            "min": 7.0,
+            "max": 7.0,
+            "variation": 0.0
+          },
+          "epoch_summary_count": {
+            "count": 7,
+            "median": 3.0,
+            "p95": 3.0,
+            "min": 3.0,
+            "max": 3.0,
+            "variation": 0.0
+          },
+          "eta_captured": {
+            "count": 7,
+            "median": 1.0,
+            "p95": 1.0,
+            "min": 1.0,
+            "max": 1.0,
+            "variation": 0.0
+          },
+          "execute_seconds": {
+            "count": 7,
+            "median": 0.04779424995649606,
+            "p95": 0.048481658112723376,
+            "min": 0.04625250003300607,
+            "max": 0.04848258302081376,
+            "variation": 0.04666006872871921
+          },
+          "managed_peak_bytes_max": {
+            "count": 7,
+            "median": 550144.0,
+            "p95": 550144.0,
+            "min": 550144.0,
+            "max": 550144.0,
+            "variation": 0.0
+          },
+          "raw_spill_bytes_max": {
+            "count": 7,
+            "median": 23592.0,
+            "p95": 23594.399999999998,
+            "min": 23586.0,
+            "max": 23595.0,
+            "variation": 0.0003814852492370295
+          },
+          "read_bytes_sum": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "scratch_bytes_max": {
+            "count": 7,
+            "median": 322719.0,
+            "p95": 322725.1,
+            "min": 322706.0,
+            "max": 322726.0,
+            "variation": 6.197341960033341e-05
+          },
+          "send_bytes_sum": {
+            "count": 7,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "write_bytes_sum": {
+            "count": 7,
+            "median": 65536.0,
+            "p95": 65536.0,
+            "min": 65536.0,
+            "max": 65536.0,
+            "variation": 0.0
+          }
+        },
+        "trials": [
+          {
+            "trial_index": 0,
+            "status": "completed",
+            "wall_seconds": 0.10388162499293685,
+            "rank_wall_seconds": [
+              0.10388162499293685
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 1,
+              "execute_seconds": 0.04847949999384582,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23592,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 322719,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 1,
+                  "execute_seconds": 0.04847949999384582,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23592,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 322719,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.10388162499293685
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.10388162499293685
+              },
+              "monitor_level": "all-on",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 0,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-on"
+            },
+            "raw_sha256": "8bd5f524398c5caf3ee0fb4d78dd7ef72ba24eb8180d08b6b5ca3f8dc545e3ea",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 1,
+            "status": "completed",
+            "wall_seconds": 0.10243783390615135,
+            "rank_wall_seconds": [
+              0.10243783390615135
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 1,
+              "execute_seconds": 0.04779424995649606,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23592,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 322716,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 1,
+                  "execute_seconds": 0.04779424995649606,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23592,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 322716,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.10243783390615135
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.10243783390615135
+              },
+              "monitor_level": "all-on",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 1,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-on"
+            },
+            "raw_sha256": "f4de2ae8d7526db50c8b58b873376077b84cc700e653d5346b160e6607f20277",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 2,
+            "status": "completed",
+            "wall_seconds": 0.1027719589183107,
+            "rank_wall_seconds": [
+              0.1027719589183107
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 1,
+              "execute_seconds": 0.048378749983385205,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23589,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 322719,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 1,
+                  "execute_seconds": 0.048378749983385205,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23589,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 322719,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.1027719589183107
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.1027719589183107
+              },
+              "monitor_level": "all-on",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 2,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-on"
+            },
+            "raw_sha256": "51fce587e1c289b88b78df724c9cee4d0d28a775fd4115d4245d8030481dc2ca",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 3,
+            "status": "completed",
+            "wall_seconds": 0.10299804201349616,
+            "rank_wall_seconds": [
+              0.10299804201349616
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 1,
+              "execute_seconds": 0.04848258302081376,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23592,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 322723,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 1,
+                  "execute_seconds": 0.04848258302081376,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23592,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 322723,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.10299804201349616
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.10299804201349616
+              },
+              "monitor_level": "all-on",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 3,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-on"
+            },
+            "raw_sha256": "0a3f4b36e7490135b09b6476ae7f2bf42a24f0e20cdfb9e41ad747568c3d6547",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 4,
+            "status": "completed",
+            "wall_seconds": 0.10184324998408556,
+            "rank_wall_seconds": [
+              0.10184324998408556
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 1,
+              "execute_seconds": 0.04764245799742639,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23595,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 322726,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 1,
+                  "execute_seconds": 0.04764245799742639,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23595,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 322726,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.10184324998408556
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.10184324998408556
+              },
+              "monitor_level": "all-on",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 4,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-on"
+            },
+            "raw_sha256": "61d07bbec71889df2bdaeea8cd43c71ebc1046eeaa92b0d5c2ae1d67597c9f00",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 5,
+            "status": "completed",
+            "wall_seconds": 0.09935379202943295,
+            "rank_wall_seconds": [
+              0.09935379202943295
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 1,
+              "execute_seconds": 0.04625250003300607,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23586,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 322706,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 1,
+                  "execute_seconds": 0.04625250003300607,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23586,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 322706,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09935379202943295
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09935379202943295
+              },
+              "monitor_level": "all-on",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 5,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-on"
+            },
+            "raw_sha256": "2485efd2ff187ec6f62a06c94dad508dac8ce2bff8a8df1a060f59db3e9a2b21",
+            "reason": "",
+            "validation_errors": []
+          },
+          {
+            "trial_index": 6,
+            "status": "completed",
+            "wall_seconds": 0.09880095801781863,
+            "rank_wall_seconds": [
+              0.09880095801781863
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "completion_collector_pool_bytes_max": 73728,
+              "completion_observations_max": 7,
+              "epoch_summary_count": 3,
+              "eta_captured": 1,
+              "execute_seconds": 0.046453458024188876,
+              "managed_peak_bytes_max": 550144,
+              "raw_spill_bytes_max": 23593,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 322719,
+              "send_bytes_sum": 0,
+              "write_bytes_sum": 65536
+            },
+            "raw": {
+              "adaptive": null,
+              "background_load": {
+                "after": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ],
+                "before": [
+                  4.7353515625,
+                  5.07763671875,
+                  5.0322265625
+                ]
+              },
+              "case_manifest_hash": "9b8d1b65a63899f8c8c81f214c06f70a4ba67529e54e36424166ff2c040b05c4",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "completion_collector_pool_bytes_max": 73728,
+                  "completion_observations_max": 7,
+                  "epoch_summary_count": 3,
+                  "eta_captured": 1,
+                  "execute_seconds": 0.046453458024188876,
+                  "managed_peak_bytes_max": 550144,
+                  "raw_spill_bytes_max": 23593,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 322719,
+                  "send_bytes_sum": 0,
+                  "write_bytes_sum": 65536
+                },
+                "rank_wall_seconds": [
+                  0.09880095801781863
+                ],
+                "validator_passed": true,
+                "wall_seconds": 0.09880095801781863
+              },
+              "monitor_level": "all-on",
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "same-host",
+              "source_actual_hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+              "trial_index": 6,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "all-on"
+            },
+            "raw_sha256": "f1b64958043a75ab1bcca10d8161bc202cbde466b32f0114cbc117eb30a21258",
+            "reason": "",
+            "validation_errors": []
+          }
+        ]
+      }
+    ],
+    "comparisons": [
+      {
+        "baseline": "all-off",
+        "variant": "collector",
+        "axis": "monitor",
+        "matched_pairs": 7,
+        "difference": {
+          "count": 7,
+          "median": 0.003986041992902756,
+          "p95": 0.004785204422660172,
+          "min": 0.001300124917179346,
+          "max": 0.0047995420172810555,
+          "variation": 0.8779177706437881
+        },
+        "ratio": {
+          "count": 7,
+          "median": 1.0423038555091226,
+          "p95": 1.0529627669391088,
+          "min": 1.0139355899137206,
+          "max": 1.0538025288682227,
+          "variation": 0.0382488645166037
+        },
+        "difference_ci95": [
+          0.003269582986831665,
+          0.004751750035211444
+        ],
+        "claim": "observed-direction-only",
+        "diagnostics": [],
+        "scope_mismatches": 0,
+        "paired_metrics": {
+          "completion_collector_pool_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "completion_observations_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 7.0,
+              "p95": 7.0,
+              "min": 7.0,
+              "max": 7.0,
+              "variation": 0.0
+            },
+            "ratio": null,
+            "difference_ci95": [
+              7.0,
+              7.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "epoch_summary_count": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "eta_captured": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "execute_seconds": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0035374158760532737,
+              "p95": 0.003887662594206631,
+              "min": 0.00213004183024168,
+              "max": 0.003921249997802079,
+              "variation": 0.5063606401741108
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0868748166525262,
+              "p95": 1.0990809125023138,
+              "min": 1.0526863141933476,
+              "max": 1.1011045111191027,
+              "variation": 0.04454808979278651
+            },
+            "difference_ci95": [
+              0.00310795905534178,
+              0.0038092919858172536
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "managed_peak_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "raw_spill_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "read_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "scratch_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": -2.0,
+              "p95": 3.3999999999999986,
+              "min": -6.0,
+              "max": 4.0,
+              "variation": -5.0
+            },
+            "ratio": {
+              "count": 7,
+              "median": 0.9999930370360055,
+              "p95": 1.0000118372715132,
+              "min": 0.9999791109625669,
+              "max": 1.0000139262188923,
+              "variation": 3.481549874449091e-05
+            },
+            "difference_ci95": [
+              -3.0,
+              2.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "send_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "write_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          }
+        }
+      },
+      {
+        "baseline": "all-off",
+        "variant": "collector-summary",
+        "axis": "monitor",
+        "matched_pairs": 7,
+        "difference": {
+          "count": 7,
+          "median": 0.006983041996136308,
+          "p95": 0.06993314619176084,
+          "min": 0.006143333972431719,
+          "max": 0.0947069589747116,
+          "variation": 12.68267111257269
+        },
+        "ratio": {
+          "count": 7,
+          "median": 1.0746094674871658,
+          "p95": 1.7492048306618453,
+          "min": 1.0646972343185082,
+          "max": 2.015131180710296,
+          "variation": 0.8844459081625752
+        },
+        "difference_ci95": [
+          0.006673624971881509,
+          0.0121275830315426
+        ],
+        "claim": "observed-direction-only",
+        "diagnostics": [],
+        "scope_mismatches": 0,
+        "paired_metrics": {
+          "completion_collector_pool_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "completion_observations_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 7.0,
+              "p95": 7.0,
+              "min": 7.0,
+              "max": 7.0,
+              "variation": 0.0
+            },
+            "ratio": null,
+            "difference_ci95": [
+              7.0,
+              7.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "epoch_summary_count": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 3.0,
+              "p95": 3.0,
+              "min": 3.0,
+              "max": 3.0,
+              "variation": 0.0
+            },
+            "ratio": null,
+            "difference_ci95": [
+              3.0,
+              3.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "eta_captured": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "execute_seconds": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.005623584031127393,
+              "p95": 0.007192133739590644,
+              "min": 0.005136249936185777,
+              "max": 0.007587333908304572,
+              "variation": 0.43585797928005915
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.1378319949750362,
+              "p95": 1.1779640798367195,
+              "min": 1.1261403202570373,
+              "max": 1.1876717407645552,
+              "variation": 0.05407777315039195
+            },
+            "difference_ci95": [
+              0.005427500000223517,
+              0.006270000012591481
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "managed_peak_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "raw_spill_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 23591.0,
+              "p95": 23592.7,
+              "min": 23589.0,
+              "max": 23593.0,
+              "variation": 0.00016955618668136155
+            },
+            "ratio": null,
+            "difference_ci95": [
+              23590.0,
+              23592.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "read_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "scratch_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 23587.0,
+              "p95": 23594.8,
+              "min": 23584.0,
+              "max": 23596.0,
+              "variation": 0.0005087548225717557
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0821188594506146,
+              "p95": 1.0821460726557928,
+              "min": 1.0821066997173057,
+              "max": 1.082150765245728,
+              "variation": 4.0721523368302424e-05
+            },
+            "difference_ci95": [
+              23586.0,
+              23592.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "send_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "write_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          }
+        }
+      },
+      {
+        "baseline": "all-off",
+        "variant": "all-on",
+        "axis": "monitor",
+        "matched_pairs": 7,
+        "difference": {
+          "count": 7,
+          "median": 0.008926499984227121,
+          "p95": 0.009761079330928624,
+          "min": 0.006058500963263214,
+          "max": 0.009832542040385306,
+          "variation": 0.42279068882436777
+        },
+        "ratio": {
+          "count": 7,
+          "median": 1.094484644730112,
+          "p95": 1.1069477929972245,
+          "min": 1.064938979170623,
+          "max": 1.1075517990720962,
+          "variation": 0.038934141384853425
+        },
+        "difference_ci95": [
+          0.0076191669795662165,
+          0.009594333008863032
+        ],
+        "claim": "observed-direction-only",
+        "diagnostics": [],
+        "scope_mismatches": 0,
+        "paired_metrics": {
+          "completion_collector_pool_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "completion_observations_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 7.0,
+              "p95": 7.0,
+              "min": 7.0,
+              "max": 7.0,
+              "variation": 0.0
+            },
+            "ratio": null,
+            "difference_ci95": [
+              7.0,
+              7.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "epoch_summary_count": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 3.0,
+              "p95": 3.0,
+              "min": 3.0,
+              "max": 3.0,
+              "variation": 0.0
+            },
+            "ratio": null,
+            "difference_ci95": [
+              3.0,
+              3.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "eta_captured": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "ratio": null,
+            "difference_ci95": [
+              1.0,
+              1.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "execute_seconds": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.007448374992236495,
+              "p95": 0.007749541383236646,
+              "min": 0.005823749932460487,
+              "max": 0.00776404095813632,
+              "variation": 0.2604985688419575
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.1815298749898853,
+              "p95": 1.1956236330877497,
+              "min": 1.1440497150660587,
+              "max": 1.1977441290302637,
+              "variation": 0.04544482124471436
+            },
+            "difference_ci95": [
+              0.007225041976198554,
+              0.007715709041804075
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "managed_peak_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "raw_spill_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 23592.0,
+              "p95": 23594.399999999998,
+              "min": 23586.0,
+              "max": 23595.0,
+              "variation": 0.0003814852492370295
+            },
+            "ratio": null,
+            "difference_ci95": [
+              23589.0,
+              23593.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "read_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "scratch_bytes_max": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 35487.0,
+              "p95": 35493.9,
+              "min": 35474.0,
+              "max": 35496.0,
+              "variation": 0.0006199453320934427
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.1235464913868736,
+              "p95": 1.1235730947324443,
+              "min": 1.1235029523172906,
+              "max": 1.123580405946454,
+              "variation": 6.893673715970767e-05
+            },
+            "difference_ci95": [
+              35485.0,
+              35489.0
+            ],
+            "claim": "observed-direction-only",
+            "diagnostics": []
+          },
+          "send_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          },
+          "write_bytes_sum": {
+            "matched_pairs": 7,
+            "difference": {
+              "count": 7,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 7,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "interval crosses zero"
+            ]
+          }
+        }
+      }
+    ],
+    "planned_order": [
+      [
+        "all-on",
+        0
+      ],
+      [
+        "all-off",
+        0
+      ],
+      [
+        "collector-summary",
+        0
+      ],
+      [
+        "collector",
+        0
+      ],
+      [
+        "all-off",
+        1
+      ],
+      [
+        "collector-summary",
+        1
+      ],
+      [
+        "collector",
+        1
+      ],
+      [
+        "all-on",
+        1
+      ],
+      [
+        "collector-summary",
+        2
+      ],
+      [
+        "collector",
+        2
+      ],
+      [
+        "all-on",
+        2
+      ],
+      [
+        "all-off",
+        2
+      ],
+      [
+        "collector",
+        3
+      ],
+      [
+        "all-on",
+        3
+      ],
+      [
+        "all-off",
+        3
+      ],
+      [
+        "collector-summary",
+        3
+      ],
+      [
+        "all-on",
+        4
+      ],
+      [
+        "all-off",
+        4
+      ],
+      [
+        "collector-summary",
+        4
+      ],
+      [
+        "collector",
+        4
+      ],
+      [
+        "all-off",
+        5
+      ],
+      [
+        "collector-summary",
+        5
+      ],
+      [
+        "collector",
+        5
+      ],
+      [
+        "all-on",
+        5
+      ],
+      [
+        "collector-summary",
+        6
+      ],
+      [
+        "collector",
+        6
+      ],
+      [
+        "all-on",
+        6
+      ],
+      [
+        "all-off",
+        6
+      ]
+    ],
+    "extrapolation": "none",
+    "predictive_interval": false,
+    "case": {
+      "source": {
+        "hash": "05e82caf70f06c8031a3aaacd83ef5ee53d7033b0c4a8aad1c0422dfcddfb16c",
+        "recipe": {
+          "injection": null,
+          "recipe": [
+            [
+              "H",
+              [
+                3
+              ],
+              null
+            ],
+            [
+              "RY",
+              [
+                0
+              ],
+              0.07
+            ],
+            [
+              "RZ",
+              [
+                1
+              ],
+              0.1
+            ],
+            [
+              "RY",
+              [
+                0
+              ],
+              0.07
+            ],
+            [
+              "RZ",
+              [
+                1
+              ],
+              0.1
+            ],
+            [
+              "RY",
+              [
+                0
+              ],
+              0.07
+            ],
+            [
+              "RZ",
+              [
+                1
+              ],
+              0.1
+            ],
+            [
+              "RY",
+              [
+                0
+              ],
+              0.07
+            ],
+            [
+              "RZ",
+              [
+                1
+              ],
+              0.1
+            ]
+          ]
+        }
+      },
+      "initial_state": {
+        "kind": "initial-one"
+      },
+      "binding": {
+        "kind": "empty"
+      },
+      "exact_witness": {
+        "kind": "none"
+      },
+      "observable": {
+        "Z": 0
+      },
+      "endpoint": "construct+forward+state-validation+checkpoint+close+cleanup",
+      "n": 4,
+      "b": 2,
+      "ranks": 1,
+      "resources": {
+        "disk_per_rank_bytes": 67108864,
+        "ram_per_rank_bytes": 8388608,
+        "scope": "same-host",
+        "threads": 1
+      },
+      "backend": "buffered",
+      "build": {
+        "lock": "850aa96ac1d868f27530f00f8ef8c9dcf954c60cdaa881ba2d8c2dabb2f6540b",
+        "machine": "arm64",
+        "mpi": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+        "platform": "macOS-26.7.1-arm64-arm-64bit",
+        "python": "3.12.13 (main, Mar  3 2026, 15:35:03) [Clang 21.1.4 ]",
+        "source": "60194182b3ed6b76b9cfc284f19d0b23bd185c4681c485b26fc791e4c93232ab",
+        "thread_environment": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": null,
+          "VECLIB_MAXIMUM_THREADS": null
+        },
+        "worker": "f0247e121028e31c0557bac7ae43018d870713b72d7ddff33f8b71c57f454e19"
+      },
+      "seed": 1,
+      "tolerances": {
+        "atol": 1e-10,
+        "rtol": 1e-10
+      },
+      "warmups": 2,
+      "trials": 7,
+      "budget_seconds": 899.9999965830939
+    },
+    "warmup_rows": [
+      {
+        "variant": "all-on",
+        "index": 0,
+        "wall_seconds": 0.5673676669830456,
+        "status": "completed",
+        "reason": ""
+      },
+      {
+        "variant": "all-off",
+        "index": 0,
+        "wall_seconds": 0.09437545901164412,
+        "status": "completed",
+        "reason": ""
+      },
+      {
+        "variant": "collector-summary",
+        "index": 0,
+        "wall_seconds": 0.10019545792602003,
+        "status": "completed",
+        "reason": ""
+      },
+      {
+        "variant": "collector",
+        "index": 0,
+        "wall_seconds": 0.09837045799940825,
+        "status": "completed",
+        "reason": ""
+      },
+      {
+        "variant": "all-off",
+        "index": 1,
+        "wall_seconds": 0.0932002499466762,
+        "status": "completed",
+        "reason": ""
+      },
+      {
+        "variant": "collector-summary",
+        "index": 1,
+        "wall_seconds": 0.10062562499660999,
+        "status": "completed",
+        "reason": ""
+      },
+      {
+        "variant": "collector",
+        "index": 1,
+        "wall_seconds": 0.09925416694022715,
+        "status": "completed",
+        "reason": ""
+      },
+      {
+        "variant": "all-on",
+        "index": 1,
+        "wall_seconds": 0.10318979097064584,
+        "status": "completed",
+        "reason": ""
+      }
+    ],
+    "scope": "same-host",
+    "injection": null,
+    "pilot_positive_gain_verified": null,
+    "positive_rule": null
+  },
+  "schema_version": 1,
+  "kind": "phase4-followup-campaign",
+  "scope": "same-host",
+  "ranks": 1,
+  "backend": "buffered",
+  "build": {
+    "source": "60194182b3ed6b76b9cfc284f19d0b23bd185c4681c485b26fc791e4c93232ab",
+    "worker": "f0247e121028e31c0557bac7ae43018d870713b72d7ddff33f8b71c57f454e19",
+    "lock": "850aa96ac1d868f27530f00f8ef8c9dcf954c60cdaa881ba2d8c2dabb2f6540b",
+    "python": "3.12.13 (main, Mar  3 2026, 15:35:03) [Clang 21.1.4 ]",
+    "platform": "macOS-26.7.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "mpi": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+    "thread_environment": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": null,
+      "VECLIB_MAXIMUM_THREADS": null
+    }
+  },
+  "cluster_used": false,
+  "unmeasured_groups": [
+    "cross-host",
+    "storage-mpi-positive-adaptation",
+    "full-control-migration",
+    "large-state-paired",
+    "tile-paired",
+    "cache-fairness-paired",
+    "lifecycle-fault-matrix"
+  ]
+}

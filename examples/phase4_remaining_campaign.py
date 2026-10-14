@@ -49,6 +49,10 @@ def config(path,args):
         storage_scope='node-local')
 
 
+MONITOR_LEVELS={'all-off':(False,False,False),'collector':(True,False,False),
+                'collector-summary':(True,True,False),'all-on':(True,True,True)}  # collection, epoch summary, ETA
+
+
 def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='sustained'):
     rank=comm.Get_rank();size=comm.Get_size()
     resource=getattr(args,'resource','compute')
@@ -58,8 +62,8 @@ def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='
     variants=(Variant('fixed',{'mode':'observe'}),Variant('auto',{'mode':'auto'})) if adaptive else (
         Variant('S0',{'swap_policy':'S0'}),Variant('S2',{'swap_policy':'S2'}))
     if monitoring:
-        variants=(Variant('collector-off',{'completion_collection':False}),
-                  Variant('collector-on',{'completion_collection':True}))
+        # Cumulative monitor ladder against an all-off baseline (same managed RAM pool in every arm).
+        variants=tuple(Variant(level,{'monitor':level}) for level in MONITOR_LEVELS)
     starts={'sustained':(4,33),'transient':(4,6),'recovery':(4,12),'missing-baseline':(0,33)}
     start,end=starts[scenario]
     # Per-call compute delay; fusing calls (S2) is the only legal way to pay fewer of them.
@@ -102,7 +106,9 @@ def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='
             with AsyncDistributedSimulator(4,config(directory,args),comm=comm,policy=policy) as sim:
                 if monitoring:
                     sim.runtime.configure_measurements(max_bytes=max(1024,min(64*1024,
-                        sim.config.metadata_reserve_bytes//16)),enabled=variant.axes['completion_collection'])
+                        sim.config.metadata_reserve_bytes//16)),enabled=MONITOR_LEVELS[variant.axes['monitor']][0])
+                    sim.runtime.configure_monitoring(epoch_summary=MONITOR_LEVELS[variant.axes['monitor']][1],
+                                                     eta=MONITOR_LEVELS[variant.axes['monitor']][2])
                 for kind,target,angle in recipe:sim.gate(kind,target,**({'angle':angle} if angle is not None else {}))
                 binding=sim.bind()
                 source=content_hash([gate_data(g) for g in sim.sequencer.operations])
@@ -174,6 +180,9 @@ def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='
                     sample=sim.runtime.measurements.snapshot()
                     metrics['completion_observations_max']=int(sim.transport.max_value(len(sample['observations'])))
                     metrics['completion_collector_pool_bytes_max']=int(sim.transport.max_value(sim.runtime._measurement_budget))
+                    metrics['epoch_summary_count']=len(getattr(sim.runtime,'epoch_summaries',()))
+                    metrics['eta_captured']=int(sim.runtime.latest_eta is not None)
+                    metrics['raw_spill_bytes_max']=int(sim.transport.max_value(getattr(sim.runtime,'raw_spill_bytes',0)))
         except Exception as exc:
             failure=f'{type(exc).__name__}: {exc}'[:512]
         try:cleanup(comm,directory)
@@ -185,7 +194,8 @@ def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='
             'scope':'injected-same-host' if adaptive else 'same-host','source_actual_hash':source,
             'validator':'eager-state-rtol-atol-1e-10','gradient':None,'adaptive':adaptive_report,
             'resolved_backends':resolved,
-            'completion_collection':variant.axes['completion_collection'] if monitoring else True,
+            'completion_collection':MONITOR_LEVELS[variant.axes['monitor']][0] if monitoring else True,
+            'monitor_level':variant.axes['monitor'] if monitoring else None,
             'background_load':{'before':background_load,'after':os.getloadavg()}}
         if rank==0:
             if warmup:warmup_rows.append({'variant':variant_id,'index':index,'wall_seconds':max(rank_wall),

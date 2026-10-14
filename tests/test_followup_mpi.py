@@ -63,9 +63,15 @@ def test_completion_monitor_compares_equal_pools_and_captures_actual_backend(tmp
     report=json.loads(output.read_text())['monitor']
     rows={row['variant_id']:row for row in report['rows']}
     assert all(row['status']=='completed' for row in rows.values())
-    off=rows['collector-off']['trials'][0];on=rows['collector-on']['trials'][0]
-    assert off['metrics']['completion_collector_pool_bytes_max']==on['metrics']['completion_collector_pool_bytes_max']
-    assert off['metrics']['completion_observations_max']==0
-    assert on['metrics']['completion_observations_max']>0
+    assert set(rows)=={'all-off','collector','collector-summary','all-on'}
+    trial={name:row['trials'][0]['metrics'] for name,row in rows.items()}
+    off,on=rows['all-off']['trials'][0],rows['all-on']['trials'][0]
+    # Every arm reserves the same collector pool, so RAM pressure does not bias the comparison.
+    assert len({m['completion_collector_pool_bytes_max'] for m in trial.values()})==1
+    assert trial['all-off']['completion_observations_max']==0 and trial['collector']['completion_observations_max']>0
+    assert trial['collector']['epoch_summary_count']==0 and trial['collector-summary']['epoch_summary_count']>0
+    assert trial['collector-summary']['raw_spill_bytes_max']>0 and trial['all-off']['raw_spill_bytes_max']==0
+    assert trial['collector-summary']['eta_captured']==0 and trial['all-on']['eta_captured']==1
+    assert all(c['axis']=='monitor' for c in report['comparisons'])
     expected='buffered' if backend=='buffered' else 'macos-f-nocache' if sys.platform=='darwin' else 'linux-o-direct'
     assert off['raw']['resolved_backends']==on['raw']['resolved_backends']==[expected]

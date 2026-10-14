@@ -63,6 +63,22 @@
 - **epoch集計。** そのepochのmeasured行を、stageごとの件数・合計秒・最大秒にまとめ、全rankでallgatherする。rank MAX、平均、不均衡（最大÷平均）、最も遅いrank、eventの最大を、`epoch_summaries`（最大64 epoch）に保持する。遅いrankの情報を平均で消さないためである。
 - **監視自身の費用。** 書出しと交換の所要時間を、stage `monitor-raw-flush`／`monitor-summary-exchange`として記録する（次のepochでrawに出る）。
 
+## 監視overheadの対照（2026-10-15追加）
+
+`RuntimeControl.configure_monitoring(eta=..., epoch_summary=...)`で監視の構成要素を切り替える（全rankで合意）。completion収集は既存の`configure_measurements(enabled=...)`で切り替える。ETAを止めると`remaining_seconds`はunknownになる。epoch集計を止めると、raw行は上限付きのまま書き出されない。`examples/phase4_remaining_campaign.py --action monitor`は、1つの軸`monitor`で全停止→収集→epoch集計・raw→ETAの4段を比べる。どの段も同じcollector poolをRAMに予約するので、RAM圧の差は混ざらない。回路は9 gate、warmup 2・paired 7で、差のCI95はpaired bootstrapで求めた。
+
+| 環境 | P | 全停止 wall median | +収集 | +epoch集計・raw | 全部（+ETA） |
+|---|---|---|---|---|---|
+| Mac | 1 | 93.6 ms | +4.2%（[3.3, 4.8] ms） | +7.5%（[6.7, 12.1] ms） | +9.5%（[7.6, 9.6] ms） |
+| Mac | 2 | 128.7 ms | +5.3%（[3.1, 8.5] ms） | +8.2%（[10.2, 10.8] ms） | +10.5%（[12.1, 59.5] ms） |
+| Linux | 1 | 515.8 ms | +0.7%（[-31.0, 34.2] ms） | +6.6%（[10.5, 53.4] ms） | +1.7%（[-36.9, 36.2] ms） |
+| Linux | 2 | 608.8 ms | +0.8%（[0.5, 17.2] ms） | +4.2%（[20.6, 36.6] ms） | +4.0%（[14.3, 44.3] ms） |
+
+- **固定費。** 監視全体で、1 runあたり約8〜15 ms（Mac）の固定費が乗る。gate数とepoch数に比例する費用で、Linuxでは実行時間の大半がdurable commitなので、比率は小さくばらつきに埋もれる段がある。
+- **epoch集計。** epoch集計・raw書出しの段は、両環境で区間が0を含まない増加だった。
+- **未測定。** 大きなBlockや長いrunでの比率は測っていない。
+- **証跡。** [内部記録](internal/phase4_monitor_overhead/)。
+
 ## 検証
 
 `tests/test_runtime_cost_registry.py`（6件）で次を確認した。
@@ -77,13 +93,13 @@
 - cache：measuredのread／writeからeviction scoreを作り、injectedの観測を数えないこと。
 - stage記録（`tests/test_stage_records.py`）：catalog-commitが子eventとしてgroupの消費集合に入ること、checkpointの3段、collectorのon/off、injected scope。raw行のlease下での書出し、epoch集計、監視自身の記録、総量上限での打切りと計数。
 
-Mac全回帰は868 passed／14 skipped。
+Mac全回帰は869 passed／14 skipped。Linuxの高速版（`-m "not slow"`）は816 passed／14 skipped（9分9秒）。
 
 ## 残件（P4-001）
 
 - async runtimeでのpacking経路と、その計測。
 - rolling観測の鮮度・品質基準（現在はsample数のみ）と、held-outのenvelope化。
 - 上限付きraw chunkのflushと、epoch境界でのrank summary。
-- 監視overheadの全体対照。
+- 大きなBlockや長いrunでの監視overheadの比率。
 - Linux O_DIRECTとcross-hostの校正。
 - 完了証跡（raw、immutable profile、manifest、比較report）。

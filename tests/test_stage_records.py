@@ -84,3 +84,18 @@ def test_epoch_boundary_spills_raw_lines_under_a_disk_lease_and_summarizes_ranks
         sim.gate('RX', (1,), angle=.3); sim.materialize(binding=sim.bind())
         assert runtime.raw_spill_truncated and runtime.measurements.dropped_raw > 0
         assert spill['path'].stat().st_size == runtime.raw_spill_bytes
+
+
+def test_monitoring_switches_disable_eta_and_epoch_summary_symmetrically(tmp_path):
+    with _sim(tmp_path / 'data', frame='materialize') as sim:
+        sim.runtime.configure_monitoring(eta=False, epoch_summary=False)
+        for _ in range(4): sim.gate('RX', (0,), angle=.3)
+        sim.materialize(binding=sim.bind())
+        assert sim.runtime.latest_eta is None and sim.runtime.remaining_seconds is None
+        assert getattr(sim.runtime, '_raw_spill', None) is None and not getattr(sim.runtime, 'epoch_summaries', ())
+        assert sim.runtime.measurements.snapshot()['observations']  # collection itself stays on
+        sim.runtime.configure_monitoring(eta=True, epoch_summary=True)
+        sim.gate('RX', (1,), angle=.3); sim.materialize(binding=sim.bind())
+        assert sim.runtime.latest_eta is not None and sim.runtime.epoch_summaries
+        with pytest.raises(TypeError):
+            sim.runtime.configure_monitoring(eta='yes')

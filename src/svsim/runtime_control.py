@@ -91,6 +91,7 @@ class RuntimeControl:
         self.condition_provenance=None
         self.gradient_cost_reason=None
         self.evaluation_estimate=None
+        self.monitoring={'eta':True,'epoch_summary':True}
         self.checkpoint_walls=[]
         self.max_switches=4
         self.switch_count=0
@@ -331,6 +332,9 @@ class RuntimeControl:
     def update_eta(self, *, endpoint_frontier=None, collective=False):
         from .runtime_eta import RuntimeETA
         sim=self.sim
+        if not self.monitoring['eta']:
+            if endpoint_frontier is not None:self._eta_endpoint=endpoint_frontier
+            return None
         error=None
         try:
             if endpoint_frontier is not None:self._eta_endpoint=endpoint_frontier
@@ -393,8 +397,21 @@ class RuntimeControl:
         self.remaining_seconds=(result.get('rank_max_expected_seconds',{}).get('observed') if collective else reports['observed']['expected_seconds'])
         return result
 
+    def configure_monitoring(self,*,eta=True,epoch_summary=True):
+        """Switch monitor components for overhead comparison; agreed by every rank.
+
+        Completion collection itself is switched by configure_measurements(enabled=...).
+        Disabling ETA leaves remaining_seconds unknown; disabling the epoch
+        summary leaves raw lines queued (bounded) without spill or exchange.
+        """
+        if type(eta) is not bool or type(epoch_summary) is not bool:raise TypeError('monitoring switches are boolean')
+        self.sim.transport.agree({'monitoring':{'eta':eta,'epoch_summary':epoch_summary}})
+        self.monitoring={'eta':eta,'epoch_summary':epoch_summary}
+        if not eta:self.invalidate_eta('ETA_MONITORING_DISABLED')
+
     def progress_eta(self):
         now=monotonic()
+        if not self.monitoring['eta']:return
         if self.latest_eta is None or now-self._eta_last_progress<1:return
         self._eta_last_progress=now
         # Monitoring failures must not turn successful request callbacks into
@@ -772,7 +789,7 @@ class RuntimeControl:
         from collections import deque
         sim=self.sim
         collector=self.measurements
-        if collector is None or not collector.enabled:return None
+        if collector is None or not collector.enabled or not self.monitoring['epoch_summary']:return None
         started=monotonic();error=None;written=0
         lines=collector.drain_raw()
         try:written=self._spill_raw(lines)
