@@ -131,6 +131,14 @@ class FileBlockStore:
             if saved != {'num_qubits':num_qubits,'block_bits':config.block_bits,'alignment':config.alignment}:
                 self.db.close()
                 raise ValueError('Storage dimensions/alignment mismatch')
+        # Record creation and current-open capability separately. A compatible
+        # SQLite upgrade may reopen a dataset; it does not rewrite creation evidence.
+        capability=self.db.admission_status()['capability']
+        with self.db:
+            self.db.execute('INSERT OR IGNORE INTO settings VALUES(?,?)',
+                            ('catalog_vfs_creation_capability',canonical(capability)))
+            self.db.execute('INSERT OR REPLACE INTO settings VALUES(?,?)',
+                            ('catalog_vfs_open_capability',canonical(capability)))
         # Slots orphaned by failed writes are never reused.
         paths = sorted((self.directory/'state').glob('segment-*.bin'))
         self.segment = int(paths[-1].stem.split('-')[1]) if paths else 0

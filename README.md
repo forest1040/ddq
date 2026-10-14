@@ -17,7 +17,7 @@ uv.lock         uvのロックファイル
 
 ## 研究室クラスタの内部計画
 
-[研究室クラスタ調査・実行計画](docs/internal/lab_cluster_execution_plan.md)には、研究室固有の接続先、ノード構成、容量、運用情報を記載しています。[Linuxサーバ検証記録](docs/internal/ent_linux_validation/README.md)もホスト情報と絶対パスを含みます。将来リポジトリを共有する際は、これらの資料を非公開にするか匿名化する可能性があります。現在はリポジトリ内に保存しており、`docs/internal/` という配置だけでアクセスを制限するものではありません。公開前には資料・参照リンクと Git 履歴に含まれる情報も確認してください。
+[研究室クラスタ調査・実行計画](docs/internal/lab_cluster_execution_plan.md)には、研究室固有の接続先、ノード構成、容量、運用情報を記載しています。[Linuxサーバ検証記録](docs/internal/ent_linux_validation/README.md)と[writer検証記録](docs/internal/phase4_writer_durability_validation/README.md)もホスト情報と絶対パスを含みます。将来リポジトリを共有する際は、これらの資料を非公開にするか匿名化する可能性があります。現在はリポジトリ内に保存しており、`docs/internal/` という配置だけでアクセスを制限するものではありません。公開前には資料・参照リンクと Git 履歴に含まれる情報も確認してください。
 
 ## Python環境
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import threading
 import uuid
 from contextlib import nullcontext
 from dataclasses import asdict
@@ -41,13 +42,18 @@ def storage_device_id(path: str | os.PathLike[str]) -> str:
 
 
 class StreamingExecutionTrace:
-    """Append each event directly to JSONL; memory use does not grow with event count."""
+    """Append each event directly to JSONL without growing memory with event count.
+
+    Disk admission is soft and applies only to paths covered by the supplied
+    budget's managed roots; it does not make this trace a durable authority.
+    Each trace path has one writer. Separate instances/processes must use
+    separate paths; the lock only coordinates this instance's append/close.
+    """
 
     def __init__(self, path: str | Path, *, profile_id: str, plan_id: str,
                  plan_version: int = 1, trace_id: str | None = None, version: int = 1,
                  disk_budget_getter=lambda:None, drain_getter=lambda:False) -> None:
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
         self.trace_id = trace_id or f"trace-{uuid.uuid4().hex}"
         self.version = version
         self.profile_id = profile_id
@@ -58,7 +64,15 @@ class StreamingExecutionTrace:
         self.read_bytes = self.write_bytes = 0
         self.read_count = self.write_count = self.flush_count = 0
         self._disk_budget_getter,self._drain_getter=disk_budget_getter,drain_getter
-        self._stream = self.path.open("a", encoding="utf-8")
+        self._lock = threading.RLock()
+        self._poisoned = False
+        budget = self._disk_budget_getter()
+        # Admit the namespace operation before mkdir/open. This one-byte probe
+        # is accounting only; capacity remains a soft guarantee.
+        with (budget.allocation(1, drain=bool(self._drain_getter()), operation="trace-open")
+              if budget else nullcontext()):
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self._stream = self.path.open("a+b", buffering=0)
 
     def record(self, task_id: str, **kwargs: Any) -> TraceEvent:
         """Write a lifecycle TraceEvent. Timing values are passed through as supplied."""
@@ -71,35 +85,80 @@ class StreamingExecutionTrace:
                "profile_id": self.profile_id, "plan_id": self.plan_id,
                **asdict(event)}
         raw=json.dumps(row, separators=(",", ":"), default=_json_default) + "\n"
-        nbytes=len(raw.encode('utf-8'))
+        data=raw.encode('utf-8')
+        nbytes=len(data)
         if nbytes>1024**2: raise ValueError('Trace record exceeds bounded 1 MiB envelope')
         budget=self._disk_budget_getter()
-        with (budget.allocation(nbytes,drain=bool(self._drain_getter())) if budget else nullcontext()):
-            self._stream.write(raw)
-            # Release credit only after buffered bytes have reached the file.
-            self._stream.flush()
-        self.event_count += 1
-        meta = event.metadata
-        operation = str(meta.get("operation", "")).lower()
-        nbytes = meta.get("transfer_bytes", event.bytes)
-        if isinstance(nbytes, int) and nbytes >= 0:
-            if operation == "read": self.read_count += 1; self.read_bytes += nbytes
-            elif operation == "write": self.write_count += 1; self.write_bytes += nbytes
-        if operation == "flush": self.flush_count += 1
+        with self._lock:
+            self._ensure_usable()
+            if self._stream.closed:
+                raise ValueError('Cannot append to a closed trace')
+            context = (budget.allocation(nbytes, drain=bool(self._drain_getter()),
+                                         operation="trace-append", retain_on_error=True)
+                       if budget else nullcontext(None))
+            with context as key:
+                try:
+                    start = os.fstat(self._stream.fileno()).st_size
+                except BaseException:
+                    if budget is not None:
+                        budget.release(key)
+                    raise
+                try:
+                    written = self._stream.write(data)
+                    if written != nbytes:
+                        raise OSError("short write while appending trace record")
+                    if budget is not None:
+                        budget.materialize(key, nbytes)
+                    self._stream.flush()
+                except BaseException as append_error:
+                    try:
+                        os.ftruncate(self._stream.fileno(), start)
+                    except BaseException as rollback_error:
+                        self._poison_and_close()
+                        raise append_error from rollback_error
+                    if budget is not None:
+                        budget.release(key)
+                    raise
+            self.event_count += 1
+            meta = event.metadata
+            operation = str(meta.get("operation", "")).lower()
+            transfer_bytes = meta.get("transfer_bytes", event.bytes)
+            if isinstance(transfer_bytes, int) and transfer_bytes >= 0:
+                if operation == "read": self.read_count += 1; self.read_bytes += transfer_bytes
+                elif operation == "write": self.write_count += 1; self.write_bytes += transfer_bytes
+            if operation == "flush": self.flush_count += 1
         return event
 
     def iter_events(self) -> Iterator[dict[str, Any]]:
-        if not self._stream.closed:
-            self._stream.flush()
-        with self.path.open("r", encoding="utf-8") as source:
-            for line in source:
-                if line.strip():
-                    yield json.loads(line)
+        with self._lock:
+            self._ensure_usable()
+            if not self._stream.closed:
+                self._stream.flush()
+            with self.path.open("r", encoding="utf-8") as source:
+                for line in source:
+                    if line.strip():
+                        yield json.loads(line)
+
+    def _ensure_usable(self) -> None:
+        if self._poisoned:
+            raise OSError("trace is unusable after append rollback failed")
 
     def close(self) -> None:
-        if not self._stream.closed:
-            self._stream.flush()
+        with self._lock:
+            if not self._stream.closed:
+                try:
+                    if not self._poisoned:
+                        self._stream.flush()
+                finally:
+                    self._stream.close()
+
+    def _poison_and_close(self) -> None:
+        self._poisoned = True
+        try:
             self._stream.close()
+        except BaseException:
+            # Preserve the append and rollback errors as the primary causal chain.
+            pass
 
     def __enter__(self) -> StreamingExecutionTrace: return self
     def __exit__(self, *_: object) -> None: self.close()

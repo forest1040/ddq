@@ -287,6 +287,32 @@ static int guardAuthorizer(void *unused,int action,const char *arg1,const char *
   return SQLITE_OK;
 }
 
+/* Read both the compile-time header identity and the loaded dispatch library.
+ * Header and runtime versions may differ: SQLite supports compatible headers.
+ * The caller compares dispatch identity to that of its actual connection. */
+static void identityFn(sqlite3_context*ctx,int argc,sqlite3_value**argv){
+  const char *key, *value=0;
+  if(argc!=1 || sqlite3_value_type(argv[0])!=SQLITE_TEXT){
+    sqlite3_result_error(ctx,"identity key required",-1);return;
+  }
+  key=(const char*)sqlite3_value_text(argv[0]);
+  if(!strcmp(key,"runtime_version"))value=sqlite3_libversion();
+  else if(!strcmp(key,"runtime_source_id"))value=sqlite3_sourceid();
+  else if(!strcmp(key,"header_version"))value=SQLITE_VERSION;
+  else if(!strcmp(key,"header_source_id"))value=SQLITE_SOURCE_ID;
+  else {sqlite3_result_error(ctx,"unknown identity key",-1);return;}
+  sqlite3_result_text(ctx,value,-1,SQLITE_TRANSIENT);
+}
+static void compileOptionFn(sqlite3_context*ctx,int argc,sqlite3_value**argv){
+  const char *value;
+  if(argc!=1 || sqlite3_value_type(argv[0])!=SQLITE_INTEGER || sqlite3_value_int(argv[0])<0){
+    sqlite3_result_error(ctx,"nonnegative compile option index required",-1);return;
+  }
+  value=sqlite3_compileoption_get(sqlite3_value_int(argv[0]));
+  if(value)sqlite3_result_text(ctx,value,-1,SQLITE_TRANSIENT);
+  else sqlite3_result_null(ctx);
+}
+
 int sqlite3_svsimdisk_init(sqlite3 *db,char **pzErrMsg,const sqlite3_api_routines *pApi){
   int rc; SQLITE_EXTENSION_INIT2(pApi);
   gParent=sqlite3_vfs_find(0); if(!gParent)return SQLITE_ERROR;
@@ -300,6 +326,8 @@ int sqlite3_svsimdisk_init(sqlite3 *db,char **pzErrMsg,const sqlite3_api_routine
   if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_disk_guard_status",0,SQLITE_UTF8|SQLITE_DIRECTONLY,0,statusFn,0,0);
   if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_disk_guard_prepare",3,SQLITE_UTF8|SQLITE_DIRECTONLY,0,prepareFn,0,0);
   if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_disk_guard_unprepare",1,SQLITE_UTF8|SQLITE_DIRECTONLY,0,unprepareFn,0,0);
+  if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_disk_guard_identity",1,SQLITE_UTF8|SQLITE_DIRECTONLY,0,identityFn,0,0);
+  if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_disk_guard_compile_option",1,SQLITE_UTF8|SQLITE_DIRECTONLY,0,compileOptionFn,0,0);
   if(rc==SQLITE_OK)rc=sqlite3_set_authorizer(db,guardAuthorizer,0);
   if(rc==SQLITE_OK)sqlite3_db_config(db,SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION,0,0);
 #ifdef SQLITE_OK_LOAD_PERMANENTLY

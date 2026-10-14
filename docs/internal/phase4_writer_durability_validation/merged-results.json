@@ -1,0 +1,1032 @@
+{
+  "mac": {
+    "count": 124,
+    "artifact": "mac/accepted.xml",
+    "cases": {
+      "tests/test_admitted_files.py::test_failed_rename_and_cleanup_preserve_live_token_and_temporary": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_failed_snapshot_sidecar_keeps_previous_checkpoint_resumable": {
+        "status": "passed",
+        "seconds": 0.105
+      },
+      "tests/test_admitted_files.py::test_failed_temporary_inventory_check_retains_token": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_flushed_sidecar_is_charged_once_for_concurrent_admission": {
+        "status": "passed",
+        "seconds": 0.003
+      },
+      "tests/test_admitted_files.py::test_quota_rejection_precedes_sidecar_namespace_changes": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_admitted_files.py::test_real_process_crash_keeps_sidecar_credit_and_inventory[after-rename]": {
+        "status": "passed",
+        "seconds": 0.868
+      },
+      "tests/test_admitted_files.py::test_real_process_crash_keeps_sidecar_credit_and_inventory[before-rename]": {
+        "status": "passed",
+        "seconds": 0.522
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[cleanup]": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[directory-fsync]": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[file-fsync]": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[none]": {
+        "status": "passed",
+        "seconds": 0.003
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[rename]": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[short-write]": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_stored_outputs_hold_credit_through_directory_fsync[matrix-asset]": {
+        "status": "passed",
+        "seconds": 0.046
+      },
+      "tests/test_admitted_files.py::test_stored_outputs_hold_credit_through_directory_fsync[snapshot-export]": {
+        "status": "passed",
+        "seconds": 0.048
+      },
+      "tests/test_admitted_files.py::test_temporary_collision_preserves_foreign_file_and_releases_own_credit": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_catalog_admission.py::test_backup_reserves_complete_destination_before_native_copy": {
+        "status": "passed",
+        "seconds": 0.007
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA journal_mode=WAL]": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA synchronous=OFF]": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA writable_schema=ON]": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[SELECT svsim_disk_guard_config(99999999,99999999,1)]": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_catalog_admission.py::test_cursor_and_script_share_reservations_and_rollback": {
+        "status": "passed",
+        "seconds": 0.012
+      },
+      "tests/test_catalog_admission.py::test_generated_sql_payload_is_stopped_by_native_page_cap": {
+        "status": "passed",
+        "seconds": 0.006
+      },
+      "tests/test_catalog_admission.py::test_journal_rollback_cannot_extend_file_without_reservation": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_catalog_admission.py::test_open_failure_releases_startup_reservation": {
+        "status": "passed",
+        "seconds": 0.003
+      },
+      "tests/test_catalog_admission.py::test_quota_rejection_precedes_begin_and_preserves_committed_rows": {
+        "status": "passed",
+        "seconds": 0.013
+      },
+      "tests/test_catalog_admission.py::test_second_quiescent_connection_preserves_shared_catalog": {
+        "status": "passed",
+        "seconds": 0.006
+      },
+      "tests/test_catalog_admission.py::test_trace_and_semantic_journal_refuse_growth_before_write": {
+        "status": "passed",
+        "seconds": 0.007
+      },
+      "tests/test_catalog_capability.py::test_binary_mismatch_prevents_load_and_releases_startup_credit": {
+        "status": "passed",
+        "seconds": 0.006
+      },
+      "tests/test_catalog_capability.py::test_capability_records_actual_build_and_connection_identity": {
+        "status": "passed",
+        "seconds": 0.429
+      },
+      "tests/test_catalog_capability.py::test_creation_and_open_capability_are_persisted_separately": {
+        "status": "passed",
+        "seconds": 0.042
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_compile_options]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_source_id]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_version]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_catalog_capability.py::test_identity_failure_cannot_downgrade_to_optional_soft_catalog": {
+        "status": "passed",
+        "seconds": 0.005
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failed_rename_and_failed_cleanup_keep_temp_and_live_token": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[directory-fsync-{\"ok\":true}\\n]": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[rename-old contents\\n]": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[write-old contents\\n]": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_rejected_admission_leaves_destination_and_directory_unchanged": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_reservation_covers_file_fsync_replace_directory_fsync_and_cleanup": {
+        "status": "passed",
+        "seconds": 0.003
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_temp_name_collision_preserves_other_file_and_releases_own_token": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_disk_coordinator.py::test_coordinator_path_requires_explicit_absolute_node_local_namespace": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_coordinator.py::test_same_volume_rank_path_mismatch_fails_collectively_before_ledger_open": {
+        "status": "passed",
+        "seconds": 0.233
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-1]": {
+        "status": "passed",
+        "seconds": 2.339
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-2]": {
+        "status": "passed",
+        "seconds": 5.296
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-4]": {
+        "status": "passed",
+        "seconds": 17.742
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-1]": {
+        "status": "passed",
+        "seconds": 2.375
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-2]": {
+        "status": "passed",
+        "seconds": 5.231
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-4]": {
+        "status": "passed",
+        "seconds": 17.523
+      },
+      "tests/test_disk_failed_allocation.py::test_failed_write_can_retain_recovery_evidence": {
+        "status": "passed",
+        "seconds": 0.003
+      },
+      "tests/test_disk_failed_allocation.py::test_retaining_context_releases_success_and_verified_cleanup": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_disk_failed_allocation.py::test_retention_option_is_validated_before_reservation": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_bootstrap_is_admitted_before_creating_ledger": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_child_process_crash_keeps_partial_charge_until_explicit_single_recovery": {
+        "status": "passed",
+        "seconds": 0.09
+      },
+      "tests/test_disk_reservation_ledger.py::test_crash_token_persists_and_materialization_removes_pending_charge": {
+        "status": "passed",
+        "seconds": 0.003
+      },
+      "tests/test_disk_reservation_ledger.py::test_full_ledger_keeps_room_for_release": {
+        "status": "passed",
+        "seconds": 0.003
+      },
+      "tests/test_disk_reservation_ledger.py::test_generic_client_cannot_bypass_an_already_bound_shared_policy": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_disk_reservation_ledger.py::test_incoming_parent_compacts_descendant_and_keeps_existing_bytes": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_disk_reservation_ledger.py::test_injected_capacity_scope_is_never_strict": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_legacy_ledger_with_active_token_cannot_be_bound_to_shared_policy": {
+        "status": "passed",
+        "seconds": 0.003
+      },
+      "tests/test_disk_reservation_ledger.py::test_nested_child_roots_compact_under_parent_without_losing_usage": {
+        "status": "passed",
+        "seconds": 0.146
+      },
+      "tests/test_disk_reservation_ledger.py::test_nonoverlapping_root_limit_still_rejects_257th_root": {
+        "status": "passed",
+        "seconds": 1.129
+      },
+      "tests/test_disk_reservation_ledger.py::test_production_ledger_pool_is_bounded_and_precharged_once": {
+        "status": "passed",
+        "seconds": 0.005
+      },
+      "tests/test_disk_reservation_ledger.py::test_reconciliation_evidence_is_bounded": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs0]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs1]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs2]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[-1]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[1.5]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[1]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[True]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_root_limit_is_global_across_clients_and_constructor": {
+        "status": "passed",
+        "seconds": 1.62
+      },
+      "tests/test_disk_reservation_ledger.py::test_roots_on_different_volumes_are_rejected": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_policy_connections_serialize_and_share_pending_quota": {
+        "status": "passed",
+        "seconds": 0.003
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_policy_mismatch_rejects_before_touching_existing_reservation": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_root_registration_rejects_aggregate_overquota_and_rolls_back": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_disk_reservation_ledger.py::test_unrelated_roots_with_sibling_prefix_names_remain_distinct": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_checkpoint_restores_prior_authoritative_cut[global]": {
+        "status": "passed",
+        "seconds": 0.137
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_checkpoint_restores_prior_authoritative_cut[prepare]": {
+        "status": "passed",
+        "seconds": 0.14
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_migration_global_publication_restores_empty_target": {
+        "status": "passed",
+        "seconds": 0.216
+      },
+      "tests/test_distributed_checkpoint.py::test_fork_local_failure_is_voted_and_parent_remains_usable[backup]": {
+        "status": "passed",
+        "seconds": 0.094
+      },
+      "tests/test_distributed_checkpoint.py::test_fork_local_failure_is_voted_and_parent_remains_usable[lease]": {
+        "status": "passed",
+        "seconds": 0.102
+      },
+      "tests/test_distributed_checkpoint.py::test_global_manifest_rejects_duplicate_rank_prepares": {
+        "status": "passed",
+        "seconds": 0.042
+      },
+      "tests/test_distributed_checkpoint.py::test_phase1_catalog_migration_retains_legacy_relative_phase": {
+        "status": "passed",
+        "seconds": 0.171
+      },
+      "tests/test_distributed_checkpoint.py::test_phase2_snapshot_migration_preserves_source_and_adjoint_history": {
+        "status": "passed",
+        "seconds": 0.44
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_actual_free_checked_each_admission": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_reservations_aggregate_ranks_and_preserve_drain": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_usage_tolerates_disappearing_sqlite_journal": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[1]": {
+        "status": "passed",
+        "seconds": 1.71
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[2]": {
+        "status": "passed",
+        "seconds": 3.605
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[4]": {
+        "status": "passed",
+        "seconds": 10.376
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_placement_rejects_network_filesystem": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_phase4_lifecycle.py::test_owner_resolution_never_uses_other_rank_root": {
+        "status": "passed",
+        "seconds": 0.01
+      },
+      "tests/test_phase4_lifecycle.py::test_ram_snapshot_flush_obeys_disk_admission": {
+        "status": "passed",
+        "seconds": 0.031
+      },
+      "tests/test_runtime_calibration.py::test_calibration_rejects_ram_budget_before_mpi_import": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_runtime_calibration.py::test_calibration_spec_bounds": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_runtime_calibration.py::test_runtime_flag_uses_common_codec_without_boolean_count": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_runtime_calibration.py::test_suite_recipes_are_reproducible_and_only_mpi_suites_touch_owner_bit": {
+        "status": "passed",
+        "seconds": 0.007
+      },
+      "tests/test_stored_budget.py::test_failed_gate_registration_does_not_duplicate_semantic_ids": {
+        "status": "passed",
+        "seconds": 0.182
+      },
+      "tests/test_stored_budget.py::test_failed_materialization_rolls_back_whole_logical_cut": {
+        "status": "passed",
+        "seconds": 0.822
+      },
+      "tests/test_stored_budget.py::test_gc_requires_quiescence_and_preserves_committed_snapshots": {
+        "status": "passed",
+        "seconds": 0.732
+      },
+      "tests/test_stored_budget.py::test_runtime_observe_uses_virtual_transport_and_never_replans": {
+        "status": "passed",
+        "seconds": 0.333
+      },
+      "tests/test_stored_budget.py::test_state_larger_than_budget_executes_exports_and_streams": {
+        "status": "passed",
+        "seconds": 12.827
+      },
+      "tests/test_stored_budget.py::test_uncommitted_journal_tail_repaired_before_next_checkpoint": {
+        "status": "passed",
+        "seconds": 0.553
+      },
+      "tests/test_stored_recovery.py::test_failed_snapshot_commit_leaves_previous_snapshot_resumable[flush]": {
+        "status": "passed",
+        "seconds": 0.92
+      },
+      "tests/test_stored_recovery.py::test_failed_snapshot_commit_leaves_previous_snapshot_resumable[write_from]": {
+        "status": "passed",
+        "seconds": 0.854
+      },
+      "tests/test_stored_recovery.py::test_fork_rejects_changed_fixed_parameter_and_foreign_snapshot": {
+        "status": "passed",
+        "seconds": 0.376
+      },
+      "tests/test_stored_recovery.py::test_interleaved_binding_forks_preserve_prefix_extents": {
+        "status": "passed",
+        "seconds": 2.161
+      },
+      "tests/test_stored_recovery.py::test_resume_detects_truncated_committed_extent": {
+        "status": "passed",
+        "seconds": 0.337
+      },
+      "tests/test_stored_recovery.py::test_resume_rejects_corrupt_committed_journal_and_asset": {
+        "status": "passed",
+        "seconds": 0.129
+      },
+      "tests/test_stored_recovery.py::test_snapshot_resume_preserves_pending_frame_and_upper_phase": {
+        "status": "passed",
+        "seconds": 0.585
+      },
+      "tests/test_telemetry.py::test_guard_ignores_unmatched_conditions": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_telemetry.py::test_guard_neutral_and_insufficient_windows_reset_persistence": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_telemetry.py::test_guard_requires_persistent_matched_windows_and_tracks_runtime_profile": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_telemetry.py::test_streaming_trace_appends_and_iterates_without_event_list": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_budget_rejection_does_not_create_trace_namespace": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_trace_admission.py::test_closed_trace_rejects_append_before_disk_admission": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[flush_error]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[short_write]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[write_error]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_open_failure_releases_admission_token": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_rollback_failure_retains_real_writing_reservation_and_poisons_trace": {
+        "status": "passed",
+        "seconds": 0.003
+      },
+      "tests/test_trace_admission.py::test_success_appends_without_truncating_existing_trace_and_counts_after_flush": {
+        "status": "passed",
+        "seconds": 0.001
+      }
+    }
+  },
+  "linux": {
+    "count": 121,
+    "artifact": "linux/accepted/regression.xml",
+    "cases": {
+      "tests/test_admitted_files.py::test_failed_rename_and_cleanup_preserve_live_token_and_temporary": {
+        "status": "passed",
+        "seconds": 0.011
+      },
+      "tests/test_admitted_files.py::test_failed_snapshot_sidecar_keeps_previous_checkpoint_resumable": {
+        "status": "passed",
+        "seconds": 0.738
+      },
+      "tests/test_admitted_files.py::test_failed_temporary_inventory_check_retains_token": {
+        "status": "passed",
+        "seconds": 0.011
+      },
+      "tests/test_admitted_files.py::test_flushed_sidecar_is_charged_once_for_concurrent_admission": {
+        "status": "passed",
+        "seconds": 0.017
+      },
+      "tests/test_admitted_files.py::test_quota_rejection_precedes_sidecar_namespace_changes": {
+        "status": "passed",
+        "seconds": 0.005
+      },
+      "tests/test_admitted_files.py::test_real_process_crash_keeps_sidecar_credit_and_inventory[after-rename]": {
+        "status": "passed",
+        "seconds": 0.421
+      },
+      "tests/test_admitted_files.py::test_real_process_crash_keeps_sidecar_credit_and_inventory[before-rename]": {
+        "status": "passed",
+        "seconds": 0.43
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[cleanup]": {
+        "status": "passed",
+        "seconds": 0.014
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[directory-fsync]": {
+        "status": "passed",
+        "seconds": 0.013
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[file-fsync]": {
+        "status": "passed",
+        "seconds": 0.012
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[none]": {
+        "status": "passed",
+        "seconds": 0.018
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[rename]": {
+        "status": "passed",
+        "seconds": 0.013
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[short-write]": {
+        "status": "passed",
+        "seconds": 0.011
+      },
+      "tests/test_admitted_files.py::test_stored_outputs_hold_credit_through_directory_fsync[matrix-asset]": {
+        "status": "passed",
+        "seconds": 0.334
+      },
+      "tests/test_admitted_files.py::test_stored_outputs_hold_credit_through_directory_fsync[snapshot-export]": {
+        "status": "passed",
+        "seconds": 0.352
+      },
+      "tests/test_admitted_files.py::test_temporary_collision_preserves_foreign_file_and_releases_own_credit": {
+        "status": "passed",
+        "seconds": 0.009
+      },
+      "tests/test_catalog_admission.py::test_backup_reserves_complete_destination_before_native_copy": {
+        "status": "passed",
+        "seconds": 0.035
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA journal_mode=WAL]": {
+        "status": "passed",
+        "seconds": 0.019
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA synchronous=OFF]": {
+        "status": "passed",
+        "seconds": 0.018
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA writable_schema=ON]": {
+        "status": "passed",
+        "seconds": 0.019
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[SELECT svsim_disk_guard_config(99999999,99999999,1)]": {
+        "status": "passed",
+        "seconds": 0.018
+      },
+      "tests/test_catalog_admission.py::test_cursor_and_script_share_reservations_and_rollback": {
+        "status": "passed",
+        "seconds": 0.039
+      },
+      "tests/test_catalog_admission.py::test_generated_sql_payload_is_stopped_by_native_page_cap": {
+        "status": "passed",
+        "seconds": 0.036
+      },
+      "tests/test_catalog_admission.py::test_journal_rollback_cannot_extend_file_without_reservation": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_catalog_admission.py::test_open_failure_releases_startup_reservation": {
+        "status": "passed",
+        "seconds": 0.016
+      },
+      "tests/test_catalog_admission.py::test_quota_rejection_precedes_begin_and_preserves_committed_rows": {
+        "status": "passed",
+        "seconds": 0.027
+      },
+      "tests/test_catalog_admission.py::test_second_quiescent_connection_preserves_shared_catalog": {
+        "status": "passed",
+        "seconds": 0.039
+      },
+      "tests/test_catalog_admission.py::test_trace_and_semantic_journal_refuse_growth_before_write": {
+        "status": "passed",
+        "seconds": 0.042
+      },
+      "tests/test_catalog_capability.py::test_binary_mismatch_prevents_load_and_releases_startup_credit": {
+        "status": "passed",
+        "seconds": 0.012
+      },
+      "tests/test_catalog_capability.py::test_capability_records_actual_build_and_connection_identity": {
+        "status": "passed",
+        "seconds": 0.148
+      },
+      "tests/test_catalog_capability.py::test_creation_and_open_capability_are_persisted_separately": {
+        "status": "passed",
+        "seconds": 0.283
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_compile_options]": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_source_id]": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_version]": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_catalog_capability.py::test_identity_failure_cannot_downgrade_to_optional_soft_catalog": {
+        "status": "passed",
+        "seconds": 0.01
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failed_rename_and_failed_cleanup_keep_temp_and_live_token": {
+        "status": "passed",
+        "seconds": 0.01
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[directory-fsync-{\"ok\":true}\\n]": {
+        "status": "passed",
+        "seconds": 0.012
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[rename-old contents\\n]": {
+        "status": "passed",
+        "seconds": 0.011
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[write-old contents\\n]": {
+        "status": "passed",
+        "seconds": 0.008
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_rejected_admission_leaves_destination_and_directory_unchanged": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_reservation_covers_file_fsync_replace_directory_fsync_and_cleanup": {
+        "status": "passed",
+        "seconds": 0.012
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_temp_name_collision_preserves_other_file_and_releases_own_token": {
+        "status": "passed",
+        "seconds": 0.008
+      },
+      "tests/test_disk_coordinator.py::test_coordinator_path_requires_explicit_absolute_node_local_namespace": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_coordinator.py::test_same_volume_rank_path_mismatch_fails_collectively_before_ledger_open": {
+        "status": "passed",
+        "seconds": 0.795
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-1]": {
+        "status": "passed",
+        "seconds": 8.115
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-2]": {
+        "status": "passed",
+        "seconds": 11.523
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-4]": {
+        "status": "passed",
+        "seconds": 24.627
+      },
+      "tests/test_disk_failed_allocation.py::test_failed_write_can_retain_recovery_evidence": {
+        "status": "passed",
+        "seconds": 0.01
+      },
+      "tests/test_disk_failed_allocation.py::test_retaining_context_releases_success_and_verified_cleanup": {
+        "status": "passed",
+        "seconds": 0.012
+      },
+      "tests/test_disk_failed_allocation.py::test_retention_option_is_validated_before_reservation": {
+        "status": "passed",
+        "seconds": 0.003
+      },
+      "tests/test_disk_reservation_ledger.py::test_bootstrap_is_admitted_before_creating_ledger": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_child_process_crash_keeps_partial_charge_until_explicit_single_recovery": {
+        "status": "passed",
+        "seconds": 0.269
+      },
+      "tests/test_disk_reservation_ledger.py::test_crash_token_persists_and_materialization_removes_pending_charge": {
+        "status": "passed",
+        "seconds": 0.019
+      },
+      "tests/test_disk_reservation_ledger.py::test_full_ledger_keeps_room_for_release": {
+        "status": "passed",
+        "seconds": 0.021
+      },
+      "tests/test_disk_reservation_ledger.py::test_generic_client_cannot_bypass_an_already_bound_shared_policy": {
+        "status": "passed",
+        "seconds": 0.013
+      },
+      "tests/test_disk_reservation_ledger.py::test_incoming_parent_compacts_descendant_and_keeps_existing_bytes": {
+        "status": "passed",
+        "seconds": 0.006
+      },
+      "tests/test_disk_reservation_ledger.py::test_injected_capacity_scope_is_never_strict": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_legacy_ledger_with_active_token_cannot_be_bound_to_shared_policy": {
+        "status": "passed",
+        "seconds": 0.018
+      },
+      "tests/test_disk_reservation_ledger.py::test_nested_child_roots_compact_under_parent_without_losing_usage": {
+        "status": "passed",
+        "seconds": 0.955
+      },
+      "tests/test_disk_reservation_ledger.py::test_nonoverlapping_root_limit_still_rejects_257th_root": {
+        "status": "passed",
+        "seconds": 0.697
+      },
+      "tests/test_disk_reservation_ledger.py::test_production_ledger_pool_is_bounded_and_precharged_once": {
+        "status": "passed",
+        "seconds": 0.021
+      },
+      "tests/test_disk_reservation_ledger.py::test_reconciliation_evidence_is_bounded": {
+        "status": "passed",
+        "seconds": 0.008
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs0]": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs1]": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs2]": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[-1]": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[1.5]": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[1]": {
+        "status": "passed",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[True]": {
+        "status": "passed",
+        "seconds": 0.005
+      },
+      "tests/test_disk_reservation_ledger.py::test_root_limit_is_global_across_clients_and_constructor": {
+        "status": "passed",
+        "seconds": 1.033
+      },
+      "tests/test_disk_reservation_ledger.py::test_roots_on_different_volumes_are_rejected": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_policy_connections_serialize_and_share_pending_quota": {
+        "status": "passed",
+        "seconds": 0.008
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_policy_mismatch_rejects_before_touching_existing_reservation": {
+        "status": "passed",
+        "seconds": 0.01
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_root_registration_rejects_aggregate_overquota_and_rolls_back": {
+        "status": "passed",
+        "seconds": 0.006
+      },
+      "tests/test_disk_reservation_ledger.py::test_unrelated_roots_with_sibling_prefix_names_remain_distinct": {
+        "status": "passed",
+        "seconds": 0.007
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_checkpoint_restores_prior_authoritative_cut[global]": {
+        "status": "passed",
+        "seconds": 0.953
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_checkpoint_restores_prior_authoritative_cut[prepare]": {
+        "status": "passed",
+        "seconds": 1.034
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_migration_global_publication_restores_empty_target": {
+        "status": "passed",
+        "seconds": 6.282
+      },
+      "tests/test_distributed_checkpoint.py::test_fork_local_failure_is_voted_and_parent_remains_usable[backup]": {
+        "status": "passed",
+        "seconds": 0.667
+      },
+      "tests/test_distributed_checkpoint.py::test_fork_local_failure_is_voted_and_parent_remains_usable[lease]": {
+        "status": "passed",
+        "seconds": 1.643
+      },
+      "tests/test_distributed_checkpoint.py::test_global_manifest_rejects_duplicate_rank_prepares": {
+        "status": "passed",
+        "seconds": 1.224
+      },
+      "tests/test_distributed_checkpoint.py::test_phase1_catalog_migration_retains_legacy_relative_phase": {
+        "status": "passed",
+        "seconds": 4.955
+      },
+      "tests/test_distributed_checkpoint.py::test_phase2_snapshot_migration_preserves_source_and_adjoint_history": {
+        "status": "passed",
+        "seconds": 12.604
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_actual_free_checked_each_admission": {
+        "status": "passed",
+        "seconds": 0.018
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_reservations_aggregate_ranks_and_preserve_drain": {
+        "status": "passed",
+        "seconds": 0.094
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_usage_tolerates_disappearing_sqlite_journal": {
+        "status": "passed",
+        "seconds": 0.04
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[1]": {
+        "status": "passed",
+        "seconds": 21.19
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[2]": {
+        "status": "passed",
+        "seconds": 35.707
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[4]": {
+        "status": "passed",
+        "seconds": 61.422
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_placement_rejects_network_filesystem": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_phase4_lifecycle.py::test_owner_resolution_never_uses_other_rank_root": {
+        "status": "passed",
+        "seconds": 0.006
+      },
+      "tests/test_phase4_lifecycle.py::test_ram_snapshot_flush_obeys_disk_admission": {
+        "status": "passed",
+        "seconds": 1.02
+      },
+      "tests/test_runtime_calibration.py::test_calibration_rejects_ram_budget_before_mpi_import": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_runtime_calibration.py::test_calibration_spec_bounds": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_runtime_calibration.py::test_runtime_flag_uses_common_codec_without_boolean_count": {
+        "status": "passed",
+        "seconds": 0.006
+      },
+      "tests/test_runtime_calibration.py::test_suite_recipes_are_reproducible_and_only_mpi_suites_touch_owner_bit": {
+        "status": "passed",
+        "seconds": 0.009
+      },
+      "tests/test_stored_budget.py::test_failed_gate_registration_does_not_duplicate_semantic_ids": {
+        "status": "passed",
+        "seconds": 1.321
+      },
+      "tests/test_stored_budget.py::test_failed_materialization_rolls_back_whole_logical_cut": {
+        "status": "passed",
+        "seconds": 6.461
+      },
+      "tests/test_stored_budget.py::test_gc_requires_quiescence_and_preserves_committed_snapshots": {
+        "status": "passed",
+        "seconds": 5.712
+      },
+      "tests/test_stored_budget.py::test_runtime_observe_uses_virtual_transport_and_never_replans": {
+        "status": "passed",
+        "seconds": 2.748
+      },
+      "tests/test_stored_budget.py::test_state_larger_than_budget_executes_exports_and_streams": {
+        "status": "passed",
+        "seconds": 194.611
+      },
+      "tests/test_stored_budget.py::test_uncommitted_journal_tail_repaired_before_next_checkpoint": {
+        "status": "passed",
+        "seconds": 4.447
+      },
+      "tests/test_stored_recovery.py::test_failed_snapshot_commit_leaves_previous_snapshot_resumable[flush]": {
+        "status": "passed",
+        "seconds": 5.987
+      },
+      "tests/test_stored_recovery.py::test_failed_snapshot_commit_leaves_previous_snapshot_resumable[write_from]": {
+        "status": "passed",
+        "seconds": 3.706
+      },
+      "tests/test_stored_recovery.py::test_fork_rejects_changed_fixed_parameter_and_foreign_snapshot": {
+        "status": "passed",
+        "seconds": 3.037
+      },
+      "tests/test_stored_recovery.py::test_interleaved_binding_forks_preserve_prefix_extents": {
+        "status": "passed",
+        "seconds": 12.615
+      },
+      "tests/test_stored_recovery.py::test_resume_detects_truncated_committed_extent": {
+        "status": "passed",
+        "seconds": 2.793
+      },
+      "tests/test_stored_recovery.py::test_resume_rejects_corrupt_committed_journal_and_asset": {
+        "status": "passed",
+        "seconds": 0.973
+      },
+      "tests/test_stored_recovery.py::test_snapshot_resume_preserves_pending_frame_and_upper_phase": {
+        "status": "passed",
+        "seconds": 3.735
+      },
+      "tests/test_telemetry.py::test_guard_ignores_unmatched_conditions": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_telemetry.py::test_guard_neutral_and_insufficient_windows_reset_persistence": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_telemetry.py::test_guard_requires_persistent_matched_windows_and_tracks_runtime_profile": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_telemetry.py::test_streaming_trace_appends_and_iterates_without_event_list": {
+        "status": "passed",
+        "seconds": 0.002
+      },
+      "tests/test_trace_admission.py::test_budget_rejection_does_not_create_trace_namespace": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_trace_admission.py::test_closed_trace_rejects_append_before_disk_admission": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[flush_error]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[short_write]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[write_error]": {
+        "status": "passed",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_open_failure_releases_admission_token": {
+        "status": "passed",
+        "seconds": 0.0
+      },
+      "tests/test_trace_admission.py::test_rollback_failure_retains_real_writing_reservation_and_poisons_trace": {
+        "status": "passed",
+        "seconds": 0.01
+      },
+      "tests/test_trace_admission.py::test_success_appends_without_truncating_existing_trace_and_counts_after_flush": {
+        "status": "passed",
+        "seconds": 0.0
+      }
+    }
+  },
+  "linux-native": {
+    "count": 8,
+    "artifact": "linux/accepted/native.xml",
+    "cases": {
+      "tests/test_native_uring_linux.py::test_native_backpressure_and_budget_are_bounded_and_drain_cleanly": {
+        "status": "passed",
+        "seconds": 0.055
+      },
+      "tests/test_native_uring_linux.py::test_native_buffered_write_read_fsync_cqes_and_request_accounting": {
+        "status": "passed",
+        "seconds": 0.066
+      },
+      "tests/test_native_uring_linux.py::test_native_cancel_race_accepts_either_result_but_pin_lives_to_original_cqe": {
+        "status": "passed",
+        "seconds": 0.05
+      },
+      "tests/test_native_uring_linux.py::test_native_closed_fd_produces_real_negative_cqe_and_releases_pin": {
+        "status": "passed",
+        "seconds": 0.051
+      },
+      "tests/test_native_uring_linux.py::test_native_o_direct_read_write_fsync_uses_aligned_bufferlease": {
+        "status": "passed",
+        "seconds": 0.061
+      },
+      "tests/test_native_uring_linux.py::test_native_short_eof_is_terminal_error_and_retains_pin_through_callback": {
+        "status": "passed",
+        "seconds": 0.056
+      },
+      "tests/test_native_uring_mpi_linux.py::test_native_io_uring_phase4_mpi[buffered-2]": {
+        "status": "passed",
+        "seconds": 49.977
+      },
+      "tests/test_native_uring_mpi_linux.py::test_native_io_uring_phase4_mpi[direct-2]": {
+        "status": "passed",
+        "seconds": 70.609
+      }
+    }
+  }
+}

@@ -1,0 +1,44 @@
+# Phase 4：書込み予約と永続化境界の補強
+
+2026-10-14。P4-009のwriter監査で残った予約境界、asset／snapshot sidecar、SQLite識別情報を補強した。Lunaがcheckpoint JSONとtrace、Codexがsidecar、SQLite capabilityとMac／Linux検証を担当した。P4-009はIN_PROGRESSを維持する。
+
+## 予約を永続化とcleanupまで保持する
+
+`distributed_checkpoint.atomic_json`は、親directoryの作成より先にserialized byte数を予約する。短いwriteを拒否し、tempのflush／fsync、replace、親directory fsync、temp cleanupが済むまでtokenを保持する。予約拒否ではnamespaceを変更しない。
+
+rename前の失敗は既存targetを保持する。rename後にdirectory fsyncが失敗した場合は新しいfileを保持して例外を返す。旧cutへ勝手に戻さず、呼び出し側の既存checkpoint recovery契約へ渡す。rename完了だけでは電源断後の耐久性を保証しない。
+
+Flush後に`materialize`を記録し、書込み済みbytesをpending creditから観測usageへ移す。file／directory fsyncとcleanupの間もWRITING rowを保持するため、tokenの保持とpending byte数は別である。実ファイルのold targetとtempを観測する容量境界試験で、flush後の別予約が同じbytesを二重に計上しないことを確認する。writeからmaterializeの記録までの短い区間は保守的に拒否する場合があり、全volumeの厳密な同時更新を保証するものではない。
+
+`file_allocation`はcleanup後のtemp不存在を確認して精算する。renameとunlinkが両方失敗してtempが残る場合、またはinventory確認が失敗する場合は、WRITING tokenを保持する。inventory不明は成功として返さない。`xb`でtempを作り、名前の衝突時は他者のfileを変更／削除せず今回の予約だけを解放する。
+
+`admitted_files.atomic_write_bytes`をmatrix assetと単独snapshot JSONへ接続した。同じ予約／file fsync／replace／directory fsync／cleanupを適用し、snapshot JSONの最終pathへの直接書込みを廃止した。Catalog snapshot行とJSON sidecarは依然として別の永続化ステップであり、両者を一つのtransactionにしたわけではない。sidecar失敗時はmanifestを返さず、既存snapshotのresumeが可能なことを検証した。
+
+managed root内の実子processをrename直前／直後に`os._exit`で停止する試験を追加した。再open後もWRITING tokenとtemp／final fileを保持する。fileの存在やPIDだけでtokenを自動解放しない。これはsidecarのprocess crash試験であり、電源断、全writer、authoritative decisionとの自動reconcileを受入済みとは扱わない。
+
+## Traceを変更前にadmitする
+
+`StreamingExecutionTrace`はmkdir／open前に`trace-open`予約を取得する。1 byteはnamespace操作のadmission probeであり、directory entry等のfilesystem metadata全体を予約する保証ではない。記録はunbuffered binary appendで、recordの正確なUTF-8 byte数を予約し、短いwriteとwrite／flush失敗を検出する。
+
+通常のappend失敗では予約保持中に元のfile長へ戻し、cleanup成功時にだけ明示解放する。full write後にmaterializeし、flush成功後だけcounterを進める。truncate自体に失敗した場合は、元のappend例外とrollback例外の因果関係を保持して伝播し、token／partial fileを残す。streamを閉じ、再追記とreaderを拒否する。traceはcheckpoint authorityではなく、recordごとのfsyncは追加しない。各trace pathは一つのwriterが所有し、lockは同じinstanceのappend／closeだけを調停する。
+
+## SQLiteのbuildとdispatchを識別する
+
+`SQLiteGuard.capability()`とcatalog／ledgerのadmission statusへ以下を追加した。
+
+- Native C source、`sqlite3.h`／`sqlite3ext.h`、compiled binaryのSHA-256。
+- Header directory、compiler path／version、実際のbuild flags。
+- Compile-time header version／source ID、extension dispatchのruntime version／source ID／compile options。
+- Capability全体のfingerprint、照合scopeとheader/runtime build一致を主張しないflag。
+
+Build前後の入力hashを照合し、load前にbinary hashを確認する。各connectionでextension dispatchとそのconnectionのSQLite version／source ID／compile optionsを比較し、不一致を拒否する。Headerとruntimeのversionが異なることだけで互換性を拒否しない。SQLite build configuration全体がheaderと同一であるとの保証ではない。
+
+Store catalogのsettingsへcreation時と最新open時のcapabilityを別々に保存する。互換性のある再openでcreationの証跡を書き換えない。旧storeに識別情報がなければ、今回のopenからの記録となり、元のbuildを推定しない。
+
+## 検証と未完了範囲
+
+再現条件、JUnit、capability、source hashとrawは[内部検証資料](internal/phase4_writer_durability_validation/README.md)に保存する。これは関連回帰の結果であり、Phase 4全件回帰や性能校正profileではない。
+
+最終結果はMac関連回帰124件、Linux関連回帰121件、native I/O／MPI 8件の成功。通常回帰の3件差は既存testのplatform別parameter展開による。Nativeはbuffered／O_DIRECTの各2 rankを含み、skip／fallbackはない。最終source hash、node ID集合と永続化したcapabilityを照合した。
+
+全writerのhard enforcement、allocator／journal／checkpoint cutに結び付いたrecovery、temporary branchの安全なGC、異なるledger／外部jobのhost調停、外部`export_state`の容量管理は残る。Catalog／ledger VFSのenforcementをvolume全体へ拡大したとは扱わず、`strict_capacity_guarantee=false`を維持する。クラスタは今回使用しない。

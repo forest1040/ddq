@@ -1,0 +1,1172 @@
+{
+  "mac": {
+    "count": 113,
+    "cases": {
+      "tests/test_admitted_files.py::test_failed_snapshot_sidecar_keeps_previous_checkpoint_resumable": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.102
+      },
+      "tests/test_admitted_files.py::test_quota_rejection_precedes_sidecar_namespace_changes": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_admitted_files.py::test_real_process_crash_keeps_sidecar_credit_and_inventory[after-rename]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.541
+      },
+      "tests/test_admitted_files.py::test_real_process_crash_keeps_sidecar_credit_and_inventory[before-rename]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.534
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[cleanup]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[directory-fsync]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[file-fsync]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[none]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[rename]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[short-write]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_admitted_files.py::test_stored_outputs_hold_credit_through_directory_fsync[matrix-asset]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.052
+      },
+      "tests/test_admitted_files.py::test_stored_outputs_hold_credit_through_directory_fsync[snapshot-export]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.048
+      },
+      "tests/test_catalog_admission.py::test_backup_reserves_complete_destination_before_native_copy": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.006
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA journal_mode=WAL]": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.004
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA synchronous=OFF]": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.004
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA writable_schema=ON]": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.004
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[SELECT svsim_disk_guard_config(99999999,99999999,1)]": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.004
+      },
+      "tests/test_catalog_admission.py::test_cursor_and_script_share_reservations_and_rollback": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.007
+      },
+      "tests/test_catalog_admission.py::test_generated_sql_payload_is_stopped_by_native_page_cap": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.006
+      },
+      "tests/test_catalog_admission.py::test_journal_rollback_cannot_extend_file_without_reservation": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.001
+      },
+      "tests/test_catalog_admission.py::test_open_failure_releases_startup_reservation": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.003
+      },
+      "tests/test_catalog_admission.py::test_quota_rejection_precedes_begin_and_preserves_committed_rows": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.005
+      },
+      "tests/test_catalog_admission.py::test_second_quiescent_connection_preserves_shared_catalog": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.007
+      },
+      "tests/test_catalog_admission.py::test_trace_and_semantic_journal_refuse_growth_before_write": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.007
+      },
+      "tests/test_catalog_capability.py::test_binary_mismatch_prevents_load_and_releases_startup_credit": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.008
+      },
+      "tests/test_catalog_capability.py::test_capability_records_actual_build_and_connection_identity": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.468
+      },
+      "tests/test_catalog_capability.py::test_creation_and_open_capability_are_persisted_separately": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.049
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_compile_options]": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.001
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_source_id]": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.001
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_version]": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.001
+      },
+      "tests/test_catalog_capability.py::test_identity_failure_cannot_downgrade_to_optional_soft_catalog": {
+        "status": "passed",
+        "artifact": "mac/final.xml",
+        "seconds": 0.005
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[directory-fsync-{\"ok\":true}\\n]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[rename-old contents\\n]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[write-old contents\\n]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_rejected_admission_leaves_destination_and_directory_unchanged": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.0
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_reservation_covers_file_fsync_replace_directory_fsync_and_cleanup": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_disk_coordinator.py::test_coordinator_path_requires_explicit_absolute_node_local_namespace": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_coordinator.py::test_same_volume_rank_path_mismatch_fails_collectively_before_ledger_open": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.235
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-1]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 2.324
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-2]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 5.135
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-4]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 17.68
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-1]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 2.414
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-2]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 5.208
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[direct-4]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 17.67
+      },
+      "tests/test_disk_reservation_ledger.py::test_bootstrap_is_admitted_before_creating_ledger": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_child_process_crash_keeps_partial_charge_until_explicit_single_recovery": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.091
+      },
+      "tests/test_disk_reservation_ledger.py::test_crash_token_persists_and_materialization_removes_pending_charge": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.003
+      },
+      "tests/test_disk_reservation_ledger.py::test_full_ledger_keeps_room_for_release": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.003
+      },
+      "tests/test_disk_reservation_ledger.py::test_generic_client_cannot_bypass_an_already_bound_shared_policy": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_disk_reservation_ledger.py::test_incoming_parent_compacts_descendant_and_keeps_existing_bytes": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_disk_reservation_ledger.py::test_injected_capacity_scope_is_never_strict": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_legacy_ledger_with_active_token_cannot_be_bound_to_shared_policy": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.003
+      },
+      "tests/test_disk_reservation_ledger.py::test_nested_child_roots_compact_under_parent_without_losing_usage": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.149
+      },
+      "tests/test_disk_reservation_ledger.py::test_nonoverlapping_root_limit_still_rejects_257th_root": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 1.127
+      },
+      "tests/test_disk_reservation_ledger.py::test_production_ledger_pool_is_bounded_and_precharged_once": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.005
+      },
+      "tests/test_disk_reservation_ledger.py::test_reconciliation_evidence_is_bounded": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs0]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs1]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs2]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[-1]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[1.5]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[1]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[True]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_root_limit_is_global_across_clients_and_constructor": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 1.638
+      },
+      "tests/test_disk_reservation_ledger.py::test_roots_on_different_volumes_are_rejected": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_policy_connections_serialize_and_share_pending_quota": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_policy_mismatch_rejects_before_touching_existing_reservation": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_root_registration_rejects_aggregate_overquota_and_rolls_back": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_disk_reservation_ledger.py::test_unrelated_roots_with_sibling_prefix_names_remain_distinct": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_checkpoint_restores_prior_authoritative_cut[global]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.136
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_checkpoint_restores_prior_authoritative_cut[prepare]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.137
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_migration_global_publication_restores_empty_target": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.211
+      },
+      "tests/test_distributed_checkpoint.py::test_fork_local_failure_is_voted_and_parent_remains_usable[backup]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.093
+      },
+      "tests/test_distributed_checkpoint.py::test_fork_local_failure_is_voted_and_parent_remains_usable[lease]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.102
+      },
+      "tests/test_distributed_checkpoint.py::test_global_manifest_rejects_duplicate_rank_prepares": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.041
+      },
+      "tests/test_distributed_checkpoint.py::test_phase1_catalog_migration_retains_legacy_relative_phase": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.167
+      },
+      "tests/test_distributed_checkpoint.py::test_phase2_snapshot_migration_preserves_source_and_adjoint_history": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.419
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_actual_free_checked_each_admission": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_reservations_aggregate_ranks_and_preserve_drain": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.003
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_usage_tolerates_disappearing_sqlite_journal": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[1]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 1.687
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[2]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 3.451
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[4]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 10.203
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_placement_rejects_network_filesystem": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_phase4_lifecycle.py::test_owner_resolution_never_uses_other_rank_root": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.01
+      },
+      "tests/test_phase4_lifecycle.py::test_ram_snapshot_flush_obeys_disk_admission": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.033
+      },
+      "tests/test_runtime_calibration.py::test_calibration_rejects_ram_budget_before_mpi_import": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_runtime_calibration.py::test_calibration_spec_bounds": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.0
+      },
+      "tests/test_runtime_calibration.py::test_runtime_flag_uses_common_codec_without_boolean_count": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_runtime_calibration.py::test_suite_recipes_are_reproducible_and_only_mpi_suites_touch_owner_bit": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.015
+      },
+      "tests/test_stored_budget.py::test_failed_gate_registration_does_not_duplicate_semantic_ids": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.162
+      },
+      "tests/test_stored_budget.py::test_failed_materialization_rolls_back_whole_logical_cut": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.731
+      },
+      "tests/test_stored_budget.py::test_gc_requires_quiescence_and_preserves_committed_snapshots": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.638
+      },
+      "tests/test_stored_budget.py::test_runtime_observe_uses_virtual_transport_and_never_replans": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.305
+      },
+      "tests/test_stored_budget.py::test_state_larger_than_budget_executes_exports_and_streams": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 11.344
+      },
+      "tests/test_stored_budget.py::test_uncommitted_journal_tail_repaired_before_next_checkpoint": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.496
+      },
+      "tests/test_stored_recovery.py::test_failed_snapshot_commit_leaves_previous_snapshot_resumable[flush]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.821
+      },
+      "tests/test_stored_recovery.py::test_failed_snapshot_commit_leaves_previous_snapshot_resumable[write_from]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.758
+      },
+      "tests/test_stored_recovery.py::test_fork_rejects_changed_fixed_parameter_and_foreign_snapshot": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.349
+      },
+      "tests/test_stored_recovery.py::test_interleaved_binding_forks_preserve_prefix_extents": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 1.878
+      },
+      "tests/test_stored_recovery.py::test_resume_detects_truncated_committed_extent": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.314
+      },
+      "tests/test_stored_recovery.py::test_resume_rejects_corrupt_committed_journal_and_asset": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.128
+      },
+      "tests/test_stored_recovery.py::test_snapshot_resume_preserves_pending_frame_and_upper_phase": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.523
+      },
+      "tests/test_telemetry.py::test_guard_ignores_unmatched_conditions": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.0
+      },
+      "tests/test_telemetry.py::test_guard_neutral_and_insufficient_windows_reset_persistence": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.0
+      },
+      "tests/test_telemetry.py::test_guard_requires_persistent_matched_windows_and_tracks_runtime_profile": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.0
+      },
+      "tests/test_telemetry.py::test_streaming_trace_appends_and_iterates_without_event_list": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_budget_rejection_does_not_create_trace_namespace": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[flush_error]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[short_write]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[write_error]": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_open_failure_releases_admission_token": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_success_appends_without_truncating_existing_trace_and_counts_after_flush": {
+        "status": "passed",
+        "artifact": "mac/regression.xml",
+        "seconds": 0.001
+      }
+    }
+  },
+  "linux": {
+    "count": 110,
+    "cases": {
+      "tests/test_admitted_files.py::test_failed_snapshot_sidecar_keeps_previous_checkpoint_resumable": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.708
+      },
+      "tests/test_admitted_files.py::test_quota_rejection_precedes_sidecar_namespace_changes": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.004
+      },
+      "tests/test_admitted_files.py::test_real_process_crash_keeps_sidecar_credit_and_inventory[after-rename]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.409
+      },
+      "tests/test_admitted_files.py::test_real_process_crash_keeps_sidecar_credit_and_inventory[before-rename]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.412
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[cleanup]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.01
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[directory-fsync]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.01
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[file-fsync]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.01
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[none]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.015
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[rename]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.011
+      },
+      "tests/test_admitted_files.py::test_sidecar_credit_covers_publication_and_failure_cleanup[short-write]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.011
+      },
+      "tests/test_admitted_files.py::test_stored_outputs_hold_credit_through_directory_fsync[matrix-asset]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.319
+      },
+      "tests/test_admitted_files.py::test_stored_outputs_hold_credit_through_directory_fsync[snapshot-export]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.343
+      },
+      "tests/test_catalog_admission.py::test_backup_reserves_complete_destination_before_native_copy": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.049
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA journal_mode=WAL]": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.02
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA synchronous=OFF]": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.02
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA writable_schema=ON]": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.021
+      },
+      "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[SELECT svsim_disk_guard_config(99999999,99999999,1)]": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.025
+      },
+      "tests/test_catalog_admission.py::test_cursor_and_script_share_reservations_and_rollback": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.042
+      },
+      "tests/test_catalog_admission.py::test_generated_sql_payload_is_stopped_by_native_page_cap": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.036
+      },
+      "tests/test_catalog_admission.py::test_journal_rollback_cannot_extend_file_without_reservation": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.002
+      },
+      "tests/test_catalog_admission.py::test_open_failure_releases_startup_reservation": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.018
+      },
+      "tests/test_catalog_admission.py::test_quota_rejection_precedes_begin_and_preserves_committed_rows": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.036
+      },
+      "tests/test_catalog_admission.py::test_second_quiescent_connection_preserves_shared_catalog": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.044
+      },
+      "tests/test_catalog_admission.py::test_trace_and_semantic_journal_refuse_growth_before_write": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.041
+      },
+      "tests/test_catalog_capability.py::test_binary_mismatch_prevents_load_and_releases_startup_credit": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.01
+      },
+      "tests/test_catalog_capability.py::test_capability_records_actual_build_and_connection_identity": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.148
+      },
+      "tests/test_catalog_capability.py::test_creation_and_open_capability_are_persisted_separately": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.284
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_compile_options]": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.0
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_source_id]": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.0
+      },
+      "tests/test_catalog_capability.py::test_dispatch_mismatch_is_rejected[runtime_version]": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.0
+      },
+      "tests/test_catalog_capability.py::test_identity_failure_cannot_downgrade_to_optional_soft_catalog": {
+        "status": "passed",
+        "artifact": "linux/final/final.xml",
+        "seconds": 0.01
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[directory-fsync-{\"ok\":true}\\n]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.009
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[rename-old contents\\n]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.01
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_failures_keep_pre_or_post_rename_state_and_clean_temporary_files[write-old contents\\n]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.009
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_rejected_admission_leaves_destination_and_directory_unchanged": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.0
+      },
+      "tests/test_checkpoint_atomic_admission.py::test_reservation_covers_file_fsync_replace_directory_fsync_and_cleanup": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.013
+      },
+      "tests/test_disk_coordinator.py::test_coordinator_path_requires_explicit_absolute_node_local_namespace": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_coordinator.py::test_same_volume_rank_path_mismatch_fails_collectively_before_ledger_open": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.804
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-1]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 7.236
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-2]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 10.959
+      },
+      "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-4]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 23.707
+      },
+      "tests/test_disk_reservation_ledger.py::test_bootstrap_is_admitted_before_creating_ledger": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_child_process_crash_keeps_partial_charge_until_explicit_single_recovery": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.265
+      },
+      "tests/test_disk_reservation_ledger.py::test_crash_token_persists_and_materialization_removes_pending_charge": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.016
+      },
+      "tests/test_disk_reservation_ledger.py::test_full_ledger_keeps_room_for_release": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.02
+      },
+      "tests/test_disk_reservation_ledger.py::test_generic_client_cannot_bypass_an_already_bound_shared_policy": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.01
+      },
+      "tests/test_disk_reservation_ledger.py::test_incoming_parent_compacts_descendant_and_keeps_existing_bytes": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.006
+      },
+      "tests/test_disk_reservation_ledger.py::test_injected_capacity_scope_is_never_strict": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_legacy_ledger_with_active_token_cannot_be_bound_to_shared_policy": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.014
+      },
+      "tests/test_disk_reservation_ledger.py::test_nested_child_roots_compact_under_parent_without_losing_usage": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.97
+      },
+      "tests/test_disk_reservation_ledger.py::test_nonoverlapping_root_limit_still_rejects_257th_root": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.706
+      },
+      "tests/test_disk_reservation_ledger.py::test_production_ledger_pool_is_bounded_and_precharged_once": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.019
+      },
+      "tests/test_disk_reservation_ledger.py::test_reconciliation_evidence_is_bounded": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.008
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs0]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs1]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.003
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs2]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.003
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[-1]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.003
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[1.5]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[1]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[True]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.004
+      },
+      "tests/test_disk_reservation_ledger.py::test_root_limit_is_global_across_clients_and_constructor": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 1.043
+      },
+      "tests/test_disk_reservation_ledger.py::test_roots_on_different_volumes_are_rejected": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_policy_connections_serialize_and_share_pending_quota": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.009
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_policy_mismatch_rejects_before_touching_existing_reservation": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.01
+      },
+      "tests/test_disk_reservation_ledger.py::test_shared_root_registration_rejects_aggregate_overquota_and_rolls_back": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.007
+      },
+      "tests/test_disk_reservation_ledger.py::test_unrelated_roots_with_sibling_prefix_names_remain_distinct": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.007
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_checkpoint_restores_prior_authoritative_cut[global]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.925
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_checkpoint_restores_prior_authoritative_cut[prepare]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.977
+      },
+      "tests/test_distributed_checkpoint.py::test_failed_migration_global_publication_restores_empty_target": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 1.498
+      },
+      "tests/test_distributed_checkpoint.py::test_fork_local_failure_is_voted_and_parent_remains_usable[backup]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.624
+      },
+      "tests/test_distributed_checkpoint.py::test_fork_local_failure_is_voted_and_parent_remains_usable[lease]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.733
+      },
+      "tests/test_distributed_checkpoint.py::test_global_manifest_rejects_duplicate_rank_prepares": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.316
+      },
+      "tests/test_distributed_checkpoint.py::test_phase1_catalog_migration_retains_legacy_relative_phase": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 1.182
+      },
+      "tests/test_distributed_checkpoint.py::test_phase2_snapshot_migration_preserves_source_and_adjoint_history": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 3.288
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_actual_free_checked_each_admission": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.007
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_reservations_aggregate_ranks_and_preserve_drain": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.023
+      },
+      "tests/test_phase4_lifecycle.py::test_disk_usage_tolerates_disappearing_sqlite_journal": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.012
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[1]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 5.784
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[2]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 8.872
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[4]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 17.571
+      },
+      "tests/test_phase4_lifecycle.py::test_node_local_placement_rejects_network_filesystem": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_phase4_lifecycle.py::test_owner_resolution_never_uses_other_rank_root": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.006
+      },
+      "tests/test_phase4_lifecycle.py::test_ram_snapshot_flush_obeys_disk_admission": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.271
+      },
+      "tests/test_runtime_calibration.py::test_calibration_rejects_ram_budget_before_mpi_import": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_runtime_calibration.py::test_calibration_spec_bounds": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_runtime_calibration.py::test_runtime_flag_uses_common_codec_without_boolean_count": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.005
+      },
+      "tests/test_runtime_calibration.py::test_suite_recipes_are_reproducible_and_only_mpi_suites_touch_owner_bit": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.008
+      },
+      "tests/test_stored_budget.py::test_failed_gate_registration_does_not_duplicate_semantic_ids": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.962
+      },
+      "tests/test_stored_budget.py::test_failed_materialization_rolls_back_whole_logical_cut": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 5.546
+      },
+      "tests/test_stored_budget.py::test_gc_requires_quiescence_and_preserves_committed_snapshots": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 4.461
+      },
+      "tests/test_stored_budget.py::test_runtime_observe_uses_virtual_transport_and_never_replans": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 2.307
+      },
+      "tests/test_stored_budget.py::test_state_larger_than_budget_executes_exports_and_streams": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 79.423
+      },
+      "tests/test_stored_budget.py::test_uncommitted_journal_tail_repaired_before_next_checkpoint": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 3.464
+      },
+      "tests/test_stored_recovery.py::test_failed_snapshot_commit_leaves_previous_snapshot_resumable[flush]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 5.17
+      },
+      "tests/test_stored_recovery.py::test_failed_snapshot_commit_leaves_previous_snapshot_resumable[write_from]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 3.339
+      },
+      "tests/test_stored_recovery.py::test_fork_rejects_changed_fixed_parameter_and_foreign_snapshot": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 2.719
+      },
+      "tests/test_stored_recovery.py::test_interleaved_binding_forks_preserve_prefix_extents": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 10.969
+      },
+      "tests/test_stored_recovery.py::test_resume_detects_truncated_committed_extent": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 2.493
+      },
+      "tests/test_stored_recovery.py::test_resume_rejects_corrupt_committed_journal_and_asset": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.804
+      },
+      "tests/test_stored_recovery.py::test_snapshot_resume_preserves_pending_frame_and_upper_phase": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 3.513
+      },
+      "tests/test_telemetry.py::test_guard_ignores_unmatched_conditions": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.0
+      },
+      "tests/test_telemetry.py::test_guard_neutral_and_insufficient_windows_reset_persistence": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_telemetry.py::test_guard_requires_persistent_matched_windows_and_tracks_runtime_profile": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_telemetry.py::test_streaming_trace_appends_and_iterates_without_event_list": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.002
+      },
+      "tests/test_trace_admission.py::test_budget_rejection_does_not_create_trace_namespace": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[flush_error]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[short_write]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_failed_append_rolls_back_before_releasing_credit_and_keeps_stats[write_error]": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_open_failure_releases_admission_token": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.001
+      },
+      "tests/test_trace_admission.py::test_success_appends_without_truncating_existing_trace_and_counts_after_flush": {
+        "status": "passed",
+        "artifact": "linux/regression.xml",
+        "seconds": 0.0
+      }
+    }
+  },
+  "linux-native": {
+    "count": 8,
+    "cases": {
+      "tests/test_native_uring_linux.py::test_native_backpressure_and_budget_are_bounded_and_drain_cleanly": {
+        "status": "passed",
+        "artifact": "linux/native.xml",
+        "seconds": 0.049
+      },
+      "tests/test_native_uring_linux.py::test_native_buffered_write_read_fsync_cqes_and_request_accounting": {
+        "status": "passed",
+        "artifact": "linux/native.xml",
+        "seconds": 0.064
+      },
+      "tests/test_native_uring_linux.py::test_native_cancel_race_accepts_either_result_but_pin_lives_to_original_cqe": {
+        "status": "passed",
+        "artifact": "linux/native.xml",
+        "seconds": 0.052
+      },
+      "tests/test_native_uring_linux.py::test_native_closed_fd_produces_real_negative_cqe_and_releases_pin": {
+        "status": "passed",
+        "artifact": "linux/native.xml",
+        "seconds": 0.048
+      },
+      "tests/test_native_uring_linux.py::test_native_o_direct_read_write_fsync_uses_aligned_bufferlease": {
+        "status": "passed",
+        "artifact": "linux/native.xml",
+        "seconds": 0.06
+      },
+      "tests/test_native_uring_linux.py::test_native_short_eof_is_terminal_error_and_retains_pin_through_callback": {
+        "status": "passed",
+        "artifact": "linux/native.xml",
+        "seconds": 0.057
+      },
+      "tests/test_native_uring_mpi_linux.py::test_native_io_uring_phase4_mpi[buffered-2]": {
+        "status": "passed",
+        "artifact": "linux/native.xml",
+        "seconds": 32.34
+      },
+      "tests/test_native_uring_mpi_linux.py::test_native_io_uring_phase4_mpi[direct-2]": {
+        "status": "passed",
+        "artifact": "linux/native.xml",
+        "seconds": 32.071
+      }
+    }
+  }
+}

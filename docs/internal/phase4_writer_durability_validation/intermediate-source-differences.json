@@ -1,0 +1,7 @@
+{
+  "changed_after_initial_regression": [
+    "src/svsim/catalog_admission.py",
+    "tests/test_catalog_capability.py"
+  ],
+  "intermediate_source_matches_workspace_at_capture": true
+}

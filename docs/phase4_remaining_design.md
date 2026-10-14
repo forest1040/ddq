@@ -6,6 +6,8 @@
 
 2026-10-14更新：[P4-009／001の基盤実装](phase4_foundation_implementation.md)を追加した。個別backlogはIN_PROGRESS。下記M1〜M5の受入条件は維持する。
 
+同日更新：[writer予約・永続化境界](phase4_writer_durability_implementation.md)を補強した。sidecarの予約保持／process crash、trace admission、SQLite build／dispatch identityを追加したが、全writerのcut結合と回収、host調停は残り、M1の受入条件を維持する。
+
 同日更新：[P4-002／004／006／007の先行実装](phase4_remaining_implementation.md)を追加した。finite capture／候補、P=1 tile、cache identity／費用fallbackをMacで検証した。細粒度profile、自動切替、P>1 tile、共有／公平性と実性能は残り、M2／M3の完了は宣言しない。
 
 同日更新：[P4-003／005／008の先行実装](phase4_validation_implementation.md)を追加した。evaluation専用注入と観測／拒否、paired report、明示勾配校正をMacへ接続した。M4／M5に必要なpositiveな実利益と最終matrixは未達で、各項目はIN_PROGRESSとする。

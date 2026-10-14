@@ -1,7 +1,6 @@
 """Durable rank prepare records and one authoritative global commit file."""
 from dataclasses import replace
 import json
-from contextlib import nullcontext
 import os
 from pathlib import Path
 import sqlite3
@@ -10,20 +9,40 @@ import numpy as np
 from .journal import canonical,content_hash,gate_data,decode_gate
 from .parameters import ParameterBinding,ExactPi
 from .layout import QubitLayout
+from .admitted_files import file_allocation
 
 
 def atomic_json(path,data,*,disk_budget=None):
-    path=Path(path); path.parent.mkdir(parents=True,exist_ok=True)
-    temporary=path.with_suffix('.'+uuid4().hex+'.tmp')
-    raw=canonical(data)+'\n'
-    try:
-        with disk_budget.allocation(len(raw.encode()),drain=True) if disk_budget is not None else nullcontext():
-            with open(temporary,'w') as f: f.write(raw); f.flush(); os.fsync(f.fileno())
-        os.replace(temporary,path)
-        fd=os.open(path.parent,os.O_RDONLY)
-        try: os.fsync(fd)
-        finally: os.close(fd)
-    finally: temporary.unlink(missing_ok=True)
+    path=Path(path)
+    raw=(canonical(data)+'\n').encode()
+    nonce=uuid4().hex
+    temporary=path.with_name('.'+path.name+'.'+nonce+'.tmp')
+    # Keep admission through the rename, directory durability barrier, and all
+    # temporary-file cleanup. A rejected reservation therefore leaves no files.
+    with file_allocation(disk_budget,len(raw),temporary,drain=True,operation='atomic-json') as key:
+        path.parent.mkdir(parents=True,exist_ok=True)
+        created=False
+        try:
+            try:
+                stream=open(temporary,'xb')
+            except FileExistsError:
+                # This token did not create the colliding artifact; leave that
+                # file and its owner's recovery evidence untouched.
+                if disk_budget is not None: disk_budget.release(key)
+                raise
+            created=True
+            with stream as f:
+                written=f.write(raw)
+                if written != len(raw): raise OSError('Incomplete atomic JSON write')
+                f.flush()
+                if disk_budget is not None: disk_budget.materialize(key,len(raw))
+                os.fsync(f.fileno())
+            os.replace(temporary,path)
+            fd=os.open(path.parent,os.O_RDONLY)
+            try: os.fsync(fd)
+            finally: os.close(fd)
+        finally:
+            if created: temporary.unlink(missing_ok=True)
 
 
 def _disk_kwargs(sim):

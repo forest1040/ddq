@@ -27,6 +27,7 @@ from .storage import FileBlockStore, StoredBlockView, StorageConfig
 from .streaming_kernels import apply_local, apply_group
 from .telemetry import StreamingExecutionTrace, ObservePerformanceGuard
 from .unitary import MatrixAssetRegistry
+from .admitted_files import atomic_write_bytes
 
 
 class StoredSimulator:
@@ -120,14 +121,8 @@ class StoredSimulator:
         for key, asset in self.assets.assets.items():
             path = self.store.directory/'assets'/f'{key}.bin'
             if not path.exists():
-                temporary = path.with_suffix(f'.{self.run_id}.tmp')
-                try:
-                    with self.store.disk_budget.allocation(len(asset.data),drain=getattr(self.store,'_disk_drain',False)):
-                        with open(temporary,'wb') as stream:
-                            if stream.write(asset.data)!=len(asset.data): raise OSError('Incomplete matrix asset write')
-                            stream.flush(); os.fsync(stream.fileno())
-                        os.replace(temporary,path)
-                finally: temporary.unlink(missing_ok=True)
+                atomic_write_bytes(path,asset.data,disk_budget=self.store.disk_budget,
+                                   drain=getattr(self.store,'_disk_drain',False),operation='matrix-asset')
             else:
                 with open(path,'rb') as stream:
                     digest = sha256()
@@ -667,9 +662,7 @@ class StoredSimulator:
         self.trace.record(manifest.snapshot_id,metadata={'path':'SNAPSHOT_COMMIT','frontier':self.frontier,'root':manifest.root})
         export = self.store.directory/'manifests'/f'snapshot-{manifest.snapshot_id}.json'
         raw=(data+'\n').encode()
-        with self.store.disk_budget.allocation(len(raw),operation='snapshot-export'):
-            with export.open('wb') as stream:
-                if stream.write(raw)!=len(raw):raise OSError('Incomplete snapshot export')
+        atomic_write_bytes(export,raw,disk_budget=self.store.disk_budget,operation='snapshot-export')
         return manifest
 
     def commit_prefix(self, variable_parameters, *, binding=None):

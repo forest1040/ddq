@@ -416,6 +416,7 @@ class DiskBudget:
                     'registered_root_count':self.db.execute('SELECT count(*) FROM roots').fetchone()[0],
                     'metadata_pool_bytes':self.bootstrap_bytes,'metadata_main_cap_bytes':self._ledger_main_cap,
                     'metadata_side_cap_bytes':self._ledger_side_cap,'ledger_vfs_enforced':self.ledger_vfs_enforced,
+                    'ledger_vfs_capability':self._guard.capability() if self._guard else None,
                     'accounting_scope':self.accounting_scope,'strict_capacity_guarantee':False}
 
     def reconcile(self, key, *, materialized_bytes, evidence, terminal_state='RECONCILED'):
@@ -454,12 +455,23 @@ class DiskBudget:
             self.db.execute("DELETE FROM reservations WHERE id=? AND state='RECONCILED'",(key,))
 
     @contextmanager
-    def allocation(self, amount, *, drain=False, operation='allocation', owner=None, generation=None):
+    def allocation(self, amount, *, drain=False, operation='allocation', owner=None, generation=None,
+                   retain_on_error=False):
+        """Reserve an operation, optionally retaining failed-write evidence.
+
+        A caller using retain_on_error may release explicitly after verified
+        cleanup. Neither this context nor release performs cut-based recovery.
+        """
+        if type(retain_on_error) is not bool:raise ValueError('Invalid retain-on-error flag')
         key = self.reserve(amount, drain=drain, operation=operation, owner=owner, generation=generation,writing=True)
+        release=True
         try:
             yield key
+        except BaseException:
+            release=not retain_on_error
+            raise
         finally:
-            self.release(key)
+            if release:self.release(key)
 
     def close(self):
         if self._closed:return

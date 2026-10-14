@@ -6,6 +6,7 @@ Native loading/building happens only when a writable catalog is opened.
 from __future__ import annotations
 
 from hashlib import sha256
+from copy import deepcopy
 import json
 import os
 from pathlib import Path
@@ -39,22 +40,74 @@ class SQLiteGuard:
         if shutil.which('brew'):
             result=subprocess.run(['brew','--prefix','sqlite'],capture_output=True,text=True,timeout=5)
             if result.returncode==0:includes.insert(0,Path(result.stdout.strip())/'include')
-        header = next((p for p in includes if (p/'sqlite3ext.h').is_file()),None)
+        header = next((p for p in includes if all((p/name).is_file() for name in ('sqlite3ext.h','sqlite3.h'))),None)
         if header is None: raise NotImplementedError('Installed sqlite3ext.h is required for catalog VFS')
         self._directory = tempfile.TemporaryDirectory(prefix='svsim-sqlite-vfs-')
         self.library = Path(self._directory.name)/('svsim_disk.dylib' if sys.platform=='darwin' else 'svsim_disk.so')
         command = [compiler,'-dynamiclib' if sys.platform=='darwin' else '-shared','-fPIC','-O2',
                    '-I',str(header),str(source),'-o',str(self.library)]
-        result = subprocess.run(command,capture_output=True,text=True,timeout=30)
-        if result.returncode: raise NotImplementedError('Catalog VFS build unavailable: '+result.stderr[-1500:])
-        self.loader = sqlite3.connect(':memory:')
-        self._load(self.loader)
-        self.source_hash = sha256(source.read_bytes()).hexdigest()
+        inputs = {str(path): sha256(path.read_bytes()).hexdigest()
+                  for path in (source,header/'sqlite3ext.h',header/'sqlite3.h')}
+        self.source_hash = inputs[str(source)]
+        try:
+            result = subprocess.run(command,capture_output=True,text=True,timeout=30)
+            if result.returncode: raise NotImplementedError('Catalog VFS build unavailable: '+result.stderr[-1500:])
+            if any(sha256(Path(path).read_bytes()).hexdigest()!=digest for path,digest in inputs.items()):
+                raise CatalogAdmissionError('SQLite VFS build inputs changed during compilation')
+            self._binary_hash = sha256(self.library.read_bytes()).hexdigest()
+            compiler_version = subprocess.run([compiler,'--version'],capture_output=True,text=True,timeout=5)
+            if compiler_version.returncode: raise NotImplementedError('Cannot identify SQLite VFS compiler')
+            self.loader = sqlite3.connect(':memory:')
+            identity = self._load(self.loader)
+            self._capability = {
+                'schema_version':1, 'vfs':'svsim-budget-v1', 'source_sha256':self.source_hash,
+                'header_directory':str(header.resolve()),
+                'headers':{name:inputs[str(header/name)] for name in ('sqlite3ext.h','sqlite3.h')},
+                'compiler':str(Path(compiler).resolve()), 'compiler_version':compiler_version.stdout[:8192],
+                'build_flags':command[1:-2], 'binary_sha256':self._binary_hash, **identity,
+                'identity_scope':'connection-runtime-and-extension-dispatch',
+                'header_runtime_build_match_claimed':False,
+            }
+            raw=json.dumps(self._capability,sort_keys=True,separators=(',',':')).encode()
+            self._capability['fingerprint']=sha256(raw).hexdigest()
+        except BaseException:
+            if hasattr(self,'loader'):self.loader.close()
+            self._directory.cleanup()
+            raise
+
+    def capability(self):
+        return deepcopy(self._capability)
+
+    @staticmethod
+    def _dispatch_identity(connection):
+        identity={key:connection.execute('SELECT svsim_disk_guard_identity(?)',(key,)).fetchone()[0]
+                  for key in ('runtime_version','runtime_source_id','header_version','header_source_id')}
+        options=[]
+        for index in range(4096):
+            value=connection.execute('SELECT svsim_disk_guard_compile_option(?)',(index,)).fetchone()[0]
+            if value is None:break
+            options.append(value)
+        else:raise CatalogAdmissionError('SQLite compile option registry exceeds limit')
+        identity['runtime_compile_options']=sorted(options)
+        expected_version,expected_source=connection.execute('SELECT sqlite_version(),sqlite_source_id()').fetchone()
+        expected_options=sorted(row[0] for row in connection.execute('PRAGMA compile_options'))
+        if (identity['runtime_version']!=expected_version or identity['runtime_source_id']!=expected_source or
+                identity['runtime_compile_options']!=expected_options or expected_version!=sqlite3.sqlite_version):
+            raise CatalogAdmissionError('SQLite extension dispatch identity mismatch')
+        return identity
 
     def _load(self,connection):
+        if sha256(self.library.read_bytes()).hexdigest()!=self._binary_hash:
+            raise CatalogAdmissionError('SQLite VFS binary changed after compilation')
         connection.enable_load_extension(True)
         try: connection.execute('SELECT load_extension(?,?)',(str(self.library),'sqlite3_svsimdisk_init')).fetchone()
         finally: connection.enable_load_extension(False)
+        identity=self._dispatch_identity(connection)
+        if hasattr(self,'_capability'):
+            for key,value in identity.items():
+                if value!=self._capability[key]:
+                    raise CatalogAdmissionError('SQLite VFS identity changed between connections')
+        return identity
 
     def connect(self,path,*,main_cap_bytes=None,side_cap_bytes=None):
         path = Path(path).resolve()
@@ -131,6 +184,10 @@ class CatalogConnection:
         main,side=self._reserve()
         try:
             try: self._guard=get_sqlite_guard()
+            except CatalogAdmissionError:
+                # An identity failure is evidence of a mismatch, rather than
+                # an unavailable optional compiler/capability. Never downgrade it.
+                raise
             except (NotImplementedError,OSError,sqlite3.Error,subprocess.SubprocessError) as exc:
                 self.guard_reason=str(exc)
                 if require_native: raise CatalogAdmissionError(self.guard_reason) from exc
@@ -196,6 +253,7 @@ class CatalogConnection:
 
     def admission_status(self):
         return {**self._status(),'scope':'managed-catalog-and-rollback-journal',
+                'capability':self._guard.capability() if self._guard else None,
                 'strict_capacity_guarantee':False,'reservation_count':self.reservation_count,
                 'mutation_count':self.mutation_count,'temp_file_support':False}
 
