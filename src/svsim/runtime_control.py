@@ -372,7 +372,8 @@ class RuntimeControl:
         self.time_model=model
         self._time_model_context={'condition':runtime_condition(sim,nodes=nodes,threads=sim.policy.io_workers),
             'configuration_fingerprint':configuration_fingerprint,'sync_seconds':sync_seconds,
-            'block_bits':sim.block_bits,'blocks_per_rank':sim.ownership.blocks_per_rank}
+            'block_bits':sim.block_bits,'blocks_per_rank':sim.ownership.blocks_per_rank,
+            'rank_boundary':sim.num_qubits-sim.ownership.rank_bits}
         self.invalidate_eta('TIME_MODEL_ATTACHED')
 
     def set_time_model_sync_latency(self, seconds):

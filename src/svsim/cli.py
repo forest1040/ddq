@@ -36,6 +36,7 @@ def svbench_main(argv=None):
     probe.add_argument('--output',required=True)
     probe.add_argument('--storage-path',action='append',default=[])
     probe.add_argument('--threads',type=_positive,default=1)
+    probe.add_argument('--ranks',type=_positive,default=1,help='allocation label for MPI runs on this host')
     probe.add_argument('--overwrite',action='store_true')
     bench = commands.add_parser('all',help='small RAM/kernel/storage/mixed campaign in explicit scratch')
     bench.add_argument('--profile')
@@ -74,7 +75,7 @@ def svbench_main(argv=None):
         if args.command == 'runtime':
             return _runtime_command(args)
         if args.command == 'probe':
-            profile = probe_profile({'scope':'local','ranks':1,'nodes':1,'threads':args.threads},args.storage_path)
+            profile = probe_profile({'scope':'local','ranks':args.ranks,'nodes':1,'threads':args.threads},args.storage_path)
             profile.save(args.output,overwrite=args.overwrite)
             return 0
         # Reject accidental output replacement before executing expensive probes.
@@ -188,6 +189,7 @@ def svsim_main(argv=None):
     suite.add_argument('--qubits',default='5,6,7,8')
     suite.add_argument('--counts',default='1,4,16')
     suite.add_argument('--storage',choices=('ram','file'),default='ram')
+    suite.add_argument('--ranks',type=_positive,default=1,help='MPI ranks of the runs; adds a remote (rank-bit) class')
     suite.add_argument('--output-dir',required=True)
     suite.add_argument('--overwrite',action='store_true')
     fit = commands.add_parser('calibrate-time',help='fit the phase time model from validated benchmark runs')
@@ -209,7 +211,7 @@ def svsim_main(argv=None):
         if args.command == 'calibration-suite':
             from .benchmark_run import calibration_suite
             numbers = lambda text: tuple(_positive(v) for v in text.split(','))
-            documents = calibration_suite(args.block_bits,numbers(args.qubits),numbers(args.counts),args.storage)
+            documents = calibration_suite(args.block_bits,numbers(args.qubits),numbers(args.counts),args.storage,ranks=args.ranks)
             for name, document in documents.items():
                 _output(str(Path(args.output_dir)/f'{name}.json'),WorkloadSpec(document).to_dict(),args.overwrite)
             print(f'{len(documents)} workloads: {args.output_dir}')

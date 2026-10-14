@@ -192,7 +192,8 @@ def _trial(case, options, directory, comm, eta_model=None, fingerprint=None):
                                backend=options.backend, amplitude_store=workload.policies['storage'],
                                frame_policy='materialize', swap_policy='S0')
     walls, sim = {}, None
-    probe = sync_probe(directory)
+    rank = comm.Get_rank()
+    probe = sync_probe(directory / f'probe-rank-{rank}')
     comm.Barrier()
     cpu0 = time.process_time()
     try:
@@ -223,8 +224,9 @@ def _trial(case, options, directory, comm, eta_model=None, fingerprint=None):
         peak = sim.budget.peak
         # State check after the timed phases: a device that switched sync state
         # mid-trial makes the trial unusable as a single-state calibration row.
-        probe_after = sync_probe(directory / 'sync-after')
-        payload, total = _directory_bytes(directory)
+        probe_after = sync_probe(directory / f'probe-after-rank-{rank}')
+        # One shared dataset tree for all ranks on this host; scan it once.
+        payload, total = comm.bcast(_directory_bytes(directory) if rank == 0 else None, root=0)
         validation = {'oracle': 'not-run', 'max_abs_error': None, 'passed': None}
         if workload.qubits <= options.oracle_max_qubits:
             state = sim.state(binding=binding, allow_gather=True)
@@ -237,7 +239,8 @@ def _trial(case, options, directory, comm, eta_model=None, fingerprint=None):
         t = time.perf_counter()
         sim.close()
         sim = None
-        shutil.rmtree(directory, ignore_errors=True)
+        comm.Barrier()
+        if rank == 0: shutil.rmtree(directory, ignore_errors=True)
         walls['cleanup'] = time.perf_counter() - t
     finally:
         if sim is not None: sim.close()
@@ -246,7 +249,7 @@ def _trial(case, options, directory, comm, eta_model=None, fingerprint=None):
     walls['total'] = sum(walls[phase] for phase in PHASES)
     return {'wall_seconds': walls, 'eta_checks': checks, 'cpu_seconds': comm.allreduce(time.process_time() - cpu0),
             'managed_peak_bytes': comm.allreduce(peak, op=_max()),
-            'disk_payload_bytes': comm.allreduce(payload), 'disk_total_bytes': comm.allreduce(total),
+            'disk_payload_bytes': payload, 'disk_total_bytes': total,
             'sync_probe_median_seconds': comm.allreduce(probe, op=_max()),
             'sync_probe_after_seconds': comm.allreduce(probe_after, op=_max()),
             'timestamp': _timestamp()}, validation
@@ -326,7 +329,7 @@ def run_cases(cases, profile: ProfileDocument, scratch, options: RunOptions, com
                 if late:
                     omitted.append({'round': round_index, 'case': cases[index].label, 'reason': 'walltime deadline before trial'})
                     continue
-                directory = job / f'case-{index}-round-{round_index}' / f'rank-{comm.Get_rank()}'
+                directory = job / f'case-{index}-round-{round_index}'
                 try:
                     trial, validation = _trial(cases[index], options, directory, comm, eta_model,
                                                profile.configuration_fingerprint)
@@ -394,24 +397,30 @@ def _document(case, plan, profile, options, ranks, trials, validations, omitted,
 
 
 CALIBRATION_CLASSES = {
-    'empty': lambda n, b: [],
-    'h-local': lambda n, b: [{'kind': 'H', 'targets': [0]}],
-    'rx-local': lambda n, b: [{'kind': 'RX', 'targets': [0], 'angle': 0.37}],
-    'pauli-local': lambda n, b: [{'kind': 'PAULI_ROT', 'targets': [0, 1, 2], 'paulis': ['Y', 'X', 'Z'], 'angle': 0.37}],
-    'h-joint': lambda n, b: [{'kind': 'H', 'targets': [n - 1]}],
+    'empty': lambda n, b, top: [],
+    'h-local': lambda n, b, top: [{'kind': 'H', 'targets': [0]}],
+    'rx-local': lambda n, b, top: [{'kind': 'RX', 'targets': [0], 'angle': 0.37}],
+    'pauli-local': lambda n, b, top: [{'kind': 'PAULI_ROT', 'targets': [0, 1, 2], 'paulis': ['Y', 'X', 'Z'], 'angle': 0.37}],
+    # Highest intra-rank upper bit; absent when every upper bit is a rank bit.
+    'h-joint': lambda n, b, top: [{'kind': 'H', 'targets': [top]}] if top >= b else None,
+    # A rank bit forces an MPI exchange; absent for one rank.
+    'h-remote': lambda n, b, top: [{'kind': 'H', 'targets': [n - 1]}] if top < n - 1 else None,
 }
 
 
-def calibration_suite(block_bits, qubits, counts, storage='ram', classes=tuple(CALIBRATION_CLASSES)):
+def calibration_suite(block_bits, qubits, counts, storage='ram', classes=tuple(CALIBRATION_CLASSES), ranks=1):
     """Single-class workloads so each route-class feature varies independently of the others."""
     if block_bits < 3: raise ValueError('calibration suite needs block_bits >= 3 for the Pauli cell')
     if len(qubits) * len(counts) * len(classes) > 256: raise ValueError('calibration suite exceeds 256 workloads')
+    rank_bits = ranks.bit_length() - 1
+    if ranks < 1 or ranks & (ranks - 1): raise ValueError('ranks must be a power of two')
     suite = {}
     for name in classes:
         for n in qubits:
-            if n <= block_bits: raise ValueError('calibration qubits must exceed block_bits for a joint class')
+            if n <= block_bits + rank_bits: raise ValueError('calibration qubits must exceed block and rank bits')
+            body = CALIBRATION_CLASSES[name](n, block_bits, n - rank_bits - 1)
+            if body is None: continue
             for count in (counts if name != 'empty' else (0,)):
-                body = CALIBRATION_CLASSES[name](n, block_bits)
                 operations = [{'kind': 'REPEAT', 'count': count, 'body': body}] if body else []
                 suite[f'cal-{name}-n{n}-g{count}'] = {'schema_version': 1, 'kind': 'workload', 'qubits': n,
                                                      'policies': {'storage': storage}, 'operations': operations}

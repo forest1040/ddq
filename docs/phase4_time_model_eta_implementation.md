@@ -25,6 +25,23 @@
 | 同上、校正median sync | 同上 | 40 | 25.3% | — | 71.0% | — |
 | 同上、安定filter導入前（[v1](internal/phase5_timing_validation/eta-linux-v1/)、直前probe） | 52件×3回 | 40 | 19.0% | 64.9% | 133.5% | 47.5% |
 
+### rank数とstorageのmatrix
+
+rank bitを対象とするgateは、MPI交換を伴う`remote` route classとして別に校正する（`calibration-suite --ranks`）。multi-rankでは全rankが1つのdatasetを共有し、disk計上とcleanupはrank 0が行う。手順は[run_matrix.sh](internal/phase5_timing_validation/run_matrix.sh)、証跡は[Mac](internal/phase5_timing_validation/matrix-mac/)と[Linux](internal/phase5_timing_validation/matrix-linux/)。各条件40 checkで、Linuxは直前probeで予測した。
+
+| 環境 | rank／storage | 不安定除外 | median | p95 | worst | coverage |
+|---|---|---|---|---|---|---|
+| Mac | 2／RAM | 0 | 4.5% | 19.2% | 32.3% | 97.5% |
+| Mac | 4／RAM | — | 未実施 | — | — | — |
+| Mac | 1／file | 0 | 1.2% | 7.9% | 10.8% | 100% |
+| Mac | 2／file | 0 | 4.3% | 8.3% | 14.2% | 100% |
+| Linux | 2／RAM | 13 | 31.3% | 56.7% | 185% | 100% |
+| Linux | 4／RAM | 22 | 11.1% | 70.8% | 158% | 100% |
+| Linux | 1／file | 6 | 5.3% | 56.2% | 66.5% | 90% |
+| Linux | 2／file | 11 | 32.8% | 57.0% | 235% | 52.5% |
+
+Mac 4 rankの校正は、同一host上の4 process×（main＋io worker 2）でMPI progressのbusy pollがCPUを奪い合った。40分経っても4 roundの2 round目で、wall上限を超えたため停止し、未実施とした。Linuxのmulti-rankでは、複数rankの同時fsyncで装置状態の切替が増えた（不安定除外が増加）。直前probeが示す状態と実行中の状態がずれ、速い状態で+30%（2 rank RAM）、遅い状態で約-21%の偏りが残る。2 rank／fileは30%目標を満たさない。1 rankのRAM／fileと4 rank RAMのmedianは目標内だが、p95は大きい。multi-rankのLinuxでは、check時点の1回のprobeでは実行中の状態を代表できない。実行中の連続sync観測とETAの逐次更新、またはcatalog commitそのものの集約が必要である。
+
 held-outは、校正suite外の混合circuit 4種である（7〜8Q、8〜40 gate。40 gateは校正範囲外でextrapolated）。observedは、check時点のfrontierから完了までの実execute wallのrank MAXである。証跡は[Mac](internal/phase5_timing_validation/eta-mac/)と[Linux](internal/phase5_timing_validation/eta-linux/)、手順は[flow_eta.sh](internal/phase5_timing_validation/flow_eta.sh)。新規testは次を確認する：残作業featureの正確な計数と阻害理由、`predict_remaining`の切片除外と条件照合、実async runtimeでのview値・rank MAX・frontier進行後の減少、fingerprint不一致のunknown、精度集計。Mac全回帰は825 passed／14 skipped。Linuxでは関連14件がcontainer内で成功した。
 
 Linuxの装置は、fsyncが約0.8 msの速い状態と約5 msの遅い状態を切り替える（[Phase 5検証記録](internal/phase5_timing_validation/README.md)）。runtime ETAでは、checkの直前に16回のfsync probeで状態を測り（`set_time_model_sync_latency`）、その値で評価するのが主予測である。校正median syncで評価すると誤差は25%に留まる。
@@ -33,4 +50,4 @@ Linuxの装置は、fsyncが約0.8 msの速い状態と約5 msの遅い状態を
 
 ## 残件
 
-multi-rank／multi-node（MPI経路の費用）、file store、S1／S2・fusion・post-SWAP layoutのtail、in-flight残量、checkpoint／observable／gradientを含むend-to-end endpoint、monitor overheadの受入、適応候補（P4-003／004）との接続が残る。P4-002の受入（実runtimeのheld-outで30%以内）は、この条件classでの証跡に限られる。
+multi-node、multi-rank Linuxでの状態切替に追従する逐次ETA、Mac 4 rank、S1／S2・fusion・post-SWAP layoutのtail、in-flight残量、checkpoint／observable／gradientを含むend-to-end endpoint、monitor overheadの受入、適応候補（P4-003／004）との接続が残る。P4-002の受入（実runtimeのheld-outで30%以内）は、この条件classでの証跡に限られる。

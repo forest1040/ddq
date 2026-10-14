@@ -27,13 +27,15 @@ STABLE_SYNC_RATIO = 2.0
 RELATIVE_FLOOR_SECONDS = 1e-3
 
 
-def gate_class(gate, block_bits):
-    """Kernel route class: local block pass or joint group across upper Block bits."""
-    upper = any(q >= block_bits for q in gate.targets)
+def gate_class(gate, block_bits, rank_boundary=None):
+    """Kernel route class: local Block pass, joint group across intra-rank upper bits,
+    or remote exchange when a target is a rank bit (qubit >= ``rank_boundary``)."""
+    upper = [q for q in gate.targets if q >= block_bits]
     if gate.kind == 'PAULI_ROT':
-        upper = any(q >= block_bits and p in {'X', 'Y'} for q, p in zip(gate.targets, gate.paulis))
-    if gate.diagonal: upper = False
-    return f'{gate.kind}:{"joint" if upper else "local"}'
+        upper = [q for q, p in zip(gate.targets, gate.paulis) if q >= block_bits and p in {'X', 'Y'}]
+    if gate.diagonal: upper = []
+    route = 'local' if not upper else 'remote' if rank_boundary is not None and max(upper) >= rank_boundary else 'joint'
+    return f'{gate.kind}:{route}'
 
 
 def workload_features(workload, block_bits, ranks):
@@ -42,10 +44,11 @@ def workload_features(workload, block_bits, ranks):
     lowered, unsupported = workload.lowered()
     if unsupported: return None, unsupported
     local = ownership.blocks_per_rank
+    boundary = workload.qubits - ownership.rank_bits
     gates = sum(entry.count for entry in lowered)
     features = {'constant': 1, 'blocks': local, 'gates': gates, 'passes': gates * local}
     for entry in lowered:
-        key = 'passes:' + gate_class(entry.gate, block_bits)
+        key = 'passes:' + gate_class(entry.gate, block_bits, boundary)
         features[key] = features.get(key, 0) + entry.count * local
     return features, []
 

@@ -20,13 +20,13 @@ BLOCKING_REASONS = {'SUMMARY_CLASS_LIMIT', 'CAPTURE_METADATA_LIMIT', 'ETA_MONITO
 MODELLED_REASONS = {'FUTURE_EXECUTOR_SHAPE_UNKNOWN', 'EXECUTOR_WINDOW_TRUNCATED'}
 
 
-def remaining_features(snapshot, block_bits, blocks_per_rank):
+def remaining_features(snapshot, block_bits, blocks_per_rank, rank_boundary=None):
     """Per-rank work features of the remaining gates, plus reasons they are incomplete."""
     features = {'blocks': blocks_per_rank, 'gates': 0, 'passes': 0}
     reasons = set(snapshot.unknown_reasons) & BLOCKING_REASONS
 
     def add(data, count):
-        key = 'passes:' + gate_class(decode_gate(data), block_bits)
+        key = 'passes:' + gate_class(decode_gate(data), block_bits, rank_boundary)
         features['gates'] += count
         features['passes'] += count * blocks_per_rank
         features[key] = features.get(key, 0) + count * blocks_per_rank
@@ -55,9 +55,10 @@ def runtime_condition(sim, *, nodes, threads):
             'swap': sim.policy.swap_policy, 'execution': 'auto-native', 'initial_state': None}
 
 
-def evaluate(snapshot, model, *, condition, configuration_fingerprint, block_bits, blocks_per_rank, sync_seconds=None):
+def evaluate(snapshot, model, *, condition, configuration_fingerprint, block_bits, blocks_per_rank, rank_boundary=None,
+             sync_seconds=None):
     """ETA view shaped like the other runtime views, with model evidence attached."""
-    features, reasons = remaining_features(snapshot, block_bits, blocks_per_rank)
+    features, reasons = remaining_features(snapshot, block_bits, blocks_per_rank, rank_boundary)
     predicted = model.predict_remaining(features, condition, configuration_fingerprint, sync_seconds)
     known = predicted['expected_seconds'] is not None
     usable = known and not reasons

@@ -266,3 +266,51 @@ def test_cli_benchmark_fit_estimate_and_report_flow(tmp_path, monkeypatch):
     assert case['status'] == 'compared' and case['held_out'] is True and 'compile' in case['phases']
     assert 'held' in (tmp_path / 'report.md').read_text()
     assert svsim_main(out) == 2  # no implicit overwrite
+
+
+def test_rank_bit_targets_form_a_remote_route_class_and_suite_covers_it():
+    from svsim.ir import GateNormalizer
+    from svsim.time_model import gate_class
+    gate = lambda q: GateNormalizer(8).gate('H', (q,))
+    assert [gate_class(gate(q), 4, 7) for q in (0, 6, 7)] == ['H:local', 'H:joint', 'H:remote']
+    assert gate_class(gate(7), 4) == 'H:joint'  # one rank: every upper bit is intra-rank
+    two = calibration_suite(4, (6, 7), (1,), ranks=2)
+    remote = WorkloadSpec(two['cal-h-remote-n7-g1'])
+    assert workload_features(remote, 4, 2)[0]['passes:H:remote'] == 4
+    joint = WorkloadSpec(two['cal-h-joint-n7-g1'])
+    assert workload_features(joint, 4, 2)[0]['passes:H:joint'] == 4
+    assert 'cal-h-remote-n6-g1' in calibration_suite(4, (6,), (1,), ranks=2)
+    assert not any('remote' in k for k in calibration_suite(4, (6,), (1,)))
+    with pytest.raises(ValueError, match='power of two'):
+        calibration_suite(4, (7,), (1,), ranks=3)
+
+
+@pytest.mark.skipif(importlib.util.find_spec('mpi4py') is None or __import__('shutil').which('mpiexec') is None,
+                    reason='MPI launcher not available')
+@pytest.mark.parametrize('executor', ['sync', 'async'])
+def test_two_rank_runs_share_one_dataset_and_validate(tmp_path, executor):
+    import os, shutil, subprocess, sys
+    threads = '2' if executor == 'async' else '1'
+    run = lambda *args: subprocess.run([sys.executable, '-c', 'import sys;from svsim.cli import svbench_main,svsim_main;'
+                                        f'sys.exit({args[0]}(sys.argv[1:]))', *args[1:]],
+                                       check=True, timeout=300, env={**os.environ, 'OMP_NUM_THREADS': '1'})
+    run('svbench_main', 'probe', '--storage-path', str(tmp_path / 'scratch'), '--threads', threads, '--ranks', '2',
+        '--output', str(tmp_path / 'probe.json'))
+    workload = tmp_path / 'w.json'
+    workload.write_text(json.dumps({'kind': 'workload', 'schema_version': 1, 'qubits': 6, 'policies': {'storage': 'file'},
+                                    'operations': [{'kind': 'H', 'targets': [0]}, {'kind': 'H', 'targets': [5]}]}))
+    subprocess.run([shutil.which('mpiexec'), '-n', '2', sys.executable, '-c',
+                    'import sys;from svsim.cli import svsim_main;sys.exit(svsim_main(sys.argv[1:]))',
+                    'benchmark', '--workload', str(workload), '--executor', executor, '--threads', threads,
+                    '--profile', str(tmp_path / 'probe.json'), '--scratch', str(tmp_path / 'scratch'),
+                    '--output-dir', str(tmp_path / 'out'), '--ram-budget-per-rank', str(1 << 26),
+                    '--disk-budget', str(1 << 28), '--wall-seconds', '120', '--block-bits', '3',
+                    '--repetitions', '1', '--warmup', '0'],
+                   check=True, timeout=300, env={**os.environ, 'OMP_NUM_THREADS': '1'})
+    doc = json.loads((tmp_path / 'out' / 'w.run.json').read_text())
+    assert doc['status'] == 'completed' and doc['validation']['passed'] is True
+    assert doc['case']['ranks'] == 2 and doc['case']['mode'] == f'distributed-{executor}'
+    features = {r['feature']: int(r['count']) for r in doc['work']['features']}
+    assert features['blocks'] == 4 and features['passes:H:remote'] == 4
+    assert int(doc['trials'][0]['disk_payload_bytes']) > 0
+    assert list((tmp_path / 'scratch').iterdir()) == []
