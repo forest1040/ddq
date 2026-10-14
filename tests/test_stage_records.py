@@ -59,3 +59,28 @@ def test_stage_records_follow_collection_switch_and_injection_scope(tmp_path):
         assert rows and all(r['evidence'] == 'injected' for r in rows)
         assert not any(r['stage'] == 'catalog-commit' for r in
                        (o.to_dict() for o in sim.runtime.measurements.cost_observations()))
+
+
+def test_epoch_boundary_spills_raw_lines_under_a_disk_lease_and_summarizes_ranks(tmp_path):
+    import json
+    with _sim(tmp_path / 'data', frame='materialize') as sim:
+        for _ in range(6): sim.gate('RX', (0,), angle=.3)
+        sim.materialize(binding=sim.bind())
+        runtime = sim.runtime
+        spill = runtime._raw_spill
+        lines = spill['path'].read_bytes().splitlines()
+        assert lines and all(json.loads(line)['event_id'] for line in lines)
+        assert runtime.raw_spill_bytes == spill['path'].stat().st_size and not runtime.raw_spill_truncated
+        budget = sim.disk_budget or sim.store.disk_budget
+        assert budget.lease_reserved_bytes > 0  # the spill writes under its own append lease
+        summary = runtime.epoch_summaries[-1]
+        assert summary['ranks'] == 1 and 'executor-gate' in summary['stages']
+        gate = summary['stages']['executor-gate']
+        assert gate['rank_max_seconds'] >= gate['rank_mean_seconds'] > 0 and gate['imbalance'] == 1.0
+        sim.gate('RX', (1,), angle=.3); sim.materialize(binding=sim.bind())
+        stages = {json.loads(line)['stage'] for line in spill['path'].read_bytes().splitlines()}
+        assert {'monitor-raw-flush', 'monitor-summary-exchange'} <= stages  # the monitor costs itself (next spill)
+        runtime.RAW_SPILL_LIMIT_BYTES = runtime.raw_spill_bytes  # total limit reached: drop and count
+        sim.gate('RX', (1,), angle=.3); sim.materialize(binding=sim.bind())
+        assert runtime.raw_spill_truncated and runtime.measurements.dropped_raw > 0
+        assert spill['path'].stat().st_size == runtime.raw_spill_bytes

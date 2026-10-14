@@ -56,6 +56,13 @@
 
 制約：async runtimeは`_execute`を上書きしていてpacked MCX経路を持たない。そのため`mcx-packing`は同期runtime上でだけ発生し、そこにはcollectorが無いので、現状は計測されない（残件）。collectorの既定上限（`metadata_reserve_bytes//16`、約8 KiB）を超えたstageは、設計どおり捨てられて計上される。
 
+## raw記録のディスク退避とepoch集計（2026-10-15追加）
+
+- **raw記録。** collectorは、submitしたすべての観測（成功・失敗・RAMの集計から外れたものを含む）を、上限付きのpending列（collectorの`max_bytes`まで、超過分は`dropped_raw`で数える）に1行ずつ積む。RAMのringは集計用のまま、rawはディスクへ逃がす。
+- **書出し。** `RuntimeControl.epoch_boundary()`は`frontier()`の先頭で毎epoch呼ばれる（集団処理）。pending行を`rank-NNNN/measurements/raw-<run>.jsonl`へ追記する。追記は`AppendReservation`（操作名`measurement-append`、ledger leaseと同じchunk予約）で、書く前に必ずディスク予約に覆われる。総量の上限（既定16 MiB）を超えた行は捨てて数え、`raw_spill_truncated`を立てる。fsyncはしない（診断用のrawで、durabilityは要求しない）。
+- **epoch集計。** そのepochのmeasured行を、stageごとの件数・合計秒・最大秒にまとめ、全rankでallgatherする。rank MAX、平均、不均衡（最大÷平均）、最も遅いrank、eventの最大を、`epoch_summaries`（最大64 epoch）に保持する。遅いrankの情報を平均で消さないためである。
+- **監視自身の費用。** 書出しと交換の所要時間を、stage `monitor-raw-flush`／`monitor-summary-exchange`として記録する（次のepochでrawに出る）。
+
 ## 検証
 
 `tests/test_runtime_cost_registry.py`（6件）で次を確認した。
@@ -68,9 +75,9 @@
 既存試験（ETA、remaining work、adaptive replan、段階別fault、gradient、cache）は変更なしで成功した。追加分の試験は次のとおり。
 - rolling観測：同じclassのexecutor呼出し8回でobserved-task-secondsが答え、ETA observed viewが価格付けすること。
 - cache：measuredのread／writeからeviction scoreを作り、injectedの観測を数えないこと。
-- stage記録（`tests/test_stage_records.py`）：catalog-commitが子eventとしてgroupの消費集合に入ること、checkpointの3段、collectorのon/off、injected scope。
+- stage記録（`tests/test_stage_records.py`）：catalog-commitが子eventとしてgroupの消費集合に入ること、checkpointの3段、collectorのon/off、injected scope。raw行のlease下での書出し、epoch集計、監視自身の記録、総量上限での打切りと計数。
 
-Mac全回帰は867 passed／14 skipped、Linuxの関連66件は成功した。
+Mac全回帰は868 passed／14 skipped。
 
 ## 残件（P4-001）
 

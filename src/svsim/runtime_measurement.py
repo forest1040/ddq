@@ -111,6 +111,26 @@ class RuntimeMeasurementCollector:
         self._group_status: dict[str, bool] = {}
         self._group_parent: dict[str, str | None] = {}
         self._group_status_order: deque[str] = deque(maxlen=self._event_capacity)
+        # Raw lines awaiting a bounded spill to local disk; independent of the summary rings.
+        self._raw_pending: deque[bytes] = deque()
+        self._raw_pending_bytes = 0
+        self.dropped_raw = 0
+
+    def _queue_raw(self, observation):
+        line = (_canonical(asdict(observation)) + '\n').encode()
+        if self._raw_pending_bytes + len(line) > self.max_bytes:
+            self.dropped_raw += 1
+            return
+        self._raw_pending.append(line)
+        self._raw_pending_bytes += len(line)
+
+    def drain_raw(self):
+        """Hand pending raw lines to the spill writer (main thread, epoch boundary)."""
+        self._check_thread()
+        lines = tuple(self._raw_pending)
+        self._raw_pending.clear()
+        self._raw_pending_bytes = 0
+        return lines
 
     def _check_thread(self):
         if threading.get_ident() != self._thread:
@@ -145,6 +165,7 @@ class RuntimeMeasurementCollector:
                 self._group_status_order.append(observation.group_id)
             self._group_status[observation.group_id] = bool(observation.success and observation.validated)
             self._group_parent[observation.group_id] = observation.parent_id
+        self._queue_raw(observation)  # raw goes to disk even when the RAM summary is full
         encoded_size = len(_canonical(asdict(observation)).encode())
         if encoded_size > self.max_bytes:
             self.dropped_bytes += 1

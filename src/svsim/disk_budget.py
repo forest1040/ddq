@@ -104,7 +104,7 @@ def _root_antichain(paths):
 
 
 APPEND_RESERVATION_BYTES = 64 * 1024
-APPEND_OPERATIONS = ('trace-append', 'journal-append')
+APPEND_OPERATIONS = ('trace-append', 'journal-append', 'measurement-append')
 LEASE_OPERATIONS = APPEND_OPERATIONS + ('catalog-transaction',)
 
 

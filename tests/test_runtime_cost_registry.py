@@ -131,7 +131,8 @@ def test_rolling_observations_answer_production_after_enough_same_class_groups(t
                                storage_scope='node-local', frame_policy='materialize')
     with AsyncDistributedSimulator(4, config, comm=MPI.COMM_SELF, policy=policy) as sim:
         runtime = sim.runtime
-        runtime.configure_measurements(max_bytes=64 * 1024)
+        # Stage records share the RAM summary budget; leave room for eight executor groups.
+        runtime.configure_measurements(max_bytes=256 * 1024)
         runtime.configure_eta(max_bytes=64 * 1024, scan_items=4096, scan_seconds=1.0)
         for _ in range(12): sim.gate('RX', (0,), angle=.3)
         sim.materialize(frontier=7, binding=sim.bind())  # eight same-class executor calls measured

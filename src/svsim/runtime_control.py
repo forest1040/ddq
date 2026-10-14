@@ -1,5 +1,6 @@
 """Collective runtime policy changes at drained, versioned prefix cuts."""
 from dataclasses import asdict, dataclass, replace
+import json
 import math
 from time import monotonic
 
@@ -123,6 +124,11 @@ class RuntimeControl:
 
     def close_measurements(self):
         self.measurements=None
+        spill=getattr(self,'_raw_spill',None)
+        if spill is not None:
+            try:spill['stream'].close()
+            finally:
+                spill['lease'].release();self._raw_spill=None
         if self._measurement_budget:
             self.sim.budget.release(self._measurement_budget)
             self._measurement_budget=0
@@ -758,8 +764,78 @@ class RuntimeControl:
     def record_checkpoint_wall(self, seconds):
         self.checkpoint_walls = (self.checkpoint_walls + [seconds])[-16:]
 
+    RAW_SPILL_LIMIT_BYTES = 16 * 1024 * 1024
+    EPOCH_SUMMARY_LIMIT = 64
+
+    def epoch_boundary(self):
+        """Spill raw completions to bounded local disk and exchange a rank summary (collective)."""
+        from collections import deque
+        sim=self.sim
+        collector=self.measurements
+        if collector is None or not collector.enabled:return None
+        started=monotonic();error=None;written=0
+        lines=collector.drain_raw()
+        try:written=self._spill_raw(lines)
+        except Exception as exc:error=str(exc)
+        sim.transport.vote(error)
+        self.record_stage('monitor-raw-flush',{'target':'rank-local-jsonl'},seconds=monotonic()-started,
+                          quantity=max(1,len(lines)),units='lines',payload_bytes=written)
+        started=monotonic()
+        local={}
+        for line in lines:
+            row=json.loads(line)
+            if row.get('evidence')!='measured' or row.get('warmup'):continue
+            seconds=row.get('protocol_seconds') if row.get('protocol_seconds') is not None else row.get('service_seconds')
+            stat=local.setdefault(row['stage'],[0,0.0,0.0])
+            stat[0]+=1
+            if seconds is not None:stat[1]+=seconds;stat[2]=max(stat[2],seconds)
+        if len(local)>32:local=dict(sorted(local.items())[:32])
+        ranks=sim.transport.control.allgather(local)
+        stages={}
+        for stage in sorted({name for rank in ranks for name in rank}):
+            totals=[rank.get(stage,[0,0.0,0.0])[1] for rank in ranks]
+            mean=sum(totals)/len(totals)
+            stages[stage]={'count_max':max(rank.get(stage,[0])[0] for rank in ranks),
+                'rank_max_seconds':max(totals),'rank_mean_seconds':mean,
+                'imbalance':max(totals)/mean if mean>0 else None,
+                'slowest_rank':totals.index(max(totals)),
+                'event_max_seconds':max(rank.get(stage,[0,0.0,0.0])[2] for rank in ranks)}
+        if not hasattr(self,'epoch_summaries'):self.epoch_summaries=deque(maxlen=self.EPOCH_SUMMARY_LIMIT)
+        summary={'frontier':sim.frontier,'ranks':sim.size,'stages':stages,
+                 'dropped_raw':sim.transport.control.allreduce(collector.dropped_raw),
+                 'raw_spill_bytes':sim.transport.control.allreduce(getattr(self,'raw_spill_bytes',0)),
+                 'raw_spill_truncated':any(sim.transport.control.allgather(getattr(self,'raw_spill_truncated',False)))}
+        self.epoch_summaries.append(summary)
+        self.record_stage('monitor-summary-exchange',{'ranks':sim.size},seconds=monotonic()-started)
+        return summary
+
+    def _spill_raw(self,lines):
+        """Append raw lines under a chunked disk reservation; stop (counted) at the total limit."""
+        from .disk_budget import AppendReservation
+        if not lines:return 0
+        sim=self.sim
+        spill=getattr(self,'_raw_spill',None)
+        if spill is None:
+            path=sim.directory/f'rank-{sim.rank:04d}'/'measurements'/f'raw-{sim.run_id}.jsonl'
+            budget=lambda:getattr(sim,'disk_budget',None) or getattr(sim.store,'disk_budget',None)
+            lease=AppendReservation(budget,operation='measurement-append')
+            lease.admit(1)
+            path.parent.mkdir(parents=True,exist_ok=True)
+            spill=self._raw_spill={'path':path,'stream':path.open('ab',buffering=0),'lease':lease}
+            self.raw_spill_bytes=0;self.raw_spill_truncated=False
+        written=0
+        for line in lines:
+            if self.raw_spill_bytes+len(line)>self.RAW_SPILL_LIMIT_BYTES:
+                self.raw_spill_truncated=True;self.measurements.dropped_raw+=1;continue
+            spill['lease'].admit(len(line))
+            if spill['stream'].write(line)!=len(line):raise OSError('Incomplete raw measurement write')
+            spill['lease'].wrote(len(line))
+            self.raw_spill_bytes+=len(line);written+=len(line)
+        return written
+
     def frontier(self):
         sim = self.sim
+        self.epoch_boundary()
         self.update_eta(collective=True)
         states = sim.transport.control.allgather(self.health)
         if sim.policy.mode not in {'auto','recommend'} or 'DEGRADED' not in states or self.verifying is not None:
