@@ -6,6 +6,7 @@ import sqlite3
 from time import perf_counter
 
 from .cache import BufferLease
+from .dataset_lease import DirectoryLease
 from .storage import FileBlockStore
 from .transport import open_storage
 
@@ -135,9 +136,10 @@ class ReadOnlyBlockStore(FileBlockStore):
         self.files, self._last_offsets = {}, {}
         self.guard = None
         self.transport_factory = open_storage
+        self._directory_lease = DirectoryLease(self.directory)
         catalog = self.directory/'metadata/catalog.sqlite3'
-        self.db = sqlite3.connect(catalog.resolve().as_uri()+'?mode=ro', uri=True)
         try:
+            self.db = sqlite3.connect(catalog.resolve().as_uri()+'?mode=ro', uri=True)
             self.db.execute('PRAGMA query_only=ON')
             version = self.db.execute('PRAGMA user_version').fetchone()[0]
             if version not in {1,2}: raise OSError('Unsupported catalog schema')
@@ -145,7 +147,13 @@ class ReadOnlyBlockStore(FileBlockStore):
             if saved != {'num_qubits':num_qubits,'block_bits':config.block_bits,'alignment':config.alignment}:
                 raise ValueError('Storage dimensions/alignment mismatch')
         except BaseException:
-            self.db.close()
+            cleanup_ok = True
+            if hasattr(self, 'db'):
+                try: self.db.close()
+                except BaseException: cleanup_ok = False
+            if cleanup_ok:
+                self._directory_lease.close()
+                self._directory_lease = None
             raise
 
     def _file(self, segment):

@@ -7,7 +7,8 @@ from uuid import uuid4
 
 
 @contextmanager
-def file_allocation(budget, amount, temporary, *, drain=False, operation='sidecar-write'):
+def file_allocation(budget, amount, temporary, *, drain=False, operation='sidecar-write',
+                    owner=None,generation=None,checkpoint_link=None):
     """Keep recovery evidence if a temporary artifact cannot be cleaned up.
 
     This checks only artifact absence, not an authoritative checkpoint cut.
@@ -16,7 +17,9 @@ def file_allocation(budget, amount, temporary, *, drain=False, operation='sideca
     if budget is None:
         yield None
         return
-    key=budget.reserve(amount,drain=drain,operation=operation,writing=True)
+    kwargs={'owner':owner,'generation':generation}
+    if checkpoint_link is not None:kwargs['checkpoint_link']=checkpoint_link
+    key=budget.reserve(amount,drain=drain,operation=operation,writing=True,**kwargs)
     try:yield key
     finally:
         try:Path(temporary).lstat()

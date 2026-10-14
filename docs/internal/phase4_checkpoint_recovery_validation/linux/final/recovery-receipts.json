@@ -1,0 +1,834 @@
+[
+  {
+    "ledger": "/validation/regression/test_collective_checkpoint_rec0/owner-0/.disk-admission/eed70aede8e09e058b7bfb3790aba0cf50eaf2ae610c14da6c20761789e71e43.sqlite3",
+    "reservation_id": "ad95aaa1519445f5a904f41dc2022037",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "6dfad43556d39aea9eae04e20065b6d0f550ee18d08b716df2b95c8e5db2f7cb",
+      "intent_sha256": "0ff7878ac6692d38bc311d5dd2546f16a74f2206b57b996d102cecf2772dc061",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 13,
+          "present": true,
+          "sha256": "117c96b3dfd33e32ec53aad89f0f9cd7265f7596ca242b98457184becfa3eb2d"
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226289
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "ef9af2fa35ef52c2201e701623ae4a15d80778b6f4b2c3e1c7b78ea75ec37714"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "cddb17304c300bddde60a362be6da9078fc3b23b28879c9581e0036a49a2a48a"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 13,
+      "reservation_id": "ad95aaa1519445f5a904f41dc2022037",
+      "snapshot_id": "6e07ba90e3a9463383e4aeed3319f65b",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:6e07ba90e3a9463383e4aeed3319f65b:b0cfc6eb617728c338ab7b470c6524eb14937880967424202400f3573d9d322a"
+  },
+  {
+    "ledger": "/validation/regression/test_collective_checkpoint_rec1/owner-0/.disk-admission/d5ea65b22dad7388f8b3c9345d3ecd67762cf3f2c239a91767e4dd2fb6df5a11.sqlite3",
+    "reservation_id": "1fa8e8d3d1334814883f275aa31ae731",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "d260ca61742043e545574ec1b6ae2ad35655a9b8a24ca886e5908acf5ee7ee7f",
+      "intent_sha256": "404dd1b15d31e977107086b5ae4fa55c98016e0ce531137f6894673fe81d52dc",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 13,
+          "present": true,
+          "sha256": "117c96b3dfd33e32ec53aad89f0f9cd7265f7596ca242b98457184becfa3eb2d"
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226327
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "ebea6b458888bd00c043cd8be0d67c5d181202bba9f805e64dbbd72c4a621e1f"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "f1c38904a961759380dac19696249f19727723d533671489ee088ba6ae245a90"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 13,
+      "reservation_id": "1fa8e8d3d1334814883f275aa31ae731",
+      "snapshot_id": "4d7bb834a662483eb20de51cc0bcc98f",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:4d7bb834a662483eb20de51cc0bcc98f:01a347445e04f69e7e4db0bb0ddf280aa5b5237deca26130c5480504f522a076"
+  },
+  {
+    "ledger": "/validation/regression/test_collective_checkpoint_rec1/owner-0/.disk-admission/d5ea65b22dad7388f8b3c9345d3ecd67762cf3f2c239a91767e4dd2fb6df5a11.sqlite3",
+    "reservation_id": "ef856cb780aa436b865cd425d8e3ec2c",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "d260ca61742043e545574ec1b6ae2ad35655a9b8a24ca886e5908acf5ee7ee7f",
+      "intent_sha256": "fa1cbed2a4fdd688623df158b143e0785cf1a25006dc7a44cdb4b234ae620059",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 13,
+          "present": true,
+          "sha256": "117c96b3dfd33e32ec53aad89f0f9cd7265f7596ca242b98457184becfa3eb2d"
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226326
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "ebea6b458888bd00c043cd8be0d67c5d181202bba9f805e64dbbd72c4a621e1f"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "35470681b0980a11a7759bd09cff711e38e935fe4cc058c95e25afe48ac60fd6"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 13,
+      "reservation_id": "ef856cb780aa436b865cd425d8e3ec2c",
+      "snapshot_id": "4d7bb834a662483eb20de51cc0bcc98f",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:4d7bb834a662483eb20de51cc0bcc98f:0fb126b05399b6d7c37bba87188cc0528f09e26f6a237936293eed30a6ef9b87"
+  },
+  {
+    "ledger": "/validation/regression/test_collective_checkpoint_rec2/owner-0/.disk-admission/2265f1126e92feba276f84989f3a680bbed64e9b8212704a8daf4670b420df81.sqlite3",
+    "reservation_id": "a3d06d513470464591144022dcb6421b",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "459015b283cedf4c85f2ed3ab0fdc021a58d0c0a9b7f5aad902498ab676989d2",
+      "intent_sha256": "e81af5f604672bb24273f63afd884f575db09d67c6ab4edc41e98087f313cfba",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 13,
+          "present": true,
+          "sha256": "117c96b3dfd33e32ec53aad89f0f9cd7265f7596ca242b98457184becfa3eb2d"
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226399
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "c4290e22875af3a1de5e633a4e11b228d36783b55d94bb54a35aac83f0a8a2b8"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "87fae77fd84be37ade7ccda53df0e392f855c8dfbe87176eddd57b1b8442515e"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 13,
+      "reservation_id": "a3d06d513470464591144022dcb6421b",
+      "snapshot_id": "65a0375784164f0c993f80ffe7306afb",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:65a0375784164f0c993f80ffe7306afb:6b47322dc4bbc450d3b9ec4f95accf2e6bd758eb0e70cb03e24aad96d9d87a2a"
+  },
+  {
+    "ledger": "/validation/regression/test_collective_checkpoint_rec2/owner-0/.disk-admission/2265f1126e92feba276f84989f3a680bbed64e9b8212704a8daf4670b420df81.sqlite3",
+    "reservation_id": "2406238c4045441b9854bb2f431e1a1b",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "459015b283cedf4c85f2ed3ab0fdc021a58d0c0a9b7f5aad902498ab676989d2",
+      "intent_sha256": "a529afb9c506cae30280bd1f45676aaa4307b606ec3974e4a5983b215e9048a5",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 13,
+          "present": true,
+          "sha256": "117c96b3dfd33e32ec53aad89f0f9cd7265f7596ca242b98457184becfa3eb2d"
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226395
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "c4290e22875af3a1de5e633a4e11b228d36783b55d94bb54a35aac83f0a8a2b8"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "b8eadfeede65ce7d263b2edb847060427f13555d16e8603026477cc1ef1070a0"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 13,
+      "reservation_id": "2406238c4045441b9854bb2f431e1a1b",
+      "snapshot_id": "65a0375784164f0c993f80ffe7306afb",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:65a0375784164f0c993f80ffe7306afb:6fcc9afabb3ce380921611a488b6bf8ef712506db815b6dd68f783a540987ca9"
+  },
+  {
+    "ledger": "/validation/regression/test_collective_checkpoint_rec2/owner-0/.disk-admission/2265f1126e92feba276f84989f3a680bbed64e9b8212704a8daf4670b420df81.sqlite3",
+    "reservation_id": "39b023fc0a8b4e7da1e7ebdc52fa8022",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "459015b283cedf4c85f2ed3ab0fdc021a58d0c0a9b7f5aad902498ab676989d2",
+      "intent_sha256": "f59b1a916c5f7628836b55928faf3fc99e798d5a3446f1f2b15d09e77920f2cd",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 13,
+          "present": true,
+          "sha256": "117c96b3dfd33e32ec53aad89f0f9cd7265f7596ca242b98457184becfa3eb2d"
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226394
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "c4290e22875af3a1de5e633a4e11b228d36783b55d94bb54a35aac83f0a8a2b8"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "ce28162dcf8a24cc95e6c732ff3be6eba41f34d2e9237a04515ceab72fa26248"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 13,
+      "reservation_id": "39b023fc0a8b4e7da1e7ebdc52fa8022",
+      "snapshot_id": "65a0375784164f0c993f80ffe7306afb",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:65a0375784164f0c993f80ffe7306afb:7577e0d977e01cf8d6d4f0aa29c2e8a0c98cd054b32d98515e2121a326c343c5"
+  },
+  {
+    "ledger": "/validation/regression/test_collective_checkpoint_rec2/owner-0/.disk-admission/2265f1126e92feba276f84989f3a680bbed64e9b8212704a8daf4670b420df81.sqlite3",
+    "reservation_id": "5ceadcfd4fcf48ba906527f620840a94",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "459015b283cedf4c85f2ed3ab0fdc021a58d0c0a9b7f5aad902498ab676989d2",
+      "intent_sha256": "56df32b75e05226f320c9e035dc8f365cbd05918f99bd33fffd0e52bb9e72a22",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 13,
+          "present": true,
+          "sha256": "117c96b3dfd33e32ec53aad89f0f9cd7265f7596ca242b98457184becfa3eb2d"
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226396
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "c4290e22875af3a1de5e633a4e11b228d36783b55d94bb54a35aac83f0a8a2b8"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "fffabaadb9fecec08ccbe5a60d52f70538ecc945408336f5aa03b311d7451c3b"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 13,
+      "reservation_id": "5ceadcfd4fcf48ba906527f620840a94",
+      "snapshot_id": "65a0375784164f0c993f80ffe7306afb",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:65a0375784164f0c993f80ffe7306afb:378d20e37c0dd501dfa2b666971575b2cb7b8e61c924ede3ec41e2fa16e21995"
+  },
+  {
+    "ledger": "/validation/regression/test_collective_checkpoint_rec3/same-root/.disk-admission/05b3859539524c06c6e2430081f08f895608413a3c2fa477f6320f51d07125a8.sqlite3",
+    "reservation_id": "6c1f43c6e3364c16b4e7faf424aa3ea6",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "984209664f5661b9268747fe1c2011282f4e51001495ccbbd86b3689622d81ff",
+      "intent_sha256": "97d0e5e932d28035ea2b1ce2e3c3fcaee33b200245e189b574e170a291afce0e",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 13,
+          "present": true,
+          "sha256": "117c96b3dfd33e32ec53aad89f0f9cd7265f7596ca242b98457184becfa3eb2d"
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226458
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "1aabb0182666ca66474ebf083d947fdf01291f37298095d61a5e9e1c2c071869"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "550cf1ce952226e417d1ad7272bf9662d203f5d8bc514758089f453ccc364678"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 13,
+      "reservation_id": "6c1f43c6e3364c16b4e7faf424aa3ea6",
+      "snapshot_id": "ddba7293095e4487af114f0e5852e1f8",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:ddba7293095e4487af114f0e5852e1f8:5ab1b1d9f6a32ae29b64fe0d01e6772fec3191a35f52d453831fc7ba60e87483"
+  },
+  {
+    "ledger": "/validation/regression/test_collective_checkpoint_rec3/same-root/.disk-admission/05b3859539524c06c6e2430081f08f895608413a3c2fa477f6320f51d07125a8.sqlite3",
+    "reservation_id": "98a8bccc2f16431894ae220c20591c85",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "984209664f5661b9268747fe1c2011282f4e51001495ccbbd86b3689622d81ff",
+      "intent_sha256": "91d3810e6f0286cc65a3e7c32fc67c6dfccece260b07448ee6d52c58d07d2003",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 13,
+          "present": true,
+          "sha256": "117c96b3dfd33e32ec53aad89f0f9cd7265f7596ca242b98457184becfa3eb2d"
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226457
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "1aabb0182666ca66474ebf083d947fdf01291f37298095d61a5e9e1c2c071869"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "7c03a8f5305d43ceba3047db8c35a47e53f52121adf4912eac497e9beb5a2855"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 13,
+      "reservation_id": "98a8bccc2f16431894ae220c20591c85",
+      "snapshot_id": "ddba7293095e4487af114f0e5852e1f8",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:ddba7293095e4487af114f0e5852e1f8:7d596e2e8e023402abe22cc5173187a8be7e68e858df1019bc47a79b4bd39dfd"
+  },
+  {
+    "ledger": "/validation/regression/test_dry_run_and_apply_keep_cu0/state/.disk-admission/d9cb7d61dd4989dd32d452cbaec38e57deba4f6be44a0ee650fc17008413f5a8.sqlite3",
+    "reservation_id": "9f2a539aff7d4eb29c0955a57a227b89",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "fc0a141be64c61dc86a82b6938fe1effebc70e84bbdaeac9acca5305ae0026bd",
+      "intent_sha256": "023b5e8056cbf19a38edfd4cbbcd99628ad0c23b49c8503f04aa85cc9befd3aa",
+      "inventory": {
+        "target": {
+          "bytes": 342,
+          "present": true,
+          "sha256": "8ef3a86695c291e992b9f9dee1d4e779734147f7f72dbd12eef06ffd20d7b0e3"
+        },
+        "temporary": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37225558
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "e049fde6d82581f5837e71b2588eeb1fa03fd5d8a31faf949553a8860dc18431"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "8ef3a86695c291e992b9f9dee1d4e779734147f7f72dbd12eef06ffd20d7b0e3"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 0,
+      "reservation_id": "9f2a539aff7d4eb29c0955a57a227b89",
+      "snapshot_id": "0bb619b987cc425089ffdfc815e8b961",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:0bb619b987cc425089ffdfc815e8b961:801145e2450f264ca10c38c9407b0ecb6c4e82579231fed2df40431be84e3b4f"
+  },
+  {
+    "ledger": "/validation/regression/test_dry_run_and_apply_keep_cu1/state/.disk-admission/98240631499d4465cd73596d6324f2440658dd06bf0cedc9d2863edb6a429391.sqlite3",
+    "reservation_id": "5d72701a8fbd46cc983416d6beae17a9",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "12efb2dd9c60c34a2db39076b04ec38e7e7a5339f2deb266fbfc05a2dfe1cd32",
+      "intent_sha256": "fad1992fdb07aa0e260315b9efd2a9997a3c5c13ae02da7594f65f17e10352c3",
+      "inventory": {
+        "target": {
+          "bytes": 537,
+          "present": true,
+          "sha256": "952a2345e654a18678614306f8a9f664659e4d979d078a8352ee717233572944"
+        },
+        "temporary": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37225719
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "bb400c8e1fb1e7932ea4ea18b0ffc01b5df43172af477934242738316cd792fc"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "1ae63bdc78bd08ebcaff6eadb0991e6fa8dc058ee4c8aa0ea7ee9a40dc519178"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 0,
+      "reservation_id": "5d72701a8fbd46cc983416d6beae17a9",
+      "snapshot_id": "90b07d596db543048831a4529aa70dfb",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:90b07d596db543048831a4529aa70dfb:29530bf590802c51127c2f264f4826a73dac796defff4027b69cda74c669f9b3"
+  },
+  {
+    "ledger": "/validation/regression/test_dry_run_and_apply_keep_cu2/state/.disk-admission/73121f609c52651f14fa5e63dee23356ea4f8d858ae81e00fcdfa1ff9bdcd63c.sqlite3",
+    "reservation_id": "02ec7877bc33447cadd86d6716339e56",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "b94e333ab858faca4c1518fc63017b8bfd0482d001e5ee5551f2c34c2ebd089a",
+      "intent_sha256": "0779a9a72962b7445a51f3d9df5373a3a1cf11e9bb2f66af91c9960409489699",
+      "inventory": {
+        "target": {
+          "bytes": 537,
+          "present": true,
+          "sha256": "d9b8e28415c92912887e385ee9ceee9dbec9779c29a6063d9d39eb1b0b482471"
+        },
+        "temporary": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37225744
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "c89f206f53cf4cafefcd3c40c65aa2be35fca8cb9b35a3b03bba9d3bff3569fa"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "3f3c44de7e87c5c961cf3d86829efc54dc048224fb1a13a65ddc641c4052d4a3"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 0,
+      "reservation_id": "02ec7877bc33447cadd86d6716339e56",
+      "snapshot_id": "065700a018f542ef9a9df13fb784def0",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:065700a018f542ef9a9df13fb784def0:f419d0cac9f2e2413aeb145b8c8d3782f50d623fe19768db3af1df291ebd1fa5"
+  },
+  {
+    "ledger": "/validation/regression/test_missing_copy_and_partial_0/state/.disk-admission/f8d41303f4f51d57e580f9e697a1de95d03bfdb4663c3aa1a92f377210c5f84f.sqlite3",
+    "reservation_id": "1a41593b989a475f9ed711ac9531026f",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "689d89ca4ed3c83cec3ec4e294a9b0625dbef2799b30e43013ff3854c8608899",
+      "intent_sha256": "7774efe8057b5f76e5686236d09fde9c0100f3f5a59009adf072602e6dbf659e",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 13,
+          "present": true,
+          "sha256": "117c96b3dfd33e32ec53aad89f0f9cd7265f7596ca242b98457184becfa3eb2d"
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37225770
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "2e61e749fb2c03bc48aa824a6db0f73cfa609671580d883ffe94bf1ff438c7a4"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "f38bc01e42541cd9694ac715a89e4e5c7420b9e2b233cc1c2a4441af32c398ce"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 13,
+      "reservation_id": "1a41593b989a475f9ed711ac9531026f",
+      "snapshot_id": "324b2d3f5568481db45735db8ac54da8",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:324b2d3f5568481db45735db8ac54da8:2e878d1705228c73b9179b884cca4f58f97c8b47084ad7449e852cc3cdf28303"
+  },
+  {
+    "ledger": "/validation/regression/test_real_crashed_checkpoint_w0/state/.disk-admission/67c8c9c7a82a5ac9742cc5d15d5b5884fc35c99362555894de7d2c4e4a023029.sqlite3",
+    "reservation_id": "8f65822afda74fe4b5c1f59a8833b1a1",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "e11ffcbc4a60fb2141798c60079c382f0dfa3219bdb8fbe078cbd762c26f121b",
+      "intent_sha256": "4b4bfca9f9e91249d6f6acc73a81d2eec32261b9a730e32c019fdfe45615dbf6",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226188
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "66fbf5547b35e9e5db1c06c96ca3a4f9c06d5ce15f3d3ce97acce59dff8390fe"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "b640681bf2f42504d28a295114cedc86ad712fc1bfa85f16d5261dd1e89f1c3b"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 0,
+      "reservation_id": "8f65822afda74fe4b5c1f59a8833b1a1",
+      "snapshot_id": "169b0e282fc14a0d8378637ba5bc2afc",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:169b0e282fc14a0d8378637ba5bc2afc:7dbaf8aaecfb0ae98a09c70b8c6860a262bcfe754250382c564c7447fbdd2319"
+  },
+  {
+    "ledger": "/validation/regression/test_real_crashed_checkpoint_w1/state/.disk-admission/0275c054073b4cb0b0f7f491e9b8626c823ece269e351f6bb18f1174642fe221.sqlite3",
+    "reservation_id": "eb1a22a64fb645ebbcc6ea7141e1c5f0",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "153538e98f89750391788443f734590e167b1eea9396ea802c77602c4f336982",
+      "intent_sha256": "17ffbda6d08b8f72a79f86d07de8dbba64635d8587a666626045f3d37e439692",
+      "inventory": {
+        "target": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        },
+        "temporary": {
+          "bytes": 13,
+          "present": true,
+          "sha256": "117c96b3dfd33e32ec53aad89f0f9cd7265f7596ca242b98457184becfa3eb2d"
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226215
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "5a87b40efcf52539a3d8761220df8a8bf7d9fe7a477407899fd8bccbe5da75cc"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "26795cb0cd6b716447616d8ad344c1a67062c08da337b494cf7449f43ab2db7e"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 13,
+      "reservation_id": "eb1a22a64fb645ebbcc6ea7141e1c5f0",
+      "snapshot_id": "749af8ace1dd4293a6a5b1da544dd1e6",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:749af8ace1dd4293a6a5b1da544dd1e6:458e0565a3253758fb74a8ce705a31bf6e06544a1e23e7ef88d6c423b156d771"
+  },
+  {
+    "ledger": "/validation/regression/test_real_crashed_checkpoint_w2/state/.disk-admission/76770fe61ec0125d678d5fc4c6a4b05ff1f20ca44a7b525063012869baecc344.sqlite3",
+    "reservation_id": "08c36e946f25430790f3a04905d24cde",
+    "proof": {
+      "artifacts_preserved": true,
+      "decision_sha256": "08628b532c57ff749c5feb2ee2eb16c3fbd09c33ed009cccf2db96d8c5c2ac45",
+      "intent_sha256": "66b3ada2eac0eb92dc999d68baf4a1bd19998d074779bc3f7e40c5270601e675",
+      "inventory": {
+        "target": {
+          "bytes": 537,
+          "present": true,
+          "sha256": "97bf2d8410ee5e05801c017cbb9ad8a0a2f0f0251c50b5bf25238e71678d7210"
+        },
+        "temporary": {
+          "bytes": 0,
+          "present": false,
+          "sha256": null
+        }
+      },
+      "local_cut": {
+        "catalog_identity": {
+          "device": 66306,
+          "inode": 37226243
+        },
+        "journal": {
+          "commits": {
+            "bytes": 474,
+            "sha256": "c9473f3cdb2601d4fc950a3ff4dd1d68093fce8a2563dc044098216b7a34c193"
+          },
+          "gates": {
+            "bytes": 695,
+            "sha256": "2a0d65e021be85174eb7208ee15433e61f4c1a0475a8a31e6ae50174a7a6ecc9"
+          },
+          "joint": {
+            "bytes": 169,
+            "sha256": "5ac35455a136c1ec981bd93067082548ec6b71f055458a33f9336d9d98237e1c"
+          },
+          "shared": {
+            "bytes": 169,
+            "sha256": "7388e89d7f303d4152dd370b7f085c98b0598a68288e84115c0fdfa7000a54cd"
+          }
+        },
+        "prepare_sha256": "881e1a0ce10ce90d0d89382c97c7dfaf2a2913ffa1d0b764d97b9f4cb9f33d46"
+      },
+      "metadata_only": true,
+      "observed_growth_bytes": 537,
+      "reservation_id": "08c36e946f25430790f3a04905d24cde",
+      "snapshot_id": "eb692a54f061407cb9d1e7f683d079c4",
+      "version": 1
+    },
+    "evidence": "checkpoint-recovery-v1:eb692a54f061407cb9d1e7f683d079c4:22e0f11dee187eca1b88696d8ee68162d4b82274aee671d3cbdc84ad76af0916"
+  }
+]

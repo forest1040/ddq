@@ -1,0 +1,43 @@
+# Phase 4 checkpoint reservation recovery design
+
+更新日：2026-10-14。これは、P4-009のうちnode-local checkpoint sidecar予約を明示回収する範囲の設計である。Phase 4全体やP4-009全体の完了を意味しない。実装状況は[実装資料](phase4_checkpoint_recovery_implementation.md)、writer全体の未受入項目は[監査](phase4_writer_audit.md)、検証記録は[内部validation資料](internal/phase4_checkpoint_recovery_validation/README.md)を参照する。
+
+## 目的と前提
+
+対象は、atomic JSON writerがcheckpointのprepare、global decision、rank decision-copyを書き出すために作ったP4-009 reservation intentである。異常終了後にtokenだけを見て解放すると、authoritative checkpointの未計上bytesや別世代のwriterを見落とす。そこで、回収を明示offline operationに限定し、最新のcommitted v4 cut、owner-local prepare、catalogのsnapshot/root metadata、committed journal cursor、target/temp inventoryをすべて検査した後でのみ、対象tokenを一件ずつterminalへ移す。
+
+回収時にはnode-local datasetのrootと各rank shardにkernel flockのexclusive leaseを取得する。通常runtimeのshared leaseが残っていればexclusive leaseを取得できず、回収は始まらない。全writer processを終了し、すべての対象volumeで同じ状態を確認してから、MPI communicatorを使って全rankの検査と適用を進める。leaseは協調するsvsim process間の排他であり、他のOS processや外部jobを停止させるものではない。
+
+APIはdry runを既定とする。dry runでも既存ledgerを開いてDiskBudgetを初期化するため、ledger schemaの初期化、root登録、shared policyのbind等のmetadata更新は起こり得る。予約状態の精算とrecovery receiptの保存はapply=Trueの場合だけ行う。storage_scope='node-local'、既存dataset、最新cutとの一致を必須にする。古いsnapshotを指定して最新cutの代わりに回収することは認めない。
+
+## 対象cutとmetadata検査
+
+rank 0はbounded candidate setから最新のglobal manifestを読み、checksumとschema v4を確認する。metadata payloadと通常のglobal checkpoint loaderを通じてauthoritative decisionを検証し、MPI size、block bits、必要なら要求されたsnapshot IDと一致することを確認する。より古いcommitted cutへfallbackしない。
+
+各rankは自身のprepare manifestをdecision中のprepare hash、snapshot ID、rank、root、frontierと照合する。read-only catalogを開いてquick_check、dataset/store identity、snapshot row、sealed root、通常のsemantic root validatorを確認する。committed journal cursorまでの各JSONL recordをchecksum検証し、そのprefixのbyte数とhashをproofへ記録する。uncommitted tailをtruncateしたりcatalog journalを修復したりしない。catalogのrollback journal/WAL/SHM side fileが存在し、かつnonemptyの場合は拒否する。resident amplitude metadataが残る場合も拒否する。
+
+この検査はcheckpointに必要なcatalog/journal metadataとsidecarだけを対象にする。振幅payloadや全physical closure、全segment extentの完全性を検査するものではない。
+
+## reservation intent、世代、適用
+
+DiskBudget.reserveのcheckpoint_link引数は、容量tokenとcheckpoint intentを同じSQLite transactionで記録する。intentはdataset rootのresolved pathとdevice/inode、dataset/snapshot UUID、rank/stage、root相対target/temp、content digest、予約byte数、予約時のtarget存在状態を持つ。target名はstageごとに固定し、temporaryはtargetと同じdirectoryに置くgeneration付きnonce名でなければならない。root、target、temporaryの内側symlinkは拒否する。intentの上限は4 KiBである。
+
+回収側はroot pathとdevice/inode、dataset/snapshot/rank、stage、予約operation、owner/generation、expected bytes、digestをauthoritative cutと突き合わせる。targetとtemporaryをNOFOLLOWで読み、exclusive-name regular file、volume、size、hashを検査する。intentのgenerationとtemporary名が一致しなければ拒否する。partial temporaryは削除・truncateせずにinventoryへ記録する。prepareとglobal decisionのtargetは必須で、欠けていれば拒否してtokenを残す。rank decision-copyは欠損していてよい。decision-copyが欠けpartial temporaryが存在する場合はそのbytesをmaterialized accountingに加えてRECONCILEDにし、artifactをproofへ残す。通常resume/restoreはdecision-copyを再作成するが、partial temporaryを削除・cleanupしない。
+
+全rankが検査を終えてvoteするまではtokenを変更しない。apply段階では各tokenに対してreservationの完全な旧値とintentの完全な旧値をcompare-and-swapし、terminal accountingとcanonical evidence receiptを同一SQLite transactionで保存する。receiptはcut、intent hash、local metadata proof、target/temp inventoryを含み、evidence文字列のSHA256と一致する。重複・stale CASは拒否する。
+
+MPI全体と複数tokenを一括する分散transactionではない。rank vote後もプロセス停止やledger errorにより一部tokenだけterminalになることがある。各tokenのCAS/receiptは原子的で、再実行ではterminal rowsを再適用せず、残ったactive rowsを改めて照合する。
+
+## 上限と回収不能な範囲
+
+既定のinspection上限はintent 128件、個別checkpoint sidecar／metadata payload／temporary 16 MiB、catalog file 64 MiB、committed journal prefix合計64 MiBである。catalog file上限はmax_journal_bytesと同じ設定を使う。global candidateは最大256件に制限し、catalogはread-only・小さなSQLite cacheで開く。いずれかの上限を超えた場合はtruncateや部分適用をせず拒否する。ledger自身も既存のbounded metadata poolとrecord/page上限を使う。
+
+この操作で回収できるのはcheckpoint sidecar writerに明示リンクされた予約だけである。intentがないtoken、uncommitted writer、catalog/journal/segment/extent/payload/trace/asset等の予約は対象外であり、自動的に推定して精算しない。temporary branch GCや全writerをまたぐinventoryも実装範囲外である。
+
+同一host・同一volume上のdataset/rankは、catalogに保存されたlocatorまたは明示設定から同じpersistent ledgerを開く。volume内rankのlocator一致を検査し、rootを登録してcapacityを合算する。別ledger間、別host、外部jobの容量は統合しない。
+
+OS processを終了させずにleaseが取れない状態、power loss時の実hardware durability、cross-host recoveryは受入れていない。管理外writer、filesystem metadata、外部jobの空き容量変化も制御できないため、strict_capacity_guaranteeはfalseのままである。
+
+## P4-009の位置付け
+
+この設計と実装は、P4-009のcheckpoint reservation recoveryを一段進める。全writerのfault/recovery matrix、GC、別ledger・外部jobを含むhost調停、Linuxを含む全matrixとcross-host受入は残る。Linuxの一部機能検証は済んでいるが、これらの完全な受入を意味しない。P4-009とPhase 4は未完了として扱う。

@@ -11,6 +11,7 @@ from uuid import uuid4
 import numpy as np
 from .transport import open_storage
 from .journal import canonical
+from .dataset_lease import DirectoryLease
 
 
 @dataclass(frozen=True)
@@ -78,6 +79,14 @@ class FileBlockStore:
             self.directory.mkdir(parents=True,exist_ok=True)
             if (self.directory/'metadata/catalog.sqlite3').exists(): raise FileExistsError('Storage directory already contains a state')
         elif not (self.directory/'metadata/catalog.sqlite3').is_file(): raise FileNotFoundError('Missing state catalog')
+        self._directory_lease = DirectoryLease(self.directory)
+        try:
+            self._open_store(config, num_qubits, create, disk_budget)
+        except BaseException:
+            self._cleanup_failed_open()
+            raise
+
+    def _open_store(self, config, num_qubits, create, disk_budget):
         for sub in ('state','metadata','assets','journal','traces','manifests'): (self.directory/sub).mkdir(exist_ok=True)
         from .disk_budget import DiskBudget
         from .catalog_admission import CatalogConnection
@@ -86,17 +95,33 @@ class FileBlockStore:
             self._owned_disk_budget=DiskBudget(self.directory/'metadata/disk-ledger.sqlite3',[self.directory])
             disk_budget=self._owned_disk_budget
         self.disk_budget=disk_budget
-        try:
-            self.db=CatalogConnection(self.directory/'metadata/catalog.sqlite3',
-                budget_getter=lambda:self.disk_budget,drain_getter=lambda:getattr(self,'_disk_drain',False),
-                require_native=self.disk_budget.quota_bytes is not None)
-        except BaseException:
-            if self._owned_disk_budget: self._owned_disk_budget.close()
-            raise
-        try: self._initialize_catalog(config,num_qubits,create)
-        except BaseException:
-            self.close()
-            raise
+        self.db=CatalogConnection(self.directory/'metadata/catalog.sqlite3',
+            budget_getter=lambda:self.disk_budget,drain_getter=lambda:getattr(self,'_disk_drain',False),
+            require_native=self.disk_budget.quota_bytes is not None)
+        self._initialize_catalog(config,num_qubits,create)
+
+    def _cleanup_failed_open(self):
+        # Construction has not exposed the store. Keep the inode lease if any
+        # resource refuses to close, so recovery remains blocked until exit.
+        cleanup_ok = True
+        for handle in getattr(self, 'files', {}).values():
+            try: handle.close()
+            except BaseException: cleanup_ok = False
+        db = getattr(self, 'db', None)
+        if db is not None:
+            try: db.close()
+            except BaseException: cleanup_ok = False
+        budget = getattr(self, '_owned_disk_budget', None)
+        if budget is not None:
+            try:
+                budget.close()
+                self._owned_disk_budget = None
+            except BaseException:
+                cleanup_ok = False
+        lease = getattr(self, '_directory_lease', None)
+        if cleanup_ok and lease is not None:
+            lease.close()
+            self._directory_lease = None
 
     def _initialize_catalog(self,config,num_qubits,create):
         self.db.execute('PRAGMA synchronous=FULL')
@@ -351,7 +376,11 @@ class FileBlockStore:
 
     def close(self):
         for handle in self.files.values(): handle.close()
-        self.files.clear()
         self.db.close()
         if getattr(self,'_owned_disk_budget',None):
             self._owned_disk_budget.close();self._owned_disk_budget=None
+        self.files.clear()
+        lease = getattr(self, '_directory_lease', None)
+        if lease is not None:
+            lease.close()
+            self._directory_lease = None

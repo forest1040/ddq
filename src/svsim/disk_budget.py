@@ -6,6 +6,8 @@ credit into observed usage, so the same write is not charged twice.
 from contextlib import contextmanager
 from pathlib import Path
 import os
+import json
+import re
 import sqlite3
 import stat
 import threading
@@ -162,6 +164,12 @@ class DiskBudget:
                         if name not in cols:
                             self.db.execute(f'ALTER TABLE reservations ADD COLUMN {name} {decl}')
                     self.db.execute('CREATE TABLE IF NOT EXISTS roots(path TEXT PRIMARY KEY)')
+                    self.db.execute('''CREATE TABLE IF NOT EXISTS checkpoint_reservations(
+                        id TEXT PRIMARY KEY, link TEXT NOT NULL CHECK(length(CAST(link AS BLOB))<=4096),
+                        FOREIGN KEY(id) REFERENCES reservations(id) ON DELETE CASCADE)''')
+                    self.db.execute('''CREATE TABLE IF NOT EXISTS checkpoint_recovery_receipts(
+                        id TEXT PRIMARY KEY, proof TEXT NOT NULL CHECK(length(CAST(proof AS BLOB))<=8192),
+                        FOREIGN KEY(id) REFERENCES reservations(id) ON DELETE CASCADE)''')
                     self.db.execute('''CREATE TABLE IF NOT EXISTS shared_policy(
                         singleton INTEGER PRIMARY KEY CHECK(singleton=1),
                         quota_bytes INTEGER, min_free_bytes INTEGER NOT NULL,
@@ -362,13 +370,118 @@ class DiskBudget:
             row = self.db.execute("SELECT COALESCE(SUM(bytes-materialized),0) FROM reservations WHERE state IN ('RESERVED','WRITING')").fetchone()
             return row[0]
 
-    def reserve(self, amount, *, drain=False, operation='unspecified', owner=None, generation=None, writing=False):
+    def _checkpoint_link(self, link, amount):
+        if type(link) is not dict:
+            raise ValueError('Invalid checkpoint link')
+        keys = {'dataset_root','dataset_id','snapshot_id','rank','stage','target','temporary','digest'}
+        if set(link) != keys:
+            raise ValueError('Invalid checkpoint link fields')
+        raw_root = Path(link['dataset_root']) if isinstance(link['dataset_root'], str) else None
+        if raw_root is None or not raw_root.is_absolute(): raise ValueError('dataset_root must be absolute')
+        def reject_symlinks(path, base=None):
+            path = Path(os.path.abspath(path))
+            parts = [path, *path.parents]
+            if base is not None:
+                base=Path(os.path.abspath(base))
+                parts=parts[:parts.index(base)+1]
+            for item in reversed(parts):
+                try: mode = item.lstat().st_mode
+                except FileNotFoundError: continue
+                if stat.S_ISLNK(mode): raise ValueError('Checkpoint paths cannot contain symlinks')
+        try:
+            if stat.S_ISLNK(raw_root.lstat().st_mode): raise ValueError('dataset_root cannot be a symlink')
+        except FileNotFoundError:
+            pass
+        if not raw_root.is_dir(): raise ValueError('dataset_root must be an existing directory')
+        root = raw_root.resolve(strict=True)
+        for name in ('dataset_id','snapshot_id'):
+            if not isinstance(link[name],str) or re.fullmatch(r'[0-9a-f]{32}',link[name]) is None:
+                raise ValueError('Invalid checkpoint UUID')
+        rank=link['rank']
+        if isinstance(rank,bool) or not isinstance(rank,int) or rank<0 or rank>1024: raise ValueError('Invalid checkpoint rank')
+        stage=link['stage']
+        if stage not in ('prepare','decision','decision-copy'): raise ValueError('Invalid checkpoint stage')
+        if not isinstance(link['digest'],str) or re.fullmatch(r'[0-9a-f]{64}',link['digest']) is None:
+            raise ValueError('Invalid checkpoint digest')
+        if stage=='prepare': rel=Path(f'rank-{rank:04d}/manifests/prepare-{link["snapshot_id"]}.json')
+        elif stage=='decision':
+            if rank != 0: raise ValueError('Decision checkpoint rank must be zero')
+            rel=Path(f'global/manifests/{link["snapshot_id"]}.json')
+        else: rel=Path(f'rank-{rank:04d}/manifests/decision-{link["snapshot_id"]}.json')
+        target_input=link['target']; temp_input=link['temporary']
+        if not isinstance(target_input,str) or not isinstance(temp_input,str): raise ValueError('Invalid checkpoint paths')
+        target=Path(target_input); temp=Path(temp_input)
+        def in_root_lexical(path):
+            if not path.is_absolute():
+                relative=path
+            else:
+                relative=None
+                for base in (raw_root,root):
+                    try:
+                        relative=path.relative_to(base)
+                        break
+                    except ValueError:
+                        pass
+                if relative is None:
+                    raise ValueError('Checkpoint path is outside dataset_root')
+            if '..' in relative.parts:
+                raise ValueError('Checkpoint path cannot traverse dataset_root')
+            return relative
+        target_relative=in_root_lexical(target)
+        temp_relative=in_root_lexical(temp)
+        if target_relative != rel: raise ValueError('Checkpoint target does not match stage')
+        target_candidate=target if target.is_absolute() else raw_root/target
+        temp_candidate=temp if temp.is_absolute() else raw_root/temp
+        expected=root/rel
+        temp_name=temp_candidate.name
+        if re.fullmatch(r'\.'+re.escape(expected.name)+r'\.[0-9a-f]{32}\.tmp',temp_name) is None:
+            raise ValueError('Invalid checkpoint temporary path')
+        if temp_relative.parent != rel.parent: raise ValueError('Invalid checkpoint temporary path')
+        temp_abs=expected.parent/temp_name
+        reject_symlinks(expected,root); reject_symlinks(temp_abs,root)
+        # Resolve each candidate's parent with filesystem semantics, including
+        # root-external symlink and '..' aliases, then require the resulting
+        # location to equal the canonical stage path. Keep the final component
+        # intact so the lstat checks below can reject a symlink leaf.
+        target_resolved=target_candidate.parent.resolve(strict=False)/target_candidate.name
+        temp_resolved=temp_candidate.parent.resolve(strict=False)/temp_candidate.name
+        if target_resolved != expected: raise ValueError('Checkpoint target does not resolve under dataset_root')
+        if temp_resolved != temp_abs: raise ValueError('Checkpoint temporary path does not resolve under dataset_root')
+        target_existed=False
+        try:
+            mode=expected.lstat().st_mode
+            if stat.S_ISLNK(mode): raise ValueError('Checkpoint target cannot be a symlink')
+            if not stat.S_ISREG(mode): raise ValueError('Existing checkpoint target must be a regular file')
+            target_existed=True
+        except FileNotFoundError: pass
+        try:
+            temp_mode=temp_abs.lstat().st_mode
+            if stat.S_ISLNK(temp_mode): raise ValueError('Checkpoint temporary path cannot be a symlink')
+            if not stat.S_ISREG(temp_mode): raise ValueError('Existing checkpoint temporary path must be a regular file')
+            raise ValueError('Checkpoint temporary path already exists')
+        except FileNotFoundError: pass
+        dev=root.stat().st_dev
+        roots=[Path(p) for (p,) in self.db.execute('SELECT path FROM roots')]
+        if not any(root.is_relative_to(p) for p in roots) or any(p.stat().st_dev != dev for p in roots if root.is_relative_to(p)):
+            raise ValueError('dataset_root must be covered by a registered root on the same volume')
+        root_info=root.stat()
+        canonical={'dataset_root':str(root),'dataset_device':root_info.st_dev,'dataset_inode':root_info.st_ino,
+                   'dataset_id':link['dataset_id'],'snapshot_id':link['snapshot_id'],
+                   'rank':rank,'stage':stage,'target':str(expected.relative_to(root)),
+                   'temporary':str(temp_abs.relative_to(root)),'digest':link['digest'],
+                   'target_existed':target_existed,'expected_bytes':amount}
+        encoded=json.dumps(canonical,sort_keys=True,separators=(',',':'),ensure_ascii=False)
+        if len(encoded.encode('utf-8'))>4096: raise ValueError('Checkpoint link exceeds 4096 UTF-8 bytes')
+        return encoded
+
+    def reserve(self, amount, *, drain=False, operation='unspecified', owner=None, generation=None, writing=False, checkpoint_link=None):
         _integer(amount, 'reservation bytes')
         if not isinstance(drain, bool): raise ValueError('Invalid drain flag')
         if type(writing) is not bool: raise ValueError('Invalid writing flag')
         operation = _bounded_text(operation, 'operation', 64)
         owner = _bounded_text(owner, 'owner', 256, optional=True)
         generation = _bounded_text(generation, 'generation', 128, optional=True)
+        link_json = None if checkpoint_link is None else self._checkpoint_link(checkpoint_link, amount)
         key = uuid4().hex
         with self._ledger_transaction():
             count = self.db.execute('SELECT count(*) FROM reservations').fetchone()[0]
@@ -384,6 +497,8 @@ class DiskBudget:
                 raise DiskAdmissionError('Host/device minimum free space violated')
             self.db.execute('INSERT INTO reservations(id,bytes,operation,owner,generation,state) VALUES(?,?,?,?,?,?)',
                              (key, amount, operation, owner, generation, 'WRITING' if writing else 'RESERVED'))
+            if link_json is not None:
+                self.db.execute('INSERT INTO checkpoint_reservations(id,link) VALUES(?,?)',(key,link_json))
         return key
 
     def mark_writing(self, key):
@@ -433,26 +548,73 @@ class DiskBudget:
         evidence = _bounded_text(evidence, 'recovery evidence', 256)
         if terminal_state not in ('DURABLE','ROLLED_BACK','RECONCILED'): raise ValueError('Invalid terminal state')
         with self._ledger_transaction():
-            row = self.db.execute('SELECT bytes,materialized,state FROM reservations WHERE id=?', (key,)).fetchone()
-            if row is None: raise KeyError(key)
-            reserved, previous_materialized, state = row
-            if state not in ('RESERVED', 'WRITING'):
-                raise DiskAdmissionError('Reservation is already terminal; recovery was already applied')
-            if materialized_bytes > reserved: raise ValueError('Materialized bytes exceed reservation')
-            if materialized_bytes < previous_materialized:
-                raise ValueError('Recovery cannot erase previously materialized byte accounting')
-            changed = self.db.execute(
-                "UPDATE reservations SET materialized=?,state=?,evidence=? WHERE id=? AND state IN ('RESERVED','WRITING')",
-                (materialized_bytes,terminal_state,evidence,key)).rowcount
-            if changed != 1:
-                raise DiskAdmissionError('Reservation changed during recovery')
+            self._reconcile_row(key,materialized_bytes,evidence,terminal_state)
+
+    def _reconcile_row(self,key,materialized_bytes,evidence,terminal_state):
+        row=self.db.execute('SELECT bytes,materialized,state FROM reservations WHERE id=?',(key,)).fetchone()
+        if row is None: raise KeyError(key)
+        reserved,previous_materialized,state=row
+        if state not in ('RESERVED','WRITING'): raise DiskAdmissionError('Reservation is already terminal; recovery was already applied')
+        if materialized_bytes>reserved: raise ValueError('Materialized bytes exceed reservation')
+        if materialized_bytes<previous_materialized: raise ValueError('Recovery cannot erase previously materialized byte accounting')
+        changed=self.db.execute("UPDATE reservations SET materialized=?,state=?,evidence=? WHERE id=? AND state IN ('RESERVED','WRITING')",
+                                (materialized_bytes,terminal_state,evidence,key)).rowcount
+        if changed!=1: raise DiskAdmissionError('Reservation changed during recovery')
+
+    def checkpoint_links(self,dataset_root,limit=128):
+        _integer(limit,'checkpoint link limit',minimum=1)
+        root=str(Path(dataset_root).resolve())
+        names=('id','bytes','materialized_bytes','operation','owner','generation','state','evidence')
+        result=[]
+        with self._path_lock:
+            cursor=self.db.execute('''SELECT r.id,r.bytes,r.materialized,r.operation,r.owner,r.generation,r.state,r.evidence,c.link
+                FROM checkpoint_reservations c JOIN reservations r ON r.id=c.id ORDER BY r.id''')
+            for row in cursor:
+                link=json.loads(row[8])
+                if link.get('dataset_root')!=root: continue
+                result.append({'reservation':dict(zip(names,row[:8])),'link':link})
+                if len(result)>limit: raise DiskAdmissionError('Checkpoint link result exceeds limit')
+        return result
+
+    def reconcile_checkpoint(self,key,*,expected_reservation,expected_link,materialized_bytes,evidence,terminal_state='RECONCILED',evidence_document=None):
+        _integer(materialized_bytes,'materialized bytes')
+        if not isinstance(evidence,str) or not evidence.strip(): raise ValueError('Explicit recovery evidence is required')
+        evidence=_bounded_text(evidence,'recovery evidence',256)
+        if terminal_state not in ('DURABLE','ROLLED_BACK','RECONCILED'): raise ValueError('Invalid terminal state')
+        proof_json=None
+        if evidence_document is not None:
+            if type(evidence_document) is not dict: raise ValueError('Recovery evidence document must be an object')
+            proof_json=json.dumps(evidence_document,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False)
+            proof_bytes=proof_json.encode('utf-8')
+            if len(proof_bytes)>8192: raise ValueError('Recovery evidence document exceeds 8192 UTF-8 bytes')
+            import hashlib
+            if not evidence.endswith(':'+hashlib.sha256(proof_bytes).hexdigest()):
+                raise ValueError('Recovery evidence digest does not match evidence document')
+        with self._ledger_transaction():
+            current=self.reservation(key)
+            linkrow=self.db.execute('SELECT link FROM checkpoint_reservations WHERE id=?',(key,)).fetchone()
+            if current is None or linkrow is None: raise DiskAdmissionError('Checkpoint reservation intent is missing')
+            link=json.loads(linkrow[0])
+            if current != expected_reservation or link != expected_link: raise DiskAdmissionError('Checkpoint reservation CAS mismatch')
+            if current['state'] not in ('RESERVED','WRITING'): raise DiskAdmissionError('Reservation is already terminal')
+            self._reconcile_row(key,materialized_bytes,evidence,terminal_state)
+            if proof_json is not None:
+                self.db.execute('INSERT INTO checkpoint_recovery_receipts(id,proof) VALUES(?,?)',(key,proof_json))
+
+    def recovery_receipt(self,key):
+        with self._path_lock:
+            row=self.db.execute('SELECT proof FROM checkpoint_recovery_receipts WHERE id=?',(key,)).fetchone()
+        return None if row is None else json.loads(row[0])
 
     def release(self, key):
         # Idempotent for old callers; completed tokens are removed only at this
         # explicit quiescent boundary. A process crash never invokes this path.
         with self._ledger_transaction():
             self.db.execute("UPDATE reservations SET state='RECONCILED',evidence='release' WHERE id=? AND state IN ('RESERVED','WRITING')",(key,))
-            self.db.execute("DELETE FROM reservations WHERE id=? AND state='RECONCILED'",(key,))
+            removed=self.db.execute("DELETE FROM reservations WHERE id=? AND state='RECONCILED'",(key,)).rowcount
+            if removed:
+                self.db.execute('DELETE FROM checkpoint_reservations WHERE id=?',(key,))
+                self.db.execute('DELETE FROM checkpoint_recovery_receipts WHERE id=?',(key,))
 
     @contextmanager
     def allocation(self, amount, *, drain=False, operation='allocation', owner=None, generation=None,

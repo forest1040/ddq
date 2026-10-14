@@ -12,6 +12,8 @@
 
 同日更新：[P4-003／005／008の先行実装](phase4_validation_implementation.md)を追加した。evaluation専用注入と観測／拒否、paired report、明示勾配校正をMacへ接続した。M4／M5に必要なpositiveな実利益と最終matrixは未達で、各項目はIN_PROGRESSとする。
 
+同日更新：[checkpoint reservation recovery設計](phase4_checkpoint_recovery_design.md)と[実装資料](phase4_checkpoint_recovery_implementation.md)を追加した。最新committed v4 sidecar intentだけを対象に、明示offline/node-local時のmetadata/cut/inventory検査とper-token CAS receiptを行う。P4-009の限定範囲であり、全writer recovery、GC、host調停、strict capacity guaranteeの完了条件は維持する。
+
 backlog IDごとに設計書を作り、各項目を個別に実装・review・検証できるようにする。依存関係、データ形式、資源上限、MPI合意、commitと運用境界は本書で共有する。個別書は現状との差、入出力、アルゴリズム、失敗時の処理、受入条件を定義する。共通契約の変更を伴う場合は本書と関係する個別書を同じ変更で改訂する。
 
 設計作成と実装完了は別に管理する。設計書の作成だけではbacklogの状態を変えず、実装着手・検証の進捗をbacklogへ反映する。各設計は以下の成果物で対応づける。
@@ -130,7 +132,7 @@ baseline／observed／adaptedは同じremaining snapshotに対する別cost view
 
 ## 7. 検証・開発環境
 
-Mac＋uv＋local runnerを主環境とし、fake completion→実MPI P=1/2/4→buffered/F_NOCACHEの順で進める。protocol、cut、scope、budgetを検証してからLinux/O_DIRECTと実別hostへ進む。各新規クラスタ利用はjob・配布物・scratch・cleanup・資源・wallを具体化して利用許可を確認する。過去の小規模許可を拡大許可として扱わない。PBS adapterはscript render、投入は承認後の別操作。
+Mac＋uv＋local runnerを主環境とし、fake completion→実MPI P=1/2/4→buffered/F_NOCACHEを進める。Linux/O_DIRECTと実別hostについても一部の機能検証を行っているが、protocol、cut、scope、budgetを含む全fault/durability matrixの受入は残る。各新規クラスタ利用はjob・配布物・scratch・cleanup・資源・wallを具体化して利用許可を確認する。過去の小規模許可を拡大許可として扱わない。PBS adapterはscript render、投入は承認後の別操作。
 
 振幅・catalog・journal・code/uv環境・詳細rawはnode-local。他ownerのデータ・管理情報・leaseはMPIで取得する。共有diskの小さな補助mirrorは[内部計画](internal/lab_cluster_execution_plan.md)の条件だけで使用し、通常経路の必須条件にしない。site情報・queue・host/pathは個別公開設計へ転記せず内部資料へ置く。
 

@@ -17,7 +17,7 @@ uv.lock         uvのロックファイル
 
 ## 研究室クラスタの内部計画
 
-[研究室クラスタ調査・実行計画](docs/internal/lab_cluster_execution_plan.md)には、研究室固有の接続先、ノード構成、容量、運用情報を記載しています。[Linuxサーバ検証記録](docs/internal/ent_linux_validation/README.md)と[writer検証記録](docs/internal/phase4_writer_durability_validation/README.md)もホスト情報と絶対パスを含みます。将来リポジトリを共有する際は、これらの資料を非公開にするか匿名化する可能性があります。現在はリポジトリ内に保存しており、`docs/internal/` という配置だけでアクセスを制限するものではありません。公開前には資料・参照リンクと Git 履歴に含まれる情報も確認してください。
+[研究室クラスタ調査・実行計画](docs/internal/lab_cluster_execution_plan.md)には、研究室固有の接続先、ノード構成、容量、運用情報を記載しています。[Linuxサーバ検証記録](docs/internal/ent_linux_validation/README.md)、[writer検証記録](docs/internal/phase4_writer_durability_validation/README.md)、[checkpoint回収検証記録](docs/internal/phase4_checkpoint_recovery_validation/README.md)もホスト情報と絶対パスを含みます。将来リポジトリを共有する際は、これらの資料を非公開にするか匿名化する可能性があります。現在はリポジトリ内に保存しており、`docs/internal/` という配置だけでアクセスを制限するものではありません。公開前には資料・参照リンクと Git 履歴に含まれる情報も確認してください。
 
 ## Python環境
 
@@ -95,6 +95,8 @@ P4-003／005／008の[先行実装](docs/phase4_validation_implementation.md)も
 さらに[回収・cache課金・勾配資源検証・監視費用](docs/phase4_safety_monitoring_implementation.md)を補強しました。diskの二重回収拒否、共有RAMへのhint／trace課金、resource upper照合、completion collectorのon/off対照を追加しています。残る受入条件はbacklogで管理しています。
 
 [同volumeの共有disk admission](docs/phase4_disk_coordination_implementation.md)で、独立datasetの明示共通ledgerとforkへの継承、永続policy・合算容量検査を追加しました。cacheの任意診断情報も、最低foreground作業領域を確保するため必要時に精算します。
+
+[checkpoint reservation recoveryの設計](docs/phase4_checkpoint_recovery_design.md)と[実装資料](docs/phase4_checkpoint_recovery_implementation.md)を追加しました。全writer process終了後の明示offline/node-local operationとして、最新committed v4 sidecar intentをmetadata/cut/inventoryと照合します。dry runでもledgerを開いてroot/policy metadataを初期化・更新する場合がありますが、reservation精算とrecovery receipt保存はapply時のみです。prepare/global decisionは必須target、decision-copy欠損は許可し、partial temporaryは保存したままmaterialized精算します。通常resumeは欠損copyを再作成し、temporaryを削除しません。振幅/全physical closureやunlinked/uncommitted writer、GC、全writer調停、別ledger/外部job、cross-host、電源断は対象外です。検証記録は[内部資料](docs/internal/phase4_checkpoint_recovery_validation/README.md)を参照してください。P4-009とPhase 4は未完了です。
 
 [Phase 4 設計書](docs/phase4_design.md)と[実装・検証資料](docs/phase4_implementation.md)に、worker I/O、nonblocking MPI、先読み・書き戻し、S2／local fusion／FusedSWAP、Parameter batch、期待値・三方式の勾配、Runtime Guardとpolicy変更、node-local checkpoint／resume／GCを記載しています。[Mac実測比較](docs/phase4_benchmark.md)では同期／非同期／S2を同一回路で比較しています。
 

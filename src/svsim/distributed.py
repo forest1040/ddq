@@ -71,6 +71,22 @@ class DistributedConfig:
 class DistributedSimulator:
     transport_class = MPITransport
     def __init__(self,num_qubits,config,*,comm=None,initial_state=None,initial_blocks=None,network_profile=None,storage_bandwidth=None,_create=True,_snapshot=None):
+        self._dataset_leases={}
+        try:
+            self._initialize(num_qubits,config,comm=comm,initial_state=initial_state,
+                             initial_blocks=initial_blocks,network_profile=network_profile,
+                             storage_bandwidth=storage_bandwidth,_create=_create,_snapshot=_snapshot)
+        except BaseException:
+            # Preserve the constructor error while closing all partial owners.
+            quiescent=True
+            for resource in (getattr(self,'local',None),getattr(self,'disk_budget',None),getattr(self,'transport',None)):
+                if resource is not None:
+                    try:resource.close()
+                    except BaseException:quiescent=False
+            if quiescent:self._close_dataset_leases()
+            raise
+
+    def _initialize(self,num_qubits,config,*,comm=None,initial_state=None,initial_blocks=None,network_profile=None,storage_bandwidth=None,_create=True,_snapshot=None):
         if comm is None:
             from mpi4py import MPI
             comm = MPI.COMM_WORLD
@@ -92,6 +108,8 @@ class DistributedSimulator:
             self.environment = self.transport.handshake()
             self.block_bits = config.block_bits
             self.directory = Path(config.directory)
+            self.directory.mkdir(parents=True,exist_ok=True)
+            self._lease_dataset_roots([self.directory])
             if config.storage_scope=='node-local':self._bootstrap_disk_budget()
             storage = StorageConfig(str(self.directory/f'rank-{self.rank:04d}'),config.block_bits,
                 config.ram_budget_bytes_per_rank,config.backend,config.alignment,metadata_reserve_bytes=config.metadata_reserve_bytes)
@@ -235,6 +253,7 @@ class DistributedSimulator:
         own=StoragePlacement.local(self.store_id,self.rank,self.local.profile.hostname,self.directory)
         roots=sorted({p['root'] for value in self.registry.values() if isinstance(value,list) for p in value
             if p['host']==own.host and p['volume_id']==own.volume_id})
+        self._lease_dataset_roots(roots)
         key=content_hash({'dataset':self.dataset_id,'host':own.host,'volume':own.volume_id})
         if self.disk_budget is None:
             ledger=Path(own.root)/'.disk-admission'/f'{key}.sqlite3'
@@ -243,6 +262,18 @@ class DistributedSimulator:
                 shared_policy=True)
         self.disk_budget.register_roots(roots)
         self.store.disk_budget=self.disk_budget
+
+    def _lease_dataset_roots(self,roots):
+        from .dataset_lease import DirectoryLease
+        for root in sorted(roots,key=str):
+            key=str(Path(root).resolve())
+            if key not in self._dataset_leases:
+                self._dataset_leases[key]=DirectoryLease(root)
+            self._dataset_leases[key].assert_current()
+
+    def _close_dataset_leases(self):
+        for lease in self._dataset_leases.values():lease.close()
+        self._dataset_leases.clear()
 
     def set_network_profile(self,profile):
         """Collectively select a calibration and attach passive observation."""
@@ -278,7 +309,9 @@ class DistributedSimulator:
 
     def _save_settings(self):
         with self.store.db:
-            for k,v in {'dataset_id':self.dataset_id,'store_id':self.store_id,'registry':self.registry}.items():
+            settings={'dataset_id':self.dataset_id,'store_id':self.store_id,'registry':self.registry}
+            if self.disk_budget is not None:settings['disk_admission_ledger']=str(self.disk_budget._ledger_path)
+            for k,v in settings.items():
                 self.store.db.execute('INSERT OR REPLACE INTO distributed_settings VALUES(?,?)',(k,canonical(v)))
 
     @property
@@ -290,6 +323,7 @@ class DistributedSimulator:
 
     def _open(self):
         if self.closed: raise ValueError('Distributed simulator is closed')
+        for lease in self._dataset_leases.values():lease.assert_current()
         if getattr(self,'checkpoint_requires_recovery',None):
             raise RuntimeError('Authoritative checkpoint committed; decision delivery failed. Resume before executing.')
 
@@ -933,9 +967,11 @@ class DistributedSimulator:
         if not self.closed:
             for key,reader in self.stores.items():
                 if reader is not self.store: reader.close()
-            self.local.close(); self.transport.close(); self.closed=True
+            self.local.close(); self.transport.close()
             if getattr(self,'disk_budget',None): self.disk_budget.close()
             if getattr(self,'lease_path',None): self.lease_path.unlink(missing_ok=True)
+            self.closed=True
+            self._close_dataset_leases()
 
     def __enter__(self): return self
     def __exit__(self,*args): self.close()

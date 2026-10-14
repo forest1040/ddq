@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-14",
+  "scope": "P4-009 offline checkpoint-linked reservation recovery, single-host correctness",
+  "source_matches_workspace": true,
+  "results": {
+    "mac": {
+      "passed": 184,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 112.071
+    },
+    "linux": {
+      "passed": 181,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 436.538
+    },
+    "linux-native": {
+      "passed": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 155.209
+    }
+  },
+  "recovery_receipts": 16,
+  "actual_native_catalogs": 4,
+  "resources": {
+    "cpus": 4,
+    "memory_bytes": 8589934592,
+    "pids": 512,
+    "shm_bytes": 268435456,
+    "network": "none"
+  },
+  "artifacts": {
+    "README.md": "41874fb13668848b99e424a0c53239a018cb4c446a4cacac4c1f3454422b9956",
+    "capture-ent-final.sh": "40c443ac2b50a0d569aad390aa1921cdd5c83efa429fcd98970857ea5c50c149",
+    "capture-ent.sh": "3fe04c669f62f197085afac29c9c7c0b1308644070cb8fe2393b2d5fc8a17afc",
+    "linux/final/capability-probe.json": "082215166183ac53a8ab923840d55727bcd1b3ba58d8d91dffc7104d0af7ffca",
+    "linux/final/collection.txt": "e46b6553ea0bebdcfb3b77a417d2b4a6b8e0a0f0c17dbb6fc0f33ea1263688a4",
+    "linux/final/filesystem.txt": "998f0641f239be0132f0d927b0e99d94fcf12ebc7628bf91ecc530c035d94a31",
+    "linux/final/image.json": "d1d1ac3be13fd120fc4eb5e84f82cc638d292c3bbd8e9e0ba690a5855c958474",
+    "linux/final/kernel.txt": "5124d2622afe69deb3f66ef15aa225dbb9dd1b8c31727ff8ca414d8bf43af060",
+    "linux/final/native-catalog-capabilities.json": "e19a1701c71ed3b0cae9b9c12fd684355ef5e0f2fa4073694a7e0fc1a7132ff6",
+    "linux/final/native.txt": "5bd801a5488f9a24b958a8bf5d17f5b19515dccab722b921ac5548d641bc0111",
+    "linux/final/native.xml": "3a7597883d688d097350dd96799cd2ad36b546966b2dffc8e08de267946d8aa6",
+    "linux/final/recovery-receipts.json": "9a1ba9fd31435b35a43b42f9e64b0c440275a3fb32d4655d31e9053a6845b48b",
+    "linux/final/regression.txt": "07531656858a401a36705129b929d3d37783c8aca6934c0380803b6673b013e0",
+    "linux/final/regression.xml": "a3d22153ebb330261da77baa6efb85785ae7b98d73775449c57574278d2c5259",
+    "linux/final/source-hashes.txt": "f94e3e1822eb1284d9375ec36bc548d87e0d34cf97f0779c64de06f4cc5077f0",
+    "linux/final/status.tsv": "a4302229f13cefd0ea026781d9f8db5d6c4735794f85dcbc25c23137f7c9c0b2",
+    "linux/initial/filesystem.txt": "d17f55af140661e4ff96d228bacc5a7be156ed1678d99a332b5358ebe9284cc5",
+    "linux/initial/image.json": "d1d1ac3be13fd120fc4eb5e84f82cc638d292c3bbd8e9e0ba690a5855c958474",
+    "linux/initial/kernel.txt": "5124d2622afe69deb3f66ef15aa225dbb9dd1b8c31727ff8ca414d8bf43af060",
+    "linux/initial/native.txt": "75c46e10762bc140df6bcff6a950a5b3551c9639dcddf27cdb41f4fcb949409b",
+    "linux/initial/native.xml": "1629be5dbe14843e03acb4fb74651764ee604a78b9876274c9877040d7103a05",
+    "linux/initial/regression.txt": "abe786becb92c2887dee6d52e2746d152983af5719bb0a4c6d52856d383d1031",
+    "linux/initial/regression.xml": "01132cd8df525c8f3617eb5839a3a38174d0f6f00ca0bb6451060d8f49df0c6a",
+    "linux/initial/source-hashes.txt": "d32f0346371414f3f4ae891828b32aacdd6a7701aae2386c8e48cffbeed7d9ae",
+    "linux/initial/status.tsv": "4261e48d4078329fa8b61bd9fa784629660174ad06ea091692a502b8c5bc042c",
+    "mac/collection.txt": "c970c75f96093793cb194a501a8b8eae98e81164f3c334ce78035ab88164541b",
+    "mac/environment.json": "773911f8cc79da0a3479d63213df9aca78ec342c93ed1ea375ff7de5cec23c45",
+    "mac/final/collection.txt": "dddaa20263f2ff8381edf273f2d65054c3b7179dee08da590a44083d571d8297",
+    "mac/final/regression.txt": "44d03b14a1900bf3ca7bb083b42d7e76d5abd7489df5fa3d7f1c4fee170e771d",
+    "mac/final/regression.xml": "f3d3da3451b88efb66fab4642b7b0bdb8c9f827d67f5fb17b4f0c829e9ae5920",
+    "mac/final/source-hashes.json": "8d1cb478c4fb5cae765c07c0a39da94ee35cb7b919ff145198c124bc564b5b83",
+    "mac/initial.xml": "3fe65fadcb23784101b72fadc284f8be2907ce0b1780efcd1300622bd4e14f60",
+    "mac/path-regression.xml": "5636254f8d0efcc2f09a6603e647236b0c875efa353000104435effe36913fba",
+    "mac/regression.txt": "962e974f890e83fab1ebb60b4478a2e035c069924ff3b483e8dc70eddf8f01b3",
+    "mac/regression.xml": "1d8b3468797ceb71572d50550bc3afd1c1415d59d8ed9931f9620743f2428c57",
+    "mac/source-hashes.json": "65251cd45a2eeb8dac5e7540783a12dc850ee5e1650340188ed19a1ef9f92634",
+    "merged-results.json": "eb9c42c50bd920f5a8e5f24b92d9e6a6ae052eb6eaf83c5545a5c416c33073c1",
+    "run-ent-final.sh": "fb716d1b1d940c878b7c850b6781d831d6c6a7a89dbcb236eb437ae3ecad2b2a",
+    "run-ent.sh": "a9fdcfb0ca4c103833af0167e789db829a138e68f5ecba4af0deb7c65540b88f",
+    "verify-results.py": "41aab3b31d57ef4817dda9d61a1f4ebd5d560d1a297cd00f311029fb67508cde"
+  }
+}

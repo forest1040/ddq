@@ -1,5 +1,7 @@
 """Durable rank prepare records and one authoritative global commit file."""
 from dataclasses import replace
+from hashlib import sha256
+from contextlib import nullcontext
 import json
 import os
 from pathlib import Path
@@ -12,14 +14,26 @@ from .layout import QubitLayout
 from .admitted_files import file_allocation
 
 
-def atomic_json(path,data,*,disk_budget=None):
+def atomic_json(path,data,*,disk_budget=None,checkpoint_context=None,owner=None):
+    from .dataset_lease import DirectoryLease
+    context=DirectoryLease(checkpoint_context['dataset_root']) if checkpoint_context is not None else nullcontext()
+    with context:
+        return _atomic_json(path,data,disk_budget=disk_budget,checkpoint_context=checkpoint_context,owner=owner)
+
+
+def _atomic_json(path,data,*,disk_budget=None,checkpoint_context=None,owner=None):
     path=Path(path)
     raw=(canonical(data)+'\n').encode()
     nonce=uuid4().hex
     temporary=path.with_name('.'+path.name+'.'+nonce+'.tmp')
+    link=None
+    if checkpoint_context is not None:
+        link={**checkpoint_context,'target':str(path.absolute()),'temporary':str(temporary.absolute()),
+              'digest':sha256(raw).hexdigest()}
     # Keep admission through the rename, directory durability barrier, and all
     # temporary-file cleanup. A rejected reservation therefore leaves no files.
-    with file_allocation(disk_budget,len(raw),temporary,drain=True,operation='atomic-json') as key:
+    with file_allocation(disk_budget,len(raw),temporary,drain=True,operation='atomic-json',
+                         owner=owner,generation=nonce,checkpoint_link=link) as key:
         path.parent.mkdir(parents=True,exist_ok=True)
         created=False
         try:
@@ -45,9 +59,16 @@ def atomic_json(path,data,*,disk_budget=None):
             if created: temporary.unlink(missing_ok=True)
 
 
-def _disk_kwargs(sim):
+def _disk_kwargs(sim,snapshot_id=None,stage=None):
     budget=getattr(sim,'disk_budget',None)
-    return {'disk_budget':budget} if budget is not None else {}
+    if budget is None:return {}
+    kwargs={'disk_budget':budget}
+    if snapshot_id is not None:
+        for lease in getattr(sim,'_dataset_leases',{}).values():lease.assert_current()
+        kwargs.update(checkpoint_context={'dataset_root':str(sim.directory.absolute()),
+            'dataset_id':sim.dataset_id,'snapshot_id':snapshot_id,'rank':sim.rank,'stage':stage},
+            owner=sim.run_id)
+    return kwargs
 
 
 def commit_snapshot(sim,prefix_fingerprint=None):
@@ -65,7 +86,7 @@ def commit_snapshot(sim,prefix_fingerprint=None):
         prepared={'schema_version':version,'snapshot_id':snapshot_id,'rank':sim.rank,'root':sim.root,
                   'frontier':sim.frontier,'store_id':sim.store_id,'journal_cursors':sim.local.journal.cursors()}
         path=sim.directory/f'rank-{sim.rank:04d}'/'manifests'/f'prepare-{snapshot_id}.json'
-        atomic_json(path,{'manifest':prepared,'checksum':content_hash(prepared)},**_disk_kwargs(sim))
+        atomic_json(path,{'manifest':prepared,'checksum':content_hash(prepared)},**_disk_kwargs(sim,snapshot_id,'prepare'))
         with sim.store.db:
             sim.store.db.execute('INSERT OR REPLACE INTO snapshots VALUES(?,?)',(snapshot_id,canonical(prepared)))
     except Exception as exc: error=str(exc)
@@ -93,7 +114,7 @@ def commit_snapshot(sim,prefix_fingerprint=None):
     decision=decision_record(data) if version == 4 else data
     if version == 4: sim.transport.agree(decision)
     if sim.rank == 0:
-        try: atomic_json(sim.directory/'global/manifests'/f'{snapshot_id}.json',{'manifest':decision,'checksum':content_hash(decision)},**_disk_kwargs(sim))
+        try: atomic_json(sim.directory/'global/manifests'/f'{snapshot_id}.json',{'manifest':decision,'checksum':content_hash(decision)},**_disk_kwargs(sim,snapshot_id,'decision'))
         except Exception as exc: error=str(exc)
     sim.transport.vote(error)
     sim._checkpoint_decision_durable=True
@@ -106,7 +127,7 @@ def commit_snapshot(sim,prefix_fingerprint=None):
         error=None
         try:
             atomic_json(sim.directory/f'rank-{sim.rank:04d}'/'manifests'/f'decision-{snapshot_id}.json',
-                {'manifest':decision,'checksum':content_hash(decision)},**_disk_kwargs(sim))
+                {'manifest':decision,'checksum':content_hash(decision)},**_disk_kwargs(sim,snapshot_id,'decision-copy'))
         except Exception as exc: error='Committed decision copy failed; stop and recover: '+str(exc)
         try: sim.transport.vote(error)
         except Exception:
@@ -213,7 +234,7 @@ def restore(sim,snapshot,*,validate=True):
                 decision=decision_record(data)
                 if copy.exists() and content_hash(_read(copy)) != content_hash(decision): raise OSError('Decision copy conflicts with authoritative commit')
                 # Repair a missing copy only after authority and prepare validate.
-                if not copy.exists(): atomic_json(copy,{'manifest':decision,'checksum':content_hash(decision)},**_disk_kwargs(sim))
+                if not copy.exists(): atomic_json(copy,{'manifest':decision,'checksum':content_hash(decision)},**_disk_kwargs(sim,data['snapshot_id'],'decision-copy'))
             for kind,cursor in prepared['journal_cursors'].items():
                 for _ in sim.local.journal.replay(kind,cursor): pass
         sim.sequencer.operations[:] = [decode_gate(g) for g in data['gates']]
