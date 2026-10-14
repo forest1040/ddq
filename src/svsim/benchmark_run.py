@@ -47,6 +47,7 @@ class RunOptions:
     seed: int = 0
     threads: int = 1
     oracle_max_qubits: int = 14
+    executor: str = 'sync'
 
     def __post_init__(self):
         for name in ('block_bits', 'repetitions', 'warmup', 'ram_budget_bytes_per_rank', 'disk_budget_bytes',
@@ -63,6 +64,19 @@ class RunOptions:
         if self.backend not in {'buffered', 'direct'}: raise ValueError('backend must be buffered or direct')
         if self.seed > (1 << 64) - 1: raise ValueError('seed must fit in an unsigned 64-bit integer')
         if self.oracle_max_qubits > 20: raise ValueError('oracle gather is limited to 20 qubits')
+        if self.executor not in {'sync', 'async'}: raise ValueError('executor must be sync or async')
+        if self.executor == 'async' and self.threads != _async_policy().io_workers:
+            raise ValueError('async runs label threads as the policy io_workers, as runtime profiles do')
+
+
+def _async_policy():
+    from .async_scheduler import AsyncPolicy
+    return AsyncPolicy()
+
+
+def executor_policy(options):
+    if options.executor == 'sync': return None
+    return content_hash(asdict(_async_policy()))
 
 
 @dataclass(frozen=True)
@@ -99,7 +113,8 @@ def condition(case, options, ranks):
     w = case.workload
     return {'label': case.label, 'variant': case.variant, 'qubits': w.qubits, 'block_bits': options.block_bits,
             'ranks': ranks, 'nodes': 1, 'threads': options.threads, 'storage': w.policies['storage'], 'backend': options.backend,
-            'mode': 'distributed-sync', 'frame': w.policies['frame'], 'swap': w.policies['swap'],
+            'mode': f'distributed-{options.executor}', 'executor_policy': executor_policy(options),
+            'frame': w.policies['frame'], 'swap': w.policies['swap'],
             'execution': w.policies['execution'], 'initial_state': w._data.get('initial_state', 'zero')}
 
 
@@ -167,7 +182,7 @@ def sync_probe(directory, count=SYNC_PROBE_COUNT):
     return statistics.median(samples)
 
 
-def _trial(case, options, directory, comm):
+def _trial(case, options, directory, comm, eta_model=None, fingerprint=None):
     """One collective trial; returns rank-MAX phase walls and validation outside timing."""
     from .distributed import DistributedConfig, DistributedSimulator
     workload = case.workload
@@ -182,7 +197,11 @@ def _trial(case, options, directory, comm):
     cpu0 = time.process_time()
     try:
         t = time.perf_counter()
-        sim = DistributedSimulator(workload.qubits, config, comm=comm, initial_state=initial)
+        if options.executor == 'async':
+            from .async_scheduler import AsyncDistributedSimulator
+            sim = AsyncDistributedSimulator(workload.qubits, config, comm=comm, initial_state=initial,
+                                            policy=_async_policy())
+        else: sim = DistributedSimulator(workload.qubits, config, comm=comm, initial_state=initial)
         walls['setup'] = time.perf_counter() - t
         t = time.perf_counter()
         for node in workload.expanded_operations(MAX_EXECUTED_GATES):
@@ -190,14 +209,21 @@ def _trial(case, options, directory, comm):
             sim.gate(kind, targets, **kwargs)
         binding = sim.bind(workload.binding.values)
         walls['compile'] = time.perf_counter() - t
-        t = time.perf_counter()
-        sim.materialize(binding=binding)
-        walls['execute'] = time.perf_counter() - t
+        checks = []
+        if eta_model is None:
+            t = time.perf_counter()
+            sim.materialize(binding=binding)
+            walls['execute'] = time.perf_counter() - t
+        else:
+            walls['execute'], checks = _execute_with_eta(sim, binding, eta_model, comm, fingerprint)
         t = time.perf_counter()
         sim.cache.flush()
         if workload.policies['storage'] == 'file': sim.store.flush()
         walls['flush'] = time.perf_counter() - t
         peak = sim.budget.peak
+        # State check after the timed phases: a device that switched sync state
+        # mid-trial makes the trial unusable as a single-state calibration row.
+        probe_after = sync_probe(directory / 'sync-after')
         payload, total = _directory_bytes(directory)
         validation = {'oracle': 'not-run', 'max_abs_error': None, 'passed': None}
         if workload.qubits <= options.oracle_max_qubits:
@@ -218,11 +244,54 @@ def _trial(case, options, directory, comm):
         shutil.rmtree(directory, ignore_errors=True)
     walls = {phase: comm.allreduce(walls[phase], op=_max()) for phase in PHASES}
     walls['total'] = sum(walls[phase] for phase in PHASES)
-    return {'wall_seconds': walls, 'cpu_seconds': comm.allreduce(time.process_time() - cpu0),
+    return {'wall_seconds': walls, 'eta_checks': checks, 'cpu_seconds': comm.allreduce(time.process_time() - cpu0),
             'managed_peak_bytes': comm.allreduce(peak, op=_max()),
             'disk_payload_bytes': comm.allreduce(payload), 'disk_total_bytes': comm.allreduce(total),
             'sync_probe_median_seconds': comm.allreduce(probe, op=_max()),
+            'sync_probe_after_seconds': comm.allreduce(probe_after, op=_max()),
             'timestamp': _timestamp()}, validation
+
+
+ETA_CHECK_FRACTIONS = (0.0, 0.5)
+
+
+def _execute_with_eta(sim, binding, model, comm, fingerprint):
+    """Execute in segments; before each, record the time-model ETA to the end (untimed).
+
+    The observed value of a check is the rank-MAX wall of all later segments,
+    i.e. the actual remaining gates-only execution time from that frontier.
+    """
+    from .runtime_time_model_eta import VIEW_NAME
+    # Checks capture the whole remaining program at once; the runtime's own
+    # in-run captures keep their default bounded limits.
+    sim.runtime.configure_eta(max_bytes=64 * 1024, scan_items=MAX_EXECUTED_GATES, scan_seconds=1.0)
+    sim.runtime.attach_time_model(model, configuration_fingerprint=fingerprint)
+    last = len(sim.sequencer.operations) - 1
+    marks = sorted({int(f * (last + 1)) for f in ETA_CHECK_FRACTIONS if last >= 0})
+    predictions, segments = [], []
+    for i, mark in enumerate(marks):
+        end = marks[i + 1] - 1 if i + 1 < len(marks) else last
+        sim.runtime.set_time_model_sync_latency(None)
+        median_view = sim.runtime.update_eta(endpoint_frontier=last, collective=True)
+        probe = comm.allreduce(sync_probe(sim.directory / f'eta-probe-{comm.Get_rank()}'), op=_max())
+        sim.runtime.set_time_model_sync_latency(probe)
+        result = sim.runtime.update_eta(endpoint_frontier=last, collective=True)
+        view = result['views'][VIEW_NAME]
+        predictions.append({'frontier': sim.frontier, 'remaining_gate_count': view['remaining_gate_count'],
+                            'sync_probe_seconds': probe,
+                            'median_sync_predicted_expected_seconds': median_view['rank_max_expected_seconds'][VIEW_NAME],
+                            'predicted_lower_seconds': view['lower_seconds'],
+                            'predicted_expected_seconds': result['rank_max_expected_seconds'][VIEW_NAME],
+                            'predicted_upper_seconds': view['upper_seconds'],
+                            'partial_expected_seconds': view['partial_expected_seconds'],
+                            'evidence': view['evidence'], 'unknown_reasons': list(view['unknown_reasons']),
+                            'extraction_seconds': result['extraction_seconds']})
+        t = time.perf_counter()
+        sim.materialize(frontier=end, binding=binding)
+        segments.append(time.perf_counter() - t)
+    for i, row in enumerate(predictions):
+        row['observed_seconds'] = comm.allreduce(sum(segments[i:]), op=_max())
+    return sum(segments), predictions
 
 
 def _max():
@@ -230,8 +299,14 @@ def _max():
     return MPI.MAX
 
 
-def run_cases(cases, profile: ProfileDocument, scratch, options: RunOptions, comm):
-    """Run interleaved cases; returns one benchmark-run document per case."""
+def run_cases(cases, profile: ProfileDocument, scratch, options: RunOptions, comm, eta_model=None):
+    """Run interleaved cases; returns one benchmark-run document per case.
+
+    With ``eta_model`` (async executor only) every trial also records the
+    runtime time-model ETA against the actual remaining execution time.
+    """
+    if eta_model is not None and options.executor != 'async':
+        raise ValueError('runtime ETA checks need the async executor')
     if not 1 <= len(cases) <= MAX_CASES: raise ValueError(f'run needs 1..{MAX_CASES} cases')
     if len({case.label for case in cases}) != len(cases): raise ValueError('case labels must be unique')
     ranks = comm.Get_size()
@@ -253,7 +328,8 @@ def run_cases(cases, profile: ProfileDocument, scratch, options: RunOptions, com
                     continue
                 directory = job / f'case-{index}-round-{round_index}' / f'rank-{comm.Get_rank()}'
                 try:
-                    trial, validation = _trial(cases[index], options, directory, comm)
+                    trial, validation = _trial(cases[index], options, directory, comm, eta_model,
+                                               profile.configuration_fingerprint)
                 except (ArithmeticError, OSError, MemoryError, ValueError, RuntimeError) as exc:
                     failure = {'case': cases[index].label, 'round': round_index, 'error': f'{type(exc).__name__}: {exc}'}
                     raise
@@ -269,11 +345,11 @@ def run_cases(cases, profile: ProfileDocument, scratch, options: RunOptions, com
         if failure is None: raise
     finally:
         shutil.rmtree(job, ignore_errors=True)
-    return [_document(case, plan, profile, options, ranks, trials[i], validations[i], omitted, failure)
+    return [_document(case, plan, profile, options, ranks, trials[i], validations[i], omitted, failure, eta_model)
             for i, (case, plan) in enumerate(zip(cases, plans))]
 
 
-def _document(case, plan, profile, options, ranks, trials, validations, omitted, failure):
+def _document(case, plan, profile, options, ranks, trials, validations, omitted, failure, eta_model=None):
     workload = case.workload
     features, _ = workload_features(workload, options.block_bits, ranks)
     lowered = sum(entry.count for entry in workload.lowered()[0])
@@ -299,13 +375,17 @@ def _document(case, plan, profile, options, ranks, trials, validations, omitted,
         'status': 'completed' if complete else 'failed' if failure else 'partial',
         'omitted': case_omitted + ([failure] if failure and failure['case'] == case.label else []),
         'failure': failure, 'seed': options.seed, 'options': asdict(options),
+        'eta_model_id': eta_model.model_id if eta_model is not None else None,
         'limits': {'executed_gate_limit_count': MAX_EXECUTED_GATES, 'max_case_count': MAX_CASES,
                    'deadline_scope': 'cooperative between trials; an in-flight trial is not preempted',
                    'ram_scope': 'managed budget per rank; process RSS is not limited'},
         'timing': {'phase_scope': 'rank MAX of local serial phase wall; total is the sum of phase MAX values',
                    'excluded': ['oracle gather and validation', 'disk usage scan', 'barriers between phases',
-                                f'pre-trial sync probe ({SYNC_PROBE_COUNT} x 4 KiB pwrite+fsync, rank MAX of medians)'],
+                                f'pre-trial sync probe ({SYNC_PROBE_COUNT} x 4 KiB pwrite+fsync, rank MAX of medians)',
+                                'post-flush sync probe for device-state stability'],
                    'sync_probe_scope': 'device state context only; macOS fsync does not flush the device cache',
+                   'eta_checks': 'time-model attach and ETA captures are outside the execute segments; '
+                                 'observed is the rank-MAX wall of the remaining segments',
                    'order': 'seeded shuffled case order per round; warmup rounds discarded'},
         'provenance': profile.data['provenance']}
     encoded = wire_encode(document)

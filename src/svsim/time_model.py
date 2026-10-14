@@ -20,9 +20,10 @@ from .workload_spec import bounded_tree
 
 MODEL_VERSION = 'end-to-end-sync-linear-nnls-v2'
 PHASES = ('setup', 'compile', 'execute', 'flush', 'cleanup')
-CONDITION_KEYS = ('block_bits', 'ranks', 'nodes', 'threads', 'storage', 'backend', 'mode', 'frame',
-                  'swap', 'execution', 'initial_state')
+CONDITION_KEYS = ('block_bits', 'ranks', 'nodes', 'threads', 'storage', 'backend', 'mode', 'executor_policy',
+                  'frame', 'swap', 'execution', 'initial_state')
 MAX_RUNS = 256
+STABLE_SYNC_RATIO = 2.0
 RELATIVE_FLOOR_SECONDS = 1e-3
 
 
@@ -103,6 +104,13 @@ def _trial_rows(run):
     return trials
 
 
+def _stable(trial):
+    """Keep trials whose device sync state did not switch between the pre and post probes."""
+    before, after = trial['sync_probe_median_seconds'], trial.get('sync_probe_after_seconds')
+    if after is None: return True  # runs recorded before the post probe existed
+    return max(before, after) <= STABLE_SYNC_RATIO * min(before, after)
+
+
 def fit(runs):
     """Fit phase models; every run must share configuration fingerprint and condition class.
 
@@ -118,7 +126,9 @@ def fit(runs):
         if run_condition(run) != condition: raise ValueError('runs mix execution condition classes')
     if len({run['run_id'] for run in runs}) != len(runs): raise ValueError('duplicate calibration run')
     features = [{row['feature']: row['count'] for row in run['work']['features']} for run in runs]
-    rows = [(f, t) for f, run in zip(features, runs) for t in _trial_rows(run)]
+    candidates = [(f, t) for f, run in zip(features, runs) for t in _trial_rows(run)]
+    rows = [(f, t) for f, t in candidates if _stable(t)]
+    if not rows: raise ValueError('no calibration trial kept one device sync state')
     sync = sorted(t['sync_probe_median_seconds'] for _, t in rows)
     names = sorted(set().union(*features))
     phases, ranges = {}, []
@@ -148,7 +158,9 @@ def fit(runs):
              'calibration_workload_ids': sorted({run['workload_id'] for run in runs}),
              'phases': phases, 'feature_ranges': ranges,
              'sync_latency': {'min_seconds': sync[0], 'median_seconds': float(np.median(sync)), 'max_seconds': sync[-1],
-                              'trial_count': len(sync), 'probe': '4 KiB pwrite+fsync median before each trial'},
+                              'trial_count': len(sync), 'probe': '4 KiB pwrite+fsync median before each trial',
+                              'excluded_unstable_trial_count': len(candidates) - len(rows),
+                              'stability_rule': f'before/after probe ratio <= {STABLE_SYNC_RATIO}'},
              'evidence': 'derived', 'scope': 'same-host',
              'interval_kind': 'calibrated sync-latency range plus fit residuals; not a confidence interval',
              'residual_rule': {'relative_floor_seconds': RELATIVE_FLOOR_SECONDS,
@@ -211,19 +223,36 @@ class TimeModelDocument:
         latency instead of the calibration median; lower/upper keep the
         calibrated range widened to include it.
         """
+        return self._evaluate(features, condition, configuration_fingerprint, sync_seconds,
+                              phases=PHASES, dropped=(), ignored=())
+
+    def predict_remaining(self, features, condition, configuration_fingerprint, sync_seconds=None):
+        """Execute-phase time of remaining gate work for a gates-only runtime ETA.
+
+        Setup, compile, flush and cleanup are outside the gates-only endpoint,
+        and the run intercept was already paid, so only the execute row is used
+        without its constant term. The initial state only affects setup.
+        """
+        result = self._evaluate(features, condition, configuration_fingerprint, sync_seconds,
+                                phases=('execute',), dropped=('constant',), ignored=('initial_state',))
+        return {**result, 'endpoint': 'gates-only-execute'}
+
+    def _evaluate(self, features, condition, configuration_fingerprint, sync_seconds, *, phases, dropped, ignored):
         model = self._data
         if sync_seconds is not None and (type(sync_seconds) not in (int, float) or not math.isfinite(sync_seconds)
                                          or sync_seconds <= 0):
             raise ValueError('sync_seconds must be positive and finite')
-        mismatch = [key for key in CONDITION_KEYS if model['condition'].get(key) != condition.get(key)]
+        mismatch = [key for key in CONDITION_KEYS if key not in ignored and model['condition'].get(key) != condition.get(key)]
         if configuration_fingerprint != model['configuration_fingerprint']: mismatch.append('configuration_fingerprint')
         if mismatch: return _unknown('TIME_MODEL_CONDITION_MISMATCH', mismatch=mismatch)
         if features is None: return _unknown('LOWERING_INCOMPLETE')
         ranges = {row['feature']: row for row in model['feature_ranges']}
         missing = sorted(k for k, v in features.items() if v and k not in ranges)
         if missing: return _unknown('UNCALIBRATED_WORK_FEATURES', missing=missing)
-        outside = sorted(k for k, row in ranges.items() if not row['min_count'] <= features.get(k, 0) <= row['max_count'])
-        phases, totals = {}, {'lower': 0.0, 'expected': 0.0, 'upper': 0.0}
+        used = {f for phase in phases for f in model['phases'][phase]['features']} - set(dropped)
+        outside = sorted(k for k, row in ranges.items()
+                         if k in used and not row['min_count'] <= features.get(k, 0) <= row['max_count'])
+        selected, phases, totals = phases, {}, {'lower': 0.0, 'expected': 0.0, 'upper': 0.0}
         calibrated = model['sync_latency']
         latency = {'min_seconds': calibrated['min_seconds'], 'max_seconds': calibrated['max_seconds'],
                    'median_seconds': calibrated['median_seconds'] if sync_seconds is None else sync_seconds}
@@ -232,10 +261,10 @@ class TimeModelDocument:
             latency['min_seconds'] = min(latency['min_seconds'], sync_seconds)
             latency['max_seconds'] = max(latency['max_seconds'], sync_seconds)
         scenarios = {'fast_sync_seconds': 0.0, 'slow_sync_seconds': 0.0}
-        for phase in PHASES:
+        for phase in selected:
             row = model['phases'][phase]
-            base = sum(c * features.get(f, 0) for c, f in zip(row['base'], row['features']))
-            per_sync = sum(c * features.get(f, 0) for c, f in zip(row['per_sync_second'], row['features']))
+            base = sum(c * features.get(f, 0) for c, f in zip(row['base'], row['features']) if f not in dropped)
+            per_sync = sum(c * features.get(f, 0) for c, f in zip(row['per_sync_second'], row['features']) if f not in dropped)
             lower = base + per_sync * latency['min_seconds']
             expected = base + per_sync * latency['median_seconds']
             upper = ((base + per_sync * latency['max_seconds']) * (1 + row['max_abs_relative_residual'])

@@ -17,7 +17,7 @@ TRUE = {'setup': {'constant': .05, 'blocks': 1e-4}, 'compile': {'constant': 1e-3
         'execute': {'gates': 5e-3, 'passes:H:local': 4e-4, 'passes:H:joint': 9e-4, 'passes:RX:local': 5e-4},
         'flush': {'constant': 1e-4, 'blocks': 2e-3}, 'cleanup': {'constant': 2e-3, 'passes': 1e-6}}
 CONDITION = {'block_bits': 3, 'ranks': 1, 'nodes': 1, 'threads': 1, 'storage': 'ram', 'backend': 'buffered',
-             'mode': 'distributed-sync', 'frame': 'materialize', 'swap': 'S0', 'execution': 'auto-native',
+             'mode': 'distributed-sync', 'executor_policy': None, 'frame': 'materialize', 'swap': 'S0', 'execution': 'auto-native',
              'initial_state': 'zero'}
 
 
@@ -126,6 +126,12 @@ def test_fit_rejects_mixed_invalid_or_insufficient_runs_and_document_is_tamper_e
     del legacy['trials'][0]['sync_probe_median_seconds']
     with pytest.raises(ValueError, match='sync probe'):
         fit(runs[1:] + [legacy])
+    switched = json.loads(json.dumps(runs[0]))
+    for trial in switched['trials']: trial['sync_probe_after_seconds'] = trial['sync_probe_median_seconds'] * 5
+    switched['trials'][0]['wall_seconds']['execute'] *= 10  # a mid-trial slowdown must not bias the fit
+    switched.pop('run_id'); switched['run_id'] = content_hash(switched)
+    robust = fit(runs[1:] + [switched])
+    assert robust.data['sync_latency']['excluded_unstable_trial_count'] == len(switched['trials'])
     model = fit(runs)
     path = tmp_path / 'model.json'
     model.save(path)

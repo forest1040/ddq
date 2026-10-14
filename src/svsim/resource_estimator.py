@@ -197,7 +197,7 @@ def estimate(workload: WorkloadSpec, profile: ProfileDocument, options: Estimate
         from .time_model import workload_features
         features, _ = workload_features(workload, b, options.ranks)
         target = {'block_bits':b,'ranks':options.ranks,'nodes':options.nodes,'threads':options.threads,'storage':workload.policies['storage'],
-                  'backend':options.backend,'mode':'distributed-sync','frame':workload.policies['frame'],
+                  'backend':options.backend,'mode':'distributed-sync','executor_policy':None,'frame':workload.policies['frame'],
                   'swap':workload.policies['swap'],'execution':workload.policies['execution'],
                   'initial_state':workload._data.get('initial_state','zero')}
         predicted = time_model.predict(features, target, profile.configuration_fingerprint, sync_seconds)

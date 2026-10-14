@@ -180,6 +180,8 @@ def svsim_main(argv=None):
     bench.add_argument('--threads',type=_positive,default=1,help='allocation label; does not set or pin library threads')
     bench.add_argument('--seed',type=_nonnegative,default=0)
     bench.add_argument('--oracle-max-qubits',type=_nonnegative,default=14)
+    bench.add_argument('--executor',choices=('sync','async'),default='sync',help='async uses the Phase 4 runtime; --threads must equal its io_workers')
+    bench.add_argument('--eta-model',help='record runtime time-model ETA checks against actual remaining time (async only)')
     bench.add_argument('--overwrite',action='store_true')
     suite = commands.add_parser('calibration-suite',help='write single-class calibration workloads for svsim benchmark')
     suite.add_argument('--block-bits',type=_positive,default=4)
@@ -192,6 +194,10 @@ def svsim_main(argv=None):
     fit.add_argument('--run',action='append',required=True)
     fit.add_argument('--output',required=True)
     fit.add_argument('--overwrite',action='store_true')
+    eta = commands.add_parser('eta-report',help='summarize runtime ETA checks recorded by benchmark --eta-model')
+    eta.add_argument('--run',action='append',required=True)
+    eta.add_argument('--output',required=True)
+    eta.add_argument('--overwrite',action='store_true')
     rep = commands.add_parser('report',help='compare execution plans with observed benchmark runs')
     rep.add_argument('--campaign',required=True)
     rep.add_argument('--output',required=True)
@@ -213,6 +219,12 @@ def svsim_main(argv=None):
             from .time_model import fit as fit_time
             model = fit_time([read_document(path,max_bytes=4*1024**2) for path in args.run])
             model.save(args.output,overwrite=args.overwrite)
+            return 0
+        if args.command == 'eta-report':
+            from .profile_document import read_document
+            from .runtime_time_model_eta import eta_accuracy
+            summary = eta_accuracy([read_document(path,max_bytes=4*1024**2) for path in args.run])
+            _output(args.output,summary,args.overwrite)
             return 0
         if args.command == 'report':
             from .comparison_report import build_report, render_markdown, save_report
@@ -254,7 +266,7 @@ def _benchmark_command(args):
     from .benchmark_run import CapacityError, RunCase, RunOptions, run_cases
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
-    error, code, cases, profile, options = None, 2, [], None, None
+    error, code, cases, profile, options, eta_model = None, 2, [], None, None, None
     try:
         count = len(args.workload)
         for name, values in (('label',args.label),('variant',args.variant),('plan',args.plan)):
@@ -270,7 +282,11 @@ def _benchmark_command(args):
         options = RunOptions(block_bits=args.block_bits,repetitions=args.repetitions,warmup=args.warmup,
                              ram_budget_bytes_per_rank=args.ram_budget_per_rank,disk_budget_bytes=args.disk_budget,
                              walltime_seconds=args.wall_seconds,backend=args.backend,seed=args.seed,
-                             threads=args.threads,oracle_max_qubits=args.oracle_max_qubits)
+                             threads=args.threads,oracle_max_qubits=args.oracle_max_qubits,executor=args.executor)
+        eta_model = None
+        if args.eta_model:
+            from .time_model import TimeModelDocument
+            eta_model = TimeModelDocument.load(args.eta_model)
         outputs = [Path(args.output_dir)/f'{case.label}.run.json' for case in cases]
         if not args.overwrite and any(p.exists() for p in outputs): raise FileExistsError('output document already exists')
     except (ValueError,TypeError,OSError,KeyError,RecursionError) as exc: error = str(exc)
@@ -279,7 +295,7 @@ def _benchmark_command(args):
         if comm.Get_rank() == 0: print(f'svsim: {errors[0]}',file=sys.stderr)
         return 2
     try:
-        documents = run_cases(cases,profile,args.scratch,options,comm)
+        documents = run_cases(cases,profile,args.scratch,options,comm,eta_model=eta_model)
     except CapacityError as exc:
         if comm.Get_rank() == 0: print(f'svsim: {exc}',file=sys.stderr)
         return 3

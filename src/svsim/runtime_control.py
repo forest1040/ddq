@@ -235,7 +235,7 @@ class RuntimeControl:
             old=dict(self.latest_eta)
             old['stale']=True
             old['invalidation_reason']=reason
-            old['rank_max_expected_seconds']={name:None for name in ('baseline','observed','adapted')}
+            old['rank_max_expected_seconds']={name:None for name in old['views']}
             old['views']={name:{**row,'lower_seconds':None,'expected_seconds':None,'upper_seconds':None,
                 'reason':'STALE_SNAPSHOT','unknown_reasons':('STALE_SNAPSHOT',reason)}
                 for name,row in old['views'].items()}
@@ -262,6 +262,10 @@ class RuntimeControl:
                     resolver=lambda task,adapter=adapter:adapter.cost_sample(task.context,task.condition)
                 sources[name]='diagnostic-explicit' if explicit else ('conditional-envelope' if adapter else 'unavailable')
                 reports[name]=asdict(RuntimeETA().evaluate(snapshot,resolver))
+            if getattr(self,'time_model',None) is not None:
+                from .runtime_time_model_eta import VIEW_NAME, evaluate
+                reports[VIEW_NAME]=evaluate(snapshot,self.time_model,**self._time_model_context)
+                sources[VIEW_NAME]='time-model:'+self.time_model.model_id
             result={'schema_version':1,'kind':'runtime-eta','snapshot_id':snapshot.snapshot_id,
                 'endpoint':snapshot.endpoint,'scope':'rank-local','published_frontier':snapshot.published_frontier,
                 'endpoint_frontier':snapshot.endpoint_frontier,'remaining_sources':snapshot.remaining_sources,
@@ -349,6 +353,32 @@ class RuntimeControl:
         self.profile_version+=1
         self.invalidate_eta('PROFILE_ATTACHED')
         return self.profile_adapter
+
+    def attach_time_model(self, model, *, sync_seconds=None, configuration_fingerprint=None):
+        """Attach a fitted Phase 5 time model as a separate gates-only ETA view.
+
+        The model must have been fitted for this host/build/allocation and this
+        executor condition; mismatches are reported by the view, never forced.
+        A caller that already verified a profile against the current host may
+        pass its fingerprint; otherwise the runtime directory is probed.
+        """
+        from .profile_document import probe_profile
+        from .runtime_time_model_eta import runtime_condition
+        sim=self.sim
+        nodes=len({row['host'] for row in sim.environment})
+        if configuration_fingerprint is None:
+            configuration_fingerprint=probe_profile({'scope':'local','ranks':sim.size,'nodes':nodes,
+                'threads':sim.policy.io_workers},(sim.directory,)).configuration_fingerprint
+        self.time_model=model
+        self._time_model_context={'condition':runtime_condition(sim,nodes=nodes,threads=sim.policy.io_workers),
+            'configuration_fingerprint':configuration_fingerprint,'sync_seconds':sync_seconds,
+            'block_bits':sim.block_bits,'blocks_per_rank':sim.ownership.blocks_per_rank}
+        self.invalidate_eta('TIME_MODEL_ATTACHED')
+
+    def set_time_model_sync_latency(self, seconds):
+        """Evaluate the time-model view at a freshly probed device sync latency (None: calibration median)."""
+        if getattr(self,'time_model',None) is None:raise ValueError('No time model is attached')
+        self._time_model_context['sync_seconds']=seconds
 
     def record_cost(self, sample):
         """Register a measured matched task cost, never an assumed link rate."""
