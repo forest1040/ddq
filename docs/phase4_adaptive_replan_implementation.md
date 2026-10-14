@@ -68,14 +68,29 @@ Mac全回帰は845 passed／14 skipped。Linuxでは関連61件が成功した�
 - **MPI。** 交換はrank bitを対象とするgateで起き、S2は局所gateしか融合しないので、呼出し数は変わらない（例：24→24、`INSUFFICIENT_GAIN`）。layoutを動かすS1はmigration費用がunknown（`UNKNOWN_COST_COMPONENT`）である。P4-003の「合法な候補が無ければ拒否が正しい」に従い、検出したうえで拒否する。転送は呼出しあたり複数あり、注入event上限（256）に早く達するため、run後半は注入が止まりHEALTHYへ戻る。
 - **試験。** in-processのstorage positiveと、`mpiexec -n 2`のMPI拒否を追加した。Mac全回帰は847 passed／14 skipped、Linux関連は42件成功した。
 
+## 段階別fault（P4-004）
+
+`tests/test_replan_faults.py`。FRONTIER_REPLAN（S0→S2）の`apply_policy`に、段階ごとに故障を注入した。製品コードの変更は不要で、既存の適用経路が要件を満たしていた。
+
+| 段階 | 故障 | 結果 |
+|---|---|---|
+| drain | drainが失敗 | 旧policy、plan_version／policy_epochは不変、root／frontierも不変、同じrunで継続できoracleと一致する。resumeは旧snapshot |
+| install | installが失敗（2 rankでrank 1だけ失敗する場合を含む） | 全rankで旧policyへ戻り、継続できoracleと一致する |
+| reserve | checkpointのdisk admissionが拒否 | COMMIT前に失敗し、旧policyのまま |
+| prepare | prepare manifestの書込みが失敗 | 同上 |
+| decision | global decisionの書込みが失敗 | 同上 |
+| ack | decision-copyが失敗（COMMIT後） | rollbackしない。新policy、plan_version=2のまま`checkpoint_requires_recovery`で停止する。resumeは新decision（S2）から再開し、oracleと一致する |
+| 実process kill | decision書込みの直前／直後に`os._exit` | 直前なら旧（S0、plan 1）、直後なら新（S2、plan 2）からresumeし、oracleと一致する |
+
+適用が成功した後も、状態・期待値・adjoint勾配が解析値と一致することを確認した。Mac全回帰は857 passed／14 skipped、Linux関連は56件成功した。
+
 ## 残件
 
 - MPIのpositive（rank bitを局所化するlayout migration候補と、その移行費用の実測が前提）。
 - 時間triggerと追加barrier。
 - cross-host（003C）。
 - tile／layout migration候補と、移行費用の実測。
-- 各段階のdurable fault試験（reserve／drain／install／prepare／decision／ack）。
-- 切替後の期待値・勾配の一致。
+- 多段のLIVE_TUNE適用、およびmigrationを伴うFRONTIER候補での段階別fault。
 - 検出遅延・FP/FN・ETA誤差・monitor比率のreport。
 - 運用（production profile）でのqualified costの供給（現在は注入評価だけがqualified）。
 - 装置状態の切替が多いLinux P=1での安定したpositive。service推定を装置状態別に持つ必要がある。
