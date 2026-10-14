@@ -78,6 +78,9 @@ def commit_snapshot(sim,prefix_fingerprint=None):
     version=4 if sim.config.storage_scope == 'node-local' or hasattr(sim,'_checkpoint_state') else 3
     snapshot_id=sim.transport.broadcast_json(uuid4().hex if sim.rank == 0 else None)
     prepared=None; error=None
+    from time import perf_counter
+    record=getattr(sim,'_record_stage',None) or (lambda *a,**k: None)
+    stage_started=perf_counter()
     try:
         sim.store._disk_drain=True
         if getattr(sim.store.db,'_batch',None) is not None: raise RuntimeError('Snapshot cannot start inside a catalog batch')
@@ -93,6 +96,9 @@ def commit_snapshot(sim,prefix_fingerprint=None):
     except Exception as exc: error=str(exc)
     finally: sim.store._disk_drain=False
     sim.transport.vote(error)
+    record('checkpoint-prepare',{'schema_version':version,'store':sim.config.amplitude_store},
+           seconds=perf_counter()-stage_started)
+    stage_started=perf_counter()
     prepares=sim.transport.control.allgather({'rank':sim.rank,'hash':content_hash(prepared)})
     data={'schema_version':version,'semantics_version':version,'snapshot_id':snapshot_id,'dataset_id':sim.dataset_id,
           'num_qubits':sim.num_qubits,'block_bits':sim.block_bits,'size':sim.size,'root':sim.root,'frontier':sim.frontier,
@@ -119,6 +125,8 @@ def commit_snapshot(sim,prefix_fingerprint=None):
         except Exception as exc: error=str(exc)
     sim.transport.vote(error)
     sim._checkpoint_decision_durable=True
+    record('checkpoint-decision',{'schema_version':version,'writer':'rank-0'},seconds=perf_counter()-stage_started)
+    stage_started=perf_counter()
     if version == 4:
         # The coordinator file above is authoritative even if copying fails.
         try: decision=sim.transport.broadcast_json(decision if sim.rank == 0 else None)
@@ -134,6 +142,8 @@ def commit_snapshot(sim,prefix_fingerprint=None):
         except Exception:
             sim.checkpoint_requires_recovery=snapshot_id
             raise
+    if version == 4:
+        record('checkpoint-ack',{'schema_version':version,'copy':'rank-local-decision'},seconds=perf_counter()-stage_started)
     sim.trace.record(snapshot_id,metadata={'path':'DISTRIBUTED_CHECKPOINT','root':sim.root,'frontier':sim.frontier,'rank':sim.rank})
     sim.committed_roots = getattr(sim,'committed_roots',set())|{sim.root}
     return data if version == 4 else sim.transport.broadcast_json(data if sim.rank == 0 else None)

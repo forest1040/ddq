@@ -24,6 +24,8 @@
 | `gradient-method` | `attach_gradient_calibration`（`GradientCostAdapter`のheld-out検証済みcost） | measured |
 | `cache-entry` | `set_cache_cost_hints`（callerのresolverは宣言されたprovenance、既定はmanual。hintの自己申告fieldだけならmanual） | 宣言どおり |
 | `replan-per-gate` | `observe_evaluation`（`AdaptiveEvaluation.estimate`） | injected |
+| `observed-task-seconds` | runのcompletion collector（`runtime_observed_costs.observed_task_cost`） | measured |
+| `cache-entry`（`runtime-collector-io`） | runのstorage read／write completion（`observed_cache_cost`） | measured |
 
 **利用側の切替**
 - **ETA**：各viewとtime-model viewをregistry経由で解決する。sourceのlabelは従来どおり。
@@ -34,6 +36,26 @@
 
 **挙動の変化**：runtime経由のcache evictionでは、callerが「measured」と自己申告しただけのhint／resolverは採用しなくなった。measuredとして登録されたsourceが必要である。そのproducerはまだ無い（残件）。
 
+## runtime観測をmeasured sourceとして登録（2026-10-15追加）
+
+- **採用する観測。** completion collectorの`cost_observations()`（成功・検証済み・measured・warmup外。injectedは含まない）だけを使う。`MIN_SAMPLES`（5）件に達したclassだけが答える。下限・上限は観測の最小・最大であり、信頼区間ではない。
+- **executor groupの照合。** 発生ごとの`op_id`／`source_op_id`を除いたgate classで照合する。角度、layout、policy、engineは一致を要求する。
+- **ETA。** baseline viewは最初の不変profileのままにした。observed viewは、最新profileのcellが無ければrunのrolling観測で価格付けする（label `rolling-observed`、profileがあれば`conditional-envelope+rolling-observed`）。
+- **cache eviction。** storage readのmedianを`whole_fetch`、writeのmedianを`dirty_writeback`とするmeasured `CacheCost`を登録した。callerが自己申告したcostは引き続きproductionへ流れない。前回の残件「productionでcacheのmeasured sourceが無い」はこれで解消した。
+
+## stage記録（2026-10-15追加）
+
+次をcompletion記録の独立したstageにした。いずれも、開いているexecutor／epoch groupの子として`parent_id`を持つので、group sampleとの二重加算は`consumed_children`で防がれる。
+
+| stage | 計測区間 | condition |
+|---|---|---|
+| `catalog-commit` | gate batchのdurable COMMIT | durability、journal、吸収したcommit数のclass、catalog規模のclass |
+| `frame-resolve` | fetch時の`phase2.resolve`（Frame、phase、logがある場合だけ） | block_bits、frame種別、log件数 |
+| `mcx-packing` | packed MCXのpack／unpack（転送は既存のMPI記録） | block_bits、control数、tile、active振幅 |
+| `checkpoint-prepare`／`-decision`／`-ack` | snapshotのprepare（flush〜snapshot行）、global decision、decision copy | schema、store／writer |
+
+制約：async runtimeは`_execute`を上書きしていてpacked MCX経路を持たない。そのため`mcx-packing`は同期runtime上でだけ発生し、そこにはcollectorが無いので、現状は計測されない（残件）。collectorの既定上限（`metadata_reserve_bytes//16`、約8 KiB）を超えたstageは、設計どおり捨てられて計上される。
+
 ## 検証
 
 `tests/test_runtime_cost_registry.py`（6件）で次を確認した。
@@ -43,12 +65,17 @@
 - cacheは、measuredと宣言したsourceでだけ答えること。
 - sourceが無ければ全kindがunknownのままで、ETA viewは`unavailable`になること。
 
-既存試験（ETA、remaining work、adaptive replan、段階別fault、gradient、cache）は変更なしで成功した。Mac全回帰は863 passed／14 skipped、Linuxの関連57件は成功した。
+既存試験（ETA、remaining work、adaptive replan、段階別fault、gradient、cache）は変更なしで成功した。追加分の試験は次のとおり。
+- rolling観測：同じclassのexecutor呼出し8回でobserved-task-secondsが答え、ETA observed viewが価格付けすること。
+- cache：measuredのread／writeからeviction scoreを作り、injectedの観測を数えないこと。
+- stage記録（`tests/test_stage_records.py`）：catalog-commitが子eventとしてgroupの消費集合に入ること、checkpointの3段、collectorのon/off、injected scope。
+
+Mac全回帰は867 passed／14 skipped、Linuxの関連66件は成功した。
 
 ## 残件（P4-001）
 
-- runtimeのcompletion観測（`RuntimeMeasurementCollector.cost_observations`）を、measured sourceとして登録すること（cache evictionや、rolling observed ETAのproducer）。
-- Frame、packing、metadata commitの独立したstage記録。
+- async runtimeでのpacking経路と、その計測。
+- rolling観測の鮮度・品質基準（現在はsample数のみ）と、held-outのenvelope化。
 - 上限付きraw chunkのflushと、epoch境界でのrank summary。
 - 監視overheadの全体対照。
 - Linux O_DIRECTとcross-hostの校正。

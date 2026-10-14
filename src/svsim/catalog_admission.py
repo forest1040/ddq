@@ -6,6 +6,7 @@ Native loading/building happens only when a writable catalog is opened.
 from __future__ import annotations
 
 from contextlib import contextmanager
+from time import perf_counter
 from hashlib import sha256
 from copy import deepcopy
 import json
@@ -206,6 +207,7 @@ class CatalogBatch:
     def __init__(self):
         self.on_commit,self.on_rollback,self.after=[],[],[]
         self.broken=False
+        self.absorbed=self.splits=0
 
     def run(self,name):
         hooks=getattr(self,name)
@@ -232,6 +234,7 @@ class CatalogConnection:
         self._lease=CatalogLedgerLease()
         self._batch=None
         self.batch_count=self.absorbed_commit_count=self.batch_split_count=0
+        self.last_batch=None
         self._depth=0
         self._guard=None
         self._closed=False
@@ -431,7 +434,7 @@ class CatalogConnection:
         self._check()
         if self._batch is not None:
             # Inner commits join the enclosing gate batch; only its exit is durable.
-            self.absorbed_commit_count+=1
+            self.absorbed_commit_count+=1;self._batch.absorbed+=1
             return
         try: self._conn.commit()
         except BaseException:
@@ -476,10 +479,13 @@ class CatalogConnection:
             self._depth-=1;self._batch=None
             try:
                 if ok:
+                    started=perf_counter()
                     try:
                         self.commit()
                     except BaseException:
                         state.run('on_rollback'); raise
+                    self.last_batch={'commit_seconds':perf_counter()-started,'absorbed':state.absorbed,
+                                     'splits':state.splits,'main_bytes':self.path.stat().st_size if self.path.exists() else 0}
                     state.run('on_commit')
                 else:
                     try:
@@ -496,7 +502,7 @@ class CatalogConnection:
         self._finish()
         self._batch.run('on_commit')
         self._batch.on_rollback.clear()
-        self.batch_split_count+=1
+        self.batch_split_count+=1;self._batch.splits+=1
         self._start()
         self._conn.execute('BEGIN IMMEDIATE')
 

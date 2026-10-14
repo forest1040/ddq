@@ -80,6 +80,13 @@ class RuntimeControl:
         from .runtime_cost_registry import RuntimeCostRegistry
         # The single source of runtime costs for ETA, Guard, cache, gradient and replan.
         self.costs=RuntimeCostRegistry()
+        # Rolling measured completions of this run (validated, non-warmup, non-injected).
+        from .runtime_observed_costs import observed_cache_cost, observed_task_cost
+        self.costs.register('observed-task-seconds','runtime-collector','measured',
+            lambda _context,condition:observed_task_cost(self.measurements,condition),units='seconds/call')
+        self.costs.register('cache-entry','runtime-collector-io','measured',
+            lambda _key,_condition:observed_cache_cost(self.measurements,
+                'same-host' if len({r['host'] for r in sim.environment})==1 else 'cross-host'),units='seconds')
         self.condition_provenance=None
         self.gradient_cost_reason=None
         self.evaluation_estimate=None
@@ -332,15 +339,23 @@ class RuntimeControl:
             profiled='task-seconds' in costs.kinds()
             for name in ('baseline','observed','adapted'):
                 explicit=name in self._eta_cost_views
-                resolver=None
+                resolver=None;label='unavailable'
                 if explicit:
                     resolver=lambda task,name=name:costs.resolve('eta-view:'+name,task,purpose='diagnostic').value
-                elif profiled and name!='adapted':
-                    # baseline keeps the first attached profile; observed follows the newest one.
-                    select='first' if name=='baseline' else 'latest'
-                    resolver=lambda task,select=select:costs.resolve('task-seconds',task.context,task.condition,
-                        purpose='production',select=select).value
-                sources[name]='diagnostic-explicit' if explicit else ('conditional-envelope' if resolver else 'unavailable')
+                    label='diagnostic-explicit'
+                elif profiled and name=='baseline':
+                    # The baseline stays the first immutable profile.
+                    resolver=lambda task:costs.resolve('task-seconds',task.context,task.condition,
+                        purpose='production',select='first').value
+                    label='conditional-envelope'
+                elif name=='observed':
+                    # Observed: newest profile cell, else this run's rolling measured completions.
+                    def resolver(task):
+                        cell=costs.resolve('task-seconds',task.context,task.condition,purpose='production').value
+                        return cell if cell is not None else costs.resolve('observed-task-seconds',task.context,
+                            task.condition,purpose='production').value
+                    label='conditional-envelope+rolling-observed' if profiled else 'rolling-observed'
+                sources[name]=label
                 reports[name]=asdict(RuntimeETA().evaluate(snapshot,resolver))
             if 'eta-remaining' in costs.kinds():
                 from .runtime_time_model_eta import VIEW_NAME
@@ -705,6 +720,27 @@ class RuntimeControl:
         sim.trace.record('policy-change', performance_class='control', plan_version=self.plan_version,
                          metadata={'path': classification, **transition})
         return transition
+
+    def record_stage(self, stage, condition, *, seconds, cpu_seconds=None, payload_bytes=None, quantity=1,
+                     units='calls', success=True):
+        """Completion record for one sub-stage (Frame resolve, packing, catalog/checkpoint commit).
+
+        The event is a child of the innermost open executor/epoch group so a group
+        sample and its stages are never both added by a consumer.
+        """
+        collector=self.measurements
+        if collector is None or not collector.enabled:return False
+        sim=self.sim
+        self._stage_serial=getattr(self,'_stage_serial',0)+1
+        same_host=len({row['host'] for row in sim.environment})==1
+        return collector.complete(f'{sim.run_id}:{stage}:{self._stage_serial}',
+            context=sim._measurement_context(),condition={'operation':stage,**condition},
+            parent_id=collector.current_group(),stage=stage,units=units,quantity=quantity,
+            protocol_seconds=seconds,cpu_seconds=cpu_seconds,payload_bytes=payload_bytes,
+            success=success,validated=success,
+            evidence='injected' if getattr(sim,'_measurement_injected',False) else 'measured',
+            warmup=bool(getattr(sim,'_measurement_warmup',False)),
+            scope='same-host' if same_host else 'cross-host')
 
     def observe_evaluation(self, row):
         """Accept one agreed evaluation row (health, and evidence when degraded)."""

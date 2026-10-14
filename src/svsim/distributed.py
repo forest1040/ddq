@@ -512,8 +512,14 @@ class DistributedSimulator:
                         with self.cache.pin(view.version_id) as old: work.view[:] = old.view
                     else: reader.read_version(view.version_id,work.view)
                     array = work.array(self.store.payload_bytes)
+                    started=perf_counter()
                     try: self.local.phase2.resolve(array,view,h)
                     finally: del array
+                    if view.frame_id or getattr(view,'frame_asset_id',None) or view.phase != 1 or getattr(view,'base_log',None):
+                        self._record_stage('frame-resolve',{'block_bits':self.block_bits,
+                            'frame':'clifford' if view.frame_id or getattr(view,'frame_asset_id',None) else 'phase-only',
+                            'log_entries':len(getattr(view,'base_log',()) or ())},seconds=perf_counter()-started,
+                            payload_bytes=self.store.payload_bytes)
             except Exception as exc: error = str(exc)
             self.transport.vote(error)
             if source != destination:
@@ -530,11 +536,24 @@ class DistributedSimulator:
                             'layout':self.layout.layout_id,'placement':self.placement_epoch,'representation':'logical-identity'})
             yield out
 
+    @contextmanager
     def _catalog_batch(self):
         """One durable catalog transaction per gate stage; recovery uses snapshots only."""
-        from contextlib import nullcontext
-        batch=getattr(self.store.db,'batch',None)
-        return batch() if batch is not None else nullcontext()
+        db=self.store.db
+        batch=getattr(db,'batch',None)
+        if batch is None or getattr(db,'_batch',None) is not None:
+            yield
+            return
+        with batch(): yield
+        last=getattr(db,'last_batch',None)
+        if last is not None:
+            self._record_stage('catalog-commit',{'durability':'synchronous-full','journal':'delete',
+                'absorbed_commit_class':min(last['absorbed'],64).bit_length(),
+                'catalog_scale_class':max(0,last['main_bytes']).bit_length()},seconds=last['commit_seconds'])
+
+    def _record_stage(self,stage,condition,**fields):
+        runtime=getattr(self,'runtime',None)
+        if runtime is not None:runtime.record_stage(stage,condition,**fields)
 
     def _rule(self,rule):
         new = self._new_root(self.root); error = None
@@ -739,22 +758,32 @@ class DistributedSimulator:
                         self.transport.vote(allocation_error)
                         sendarr = send.array() if send else None; recvarr = recv.array() if recv else None
                         source_offsets = iter(active_offsets(b,controls,values)); destination_offsets = iter(active_offsets(b,controls,values))
+                        packing_seconds=0.0;tiles=0
                         for start in range(0,active,tile_count):
                             n = min(tile_count,active-start)
                             if self.rank in owners:
                                 idx = owners.index(self.rank); arr = old[idx].array(self.store.payload_bytes)
+                                started=perf_counter()
                                 try:
                                     for j in range(n): sendarr[j] = arr[next(source_offsets)]
                                 finally: del arr
+                                packing_seconds+=perf_counter()-started;tiles+=1
                             for sender,receiver in ((owners[0],owners[1]),(owners[1],owners[0])):
                                 self.transport.transfer(sendarr[:n] if self.rank == sender else None,recvarr[:n] if self.rank == receiver else None,
                                     sender,receiver,metadata={'root':parent,'pair':pair,'offset_tile':start,'predicate':[controls,values],'path':'MCX_PACKED'})
                             if self.rank in owners:
                                 idx = owners.index(self.rank); arr = outputs[idx][0].array(self.store.payload_bytes)
+                                started=perf_counter()
                                 try:
                                     for j in range(n): arr[next(destination_offsets)] = recvarr[j]
                                 finally: del arr
+                                packing_seconds+=perf_counter()-started
                         del sendarr,recvarr
+                        if self.rank in owners and tiles:
+                            # Pack+unpack of active amplitudes only; the transfers are separate MPI records.
+                            self._record_stage('mcx-packing',{'block_bits':b,'controls':len(controls),
+                                'tile_bytes':self.config.tile_bytes,'active_amplitudes':active},
+                                seconds=packing_seconds,quantity=tiles,units='tiles',payload_bytes=active*16)
                     for h,out in zip(pair,outputs):
                         if out:
                             v = self.cache.adopt(out[0]); self._publish(new,h,StoredBlockView(v,end,end))

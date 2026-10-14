@@ -116,8 +116,52 @@ def test_cache_eviction_costs_need_a_measured_registry_source(sim):
 
 def test_unknown_stays_unknown_without_sources(sim):
     runtime = sim.runtime
-    for kind in ('task-seconds', 'eta-remaining', 'gradient-method', 'cache-entry', 'replan-per-gate'):
+    for kind in ('task-seconds', 'eta-remaining', 'gradient-method', 'replan-per-gate'):
         result = runtime.costs.resolve(kind)
         assert result.value is None and result.reason == 'UNKNOWN_COST'
+    # The run's own collector is registered but has too few measured samples to answer.
+    assert runtime.costs.resolve('cache-entry', ('v', None, None)).reason == 'NO_MATCHING_COST'
     eta = runtime.update_eta(endpoint_frontier=sim.frontier)
-    assert eta['cost_view_sources'] == {'baseline': 'unavailable', 'observed': 'unavailable', 'adapted': 'unavailable'}
+    assert eta['cost_view_sources'] == {'baseline': 'unavailable', 'observed': 'rolling-observed', 'adapted': 'unavailable'}
+
+
+def test_rolling_observations_answer_production_after_enough_same_class_groups(tmp_path):
+    policy = AsyncPolicy(io_engine='cooperative', io_workers=1, prefetch_blocks=0, lookahead_gates=1)
+    config = DistributedConfig(str(tmp_path / 'data'), 2, ram_budget_bytes_per_rank=8 * 1024**2,
+                               storage_scope='node-local', frame_policy='materialize')
+    with AsyncDistributedSimulator(4, config, comm=MPI.COMM_SELF, policy=policy) as sim:
+        runtime = sim.runtime
+        runtime.configure_measurements(max_bytes=64 * 1024)
+        runtime.configure_eta(max_bytes=64 * 1024, scan_items=4096, scan_seconds=1.0)
+        for _ in range(12): sim.gate('RX', (0,), angle=.3)
+        sim.materialize(frontier=7, binding=sim.bind())  # eight same-class executor calls measured
+        eta = runtime.update_eta(endpoint_frontier=11)
+        observed = eta['views']['observed']
+        assert eta['cost_view_sources']['observed'] == 'rolling-observed'
+        assert observed['partial_expected_seconds'] > 0 and observed['coverage'] > 0
+        resolved = runtime.costs.resolve('observed-task-seconds', None,
+                                         next(t for t in runtime.remaining_extractor.capture(sim, endpoint_frontier=11).window
+                                              if t.kind != 'publication').condition)
+        assert resolved.known and resolved.provenance == 'measured' and resolved.value.lower_seconds <= resolved.value.mean_seconds
+        injected = [r for r in runtime.measurements.cost_observations() if r.evidence != 'measured']
+        assert injected == []  # only measured, validated, non-warmup rows feed production costs
+
+
+def test_cache_eviction_uses_measured_storage_completions_from_the_collector(tmp_path):
+    policy = AsyncPolicy(io_engine='cooperative', io_workers=1, prefetch_blocks=0)
+    config = DistributedConfig(str(tmp_path / 'io'), 2, ram_budget_bytes_per_rank=8 * 1024**2, storage_scope='node-local')
+    with AsyncDistributedSimulator(4, config, comm=MPI.COMM_SELF, policy=policy) as fresh:
+        _check_cache_costs(fresh.runtime)
+
+
+def _check_cache_costs(runtime):
+    runtime.configure_measurements(max_bytes=64 * 1024)
+    collector = runtime.measurements
+    for i, (operation, seconds) in enumerate([('read', .01)] * 5 + [('write', .02)] * 5 + [('read', 9.0)] * 3):
+        collector.complete(f'io-{i}', context={}, condition={'operation': operation}, stage='storage-' + operation,
+                           protocol_seconds=seconds, validated=True,
+                           evidence='injected' if seconds == 9.0 else 'measured')
+    cost = runtime.costs.resolve('cache-entry', ('v', None, None))
+    assert cost.known and cost.source_id == 'runtime-collector-io'
+    assert cost.value.whole_fetch == pytest.approx(.01) and cost.value.dirty_writeback == pytest.approx(.02)
+    assert cost.value.eviction_score(True) == pytest.approx(.03)  # injected 9 s reads never counted

@@ -218,6 +218,10 @@ class RuntimeMeasurementCollector:
             raise RuntimeError("measurement groups must end in stack order")
         self._group_stack.pop()
 
+    def current_group(self):
+        """Innermost open group, the parent of stage events completed inside it."""
+        return self._group_stack[-1] if self._group_stack else None
+
     def complete(self, event_id: str, *, validator=None, **fields):
         """Complete after caller validation. A raising validator becomes failed evidence."""
         self._check_thread()
