@@ -11,6 +11,7 @@ import re
 import sqlite3
 import stat
 import threading
+import weakref
 from uuid import uuid4
 
 
@@ -102,6 +103,83 @@ def _root_antichain(paths):
     return tuple(selected)
 
 
+APPEND_RESERVATION_BYTES = 64 * 1024
+APPEND_OPERATIONS = ('trace-append', 'journal-append')
+LEASE_OPERATIONS = APPEND_OPERATIONS + ('catalog-transaction',)
+
+
+def register_lease(budget, lease):
+    # Budget doubles in tests may not track leases; real budgets release them on close.
+    leases = getattr(budget, '_ledger_leases', None)
+    if leases is not None: leases.add(lease)
+
+
+def unregister_lease(budget, lease):
+    leases = getattr(budget, '_ledger_leases', None)
+    if leases is not None: leases.discard(lease)
+
+
+
+
+class AppendReservation:
+    """One durable WRITING token covering many bounded appends by one writer.
+
+    As with a per-record allocation, every appended byte is covered by a live
+    token before it is written; the ledger commits once per chunk instead of
+    two or three times per record. Written bytes are observed on disk while the
+    whole chunk is still pending, so accounting overcounts by at most one chunk
+    per open writer. A crash leaves one WRITING token for explicit recovery,
+    like a retained per-record token. Near a quota or drain margin the chunk
+    falls back to the exact record size.
+    """
+    def __init__(self, budget_getter, *, operation, drain_getter=lambda: False, chunk_bytes=APPEND_RESERVATION_BYTES):
+        if type(chunk_bytes) is not int or chunk_bytes < 1: raise ValueError('Invalid append chunk size')
+        self._budget_getter, self._drain_getter = budget_getter, drain_getter
+        self.operation, self.chunk_bytes = operation, chunk_bytes
+        self.budget = self.key = None
+        self.capacity = self.used = 0
+        self._lock = threading.RLock()
+
+    def admit(self, nbytes):
+        """Ensure the live token covers ``nbytes`` more; returns the token key or None without a budget."""
+        _integer(nbytes, 'append bytes')
+        with self._lock:
+            budget = self._budget_getter()
+            if budget is not self.budget or self.used + nbytes > self.capacity: self.release()
+            if budget is None: return None
+            if self.key is None:
+                drain = bool(self._drain_getter())
+                amount = max(self.chunk_bytes, nbytes)
+                try:
+                    key = budget.reserve(amount, drain=drain, operation=self.operation, writing=True)
+                except DiskAdmissionError:
+                    if amount == nbytes: raise
+                    amount = nbytes
+                    key = budget.reserve(amount, drain=drain, operation=self.operation, writing=True)
+                self.budget, self.key, self.capacity, self.used = budget, key, amount, 0
+                register_lease(budget,self)
+            return self.key
+
+    def wrote(self, nbytes):
+        with self._lock:
+            if self.key is None: return  # unbudgeted writer
+            if self.used + nbytes > self.capacity: raise ValueError('Append exceeded its admitted reservation')
+            self.used += nbytes
+
+    def retain(self):
+        """Abandon the token without release after an unrecoverable partial write."""
+        with self._lock:
+            if self.budget is not None: unregister_lease(self.budget,self)
+            self.budget = self.key = None
+            self.capacity = self.used = 0
+
+    def release(self):
+        with self._lock:
+            budget, key = self.budget, self.key
+            self.retain()
+            if key is not None and not getattr(budget,'_closed',False): budget.release(key)
+
+
 class DiskBudget:
     """Coordinate byte reservations through a SQLite ledger on one volume."""
 
@@ -165,6 +243,7 @@ class DiskBudget:
         self._guard = None
         self._registry_acquired = False
         self._closed = False
+        self._ledger_leases = weakref.WeakSet()
         if not self._custom_accounting:
             try:
                 from .catalog_admission import get_sqlite_guard
@@ -488,6 +567,15 @@ class DiskBudget:
             row = self.db.execute("SELECT COALESCE(SUM(bytes-materialized),0) FROM reservations WHERE state IN ('RESERVED','WRITING')").fetchone()
             return row[0]
 
+    @property
+    def lease_reserved_bytes(self):
+        """Unmaterialized bytes held by reusable trace/journal/catalog ledger tokens."""
+        with self._path_lock:
+            marks = ','.join('?' * len(LEASE_OPERATIONS))
+            row = self.db.execute(f"SELECT COALESCE(SUM(bytes-materialized),0) FROM reservations WHERE state IN ('RESERVED','WRITING') AND operation IN ({marks})",
+                                  LEASE_OPERATIONS).fetchone()
+            return row[0]
+
     def _checkpoint_link(self, link, amount):
         if type(link) is not dict:
             raise ValueError('Invalid checkpoint link')
@@ -650,7 +738,7 @@ class DiskBudget:
             return {'reserved_bytes':self.reserved_bytes,'states':{r[0]:{'count':r[1],'bytes':r[2],'materialized_bytes':r[3]} for r in rows},'max_records':self.max_records,
                     'shared_policy':self.shared_policy,'recovery_only':self.recovery_only,
                     'registered_root_count':self.db.execute('SELECT count(*) FROM roots').fetchone()[0],
-                    'metadata_pool_bytes':self.bootstrap_bytes,'metadata_main_cap_bytes':self._ledger_main_cap,
+                    'lease_reserved_bytes':self.lease_reserved_bytes,'metadata_pool_bytes':self.bootstrap_bytes,'metadata_main_cap_bytes':self._ledger_main_cap,
                     'metadata_side_cap_bytes':self._ledger_side_cap,'ledger_vfs_enforced':self.ledger_vfs_enforced,
                     'ledger_vfs_capability':self._guard.capability() if self._guard else None,
                     'accounting_scope':self.accounting_scope,'strict_capacity_guarantee':False}
@@ -762,6 +850,9 @@ class DiskBudget:
 
     def close(self):
         if self._closed:return
+        # Append writers are quiescent once their owner closes the budget; their
+        # written bytes are on disk and observed, so the shared token is released.
+        for lease in list(self._ledger_leases): lease.release()
         with self._path_lock:
             try:
                 self._set_guard_active(False)

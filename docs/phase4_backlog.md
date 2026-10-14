@@ -24,6 +24,8 @@ P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtim
 
 2026-10-14に[writer予約・永続化境界](phase4_writer_durability_implementation.md)を補強した。checkpoint JSON、traceのmkdir／open、asset／snapshot sidecarを変更前にadmitし、atomic writerのdirectory fsync／cleanupまで予約を保持する。flush後の物理化、cleanup不明時のtoken保持、trace巻戻し失敗後の追記拒否を追加した。SQLite build／dispatch capabilityを保存し、識別不一致のsoft fallbackを拒否する。sidecarの実process crashと関連Mac／Linux回帰を検証した。全writerのcut結合／fault、temporary branch GC、host調停は残り、P4-009はIN_PROGRESSを維持する。予約・物理化・精算を含む監視／metadata費用はP4-001／005へ接続する。
 
+2026-10-14に[ledger commitの集約](phase4_ledger_lease_implementation.md)を追加した。trace／journal追記は64 KiBのchunk token、catalogは累積成長を追跡するtokenの再利用に変え、全byteを書込み前にlive tokenで覆う契約を維持した。ent Dockerの計測では、ledger commitが2,452回から16回、executeが約3倍速くなった。Mac全回帰821件とLinux回帰812件は成功した。書込み途中のkill／電源断faultとnative matrixでの再確認は残り、P4-009はIN_PROGRESSを維持する。
+
 2026-10-14に[Linux Docker開発環境](linux_development.md)を追加した。利用者が許可したLinuxサーバ内だけにuv・OpenMPI・liburingを用意し、既定seccompのcapability拒否と限定profileのnative成功を別記録した。実kernelのO_DIRECT・CQE・cancelと、1／2／4 rankの明示nativeテストを追加する。P4-010は環境不足のBLOCKEDを解消してIN_PROGRESSへ変更し、全fault／durability／worker対照性能matrixは残す。
 
 2026-10-14に[同volume共有disk admissionとforeground RAM](phase4_disk_coordination_implementation.md)を追加した。独立datasetの明示共通ledger、forkのbootstrap前継承、永続policy照合、登録rootの最小祖先集合と合算容量検査を実装した。cacheの任意metadataは最低作業領域を圧迫する際に精算する。Macの独立dataset／fork／勾配とRAMを超えるstateを含む関連回帰107件を確認した。P4-009／007はIN_PROGRESSを維持し、temporary branchの安全なGC、全writerのfault／cut結合、Linuxを含む全matrix／別hostは残す。

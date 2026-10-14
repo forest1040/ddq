@@ -101,13 +101,16 @@ def test_failed_async_write_keeps_version_unpublished_and_releases_disk_credit(t
         def write_from(self, offset, view): raise OSError('injected write error')
         def close(self): pass
     class Ledger:
-        def __init__(self): self.pending = set(); self.calls=[]
+        def __init__(self): self.live = {}; self.calls=[]
         def reserve(self, amount, **kwargs):
-            token = str(len(self.pending))
+            token = str(len(self.calls))
             self.calls.append(kwargs)
-            self.pending.add(token); return token
+            self.live[token] = kwargs.get('operation'); return token
         def mark_writing(self, token): pass
-        def release(self, token): self.pending.remove(token)
+        def release(self, token): del self.live[token]
+        @property
+        def pending(self):  # catalog transaction tokens are reusable leases; check extent credit only
+            return {token for token, operation in self.live.items() if operation == 'amplitude-extent'}
     store = FileBlockStore(StorageConfig(str(tmp_path), 2), 4,
                            transport_factory=lambda *a, **kw: FailedFile())
     store.disk_budget = Ledger()
@@ -119,7 +122,7 @@ def test_failed_async_write_keeps_version_unpublished_and_releases_disk_credit(t
     store._disk_drain=True
     request = adapter.submit_write(version, lease)
     assert next(call for call in store.disk_budget.calls if call.get('operation')=='amplitude-extent')['drain'] is True
-    assert store.disk_budget.pending == {'0'}
+    assert len(store.disk_budget.pending) == 1
     with pytest.raises(OSError, match='injected'): engine.wait(request)
     assert not store.disk_budget.pending and store.ref(version).segment is None
     assert lease.pins == 0 and not adapter.pending

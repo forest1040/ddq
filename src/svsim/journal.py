@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 from contextlib import nullcontext
+from .disk_budget import AppendReservation
 from .ir import GateOp
 from .parameters import Expr, ParameterSymbol, ExactPi
 
@@ -52,6 +53,7 @@ class Journal:
         self.streams = {}
         self.protected_cursor = lambda kind: 0
         self._disk_budget_getter,self._drain_getter=disk_budget_getter,drain_getter
+        self._append=AppendReservation(disk_budget_getter,operation='journal-append',drain_getter=drain_getter)
 
     def append(self, kind, payload):
         if kind not in {'gates','local','shared','joint','commits','frame'}: raise ValueError('Invalid journal')
@@ -79,9 +81,11 @@ class Journal:
         record['checksum'] = content_hash(record)
         raw = (canonical(record)+'\n').encode()
         if len(raw)>1024**2: raise ValueError('Journal record exceeds bounded 1 MiB envelope')
-        budget=self._disk_budget_getter()
-        with (budget.allocation(len(raw),drain=bool(self._drain_getter())) if budget else nullcontext()):
-            if stream.write(raw) != len(raw): raise OSError('Incomplete journal write')
+        # One chunked token covers the record before it is written; a short
+        # write keeps the bytes covered for the caller's rollback/recovery.
+        self._append.admit(len(raw))
+        if stream.write(raw) != len(raw): raise OSError('Incomplete journal write')
+        self._append.wrote(len(raw))
         return stream.tell()
 
     def rollback(self, cursors):
@@ -125,3 +129,4 @@ class Journal:
     def close(self):
         for stream in self.streams.values(): stream.close()
         self.streams.clear()
+        self._append.release()

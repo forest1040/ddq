@@ -13,6 +13,7 @@ from pathlib import Path
 from statistics import median
 from typing import Any, Iterable, Iterator
 
+from .disk_budget import AppendReservation
 from .lifecycle import (
     BenchmarkCondition, BenchmarkSample, HardwareProfile, HealthReport,
     PlanTemplate, RuntimeProfile, TraceEvent, _now,
@@ -66,6 +67,7 @@ class StreamingExecutionTrace:
         self._disk_budget_getter,self._drain_getter=disk_budget_getter,drain_getter
         self._lock = threading.RLock()
         self._poisoned = False
+        self._append = AppendReservation(disk_budget_getter, operation="trace-append", drain_getter=drain_getter)
         budget = self._disk_budget_getter()
         # Admit the namespace operation before mkdir/open. This one-byte probe
         # is accounting only; capacity remains a soft guarantee.
@@ -88,37 +90,28 @@ class StreamingExecutionTrace:
         data=raw.encode('utf-8')
         nbytes=len(data)
         if nbytes>1024**2: raise ValueError('Trace record exceeds bounded 1 MiB envelope')
-        budget=self._disk_budget_getter()
         with self._lock:
             self._ensure_usable()
             if self._stream.closed:
                 raise ValueError('Cannot append to a closed trace')
-            context = (budget.allocation(nbytes, drain=bool(self._drain_getter()),
-                                         operation="trace-append", retain_on_error=True)
-                       if budget else nullcontext(None))
-            with context as key:
+            # The chunked token covers this record before any byte is written.
+            self._append.admit(nbytes)
+            start = os.fstat(self._stream.fileno()).st_size
+            try:
+                written = self._stream.write(data)
+                if written != nbytes:
+                    raise OSError("short write while appending trace record")
+                self._stream.flush()
+            except BaseException as append_error:
                 try:
-                    start = os.fstat(self._stream.fileno()).st_size
-                except BaseException:
-                    if budget is not None:
-                        budget.release(key)
-                    raise
-                try:
-                    written = self._stream.write(data)
-                    if written != nbytes:
-                        raise OSError("short write while appending trace record")
-                    if budget is not None:
-                        budget.materialize(key, nbytes)
-                    self._stream.flush()
-                except BaseException as append_error:
-                    try:
-                        os.ftruncate(self._stream.fileno(), start)
-                    except BaseException as rollback_error:
-                        self._poison_and_close()
-                        raise append_error from rollback_error
-                    if budget is not None:
-                        budget.release(key)
-                    raise
+                    os.ftruncate(self._stream.fileno(), start)
+                except BaseException as rollback_error:
+                    # Partial bytes stay covered by the retained WRITING token.
+                    self._append.retain()
+                    self._poison_and_close()
+                    raise append_error from rollback_error
+                raise
+            self._append.wrote(nbytes)
             self.event_count += 1
             meta = event.metadata
             operation = str(meta.get("operation", "")).lower()
@@ -151,6 +144,7 @@ class StreamingExecutionTrace:
                         self._stream.flush()
                 finally:
                     self._stream.close()
+            self._append.release()
 
     def _poison_and_close(self) -> None:
         self._poisoned = True

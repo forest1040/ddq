@@ -17,7 +17,7 @@ import sys
 import tempfile
 import threading
 
-from .disk_budget import DiskAdmissionError
+from .disk_budget import DiskAdmissionError, register_lease, unregister_lease
 
 
 class CatalogAdmissionError(DiskAdmissionError):
@@ -158,6 +158,49 @@ class AdmissionCursor:
         return getattr(self._cursor,name)
 
 
+CATALOG_LEASE_SLACK_BYTES = 1024 * 1024
+
+
+class CatalogLedgerLease:
+    """One durable ledger token reused across catalog transactions.
+
+    A transaction's envelope is main-file growth plus transient rollback
+    journal/side bytes. Main growth is cumulative, so the token's remaining
+    cover is its bytes minus growth since it was taken; once that cannot cover
+    the next envelope a new token with slack is reserved. Per-transaction VFS
+    caps are unchanged. Already-grown bytes are also observed on disk, so the
+    overcount is bounded by one token. A crash leaves one WRITING token for the
+    explicit recovery path, as a crash inside a transaction always did.
+    """
+    def __init__(self):
+        self.budget=self.key=None
+        self.bytes=self.base_size=0
+        self.ledger_reservation_count=0
+
+    def cover(self,budget,size,needed,*,drain,owner):
+        if (self.key is not None and self.budget is budget and not getattr(budget,'_closed',False)
+                and self.bytes-max(0,size-self.base_size)>=needed):
+            return self.key
+        self.release()
+        amount=needed+CATALOG_LEASE_SLACK_BYTES
+        arguments=dict(drain=drain,operation='catalog-transaction',owner=owner,writing=True)
+        try: key=budget.reserve(amount,generation=sha256(os.urandom(16)).hexdigest(),**arguments)
+        except DiskAdmissionError:
+            amount=needed
+            key=budget.reserve(amount,generation=sha256(os.urandom(16)).hexdigest(),**arguments)
+        self.budget,self.key,self.bytes,self.base_size=budget,key,amount,size
+        self.ledger_reservation_count+=1
+        register_lease(budget,self)
+        return key
+
+    def release(self):
+        budget,key=self.budget,self.key
+        if budget is not None: unregister_lease(budget,self)
+        self.budget=self.key=None
+        self.bytes=self.base_size=0
+        if key is not None and not getattr(budget,'_closed',False): budget.release(key)
+
+
 class CatalogConnection:
     """A main-thread connection that reserves before BEGIN, not after SQL.
 
@@ -174,6 +217,7 @@ class CatalogConnection:
         self.growth_bytes=growth_bytes
         self._thread=threading.get_ident()
         self._token=self._budget=None
+        self._lease=CatalogLedgerLease()
         self._depth=0
         self._guard=None
         self._closed=False
@@ -209,6 +253,7 @@ class CatalogConnection:
         except BaseException:
             if '_conn' in self.__dict__: self._conn.close()
             self._release()
+            self._lease.release()
             raise
 
     def _check(self):
@@ -224,8 +269,8 @@ class CatalogConnection:
         side_cap=2*max(size,minimum_main_bytes,4096)+self.growth_bytes+65536
         budget=self._budget_getter()
         if budget is not None:
-            self._token=budget.reserve(main_cap-size+side_cap,drain=bool(self._drain_getter()),
-                                       operation='catalog-transaction',owner=sha256(str(self.path).encode()).hexdigest(),generation=sha256(os.urandom(16)).hexdigest(),writing=True)
+            self._token=self._lease.cover(budget,size,main_cap-size+side_cap,
+                                          drain=bool(self._drain_getter()),owner=sha256(str(self.path).encode()).hexdigest())
             self._budget=budget
         self._main_cap,self._side_cap=main_cap,side_cap
         self._input_bytes=0
@@ -256,11 +301,11 @@ class CatalogConnection:
         return {**self._status(),'scope':'managed-catalog-and-rollback-journal',
                 'capability':self._guard.capability() if self._guard else None,
                 'strict_capacity_guarantee':False,'reservation_count':self.reservation_count,
+                'ledger_reservation_count':self._lease.ledger_reservation_count,
                 'mutation_count':self.mutation_count,'temp_file_support':False}
 
     def _release(self):
-        if self._token is not None:
-            self._budget.release(self._token)
+        # The ledger token outlives the transaction; only the envelope ends here.
         self._token=self._budget=None
         if _ACTIVE_CATALOGS.get(str(self.path)) is self: _ACTIVE_CATALOGS.pop(str(self.path),None)
         self._active=False
@@ -376,7 +421,9 @@ class CatalogConnection:
     def close(self):
         if self._closed:return
         try: self.rollback()
-        finally: self._conn.close();self._closed=True
+        finally:
+            self._conn.close();self._closed=True
+            self._lease.release()
     def __enter__(self):
         self._check();self._start();self._depth+=1
         return self

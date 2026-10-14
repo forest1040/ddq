@@ -191,7 +191,8 @@ def test_stored_outputs_hold_credit_through_directory_fsync(tmp_path,monkeypatch
             manifest=sim.commit_snapshot()
             exported=json.loads((sim.store.directory/'manifests'/f'snapshot-{manifest.snapshot_id}.json').read_text())
             assert exported['snapshot_id']==manifest.snapshot_id
-        assert seen and sim.store.disk_budget.reserved_bytes==0
+        # Only the open trace/journal chunk tokens stay live while the simulator runs.
+        assert seen and sim.store.disk_budget.reserved_bytes==sim.store.disk_budget.lease_reserved_bytes
 
 
 def test_failed_snapshot_sidecar_keeps_previous_checkpoint_resumable(tmp_path,monkeypatch):
@@ -211,7 +212,7 @@ def test_failed_snapshot_sidecar_keeps_previous_checkpoint_resumable(tmp_path,mo
         with monkeypatch.context() as patch:
             patch.setattr(admitted_files.os,'fsync',fail_directory)
             with pytest.raises(OSError,match='directory fault'):sim.commit_snapshot()
-        assert sim.store.disk_budget.reserved_bytes==0
+        assert sim.store.disk_budget.reserved_bytes==sim.store.disk_budget.lease_reserved_bytes
     with StoredSimulator.resume(config,original) as restored:
         np.testing.assert_allclose(restored.state(),expected,atol=1e-14)
 
