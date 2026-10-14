@@ -101,6 +101,8 @@ class MPIProgressEngine(MPITransport):
                 if self.rank == source: rv[:] = sv
             post_error = None
             if source != destination and self.rank == source:
+                hook = getattr(self, 'injection_hook', None)
+                if hook is not None: hook('mpi-transfer', int(len(sv)) if hasattr(sv, '__len__') else 0)
                 try: request.requests.append(self.data.Isend([sv, self._MPI.BYTE], dest=destination, tag=slot))
                 except Exception as exc: post_error = str(exc)
             self.vote(post_error)

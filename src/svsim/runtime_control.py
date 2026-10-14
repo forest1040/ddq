@@ -46,6 +46,12 @@ class PlanCandidate:
     expires_at: float
 
 
+@dataclass(frozen=True)
+class _GroupMark:
+    event_id: str
+    resource_before: float
+
+
 class RuntimeControl:
     def __init__(self, sim):
         self.sim = sim
@@ -121,15 +127,25 @@ class RuntimeControl:
         self.gradient_calibration=None
 
     def configure_performance_injection(self,spec,*,observer=None):
-        """Opt-in, in-process compute delays for evaluation only."""
+        """Opt-in, in-process delays for evaluation only.
+
+        compute delays each executor-group call; storage delays each storage
+        read/write request (optionally per byte); mpi delays each posted
+        source-side transfer. Storage and MPI waits are rank-local (no
+        collective) and are paid inside the executor group's measured service.
+        """
+        RESOURCE_OPERATIONS={'compute':{'executor-group'},'storage':{'storage-read','storage-write'},
+                             'mpi':{'mpi-transfer'}}
         from .performance_injection import InjectionSpec,PerformanceInjection
         sim=self.sim
         error=None
         try:
             if sim._private_epoch:raise ValueError('Injection requires a published cut')
             if not isinstance(spec,InjectionSpec):raise TypeError('InjectionSpec required')
-            if spec.resource!='compute' or spec.trigger!='work' or spec.operations!=('executor-group',) or spec.per_bytes is not None:
-                raise ValueError('Actual runtime injection supports compute executor-group only')
+            if spec.trigger!='work' or not set(spec.operations)<=RESOURCE_OPERATIONS[spec.resource]:
+                raise ValueError('Actual runtime injection needs a work trigger and operations of its resource')
+            if spec.resource=='compute' and (spec.operations!=('executor-group',) or spec.per_bytes is not None):
+                raise ValueError('Compute injection delays executor-group calls only')
             if observer is not None and not callable(observer):raise TypeError('Observer must be callable')
         except Exception as exc:error=str(exc)
         sim.transport.vote(error)
@@ -148,14 +164,37 @@ class RuntimeControl:
         self.performance_injection=PerformanceInjection(spec)
         self.performance_injection.start()
         self._executor_observer=observer
+        self.resource_injected_seconds=0.0
+        hook=self.inject_resource if spec.resource!='compute' else None
+        sim.store.injection_hook=hook
+        sim.transport.injection_hook=hook
         sim._measurement_injected=True
         self.invalidate_eta('EVALUATION_INJECTION_ATTACHED')
         return self.performance_injection
+
+    def inject_resource(self,operation,nbytes=0):
+        """Rank-local evaluation wait for one storage request or MPI transfer."""
+        from time import sleep
+        driver=self.performance_injection
+        if driver is None:return 0.0
+        ticket=driver.request(operation,work=1,nbytes=nbytes)
+        if ticket is None:return 0.0
+        started=monotonic()
+        while ticket.state=='pending':
+            driver.progress()
+            if ticket.state=='pending':sleep(min(.001,max(0,ticket.ready_at-monotonic())))
+        ticket.complete(service_seconds=0.0)
+        waited=monotonic()-started
+        self.resource_injected_seconds+=waited
+        return waited
 
     def before_executor(self,event_id,source_count):
         from time import sleep
         driver=self.performance_injection
         if driver is None:return None
+        if driver.spec.resource!='compute':
+            # Observe groups under resource injection; their waits are inside service time.
+            return _GroupMark(event_id,self.resource_injected_seconds)
         ticket=None;error=None
         # Progress actual requests while waiting for a bounded service barrier.
         try:
@@ -174,6 +213,15 @@ class RuntimeControl:
 
     def after_executor(self,ticket,*,service_seconds,source_ids,success,work_class=None):
         if ticket is None:return
+        if isinstance(ticket,_GroupMark):
+            if self._executor_observer is not None:
+                try:self._executor_observer({'event_id':ticket.event_id,'source_ids':source_ids,
+                    'actual_service_seconds':service_seconds,'injected_delay_seconds':0.0,
+                    'resource_injected_seconds':self.resource_injected_seconds-ticket.resource_before,
+                    'resource':self.performance_injection.spec.resource,'success':success,'evidence':'injected',
+                    'work_class':work_class})
+                except Exception as exc:self.sim._async_errors.append(exc)
+            return
         if success:self.performance_injection.complete(ticket,service_seconds=service_seconds)
         else:self.performance_injection.cancel(ticket)
         if self._executor_observer is not None:

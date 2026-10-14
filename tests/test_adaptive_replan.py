@@ -21,7 +21,8 @@ def _config(path):
 
 # The injected per-call delay must dominate host service jitter (Linux durable commits vary by
 # tens of ms per gate); otherwise the conservative bound correctly refuses as uncertain gain.
-def _run(tmp_path, *, mode='auto', gates=32, start=4, end=None, delay=.2, prime_checkpoint=True, baseline=4):
+def _run(tmp_path, *, mode='auto', gates=32, start=4, end=None, delay=.2, prime_checkpoint=True, baseline=4,
+         resource='compute'):
     policy = AsyncPolicy(mode=mode, io_engine='cooperative', io_workers=1, prefetch_blocks=0, lookahead_gates=4,
                          cooldown_seconds=0)
     session = AdaptiveEvaluation(baseline_groups=baseline)
@@ -29,8 +30,11 @@ def _run(tmp_path, *, mode='auto', gates=32, start=4, end=None, delay=.2, prime_
         for _ in range(gates): sim.gate('RX', (0,), angle=.025)
         binding = sim.bind()
         if prime_checkpoint: sim.commit_snapshot()  # measured durable-cut cost for FRONTIER candidates
-        spec = InjectionSpec(1, 'compute', 'work', start, end if end is not None else gates + 1, delay,
-                             ('executor-group',), 60.0, 256, barrier='semantic-prefix')
+        operations = {'compute': ('executor-group',), 'storage': ('storage-write',)}[resource]
+        scale = 1 if resource == 'compute' else 4  # four Block writes per executor call (n=4, b=2)
+        spec = InjectionSpec(1, resource, 'work', start * scale,
+                             (end if end is not None else gates + 1) * scale, delay / scale,
+                             operations, 60.0, 256, barrier='semantic-prefix')
 
         def observe(event):
             verifying = sim.runtime.verifying
@@ -91,3 +95,31 @@ def test_negative_cases_do_not_switch(tmp_path, case):
         assert reasons <= {'UNKNOWN_COST_COMPONENT'}
     if case == 'short-remaining':
         assert all(d['selected'] is None for d in evaluations)
+
+
+def test_storage_slowdown_is_priced_from_service_and_fused_calls_write_less(tmp_path):
+    runtime, session = _run(tmp_path, resource='storage')
+    assert runtime.transitions and runtime.transitions[-1]['updates'] == {'swap_policy': 'S2'}
+    assert session.verification == {'verified': True, 'calls': 2}
+    evaluation = next(d for d in runtime.replan_decisions if d['kind'] == 'evaluate')
+    assert evaluation['estimate']['extra_lower_per_call'] > 0  # the wait is inside measured service
+    assert runtime.resource_injected_seconds > 0
+
+
+@pytest.mark.skipif(__import__('shutil').which('mpiexec') is None, reason='MPI launcher not available')
+def test_mpi_slowdown_is_detected_and_refused_when_no_candidate_reduces_transfers(tmp_path):
+    import json, os, shutil, subprocess, sys
+    output = tmp_path / 'report.json'
+    subprocess.run([shutil.which('mpiexec'), '-n', '2', sys.executable, 'examples/phase4_remaining_campaign.py',
+                    '--action', 'adaptive', '--resource', 'mpi', '--injection-delay', '.05',
+                    '--output', str(output), '--scratch', str(tmp_path / 'scratch'),
+                    '--repetitions', '1', '--warmup', '0', '--wall-seconds', '300'],
+                   check=True, timeout=600, env={**os.environ, 'PYTHONPATH': 'src', 'OMP_NUM_THREADS': '1'})
+    report = json.loads(output.read_text())['adaptive']
+    auto = next(r for r in report['rows'] if r['variant_id'] == 'auto')['trials'][0]['raw']['adaptive']
+    assert auto['switch_count'] == 0 and auto['event_summary']['first_degraded_ordinal'] is not None
+    candidates = [c for d in auto['replan_decisions'] if d['kind'] == 'evaluate' for c in d['candidates']]
+    assert candidates and not any(c['eligible'] for c in candidates)
+    s2 = [c for c in candidates if c['updates'] == [['swap_policy', 'S2']]]
+    assert s2 and all(c['current_calls'] == c['candidate_calls'] for c in s2)  # remote rotations never fuse
+    assert {c['reason'] for c in candidates if c['updates'] == [['swap_policy', 'S1']]} <= {'UNKNOWN_COST_COMPONENT'}

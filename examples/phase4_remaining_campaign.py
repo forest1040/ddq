@@ -51,7 +51,9 @@ def config(path,args):
 
 def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='sustained'):
     rank=comm.Get_rank();size=comm.Get_size()
-    recipe=([('RX',(0,),.025)]*32 if adaptive else
+    resource=getattr(args,'resource','compute')
+    # mpi: rotate a rank bit (q3) so each call exchanges Blocks between ranks; no candidate fuses those.
+    recipe=([('RX',(3 if resource=='mpi' else 0,),.025)]*32 if adaptive else
         [('H',(3,),None)]+[item for _ in range(4) for item in [('RY',(0,),.07),('RZ',(1,),.1)]])
     variants=(Variant('fixed',{'mode':'observe'}),Variant('auto',{'mode':'auto'})) if adaptive else (
         Variant('S0',{'swap_policy':'S0'}),Variant('S2',{'swap_policy':'S2'}))
@@ -61,12 +63,17 @@ def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='
     starts={'sustained':(4,33),'transient':(4,6),'recovery':(4,12),'missing-baseline':(0,33)}
     start,end=starts[scenario]
     # Per-call compute delay; fusing calls (S2) is the only legal way to pay fewer of them.
-    spec=InjectionSpec(1,'compute','work',start,end,args.injection_delay,('executor-group',),60.0,256,barrier='semantic-prefix') if adaptive else None
+    operations={'compute':('executor-group',),'storage':('storage-write',),'mpi':('mpi-transfer',)}[resource]
+    # Work units are the injected operation: a call writes each local Block once.
+    scale=1 if resource!='storage' else max(1,4//size)
+    spec=InjectionSpec(1,resource,'work',start*scale,end*scale,args.injection_delay/scale,operations,60.0,256,
+                       barrier='semantic-prefix') if adaptive else None
     shared_recipe={'recipe':recipe,'injection':asdict(spec) if spec else None}
     normalizer=GateNormalizer(4);sequencer=GlobalSequencer()
     expected_source=content_hash([gate_data(sequencer.append(normalizer.gate(kind,target,
         **({'angle':angle} if angle is not None else {})))) for kind,target,angle in recipe])
-    case=CaseManifest(f'{"completion-monitor" if monitoring else "adaptive-"+scenario if adaptive else "layout"}-p{size}',
+    label="adaptive-"+scenario+("" if resource=='compute' else "-"+resource)
+    case=CaseManifest(f'{"completion-monitor" if monitoring else label if adaptive else "layout"}-p{size}',
         source={'hash':expected_source,'recipe':shared_recipe},initial_state={'kind':'initial-one'},
         binding={'kind':'empty'},exact_witness={'kind':'none'},observable={'Z':0},
         endpoint='construct+forward+state-validation+checkpoint+close+cleanup',n=4,b=2,ranks=size,
@@ -256,6 +263,8 @@ def main():
     parser.add_argument('--repetitions',type=int,default=7);parser.add_argument('--warmup',type=int,default=2)
     parser.add_argument('--backend',choices=('buffered','direct'),default='buffered')
     parser.add_argument('--wall-seconds',type=float,default=300)
+    parser.add_argument('--resource',choices=('compute','storage','mpi'),default='compute',
+                        help='injected resource for the adaptive action')
     parser.add_argument('--injection-delay',type=float,default=.02,
                         help='per-executor-call compute delay; size it above the host service jitter for a positive case')
     parser.add_argument('--ram-bytes',type=int,default=8*1024**2)

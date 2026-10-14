@@ -51,9 +51,26 @@ predicted gain lower（例：P=1で0.30 s）は、実測のgain（約0.52 s）�
 
 Mac全回帰は845 passed／14 skipped。Linuxでは関連61件が成功した。
 
+## storage／MPI注入（資源別）
+
+`configure_performance_injection`は、computeに加えてstorage（`storage-read`／`storage-write`、要求ごと、任意で1 byteあたり）とMPI（`mpi-transfer`、送信元の転送ごと）を受け付ける。storageとMPIの遅延はrank-localな待機で、集団通信は行わない。`AsyncStoreIO`のsubmit直前と`MPIProgressEngine`のIsend直前で支払う。executor groupの実測serviceの中に含まれるので、group observerには参考値として`resource_injected_seconds`を添える（二重計上はしない）。campaignは`--resource {compute,storage,mpi}`で選ぶ。storageのwork単位は書込み要求で、1呼出しはrankのBlock数だけ書く。MPIはrank bit（q3）の回転で、呼出しごとに交換が起きる。
+
+| 環境 | 資源 | fixed wall median | auto | 切替／VERIFY | 差のCI95 | 判定 |
+|---|---|---|---|---|---|---|
+| Mac P=1 | storage | 3.77 s | 1.45 s | 7/7 | [-2.33, -2.31] | positive |
+| Mac P=2 | storage | 6.22 s | 2.37 s | 7/7 | [-3.85, -3.84] | positive |
+| Mac P=2 | MPI | 6.37 s | 6.38 s | 0 | [-0.01, 0.01] | 正しく拒否 |
+| Linux P=1 | storage | 6.15 s | 2.66 s | 7/7 | [-3.55, -3.27] | positive |
+| Linux P=2 | storage | 8.83 s | 8.57 s | 6/7 | [-8.23, -0.54] | ✗（1 trialは不確実gainで拒否。判定規則を満たさない） |
+| Linux P=2 | MPI | 8.64 s | 8.65 s | 0 | [0.001, 0.022] | 正しく拒否（autoの候補評価費用として約10 ms遅い） |
+
+- **storage。** file storeでは、各呼出しが触れたBlockを1回ずつ書き戻す。S2の融合で呼出し数が減ると書込み要求も減るので、呼出しあたり超過のモデルがそのまま当てはまる。
+- **MPI。** 交換はrank bitを対象とするgateで起き、S2は局所gateしか融合しないので、呼出し数は変わらない（例：24→24、`INSUFFICIENT_GAIN`）。layoutを動かすS1はmigration費用がunknown（`UNKNOWN_COST_COMPONENT`）である。P4-003の「合法な候補が無ければ拒否が正しい」に従い、検出したうえで拒否する。転送は呼出しあたり複数あり、注入event上限（256）に早く達するため、run後半は注入が止まりHEALTHYへ戻る。
+- **試験。** in-processのstorage positiveと、`mpiexec -n 2`のMPI拒否を追加した。Mac全回帰は847 passed／14 skipped、Linux関連は42件成功した。
+
 ## 残件
 
-- storage／MPIの実注入adapter（現状は計算遅延のみ）と、資源別のpositive。
+- MPIのpositive（rank bitを局所化するlayout migration候補と、その移行費用の実測が前提）。
 - 時間triggerと追加barrier。
 - cross-host（003C）。
 - tile／layout migration候補と、移行費用の実測。

@@ -19,12 +19,17 @@ class AsyncStoreIO:
         self.engine._check()
         if len(self.engine.pending) >= self.engine.max_requests: raise BackpressureError('I/O queue is full')
 
+    def _inject(self, operation):
+        hook = getattr(self.store, 'injection_hook', None)
+        if hook is not None: hook(operation, self.store.slot_bytes)
+
     def submit_read(self, version, lease):
         self._credit()
         if version in {'zero', 'initial-one'}:
             # Virtual initial blocks have no physical extent.
             self.store.read_version(version, lease.view)
             return None
+        self._inject('storage-read')
         ref = self.store.ref(version)
         if ref.segment is None: raise OSError('Unwritten Block version lost from cache')
         handle = self._handle(ref.segment)
@@ -47,6 +52,7 @@ class AsyncStoreIO:
 
     def submit_write(self, version, lease):
         self._credit()
+        self._inject('storage-write')
         store = self.store
         ref = store.ref(version)
         if ref.segment is not None: raise ValueError('Cannot overwrite immutable Block extent')
