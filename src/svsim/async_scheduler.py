@@ -560,12 +560,9 @@ class AsyncDistributedSimulator(DistributedSimulator):
             adapter=GradientCostAdapter()
             cost_origin='manual-reference' if costs is not None else 'unavailable'
             if method=='auto' and costs is None and self.runtime.gradient_calibration is not None:
-                if context['injected'] or not context['build']:
-                    costs={}
-                    cost_origin='INJECTED_EVALUATION' if context['injected'] else 'INSUFFICIENT_BUILD_BASELINE'
-                else:
-                    costs=adapter.adapt(self.runtime.gradient_calibration,context)
-                    cost_origin=adapter.last_reason
+                resolved=self.runtime.costs.resolve('gradient-method',context,purpose='production')
+                costs=resolved.value or {}
+                cost_origin=self.runtime.gradient_cost_reason or resolved.reason
             schedule = GradientScheduler().choose(self.sequencer.operations, requested, self.binding,
                         method, costs, available_ram_bytes=self.budget.limit,
                         available_disk_bytes=self.config.disk_quota_bytes)

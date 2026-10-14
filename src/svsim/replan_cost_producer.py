@@ -40,8 +40,8 @@ def remaining_calls(sim, policy, start, end):
     return calls
 
 
-def costs_for(sim, row, estimate, *, end, planning_seconds, drain_seconds, checkpoint_seconds):
-    """ReplanCosts for one generated proposal row; ``estimate`` is the evaluation evidence or None."""
+def costs_for(sim, row, estimate, *, end, planning_seconds, drain_seconds, checkpoint_seconds, qualified=False):
+    """ReplanCosts for one proposal row; ``estimate`` and ``qualified`` come from the cost registry."""
     start = sim.frontier + 1
     gates = max(0, end - start + 1)
     updates = dict(tuple(item) for item in row['updates'])
@@ -59,5 +59,5 @@ def costs_for(sim, row, estimate, *, end, planning_seconds, drain_seconds, check
                         planning_seconds=planning_seconds, drain_seconds=drain_seconds,
                         migration_seconds=migration, calibration_seconds=0.0, validation_seconds=0.0,
                         checkpoint_seconds=checkpoint_seconds if frontier_change else 0.0, cleanup_seconds=0.0,
-                        context_hash=context, qualified=estimate.get('scope') == 'injected')
+                        context_hash=context, qualified=qualified)
     return costs, {'current_calls': current_calls, 'candidate_calls': candidate_calls, 'remaining_gates': gates}

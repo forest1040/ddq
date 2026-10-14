@@ -77,6 +77,11 @@ class RuntimeControl:
         self._eta_cost_views={}
         self.latest_eta=None
         self.generated_candidates={}
+        from .runtime_cost_registry import RuntimeCostRegistry
+        # The single source of runtime costs for ETA, Guard, cache, gradient and replan.
+        self.costs=RuntimeCostRegistry()
+        self.condition_provenance=None
+        self.gradient_cost_reason=None
         self.evaluation_estimate=None
         self.checkpoint_walls=[]
         self.max_switches=4
@@ -255,8 +260,22 @@ class RuntimeControl:
         if pool<self._gradient_profile_budget:sim.budget.release(self._gradient_profile_budget-pool)
         self._gradient_profile_budget=pool
         self.gradient_calibration=deepcopy(data)
+        self.costs.register('gradient-method','gradient-calibration','measured',self._gradient_costs,
+                            units='seconds/gradient')
         self.invalidate_eta('GRADIENT_PROFILE_ATTACHED')
         return content_hash(data)
+
+    def _gradient_costs(self,context,_condition):
+        """Validated held-out method costs for this exact context, or None (reason kept)."""
+        from .gradient_cost_adapter import GradientCostAdapter
+        if context.get('injected'):
+            self.gradient_cost_reason='INJECTED_EVALUATION';return None
+        if not context.get('build'):
+            self.gradient_cost_reason='INSUFFICIENT_BUILD_BASELINE';return None
+        adapter=GradientCostAdapter()
+        costs=adapter.adapt(self.gradient_calibration,context)
+        self.gradient_cost_reason=adapter.last_reason
+        return costs or None
 
     def configure_eta(self, *, max_bytes=65536,scan_items=256,scan_seconds=.02):
         from .remaining_work import CaptureLimits,RemainingWorkExtractor
@@ -278,6 +297,7 @@ class RuntimeControl:
         """Explicit diagnostic views never certify an automatic switch."""
         if name not in {'baseline','observed','adapted'}:raise ValueError('Unknown ETA view')
         self._eta_cost_views[name]=resolver
+        self.costs.register('eta-view:'+name,'explicit:'+name,'manual',lambda task,_condition,r=resolver:r(task))
         self.invalidate_eta('DIAGNOSTIC_COST_VIEW_CHANGED')
 
     def invalidate_eta(self, reason, *, reset_endpoint=False):
@@ -308,18 +328,26 @@ class RuntimeControl:
                 snapshot=replace(snapshot,complete=False,unknown_reasons=snapshot.unknown_reasons+('ETA_MONITOR_BUDGET',))
             reports={}
             sources={}
+            costs=self.costs
+            profiled='task-seconds' in costs.kinds()
             for name in ('baseline','observed','adapted'):
-                adapter=self._eta_baseline_adapter if name=='baseline' else (self.profile_adapter if name=='observed' else None)
-                resolver=self._eta_cost_views.get(name)
                 explicit=name in self._eta_cost_views
-                if not explicit and adapter is not None:
-                    resolver=lambda task,adapter=adapter:adapter.cost_sample(task.context,task.condition)
-                sources[name]='diagnostic-explicit' if explicit else ('conditional-envelope' if adapter else 'unavailable')
+                resolver=None
+                if explicit:
+                    resolver=lambda task,name=name:costs.resolve('eta-view:'+name,task,purpose='diagnostic').value
+                elif profiled and name!='adapted':
+                    # baseline keeps the first attached profile; observed follows the newest one.
+                    select='first' if name=='baseline' else 'latest'
+                    resolver=lambda task,select=select:costs.resolve('task-seconds',task.context,task.condition,
+                        purpose='production',select=select).value
+                sources[name]='diagnostic-explicit' if explicit else ('conditional-envelope' if resolver else 'unavailable')
                 reports[name]=asdict(RuntimeETA().evaluate(snapshot,resolver))
-            if getattr(self,'time_model',None) is not None:
-                from .runtime_time_model_eta import VIEW_NAME, evaluate
-                reports[VIEW_NAME]=evaluate(snapshot,self.time_model,**self._time_model_context)
-                sources[VIEW_NAME]='time-model:'+self.time_model.model_id
+            if 'eta-remaining' in costs.kinds():
+                from .runtime_time_model_eta import VIEW_NAME
+                resolved=costs.resolve('eta-remaining',snapshot,purpose='diagnostic')
+                if resolved.known:
+                    reports[VIEW_NAME]=resolved.value
+                    sources[VIEW_NAME]=resolved.source_id
             result={'schema_version':1,'kind':'runtime-eta','snapshot_id':snapshot.snapshot_id,
                 'endpoint':snapshot.endpoint,'scope':'rank-local','published_frontier':snapshot.published_frontier,
                 'endpoint_frontier':snapshot.endpoint_frontier,'remaining_sources':snapshot.remaining_sources,
@@ -385,11 +413,22 @@ class RuntimeControl:
         self.generated_candidates={row['proposal_id']:row for row in rows}
         return tuple(rows)
 
-    def set_cache_cost_hints(self,summary,*,cost_resolver=None):
+    def set_cache_cost_hints(self,summary,*,cost_resolver=None,provenance='manual'):
+        """Eviction costs resolve through the registry; only measured sources reach production.
+
+        A caller-supplied resolver is registered with the provenance the caller
+        declares (manual by default). Hint-declared fields alone are manual.
+        """
+        from .cache_cost import resolve_cost
         if getattr(self.sim,'_private_epoch',False):raise ValueError('Cache hints require a published cut')
         if not hasattr(self.sim.cache,'set_cost_hints'):raise ValueError('Cache does not support cost hints')
+        source=cost_resolver if cost_resolver is not None else (lambda version,entry,hint:resolve_cost(hint,None,version,entry))
+        self.costs.register('cache-entry','cache-resolver' if cost_resolver is not None else 'cache-hints',
+            provenance if cost_resolver is not None else 'manual',lambda key,_condition,f=source:f(*key))
+        costs=self.costs
         return self.sim.cache.set_cost_hints(summary,context=self.cache_context(),
-            cost_resolver=cost_resolver,context_getter=self.cache_context)
+            cost_resolver=lambda version,entry,hint:costs.resolve('cache-entry',(version,entry,hint),
+                purpose='production').value,context_getter=self.cache_context)
 
     def attach_profile_document(self, document, *, scope='same-host'):
         """Attach an immutable profile for exact-condition, exact-build lookup."""
@@ -404,6 +443,8 @@ class RuntimeControl:
         self.profile_adapter = RuntimeProfileAdapter(document,
             configuration_fingerprint=actual.configuration_fingerprint,scope=scope)
         if self._eta_baseline_adapter is None:self._eta_baseline_adapter=self.profile_adapter
+        self.costs.register('task-seconds','profile:'+document.profile_id,'measured',
+            lambda context,condition,a=self.profile_adapter:a.cost_sample(context,condition),units='seconds/call')
         self.profile_version+=1
         self.invalidate_eta('PROFILE_ATTACHED')
         return self.profile_adapter
@@ -423,7 +464,14 @@ class RuntimeControl:
         if configuration_fingerprint is None:
             configuration_fingerprint=probe_profile({'scope':'local','ranks':sim.size,'nodes':nodes,
                 'threads':sim.policy.io_workers},(sim.directory,)).configuration_fingerprint
+        from .runtime_time_model_eta import evaluate as time_model_view
         self.time_model=model
+        # Fitted (derived) remaining-time view: diagnostic, never a production cost.
+        for kind,source in list(self.costs.sources):
+            if kind=='eta-remaining':self.costs.unregister(kind,source)
+        self.costs.register('eta-remaining','time-model:'+model.model_id,'derived',
+            lambda snapshot,_condition:time_model_view(snapshot,self.time_model,**self._time_model_context),
+            units='seconds')
         self._time_model_context={'condition':runtime_condition(sim,nodes=nodes,threads=sim.policy.io_workers),
             'configuration_fingerprint':configuration_fingerprint,'sync_seconds':sync_seconds,
             'block_bits':sim.block_bits,'blocks_per_rank':sim.ownership.blocks_per_rank,
@@ -457,6 +505,9 @@ class RuntimeControl:
                                                    plan_id=sim.run_id+'-async')
         self.guard = ObservePerformanceGuard(hardware_profile, plan, window_size=window_size,
                                              consecutive_windows=consecutive_windows)
+        # HardwareProfile benchmarks carry no build/fingerprint/quality provenance: legacy, health only.
+        self.costs.register('guard-baseline','hardware-profile','legacy',
+            lambda _context,condition,p=hardware_profile:p.matching_benchmark(condition))
 
     def observe(self, sample):
         if self.guard is None:
@@ -464,8 +515,10 @@ class RuntimeControl:
         report = self.guard.observe(sample)
         self.health = report.health_state
         self.profile_version = self.guard.runtime_profile.version
-        if self.guard.hardware_profile.matching_benchmark(sample.condition) is not None:
+        baseline = self.costs.resolve('guard-baseline', None, sample.condition, purpose='health')
+        if baseline.known:
             self.condition_hash = content_hash(asdict(sample.condition))
+            self.condition_provenance = baseline.provenance
         self.sim.trace.record('async-health', performance_class='health', health_state=self.health,
                               metadata={'path': 'ASYNC_GUARD', 'report': asdict(report),
                                         'profile_version': self.profile_version})
@@ -656,7 +709,11 @@ class RuntimeControl:
     def observe_evaluation(self, row):
         """Accept one agreed evaluation row (health, and evidence when degraded)."""
         self.health = row['health']
-        if row.get('estimate') is not None:self.evaluation_estimate = dict(row['estimate'])
+        if row.get('estimate') is not None:
+            self.evaluation_estimate = dict(row['estimate'])
+            # Injected evaluation evidence: usable for evaluation, never for production replans.
+            self.costs.register('replan-per-gate','evaluation-estimate','injected',
+                                lambda _c,_d,e=dict(row['estimate']):e)
         if row['health'] in {'STABLE','VERIFY_FAILED'} and self.verifying is not None:
             self.verifying = {**self.verifying, 'result': row['health'], 'reason': row.get('reason')}
             self.replan_decisions.append({'kind':'verify', **self.verifying})
@@ -694,11 +751,14 @@ class RuntimeControl:
         walls = sim.transport.control.allgather(max(self.checkpoint_walls) if self.checkpoint_walls else None)
         checkpoint = None if any(w is None for w in walls) else max(walls)
         end = self._eta_endpoint if self._eta_endpoint is not None else len(sim.sequencer.operations)-1
+        purpose = 'evaluation' if getattr(sim, '_measurement_injected', False) else 'production'
+        evidence = self.costs.resolve('replan-per-gate', purpose=purpose)
         local = []
         for row in rows:
             proposal = ReplanProposal(**{**row, 'updates': tuple(tuple(item) for item in row['updates'])})
-            costs, counts = costs_for(sim, row, self.evaluation_estimate, end=end, planning_seconds=planning,
-                                      drain_seconds=drain, checkpoint_seconds=checkpoint)
+            costs, counts = costs_for(sim, row, evidence.value, end=end, planning_seconds=planning,
+                                      drain_seconds=drain, checkpoint_seconds=checkpoint,
+                                      qualified=evidence.known)
             result = evaluate(proposal, costs, minimum_gain_fraction=sim.policy.minimum_gain_fraction)
             local.append({'proposal_id': row['proposal_id'], 'updates': row['updates'],
                           'classification': row['classification'], 'gain_lower_seconds': result.gain_lower_seconds,
@@ -719,7 +779,8 @@ class RuntimeControl:
         for row in merged: self.generated_candidates.setdefault(row['proposal_id'], {}).update(row)
         decision = {'kind': 'evaluate', 'frontier': sim.frontier, 'candidates': merged,
                     'selected': selected['proposal_id'] if selected else None,
-                    'estimate': self.evaluation_estimate, 'planning_seconds': planning, 'drain_seconds': drain,
+                    'estimate': evidence.value, 'cost_purpose': purpose, 'cost_source': evidence.source_id,
+                    'cost_reason': evidence.reason, 'planning_seconds': planning, 'drain_seconds': drain,
                     'checkpoint_seconds': checkpoint, 'mode': sim.policy.mode}
         self.replan_decisions.append(decision)
         sim.trace.record('replan-search', performance_class='planning', metadata={
