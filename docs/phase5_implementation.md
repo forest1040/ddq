@@ -103,7 +103,7 @@ uv run --locked --extra mpi svsim report --campaign campaign.json --output repor
 
 **比較評価。** `svsim report`はcampaignの各caseのplan／runをSHA-256付きで1回だけ読み、workload・plan_id・configurationの不一致、未完了・oracle不合格、予測なしを理由付きで`not_compared`へ分ける。符号付き誤差（予測−実測median）、held-out／calibrationを分けた|相対誤差|のmedian・p95・worst、observed 0.05秒未満の絶対誤差集計、interval coverage、phase別誤差と観測／予測bottleneck、baseline variantとのA/B比（勝敗、trial範囲の重なり）を出す。30% median目標は評価目標で保証ではない。
 
-Mac（M系、1 rank、b=4、RAM store、buffered）で52件のsuiteを各3回測り、held-out 4件を5回測った。3件は|相対誤差|0.65〜2.5%（median 0.71%）で、3件ともintervalに入った。joint RXを含む1件は未校正classとして予測なしになった。b=4ではpass当たり約6 ms、gate当たり約7 msで、Python／metadataのoverheadが支配的だった。kernel帯域モデルとは別物で、大きなBlockや別backendへ外挿しない。証跡は[内部記録](internal/phase5_timing_validation/)に置いた。
+Mac（M系、1 rank、b=4、RAM store、buffered）で52件のsuiteを各3回測り、held-out 4件を5回測った。3件は|相対誤差|0.65〜2.5%（median 0.71%）で、3件ともintervalに入った。joint RXを含む1件は未校正classとして予測なしになった。b=4ではpass当たり約6 ms、gate当たり約7 msで、Python／metadataのoverheadが支配的だった。ent Docker（Linux ext4）の縮小suiteでは、held-outのmedian |相対誤差|は6.3%だった。一方worstは49.7%（全featureが範囲外の8Q）で、interval coverageは2/3だった。Linuxではexecuteのtrial間で2〜4倍の間欠的な遅いmodeがあり、medianを使うmodelではこれを捉えられない。原因の特定とtail込みの上側modelは残件である。kernel帯域モデルとは別物で、大きなBlockや別backendへ外挿しない。証跡は[内部記録](internal/phase5_timing_validation/)に置いた。
 
 ## 検証と次の作業
 

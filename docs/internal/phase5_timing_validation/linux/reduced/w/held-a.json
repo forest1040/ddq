@@ -1,0 +1,1 @@
+{"schema_version": 1, "kind": "workload", "qubits": 7, "operations": [{"kind": "REPEAT", "count": 3, "body": [{"kind": "H", "targets": [0]}, {"kind": "H", "targets": [6]}, {"kind": "RX", "targets": [2], "angle": 0.37}, {"kind": "PAULI_ROT", "targets": [0, 1, 2], "paulis": ["Y", "X", "Z"], "angle": 0.37}]}]}
