@@ -10,6 +10,11 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+# Docker/ext4 durability tests can exceed the short local smoke deadline.
+# The development runner selects a finite bound without changing the workload.
+MPI_TEST_TIMEOUT = int(os.environ.get('DDQ_MPI_TEST_TIMEOUT', '120'))
+if not 1 <= MPI_TEST_TIMEOUT <= 1800:
+    raise ValueError('DDQ_MPI_TEST_TIMEOUT must be in 1..1800 seconds')
 
 
 @pytest.mark.parametrize("ranks", (1, 2, 4))
@@ -27,7 +32,7 @@ def test_distributed_state_observables_and_checkpoint(tmp_path, ranks):
     result = subprocess.run(
         [launcher, "-n", str(ranks), sys.executable, "-m", "mpi4py",
          str(ROOT / "tests" / "mpi_phase3_worker.py"), "--directory", str(directory)],
-        cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+        cwd=ROOT, env=env, capture_output=True, text=True, timeout=MPI_TEST_TIMEOUT)
     assert result.returncode == 0, (
         f"{ranks}-rank worker failed ({result.returncode})\n"
         f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}")

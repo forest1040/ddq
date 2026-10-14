@@ -42,7 +42,7 @@ P4-003／005／008の[注入・paired report・明示勾配校正](phase4_valida
 
 MPI が `THREAD_SINGLE` の場合、`io_engine='auto'` は main thread の cooperative engine を選ぶ。worker を明示指定した場合は拒否する。macOS の `backend='direct'` は既存の `F_NOCACHE` backend を使う。Linuxの `O_DIRECT` backendも既存実装を引き継ぎ、PBSの単一ノード・実2ノードでworker I/Oを検証した。
 
-**native io_uring は optional adapter を追加したが、Linux 実機では未検証。** `io_engine='io_uring'` の明示指定時だけ、Linux、C compiler、liburing header／library、kernel の ring 初期化を確認する。対応しない条件では `NotImplementedError` となり、worker へ黙って切り替えない。`auto` の基準は引き続き worker／cooperative である。native ring は main thread で progress し、kernel submission の致命的失敗で request の到達状況を証明できない場合は ring を停止し、未完了 buffer の pin を process 終了まで保持する。クラスタではliburing header／libraryが既存環境に無く、新規導入を行わなかったためnative completionの実機検証は未実施。
+**native io_uringは2026-10-14にLinux Dockerで実kernel検証へ着手した。** [環境と検証範囲](linux_development.md)、[内部記録](internal/ent_linux_validation/README.md)を参照する。`io_engine='io_uring'` の明示指定時だけ、Linux、C compiler、liburing header／library、kernel の ring 初期化を確認する。対応しない条件では `NotImplementedError` となり、worker へ黙って切り替えない。`auto` の基準は引き続き worker／cooperative である。native ring は main thread で progress し、kernel submission の致命的失敗で request の到達状況を証明できない場合は ring を停止し、未完了 buffer の pin を process 終了まで保持する。従来のPBSクラスタにはliburing header／libraryを新規導入せず、nativeの全fault／durability matrixはP4-010へ残す。
 
 `DistributedConfig` に追加した設定は次のとおり。
 
@@ -175,7 +175,7 @@ Mac 検証は、unit test と同一 Mac 上の real MPI 1／2／4 rank を組み
 
 lifecycle の real MPI test は rank ごとに異なる root を使い、peer の manifest path を開く経路を拒否する。control packet より大きな Unicode payload、remote lease による GC 拒否、COMMIT 後の copy failure と停止／復旧、missing copy 修復、local prepare の破損、最新 payload 破損時の旧 cut 選択拒否、RAM checkpoint の容量不足と retry、v3 local-volume upgrade を検証する。最新の全テスト件数・実測時間は最終テスト report に記録する。実装文書のサンプルは Mac の 4 rank／F_NOCACHE で実行し、`cos(0.37)` と `-sin(0.37)` に一致する期待値・勾配と v4 snapshot の保存を確認した。
 
-許可後のクラスタ検証では真の別host／別root、Linux worker I/O／O_DIRECT、PSM2／OFI／Ethernet、2／4 rankのS0/S2、batchと三方式の勾配、v4 checkpoint／resume／prefix／GCとfault検証が成功した。local filesystemの空き100 GiB以上を維持した。native io_uring、共有filesystemからのoffline dataset移行、一般的なtile migration、性能guard／ETAの運用拡張、保存媒体喪失からの復旧は未検証・未実装境界として残る。詳細は[内部検証記録](internal/phase4_cluster_validation.md)。
+許可後のクラスタ検証では真の別host／別root、Linux worker I/O／O_DIRECT、PSM2／OFI／Ethernet、2／4 rankのS0/S2、batchと三方式の勾配、v4 checkpoint／resume／prefix／GCとfault検証が成功した。local filesystemの空き100 GiB以上を維持した。native io_uringの全fault／durability matrix、共有filesystemからのoffline dataset移行、一般的なtile migration、性能guard／ETAの運用拡張、保存媒体喪失からの復旧は未検証・未実装境界として残る。詳細は[内部検証記録](internal/phase4_cluster_validation.md)。
 
 ### Mac最終検証記録
 

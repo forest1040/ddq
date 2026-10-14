@@ -5,7 +5,17 @@ import shutil
 import sys
 import time
 
+import pytest
+
 from svsim.development_runner import JobSpec, JobState, LocalDevelopmentRunner
+
+
+@pytest.fixture(autouse=True)
+def _isolate_default_scratch(tmp_path, monkeypatch):
+    """Keep JobSpec's default relative scratch inside a writable test directory."""
+    cwd = tmp_path / "cwd"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
 
 
 def spec(code, **kwargs):

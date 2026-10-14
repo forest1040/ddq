@@ -1,0 +1,3983 @@
+{
+  "kind": "merged Linux regression coverage",
+  "scope": "single-host Linux Docker; builtin seccomp",
+  "is_single_invocation": false,
+  "collected": 656,
+  "counts": {
+    "passed": 642,
+    "skipped": 14,
+    "failed": 0,
+    "error": 0
+  },
+  "runs": [
+    {
+      "run": "regression-first",
+      "junit": "regression-first/regression.xml",
+      "seconds": 1489.772
+    },
+    {
+      "run": "remaining",
+      "junit": "remaining/remaining.xml",
+      "seconds": 2442.36
+    },
+    {
+      "run": "campaign",
+      "junit": "campaign/campaign.xml",
+      "seconds": 575.777
+    },
+    {
+      "run": "retry",
+      "junit": "retry/retry.xml",
+      "seconds": 228.413
+    }
+  ],
+  "ignored_synthetic_cases": [
+    {
+      "run": "regression-first",
+      "attributes": {
+        "time": "0.001"
+      },
+      "reason": "interrupted synthetic testcase without identity"
+    }
+  ],
+  "results": [
+    {
+      "nodeid": "tests/test_adaptive_evaluation.py::test_failed_events_bounds_and_invalid_values",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_adaptive_evaluation.py::test_persistence_transient_recovery_and_missing_baseline",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_async_io.py::test_async_store_publish_after_completion_checksum_and_durability",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.329
+    },
+    {
+      "nodeid": "tests/test_async_io.py::test_cooperative_cancel_short_read_and_single_capability",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_async_io.py::test_failed_async_write_keeps_version_unpublished_and_releases_disk_credit",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.153
+    },
+    {
+      "nodeid": "tests/test_async_io.py::test_worker_out_of_order_and_running_cancel_preserve_pin",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_async_io.py::test_worker_pin_backpressure_and_release_after_owner_close",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_benchmark.py::test_mock_buffer_methods_delegate_without_read_or_write_allocation",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_benchmark.py::test_mock_transport_tracks_virtual_durations_without_sleep",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_benchmark.py::test_run_benchmarks_returns_measured_conditions_and_removes_scratch",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.008
+    },
+    {
+      "nodeid": "tests/test_benchmark_campaign.py::test_campaign_records_raw_ram_and_kernel_trials_and_keeps_profile_immutable",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.014
+    },
+    {
+      "nodeid": "tests/test_benchmark_campaign.py::test_campaign_rejects_ram_preflight_before_allocating",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_benchmark_campaign.py::test_campaign_storage_respects_budget_and_cleans_its_file",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.008
+    },
+    {
+      "nodeid": "tests/test_benchmark_campaign.py::test_options_bound_raw_trial_growth_and_validate_suite_combinations",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_benchmark_campaign.py::test_storage_preflight_rejects_truncated_block",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_cache.py::test_cache_pin_lru_eviction_and_dirty_writeback",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.23
+    },
+    {
+      "nodeid": "tests/test_cache.py::test_failed_dirty_write_keeps_cache_buffer_and_unwritten_version",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.186
+    },
+    {
+      "nodeid": "tests/test_cache.py::test_memory_budget_and_buffer_lease_alias_contract",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_cache.py::test_pinned_entries_cannot_be_evicted_and_failed_read_releases_reservation",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.152
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_async_cache_cost_choice_and_stale_context_lru_fallback",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.151
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_automatic_pending_summary_counts_reuse_inside_a_bounded_window",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_cache_cost_combines_once_and_requires_known_dirty_writeback",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_cost_inputs_reject_bool_numeric_fields_and_nonbool_flags",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_cost_oracle_keeps_costly_dirty_version_over_cheap_clean",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.19
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_failed_dirty_writeback_keeps_owned_buffer_and_does_not_evict",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.183
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_hint_and_context_limits_are_strict",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_prefetch_respects_budget_and_pending_io_pins_entry",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.194
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_score_rejects_invalid_reuse_inputs_and_returns_unknown_on_overflow",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_summary_is_bounded_and_context_versioned",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_summary_rejects_duplicate_hints",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_cache_cost.py::test_unvalidated_or_missing_freshness_evidence_always_falls_back_to_lru",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.159
+    },
+    {
+      "nodeid": "tests/test_cache_identity.py::test_identity_requires_raw_coordinates_and_freezes_nested_metadata",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_cache_identity.py::test_phase_value_identity_preserves_z8_pi_and_legacy_complex_components",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_cache_identity.py::test_raw_identity_and_resolved_identity_use_only_dependencies",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_cache_identity.py::test_resolved_identity_checks_exact_witness_and_rejects_missing_dependency",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_cache_metadata.py::test_async_hints_and_policy_trace_are_charged_and_released_on_close",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.154
+    },
+    {
+      "nodeid": "tests/test_cache_metadata.py::test_foreground_workspace_sheds_optional_metadata_without_excess_eviction",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.15
+    },
+    {
+      "nodeid": "tests/test_cache_metadata.py::test_hint_capacity_refusal_keeps_previous_state_and_length_is_bounded",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.15
+    },
+    {
+      "nodeid": "tests/test_cache_metadata.py::test_managed_metadata_replace_rejects_capacity_and_close_settles_exactly",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_cache_metadata.py::test_stale_cost_summary_is_deleted_before_lru_fallback",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.15
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_backup_reserves_complete_destination_before_native_copy",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.032
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA journal_mode=WAL]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.017
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA synchronous=OFF]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.017
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[PRAGMA writable_schema=ON]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.017
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_caller_cannot_change_guard_or_durability[SELECT svsim_disk_guard_config(99999999,99999999,1)]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.017
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_cursor_and_script_share_reservations_and_rollback",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.042
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_generated_sql_payload_is_stopped_by_native_page_cap",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.034
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_journal_rollback_cannot_extend_file_without_reservation",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_open_failure_releases_startup_reservation",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.015
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_quota_rejection_precedes_begin_and_preserves_committed_rows",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.027
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_second_quiescent_connection_preserves_shared_catalog",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.036
+    },
+    {
+      "nodeid": "tests/test_catalog_admission.py::test_trace_and_semantic_journal_refuse_growth_before_write",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.028
+    },
+    {
+      "nodeid": "tests/test_clifford.py::test_large_tableau_metadata_without_amplitudes",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_clifford.py::test_left_update_phase_and_bounded_word",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_clifford.py::test_random_left_updates_preserve_absolute_phase",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.28
+    },
+    {
+      "nodeid": "tests/test_clifford.py::test_symplectic_validation",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_clifford.py::test_tableau_synthesis_anchor_and_inverse[1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.014
+    },
+    {
+      "nodeid": "tests/test_clifford.py::test_tableau_synthesis_anchor_and_inverse[2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.022
+    },
+    {
+      "nodeid": "tests/test_clifford.py::test_tableau_synthesis_anchor_and_inverse[3]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.051
+    },
+    {
+      "nodeid": "tests/test_clifford.py::test_tableau_synthesis_anchor_and_inverse[4]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.135
+    },
+    {
+      "nodeid": "tests/test_development_runner.py::test_cancel_queued_job_and_resource_admission",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.372
+    },
+    {
+      "nodeid": "tests/test_development_runner.py::test_descendant_inherited_pipes_do_not_hold_worker_past_walltime",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.572
+    },
+    {
+      "nodeid": "tests/test_development_runner.py::test_rejects_shell_metacharacters_as_argv_not_shell",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.038
+    },
+    {
+      "nodeid": "tests/test_development_runner.py::test_runs_and_writes_bounded_report",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.018
+    },
+    {
+      "nodeid": "tests/test_development_runner.py::test_two_rank_mpi_when_available",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.521
+    },
+    {
+      "nodeid": "tests/test_development_runner.py::test_uses_declared_scratch_root_and_checks_resource_and_mpi_counts",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.036
+    },
+    {
+      "nodeid": "tests/test_development_runner.py::test_walltime_and_nonzero_exit_are_failed",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.121
+    },
+    {
+      "nodeid": "tests/test_disk_coordinator.py::test_coordinator_path_requires_explicit_absolute_node_local_namespace",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_disk_coordinator.py::test_same_volume_rank_path_mismatch_fails_collectively_before_ledger_open",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.707
+    },
+    {
+      "nodeid": "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 7.427
+    },
+    {
+      "nodeid": "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 10.92
+    },
+    {
+      "nodeid": "tests/test_disk_coordinator.py::test_shared_volume_dataset_fork_and_gradient[buffered-4]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 22.737
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_bootstrap_is_admitted_before_creating_ledger",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_child_process_crash_keeps_partial_charge_until_explicit_single_recovery",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.197
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_crash_token_persists_and_materialization_removes_pending_charge",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.027
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_full_ledger_keeps_room_for_release",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.02
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_generic_client_cannot_bypass_an_already_bound_shared_policy",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.014
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_incoming_parent_compacts_descendant_and_keeps_existing_bytes",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.007
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_injected_capacity_scope_is_never_strict",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_legacy_ledger_with_active_token_cannot_be_bound_to_shared_policy",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.017
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_nested_child_roots_compact_under_parent_without_losing_usage",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.967
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_nonoverlapping_root_limit_still_rejects_257th_root",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.693
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_production_ledger_pool_is_bounded_and_precharged_once",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.021
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_reconciliation_evidence_is_bounded",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.009
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.005
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_reservation_labels_have_utf8_byte_limits[kwargs2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.005
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[-1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.004
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[1.5]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.005
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.005
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_reservation_rejects_non_integer_or_negative_amount[True]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_root_limit_is_global_across_clients_and_constructor",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.043
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_roots_on_different_volumes_are_rejected",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_shared_policy_connections_serialize_and_share_pending_quota",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.009
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_shared_policy_mismatch_rejects_before_touching_existing_reservation",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.013
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_shared_root_registration_rejects_aggregate_overquota_and_rolls_back",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.007
+    },
+    {
+      "nodeid": "tests/test_disk_reservation_ledger.py::test_unrelated_roots_with_sibling_prefix_names_remain_distinct",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.008
+    },
+    {
+      "nodeid": "tests/test_distributed_adjoint_serial.py::test_comm_self_adjoint_matches_finite_difference",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 4.245
+    },
+    {
+      "nodeid": "tests/test_distributed_adjoint_serial.py::test_comm_self_gradient_restores_original_cut",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.015
+    },
+    {
+      "nodeid": "tests/test_distributed_checkpoint.py::test_failed_checkpoint_restores_prior_authoritative_cut[global]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.988
+    },
+    {
+      "nodeid": "tests/test_distributed_checkpoint.py::test_failed_checkpoint_restores_prior_authoritative_cut[prepare]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.929
+    },
+    {
+      "nodeid": "tests/test_distributed_checkpoint.py::test_failed_migration_global_publication_restores_empty_target",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.507
+    },
+    {
+      "nodeid": "tests/test_distributed_checkpoint.py::test_fork_local_failure_is_voted_and_parent_remains_usable[backup]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.658
+    },
+    {
+      "nodeid": "tests/test_distributed_checkpoint.py::test_fork_local_failure_is_voted_and_parent_remains_usable[lease]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.791
+    },
+    {
+      "nodeid": "tests/test_distributed_checkpoint.py::test_global_manifest_rejects_duplicate_rank_prepares",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.325
+    },
+    {
+      "nodeid": "tests/test_distributed_checkpoint.py::test_phase1_catalog_migration_retains_legacy_relative_phase",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.255
+    },
+    {
+      "nodeid": "tests/test_distributed_checkpoint.py::test_phase2_snapshot_migration_preserves_source_and_adjoint_history",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 3.382
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_active_offsets_are_lazy_ordered_and_validate_lower_bits",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_apply_pauli_action_accumulates_and_rejects_alias",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_apply_pauli_action_matches_global_dense_partner_block[letters0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_apply_pauli_action_matches_global_dense_partner_block[letters1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_apply_pauli_action_matches_global_dense_partner_block[letters2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_inverse_gate_angles_fixed_gates_and_dense_asset",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_pack_active_writes_prefix_only",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_partial_mcx_pair_exchanges_only_matching_offsets[controls0-values0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_partial_mcx_pair_exchanges_only_matching_offsets[controls1-values1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_partial_mcx_pair_exchanges_only_matching_offsets[controls2-values2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_pauli_inner_control_projector_uses_source_index",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_pauli_inner_matches_dense_random_complex_state[letters0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_pauli_inner_matches_dense_random_complex_state[letters1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_pauli_inner_matches_dense_random_complex_state[letters2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_kernels.py::test_pauli_inner_matches_dense_random_complex_state[letters3]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_metadata.py::test_symbolic_cut_does_not_expand_blocks[40]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.538
+    },
+    {
+      "nodeid": "tests/test_distributed_metadata.py::test_symbolic_cut_does_not_expand_blocks[50]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.534
+    },
+    {
+      "nodeid": "tests/test_distributed_plan.py::test_mcx_costs_unknown_conditions_and_overrides",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_distributed_plan.py::test_passive_mpi_guard_matches_direction_and_packet_size",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_plan.py::test_profile_rejects_invalid_measurements[kw0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_plan.py::test_profile_rejects_invalid_measurements[kw1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_plan.py::test_profile_rejects_invalid_measurements[kw2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_plan.py::test_profile_rejects_invalid_measurements[kw3]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_distributed_plan.py::test_s1_preserves_order_and_requires_recoverable_measured_cost",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_distributed_policies.py::test_comm_self_calibration_and_profile_setter",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.37
+    },
+    {
+      "nodeid": "tests/test_distributed_policies.py::test_two_rank_s1_and_slow_rank_observation",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 18.058
+    },
+    {
+      "nodeid": "tests/test_estimate_report.py::test_plan_codec_checks_identity_and_preserves_large_counts_and_unknowns",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_exact_parameters.py::test_binding_keeps_legacy_hash_without_witness_and_versions_witness_hash",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_exact_parameters.py::test_duplicate_exact_witnesses_are_rejected",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_exact_parameters.py::test_exact_analysis_does_not_turn_float_underflow_into_zero",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_exact_parameters.py::test_exact_analysis_proves_rational_identities_and_special_angles",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_exact_parameters.py::test_exact_analysis_uses_exact_binary_rationals_not_float_results",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_exact_parameters.py::test_exact_pi_is_normalized_expression_and_derivative_is_zero",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_exact_parameters.py::test_shift_preserves_only_provable_exact_witness",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_execution_tasks.py::test_arbitrary_completion_order_exact_coverage_and_metadata_release",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_execution_tasks.py::test_duplicate_unknown_hole_and_failure_never_publish",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_execution_tasks.py::test_task_transition_validation_and_close_discards_unpublished_roots",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_followup_mpi.py::test_actual_followup_campaign_keeps_unknown_costs_and_state[1]",
+      "status": "passed",
+      "run": "campaign",
+      "seconds": 106.496
+    },
+    {
+      "nodeid": "tests/test_followup_mpi.py::test_actual_followup_campaign_keeps_unknown_costs_and_state[2]",
+      "status": "passed",
+      "run": "campaign",
+      "seconds": 173.439
+    },
+    {
+      "nodeid": "tests/test_followup_mpi.py::test_actual_followup_campaign_keeps_unknown_costs_and_state[4]",
+      "status": "passed",
+      "run": "campaign",
+      "seconds": 253.977
+    },
+    {
+      "nodeid": "tests/test_followup_mpi.py::test_completion_monitor_compares_equal_pools_and_captures_actual_backend[buffered]",
+      "status": "passed",
+      "run": "campaign",
+      "seconds": 18.587
+    },
+    {
+      "nodeid": "tests/test_followup_mpi.py::test_completion_monitor_compares_equal_pools_and_captures_actual_backend[direct]",
+      "status": "passed",
+      "run": "campaign",
+      "seconds": 23.257
+    },
+    {
+      "nodeid": "tests/test_followup_runtime.py::test_compute_injection_is_opt_in_bounded_and_not_production_cost",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 2.579
+    },
+    {
+      "nodeid": "tests/test_followup_runtime.py::test_raw_gradient_attachment_never_runs_pilot_and_preserves_binding",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 5.116
+    },
+    {
+      "nodeid": "tests/test_frame_benchmark.py::test_calibration_bounds_block_size_and_work[0-1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_frame_benchmark.py::test_calibration_bounds_block_size_and_work[2-0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_frame_benchmark.py::test_calibration_bounds_block_size_and_work[2-101]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_frame_benchmark.py::test_calibration_bounds_block_size_and_work[9-1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_frame_benchmark.py::test_calibration_rejects_nonfinite_or_nonpositive_measurements",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_frame_benchmark.py::test_calibration_reports_positive_finite_rates_for_small_blocks",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_frame_benchmark.py::test_phase2_report_compares_same_state_with_direct_complex_accuracy",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 37.538
+    },
+    {
+      "nodeid": "tests/test_frame_benchmark.py::test_phase2_report_rejects_calibration_for_different_block_width",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_frame_benchmark.py::test_sixteen_qubit_case_requires_matching_six_bit_calibration",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_actual_context_mutation_and_resource_overage_stop_trials",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_calibration_rejects_reused_trials_and_records_oracle_failure",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_calibration_runs_fresh_whole_methods_and_separates_warmup",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_certificate_rejects_false_coverage_injected_context_and_bad_clock",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_certified_resource_envelope_must_cover_all_measured_peaks[bounds0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_certified_resource_envelope_must_cover_all_measured_peaks[bounds1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_certified_resource_envelope_must_cover_all_measured_peaks[bounds2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_context_is_frozen_and_factory_or_cleanup_failures_are_recorded",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_explicit_certifier_must_reference_five_held_out_raw_observations",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_limits_and_actual_context_mismatch_prevent_certification",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_missing_certified_resource_bound_prevents_envelope",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_unknown_peak_resources_cannot_be_certified",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_calibration.py::test_whole_trial_wall_includes_context_cleanup_and_wall_limit_is_soft",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_gradient_cost_adapter.py::test_adapter_rechecks_explicit_resource_bounds_even_after_report_rehash",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_gradient_cost_adapter.py::test_adapter_rejects_forged_or_unqualified_report_rows",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_gradient_cost_adapter.py::test_adapter_requires_exact_context_and_certified_resources",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_gradient_cost_adapter.py::test_serialized_measured_report_roundtrips_and_whole_trial_is_not_adopted",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_gradient_scheduler.py::test_auto_defaults_to_adjoint_when_estimates_are_incomplete_or_uncertain",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_scheduler.py::test_auto_uses_lowest_confident_feasible_upper_bound",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_scheduler.py::test_certified_uncontrolled_and_controlled_shift_rules",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_scheduler.py::test_mapping_binding_and_multiple_shared_parameter_occurrences",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_scheduler.py::test_occurrences_are_per_gate_and_chain_factors_use_binding",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_scheduler.py::test_rejects_finite_difference_and_bad_resource_or_cost_values",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_gradient_scheduler.py::test_resource_admission_and_explicit_unsupported_generator",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_lifecycle.py::test_benchmark_condition_validates_ranges",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_lifecycle.py::test_benchmark_sample_rejects_invalid_confidence_interval",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_lifecycle.py::test_benchmark_sample_rejects_non_finite_metrics[-inf]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_lifecycle.py::test_benchmark_sample_rejects_non_finite_metrics[inf]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_lifecycle.py::test_benchmark_sample_rejects_non_finite_metrics[nan]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_lifecycle.py::test_guard_does_not_compare_mismatched_load_and_observe_mode_is_quiet",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_lifecycle.py::test_guard_matches_load_conditions_and_recommends_without_applying",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_lifecycle.py::test_hardware_profiler_discovers_portable_basics",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_lifecycle.py::test_static_plan_and_trace_preserve_versions_and_conditions",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_lowering.py::test_decomposition_preserves_open_outer_control_and_source_error",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_lowering.py::test_lowering_enforces_operation_bound",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_lowering.py::test_random_unitary_structured_exact_reconstructs[1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_lowering.py::test_random_unitary_structured_exact_reconstructs[2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_lowering.py::test_random_unitary_structured_exact_reconstructs[3]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_lowering.py::test_random_unitary_structured_exact_reconstructs[4]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.013
+    },
+    {
+      "nodeid": "tests/test_memory_store.py::test_memory_extents_are_bounded_immutable_and_explicitly_durable",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.055
+    },
+    {
+      "nodeid": "tests/test_memory_store.py::test_ram_admission_failure_keeps_prior_immutable_extent",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.248
+    },
+    {
+      "nodeid": "tests/test_memory_store.py::test_readonly_missing_directory_is_not_created",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_memory_store.py::test_readonly_open_does_not_change_catalog_or_allocate_files",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.784
+    },
+    {
+      "nodeid": "tests/test_memory_store.py::test_reclaim_respects_explicit_live_snapshot_and_cache_versions",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.247
+    },
+    {
+      "nodeid": "tests/test_memory_store.py::test_spill_failure_retains_ram_and_retry_reuses_written_extent",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.924
+    },
+    {
+      "nodeid": "tests/test_mpi_progress.py::test_comm_self_duplicate_tag_bound_fallback_and_local_transfer",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_mpi_progress.py::test_multiple_real_nonblocking_slots_generations_and_peer_validation[1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.719
+    },
+    {
+      "nodeid": "tests/test_mpi_progress.py::test_multiple_real_nonblocking_slots_generations_and_peer_validation[2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.719
+    },
+    {
+      "nodeid": "tests/test_mpi_progress.py::test_multiple_real_nonblocking_slots_generations_and_peer_validation[4]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.719
+    },
+    {
+      "nodeid": "tests/test_mpi_transport.py::test_import_does_not_import_mpi4py",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.216
+    },
+    {
+      "nodeid": "tests/test_mpi_transport.py::test_metadata_encoding_is_bounded_and_canonical",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_mpi_transport.py::test_two_rank_transfer_reduction_and_handshake",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.718
+    },
+    {
+      "nodeid": "tests/test_native_uring_linux.py::test_native_backpressure_and_budget_are_bounded_and_drain_cleanly",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_native_uring_linux.py::test_native_buffered_write_read_fsync_cqes_and_request_accounting",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_native_uring_linux.py::test_native_cancel_race_accepts_either_result_but_pin_lives_to_original_cqe",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_native_uring_linux.py::test_native_closed_fd_produces_real_negative_cqe_and_releases_pin",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_native_uring_linux.py::test_native_o_direct_read_write_fsync_uses_aligned_bufferlease",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_native_uring_linux.py::test_native_short_eof_is_terminal_error_and_retains_pin_through_callback",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_native_uring_mpi_linux.py::test_native_io_uring_phase4_mpi[buffered-1]",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_native_uring_mpi_linux.py::test_native_io_uring_phase4_mpi[buffered-2]",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_native_uring_mpi_linux.py::test_native_io_uring_phase4_mpi[buffered-4]",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_native_uring_mpi_linux.py::test_native_io_uring_phase4_mpi[direct-1]",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_native_uring_mpi_linux.py::test_native_io_uring_phase4_mpi[direct-2]",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_native_uring_mpi_linux.py::test_native_io_uring_phase4_mpi[direct-4]",
+      "status": "skipped",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_observables.py::test_adjoint_symbolic_chain_rule_controlled_and_finite_difference[10]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.102
+    },
+    {
+      "nodeid": "tests/test_observables.py::test_adjoint_symbolic_chain_rule_controlled_and_finite_difference[12]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.409
+    },
+    {
+      "nodeid": "tests/test_observables.py::test_adjoint_symbolic_chain_rule_controlled_and_finite_difference[8]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.027
+    },
+    {
+      "nodeid": "tests/test_observables.py::test_block_pauli_inner_against_dense_and_layout[10]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.004
+    },
+    {
+      "nodeid": "tests/test_observables.py::test_block_pauli_inner_against_dense_and_layout[12]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.012
+    },
+    {
+      "nodeid": "tests/test_observables.py::test_block_pauli_inner_against_dense_and_layout[8]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_observables.py::test_pauli_y_phase_and_hermitian_validation",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_ownership.py::test_invalid_ownership[args0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_ownership.py::test_invalid_ownership[args1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_ownership.py::test_invalid_ownership[args2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_ownership.py::test_invalid_ownership[args3]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_ownership.py::test_invalid_ownership[args4]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_ownership.py::test_invalid_ownership[args5]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_ownership.py::test_owner_validation_and_extent_placement_independent",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_ownership.py::test_partition_uses_high_rank_bits_and_global_ids",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_parameter_batch.py::test_batch_interleaves_suffixes_and_shares_memory_ledger",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 20.349
+    },
+    {
+      "nodeid": "tests/test_parameter_batch.py::test_batch_parameter_shift_uses_template_origin",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 15.295
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_local_rejects_upper_x_and_pair_rejects_wrong_partner",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_local_rotation_matches_dense_reference[0-0-0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_local_rotation_matches_dense_reference[0-5-1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_local_rotation_matches_dense_reference[1-6-0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_local_rotation_matches_dense_reference[3-3-0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_local_rotation_matches_dense_reference[5-3-1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_local_rotation_matches_dense_reference[6-5-1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_local_rotation_matches_dense_reference[7-7-1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_pair_rotation_matches_dense_reference[12-10-0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_pair_rotation_matches_dense_reference[15-15-1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_pair_rotation_matches_dense_reference[8-8-0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_pair_rotation_matches_dense_reference[9-11-1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_signed_pauli_rejects_invalid_fields[args0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_signed_pauli_rejects_invalid_fields[args1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_signed_pauli_rejects_invalid_fields[args2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pauli_rotation.py::test_signed_pauli_rejects_invalid_fields[args3]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pbs_adapter.py::test_rejects_invalid_or_insufficient_allocation[allocation0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pbs_adapter.py::test_rejects_invalid_or_insufficient_allocation[allocation1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pbs_adapter.py::test_rejects_invalid_or_insufficient_allocation[allocation2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pbs_adapter.py::test_rejects_launcher_hosts_outside_scheduler_allocation",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pbs_adapter.py::test_rejects_unsafe_queue_and_relative_scratch",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_pbs_adapter.py::test_renders_resources_and_metadata_without_submit_api",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_bytes_budget_caps_total_planned_delay_and_nonmatching_is_ignored",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_cancel_does_not_create_completion_or_actual_delay_before_ready",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_completion_must_flow_through_owner_to_update_aggregate_counters",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_arithmetic_overflow_and_serialized_spec_over_limit",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_inputs_duplicate_ids_and_clock_reversal",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes10]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes11]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes12]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes13]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes3]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes4]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes5]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes6]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes7]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes8]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_invalid_specs[changes9]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_rejects_per_byte_delay_arithmetic_overflow",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_time_trigger_uses_elapsed_from_common_run_start_and_ready_poll",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_performance_injection.py::test_work_trigger_activates_at_named_barrier_with_same_seeded_law",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_phase1_benchmark.py::test_phase1_comparison_report_schema_config_and_error_budgets",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 305.263
+    },
+    {
+      "nodeid": "tests/test_phase2_guards.py::test_float_near_exact_projection_does_not_gain_witness",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.174
+    },
+    {
+      "nodeid": "tests/test_phase2_guards.py::test_prefix_fork_rejects_changed_witness_with_same_numeric_projection",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.318
+    },
+    {
+      "nodeid": "tests/test_phase2_guards.py::test_snapshot_resume_preserves_witness_and_rejects_malformed_projection",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.638
+    },
+    {
+      "nodeid": "tests/test_phase2_persistence.py::test_catalog_corruption_prevents_snapshot_publication_and_resume",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.504
+    },
+    {
+      "nodeid": "tests/test_phase2_persistence.py::test_explicit_base_log_flush_retains_frame_and_is_idempotent",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.651
+    },
+    {
+      "nodeid": "tests/test_phase2_persistence.py::test_forced_alignment_rejects_lower_control_without_publishing",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.295
+    },
+    {
+      "nodeid": "tests/test_phase2_persistence.py::test_log_capacity_survives_compaction_snapshot_and_extension",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.643
+    },
+    {
+      "nodeid": "tests/test_phase2_persistence.py::test_metadata_only_work_needs_no_amplitude_reservation",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.461
+    },
+    {
+      "nodeid": "tests/test_phase2_persistence.py::test_unsupported_catalog_does_not_add_tables",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.199
+    },
+    {
+      "nodeid": "tests/test_phase2_persistence.py::test_v1_word_frame_migration_keeps_extent_and_complex_phase",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.858
+    },
+    {
+      "nodeid": "tests/test_phase2_persistence.py::test_virtual_permutation_predicates_follow_source_labels_and_gc",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.484
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_alignment_preserves_different_input_frames_and_relative_phases[auto]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.351
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_alignment_preserves_different_input_frames_and_relative_phases[identity]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.315
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_alignment_preserves_different_input_frames_and_relative_phases[input-a]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.332
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_alignment_preserves_different_input_frames_and_relative_phases[input-b]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.397
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_deferred_frame_log_prefix_snapshot_fork_and_resume",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 10.838
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_exact_pi_conditional_phase_and_float_angle_log_survive_alignment",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.465
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_exact_quarter_pauli_with_upper_z_is_frame_only[letters0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.685
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_exact_quarter_pauli_with_upper_z_is_frame_only[letters1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.602
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_identity_tableau_retains_conditional_hs_cycle_scalar[auto]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.633
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_identity_tableau_retains_conditional_hs_cycle_scalar[input-a]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.691
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_identity_tableau_retains_conditional_hs_cycle_scalar[input-b]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.658
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_joint_failure_does_not_publish_partial_root",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 5.52
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_large_deferred_metadata_does_not_expand_amplitudes_or_block_views[40]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.273
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_large_deferred_metadata_does_not_expand_amplitudes_or_block_views[50]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.273
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_physical_swap_snapshot_and_streaming_observable_match_reference",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 5.38
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_8q_words_include_unaligned_controlled_and_dense_fallback[31]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 92.402
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_8q_words_include_unaligned_controlled_and_dense_fallback[32]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 59.676
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_8q_words_include_unaligned_controlled_and_dense_fallback[33]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 34.015
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[auto-auto]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 2.725
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[auto-keep]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.936
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[auto-materialize]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 4.748
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[identity-auto]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 2.964
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[identity-keep]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 2.256
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[identity-materialize]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 4.695
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[input-a-auto]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 2.541
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[input-a-keep]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 2.021
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[input-a-materialize]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 4.431
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[input-b-auto]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 2.661
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[input-b-keep]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 1.894
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_random_clifford_nonclifford_and_pauli_rotations_match_eager[input-b-materialize]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 4.768
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_upper_permutations_materialize_without_amplitude_io[CX-targets1-kwargs1]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.252
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_upper_permutations_materialize_without_amplitude_io[MCX-targets2-kwargs2]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.251
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_upper_permutations_materialize_without_amplitude_io[SWAP-targets3-kwargs3]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.261
+    },
+    {
+      "nodeid": "tests/test_phase2_runtime.py::test_upper_permutations_materialize_without_amplitude_io[X-targets0-kwargs0]",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.268
+    },
+    {
+      "nodeid": "tests/test_phase3_mpi.py::test_distributed_state_observables_and_checkpoint[1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 92.031
+    },
+    {
+      "nodeid": "tests/test_phase3_mpi.py::test_distributed_state_observables_and_checkpoint[2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 107.611
+    },
+    {
+      "nodeid": "tests/test_phase3_mpi.py::test_distributed_state_observables_and_checkpoint[4]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 119.49
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_boundary_metrics_report_size_and_unmeasured_rows",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_budget_and_campaign_row_bounds",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_completed_raw_hash_covers_measurements_and_direct_trial_mismatch_fails_validation",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_dimensions_scope_rank_max_resource_budget_and_validation_status",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_finite_arithmetic_overflow_cannot_escape_into_json",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_manifest_and_variant_defensively_freeze_input_mappings",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_pair_schedule_is_seeded_and_balances_first_position",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_paired_metric_zero_baseline_and_overflowing_ratio_are_finite",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_raw_hash_validator_and_variant_axis_guardrails",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_raw_pair_identity_and_trial_budget_are_enforced",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_report_uses_only_hash_verified_valid_matched_pairs_and_is_deterministic",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_small_sample_and_zero_crossing_are_unconfirmed",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_phase4_evaluation.py::test_unsupported_and_insufficient_budget_rows_are_preserved",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_phase4_gradient.py::test_adjoint_recompute_and_occurrence_shift_match_eager_finite_difference",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 70.431
+    },
+    {
+      "nodeid": "tests/test_phase4_gradient.py::test_recompute_reclaims_old_adjoint_roots_during_long_chain",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 62.364
+    },
+    {
+      "nodeid": "tests/test_phase4_gradient.py::test_recompute_uses_s2_actual_order_and_layout_tape",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 39.638
+    },
+    {
+      "nodeid": "tests/test_phase4_lifecycle.py::test_disk_actual_free_checked_each_admission",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.032
+    },
+    {
+      "nodeid": "tests/test_phase4_lifecycle.py::test_disk_reservations_aggregate_ranks_and_preserve_drain",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.154
+    },
+    {
+      "nodeid": "tests/test_phase4_lifecycle.py::test_disk_usage_tolerates_disappearing_sqlite_journal",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.011
+    },
+    {
+      "nodeid": "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 5.348
+    },
+    {
+      "nodeid": "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 8.475
+    },
+    {
+      "nodeid": "tests/test_phase4_lifecycle.py::test_node_local_collective_lifecycle[4]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 17.226
+    },
+    {
+      "nodeid": "tests/test_phase4_lifecycle.py::test_node_local_placement_rejects_network_filesystem",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_phase4_lifecycle.py::test_owner_resolution_never_uses_other_rank_root",
+      "status": "passed",
+      "run": "regression-first",
+      "seconds": 0.004
+    },
+    {
+      "nodeid": "tests/test_phase4_lifecycle.py::test_ram_snapshot_flush_obeys_disk_admission",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.398
+    },
+    {
+      "nodeid": "tests/test_phase4_mpi.py::test_async_exact_state_resume_and_rank_local_manifests[buffered-S0-1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 9.051
+    },
+    {
+      "nodeid": "tests/test_phase4_mpi.py::test_async_exact_state_resume_and_rank_local_manifests[buffered-S0-2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 10.465
+    },
+    {
+      "nodeid": "tests/test_phase4_mpi.py::test_async_exact_state_resume_and_rank_local_manifests[buffered-S0-4]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 19.074
+    },
+    {
+      "nodeid": "tests/test_phase4_mpi.py::test_async_exact_state_resume_and_rank_local_manifests[buffered-S2-1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 86.337
+    },
+    {
+      "nodeid": "tests/test_phase4_mpi.py::test_async_exact_state_resume_and_rank_local_manifests[buffered-S2-2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 92.305
+    },
+    {
+      "nodeid": "tests/test_phase4_mpi.py::test_async_exact_state_resume_and_rank_local_manifests[buffered-S2-4]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 57.103
+    },
+    {
+      "nodeid": "tests/test_phase4_mpi.py::test_async_file_state_larger_than_managed_budget[1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 85.967
+    },
+    {
+      "nodeid": "tests/test_phase4_mpi.py::test_async_file_state_larger_than_managed_budget[2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 119.081
+    },
+    {
+      "nodeid": "tests/test_phase4_mpi.py::test_async_file_state_larger_than_managed_budget[4]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 147.388
+    },
+    {
+      "nodeid": "tests/test_phase5_cli.py::test_estimate_writes_partial_report_and_has_explicit_exit_codes",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_phase5_cli.py::test_invalid_workload_creates_no_output_and_register_roundtrips",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_phase5_cli.py::test_probe_is_read_only_and_all_requires_explicit_limits",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.01
+    },
+    {
+      "nodeid": "tests/test_phase5_cli.py::test_real_bounded_cli_campaign_and_raw_trial_manifest",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.043
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_calibration_summary_must_match_successful_raw_trials",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_condition_keys_are_stable_and_remove_result_fields",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_configuration_fingerprint_ignores_observations_and_legacy_identity",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_dirty_snapshot_prioritizes_source_before_large_raw_reports",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.005
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_document_io_rejects_duplicate_keys_limits_and_no_overwrite",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_legacy_adapter_reports_missing_data",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_match_returns_latest_exact_calibration",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_null_memory_fields_survive_profile_save_and_legacy_ids_do_not_fingerprint",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_profile_match_rejects_untrusted_and_external_records",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_profile_rejects_unknown_kind_and_boolean_schema_version",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_profile_roundtrip_integrity_and_deepcopy",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_profile_document.py::test_wire_counts_and_bytes_roundtrip_as_decimal_strings",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_capture_bounds_window_scan_groups_and_metadata",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 1.918
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_capture_limit_rejects_unbounded_settings",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_empty_endpoint_with_dirty_cache_is_unknown_not_zero_eta",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.273
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_huge_count_with_finite_weighted_cost_remains_compact",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_oversized_request_details_are_omitted_and_capture_stays_incomplete",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.266
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_private_minimal_fallback_hashes_published_frontier",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.254
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_private_request_delta_cannot_overrun_snapshot_budget",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.281
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_private_snapshot_marks_profile_context_change_stale",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 1.15
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_private_staged_delta_keeps_published_cut_and_marks_unknown",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 1.273
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_s2_group_preserves_each_source_id_once",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 1.227
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_tail_scan_advances_incrementally_then_completes",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 1.453
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_unknown_suffix_and_huge_count_never_claim_unjustified_eta",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.31
+    },
+    {
+      "nodeid": "tests/test_remaining_work.py::test_window_metadata_fallback_stays_inside_status_budget",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.335
+    },
+    {
+      "nodeid": "tests/test_remaining_work_mpi.py::test_remaining_work_collective_order_and_actual_state[1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 20.207
+    },
+    {
+      "nodeid": "tests/test_remaining_work_mpi.py::test_remaining_work_collective_order_and_actual_state[2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 31.582
+    },
+    {
+      "nodeid": "tests/test_remaining_work_mpi.py::test_remaining_work_collective_order_and_actual_state[4]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 44.472
+    },
+    {
+      "nodeid": "tests/test_replan_candidates.py::test_candidate_limit_rejects_unbounded_or_noninteger_values[0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_replan_candidates.py::test_candidate_limit_rejects_unbounded_or_noninteger_values[1.5]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_candidates.py::test_candidate_limit_rejects_unbounded_or_noninteger_values[17]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_candidates.py::test_candidate_limit_rejects_unbounded_or_noninteger_values[True]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_candidates.py::test_generated_candidates_explain_native_capacity_and_ram_rejections",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_candidates.py::test_generation_is_finite_bounded_and_candidate_ids_are_contextual",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_replan_candidates.py::test_private_cut_and_unsupported_or_overcapacity_changes_are_rejected",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_replan_candidates.py::test_proposal_context_ignores_rank_but_tracks_layout_and_placement",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_candidates.py::test_wall_deadline_stops_candidate_enumeration",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_capability_rejection_precedes_numeric_gain",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_gain_counts_every_transition_cost_once",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_overflow_is_unknown_gain_and_invalid_numbers_are_rejected",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_strict_gain_margin_uses_larger_absolute_or_fractional_threshold",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_unknown_cost_component_cannot_claim_gain[calibration_seconds]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_unknown_cost_component_cannot_claim_gain[checkpoint_seconds]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_unknown_cost_component_cannot_claim_gain[cleanup_seconds]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_unknown_cost_component_cannot_claim_gain[continue_lower_seconds]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_unknown_cost_component_cannot_claim_gain[drain_seconds]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_unknown_cost_component_cannot_claim_gain[execution_upper_seconds]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_unknown_cost_component_cannot_claim_gain[migration_seconds]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_unknown_cost_component_cannot_claim_gain[planning_seconds]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_unknown_cost_component_cannot_claim_gain[validation_seconds]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_replan_cost.py::test_unqualified_or_context_mismatched_cost_cannot_be_eligible",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_resource_estimator.py::test_append_only_disk_estimate_grows_with_operation_count",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_resource_estimator.py::test_capacity_separates_known_failure_success_and_unknown",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_resource_estimator.py::test_huge_repeat_is_bounded_and_never_allocates_simulation_state",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_resource_estimator.py::test_measured_kernel_is_component_evidence_but_never_end_to_end_time",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_resource_estimator.py::test_ownership_requires_rank_count_to_be_power_of_two_and_host_sums_local_ranks",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_resource_estimator.py::test_physical_ram_is_only_a_ceiling_and_unsupported_lowering_cannot_have_full_coverage",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.005
+    },
+    {
+      "nodeid": "tests/test_resource_estimator.py::test_profile_fixture_requires_raw_sample_summary_consistency",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_resource_estimator.py::test_small_real_store_payload_and_managed_peaks_fit_static_reference",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 4.227
+    },
+    {
+      "nodeid": "tests/test_resource_estimator.py::test_unmatched_kernel_is_not_reported_as_zero_time_and_file_needs_disk_budget",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_resource_estimator.py::test_unsupported_qpe_remains_explicit",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_runtime_calibration.py::test_calibration_rejects_ram_budget_before_mpi_import",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_runtime_calibration.py::test_calibration_spec_bounds",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_runtime_calibration.py::test_runtime_flag_uses_common_codec_without_boolean_count",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_runtime_calibration.py::test_suite_recipes_are_reproducible_and_only_mpi_suites_touch_owner_bit",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_control.py::test_eta_requires_matched_measured_conditions_and_dag",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_control.py::test_observe_mode_and_failed_policy_install_preserve_state",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 1.1
+    },
+    {
+      "nodeid": "tests/test_runtime_control.py::test_runtime_rejects_foreign_profile_configuration",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.303
+    },
+    {
+      "nodeid": "tests/test_runtime_control.py::test_runtime_warmup_and_observer_budget_cover_io_and_groups",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 4.01
+    },
+    {
+      "nodeid": "tests/test_runtime_control.py::test_sustained_guard_live_tune_and_candidate_validation",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 1.509
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_completed_requests_are_removed_from_remaining_work",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_dag_lower_bound_and_serial_expected_upper_match_oracle",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_duplicate_or_excessive_inflight_requests_are_rejected",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_huge_count_coverage_is_finite",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_invalid_graphs_and_counts_are_rejected[tasks0-Duplicate]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_invalid_graphs_and_counts_are_rejected[tasks1-Missing dependency]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_invalid_graphs_and_counts_are_rejected[tasks2-Cyclic]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_invalid_graphs_and_counts_are_rejected[tasks3-count]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_invalid_graphs_and_counts_are_rejected[tasks4-count]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_large_count_is_weighted_without_expansion",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_missing_cost_and_task_unknowns_are_reported_with_coverage",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_partial_snapshots_never_publish_total_eta[changes0-INCOMPLETE_SCAN]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_partial_snapshots_never_publish_total_eta[changes1-STALE_SNAPSHOT]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_partial_snapshots_never_publish_total_eta[changes2-IN_FLIGHT:r1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_structural_unknown_cannot_be_counted_as_known_with_a_profile",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_task_cost_metadata_is_validated[changes0-condition or context]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_task_cost_metadata_is_validated[changes1-condition or context]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_task_cost_metadata_is_validated[changes2-resource]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_task_cost_metadata_is_validated[changes3-units]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_truthy_validation_flags_do_not_certify_cost_or_request_completion",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_unmeasured_cost_does_not_price_a_task",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_eta.py::test_zero_work_complete_snapshot_is_exactly_quiescent",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_measurement.py::test_completion_validates_after_callback_and_excludes_error_or_warmup",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_runtime_measurement.py::test_disabled_collection_skips_validator_and_does_not_create_cost_evidence",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_measurement.py::test_duplicate_events_and_bounds_are_reported",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_measurement.py::test_group_children_count_once_and_failed_parent_disables_child_cost",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_runtime_measurement.py::test_io_validation_callback_is_in_whole_wall_and_failures_never_become_cost",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_runtime_measurement.py::test_long_identifiers_are_rejected_before_dedup_storage",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_measurement.py::test_observation_validation_rejects_bad_numbers_and_context_mutation",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_runtime_measurement.py::test_profile_adapter_requires_full_identity_scope_and_explicit_envelope",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_runtime_measurement.py::test_rolling_ring_replaces_old_sample_at_its_byte_limit",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_s2_planner.py::test_controls_above_block_bits_do_not_make_target_local_gate_joint",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_s2_planner.py::test_dense_and_unknown_overlap_are_conservative_and_semantic_ir_unchanged",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_s2_planner.py::test_overlapping_gates_keep_order_unless_both_are_proven_diagonal",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_s2_planner.py::test_reorders_disjoint_gates_to_reduce_local_joint_passes",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_s2_planner.py::test_search_is_bounded_to_first_32_source_occurrences",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.029
+    },
+    {
+      "nodeid": "tests/test_s2_planner.py::test_swap_is_a_hard_order_barrier",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_execute_more_gates_after_physical_layout_transition",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.004
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_fallback_exact_named_basis[CX-targets6-kwargs6]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_fallback_exact_named_basis[CZ-targets4-kwargs4]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_fallback_exact_named_basis[MCX-targets7-kwargs7]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.005
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_fallback_exact_named_basis[RX-targets0-kwargs0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_fallback_exact_named_basis[RY-targets1-kwargs1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.005
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_fallback_exact_named_basis[RZ-targets2-kwargs2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_fallback_exact_named_basis[SDG-targets8-kwargs8]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_fallback_exact_named_basis[SWAP-targets5-kwargs5]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_fallback_exact_named_basis[TDG-targets9-kwargs9]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.004
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_fallback_exact_named_basis[X-targets3-kwargs3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_frame_sharing_cow_and_relative_phase_joint_alignment",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_frontiers_no_double_execution_and_joint_dependencies",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.005
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_invalid_gate_rejected[CX-targets4-kwargs4]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_invalid_gate_rejected[H-targets2-kwargs2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_invalid_gate_rejected[H-targets3-kwargs3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_invalid_gate_rejected[MCX-targets0-kwargs0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_invalid_gate_rejected[MCX-targets1-kwargs1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_invalid_gate_rejected[foo-targets5-kwargs5]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_materialized_symbolic_state_reuses_immutable_binding",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_matrix_validation_asset_immutability_and_target_order",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[0-0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[0-1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[0-2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[0-3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[0-4]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[0-5]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[0-6]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[3-0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[3-1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[3-2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[3-3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[3-4]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[3-5]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[3-6]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[7-0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[7-1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[7-2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[7-3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[7-4]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[7-5]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_mcx_masks_open_controls_local_upper_partial_exchange[7-6]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.002
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_negative_control_phase_is_not_discarded",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_parameter_expression_bindings_guards_and_no_partial_mutation",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.004
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_physical_layout_swap_preserves_logical_state[0-7]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_physical_layout_swap_preserves_logical_state[1-2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_physical_layout_swap_preserves_logical_state[6-7]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_semantic_pipeline_matches_independent_eager[2-10]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.113
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_semantic_pipeline_matches_independent_eager[2-12]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.441
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_semantic_pipeline_matches_independent_eager[2-8]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.03
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_semantic_pipeline_matches_independent_eager[5-10]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.067
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_semantic_pipeline_matches_independent_eager[5-12]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.269
+    },
+    {
+      "nodeid": "tests/test_simulator.py::test_semantic_pipeline_matches_independent_eager[5-8]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.018
+    },
+    {
+      "nodeid": "tests/test_sqlite_budget_vfs.py::test_connections_to_same_catalog_share_guard_after_loader_close",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_sqlite_budget_vfs.py::test_failed_open_releases_prepared_account",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_sqlite_budget_vfs.py::test_guarded_rollback_transaction_and_side_file_cap",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.005
+    },
+    {
+      "nodeid": "tests/test_sqlite_budget_vfs.py::test_inactive_guard_blocks_existing_catalog_writes",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.004
+    },
+    {
+      "nodeid": "tests/test_sqlite_budget_vfs.py::test_main_database_cap_stops_page_growth",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_sqlite_budget_vfs.py::test_unconfigured_guard_denies_mutations_and_reports_sqlite_build",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_sqlite_budget_vfs.py::test_unprepare_keeps_open_guard_and_hot_journal_recovery_is_admitted",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.33
+    },
+    {
+      "nodeid": "tests/test_sqlite_budget_vfs.py::test_wal_mode_is_rejected",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_storage.py::test_read_version_rejects_corrupt_or_short_slots[checksum]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.299
+    },
+    {
+      "nodeid": "tests/test_storage.py::test_read_version_rejects_corrupt_or_short_slots[short-read]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.31
+    },
+    {
+      "nodeid": "tests/test_storage.py::test_storage_versions_roots_frames_and_reopen",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.371
+    },
+    {
+      "nodeid": "tests/test_storage.py::test_write_version_refuses_immutable_extent",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.205
+    },
+    {
+      "nodeid": "tests/test_stored_budget.py::test_failed_gate_registration_does_not_duplicate_semantic_ids",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 3.776
+    },
+    {
+      "nodeid": "tests/test_stored_budget.py::test_failed_materialization_rolls_back_whole_logical_cut",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 20.872
+    },
+    {
+      "nodeid": "tests/test_stored_budget.py::test_gc_requires_quiescence_and_preserves_committed_snapshots",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 16.634
+    },
+    {
+      "nodeid": "tests/test_stored_budget.py::test_runtime_observe_uses_virtual_transport_and_never_replans",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 8.904
+    },
+    {
+      "nodeid": "tests/test_stored_budget.py::test_state_larger_than_budget_executes_exports_and_streams",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 114.141
+    },
+    {
+      "nodeid": "tests/test_stored_budget.py::test_uncommitted_journal_tail_repaired_before_next_checkpoint",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 13.323
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_append_and_execute_after_layout_barrier",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 6.054
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_insufficient_task_budget_fails_before_root_or_frontier_mutation",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.888
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_materialization_modes_match_eager_oracle[batching]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 47.022
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_materialization_modes_match_eager_oracle[deferred-no-frame]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 47.707
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_materialization_modes_match_eager_oracle[eager]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 16.983
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_materialization_modes_match_eager_oracle[per-block-frame]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 22.757
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_named_fallback_mode_matches_native",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 10.854
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_physical_layout_swaps_preserve_logical_state[0-2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 1.289
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_physical_layout_swaps_preserve_logical_state[1-4]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 1.323
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_physical_layout_swaps_preserve_logical_state[3-5]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 1.367
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[0-0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 5.449
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[0-3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 5.319
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[0-7]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 5.325
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[1-0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 5.34
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[1-3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 8.994
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[1-7]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 8.749
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[2-0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 9.572
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[2-3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 8.822
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[2-7]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 8.986
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[3-0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 7.412
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[3-3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 8.757
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[3-7]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 8.982
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[4-0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 6.273
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[4-3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 6.909
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[4-7]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 7.15
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[5-0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 5.788
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[5-3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 5.975
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[5-7]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 7.094
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[6-0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 5.579
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[6-3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 5.609
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_mcx_zero_to_six_open_controls[6-7]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 5.689
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_streaming_mixed_local_joint_and_controlled_dense_matches_oracle[10]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 57.238
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_streaming_mixed_local_joint_and_controlled_dense_matches_oracle[12]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 361.183
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_stored_streaming_mixed_local_joint_and_controlled_dense_matches_oracle[8]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 31.689
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_structured_exact_stored_execution_matches_native[3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 29.09
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_structured_exact_stored_execution_matches_native[4]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 248.723
+    },
+    {
+      "nodeid": "tests/test_stored_numerics.py::test_upper_diagonal_and_clifford_metadata_only_no_amplitude_io",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.317
+    },
+    {
+      "nodeid": "tests/test_stored_observables.py::test_same_partner_mask_reads_each_pair_once",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 4.462
+    },
+    {
+      "nodeid": "tests/test_stored_observables.py::test_streaming_observables_without_gather[None]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 8.266
+    },
+    {
+      "nodeid": "tests/test_stored_observables.py::test_streaming_observables_without_gather[swap1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 10.161
+    },
+    {
+      "nodeid": "tests/test_stored_recovery.py::test_failed_snapshot_commit_leaves_previous_snapshot_resumable[flush]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 5.051
+    },
+    {
+      "nodeid": "tests/test_stored_recovery.py::test_failed_snapshot_commit_leaves_previous_snapshot_resumable[write_from]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 3.048
+    },
+    {
+      "nodeid": "tests/test_stored_recovery.py::test_fork_rejects_changed_fixed_parameter_and_foreign_snapshot",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 2.646
+    },
+    {
+      "nodeid": "tests/test_stored_recovery.py::test_interleaved_binding_forks_preserve_prefix_extents",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 10.507
+    },
+    {
+      "nodeid": "tests/test_stored_recovery.py::test_resume_detects_truncated_committed_extent",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 2.348
+    },
+    {
+      "nodeid": "tests/test_stored_recovery.py::test_resume_rejects_corrupt_committed_journal_and_asset",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.78
+    },
+    {
+      "nodeid": "tests/test_stored_recovery.py::test_snapshot_resume_preserves_pending_frame_and_upper_phase",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 3.133
+    },
+    {
+      "nodeid": "tests/test_streaming_kernels.py::test_group_dense_reversed_target_order_and_open_outer_control",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_streaming_kernels.py::test_group_mcx_swaps_only_predicated_pairs",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_streaming_kernels.py::test_local_mcx_and_upper_diagonal_phase",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_telemetry.py::test_guard_ignores_unmatched_conditions",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_telemetry.py::test_guard_neutral_and_insufficient_windows_reset_persistence",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_telemetry.py::test_guard_requires_persistent_matched_windows_and_tracks_runtime_profile",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_telemetry.py::test_streaming_trace_appends_and_iterates_without_event_list",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_tile_extent_writer.py::test_tile_writer_rejects_holes",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.171
+    },
+    {
+      "nodeid": "tests/test_tile_extent_writer.py::test_tile_writer_requires_exact_nonoverlapping_coverage_and_seals",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.176
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_async_distributed_p1_tile_route_state_expectation_and_inverse",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 1.689
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_async_public_tile_route_rejects_p_gt_1_before_output",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 0.266
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_route_fits_when_full_block_does_not[13]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 1.381
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_route_fits_when_full_block_does_not[14]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 2.525
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_route_ram_admission_failure_preserves_old_cut",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 0.186
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_route_short_source_read_preserves_old_cut",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 0.601
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs0-buffered]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 2.243
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs0-direct]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 2.069
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs1-buffered]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 2.117
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs1-direct]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 2.147
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs2-buffered]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 2.069
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs2-direct]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 1.951
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs3-buffered]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 1.994
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs3-direct]",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 2.093
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_swap_rejects_deferred_frame_before_output",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 0.211
+    },
+    {
+      "nodeid": "tests/test_tile_transpose.py::test_tile_transpose_refuses_non_aligned_tile",
+      "status": "passed",
+      "run": "retry",
+      "seconds": 0.188
+    },
+    {
+      "nodeid": "tests/test_transport.py::test_buffered_positional_round_trip_and_context_cleanup",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.003
+    },
+    {
+      "nodeid": "tests/test_transport.py::test_buffered_read_handles_eof_and_zero_length",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_transport.py::test_linux_branch_requests_odirect_and_does_not_fallback",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_transport.py::test_linux_o_direct_aligned_real_file_round_trip",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_transport.py::test_macos_direct_does_not_require_linux_alignment",
+      "status": "skipped",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_transport.py::test_macos_f_nocache_real_file_round_trip",
+      "status": "skipped",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_transport.py::test_macos_fcntl_failure_closes_descriptor",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_transport.py::test_mocked_linux_direct_io_loops_on_aligned_partial_transfers",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_transport.py::test_mocked_linux_direct_io_uses_aligned_buffers",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_transport.py::test_ranges_and_backend_are_explicit",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_transport_buffers.py::test_buffered_read_into_write_from_use_caller_owned_buffers",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_transport_buffers.py::test_direct_backend_uses_aligned_caller_buffers_when_supported",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_transport_buffers.py::test_linux_direct_rejects_misaligned_ranges_and_buffers",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_transport_buffers.py::test_read_into_rejects_readonly_destination_and_returns_short_count",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_uring_backend.py::test_backpressure_invalid_buffer_and_explicit_mac_rejection",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_uring_backend.py::test_cancel_ack_cannot_release_original_pin",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_uring_backend.py::test_fatal_submission_does_not_unpin_uncertain_kernel_operation",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_uring_backend.py::test_native_request_metadata_and_whole_wall_include_validator",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.006
+    },
+    {
+      "nodeid": "tests/test_uring_backend.py::test_negative_and_zero_cqe_are_terminal_error_completions[-5-OSError]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_uring_backend.py::test_negative_and_zero_cqe_are_terminal_error_completions[0-OSError]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_uring_backend.py::test_original_terminal_cqe_before_cancel_ack",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_uring_backend.py::test_partial_direct_cqe_rejects_broken_alignment_and_fsync_requires_cqe",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_uring_backend.py::test_short_buffered_io_resubmits_remaining_without_bounce_buffer",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_workload_spec.py::test_expression_symbols_require_stable_parameter_id",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_workload_spec.py::test_forced_decomposition_reports_unsupported_capabilities",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_workload_spec.py::test_qpe_foundation_refuses_uncertified_or_nonfoundation_scenario",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_workload_spec.py::test_random_state_requires_reproducible_seed_and_numeric_precision_rejects_bool",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_workload_spec.py::test_repeat_count_and_iterations_reject_boolean_and_unbounded_values",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_workload_spec.py::test_repeat_counts_are_compressed_and_roundtrip_identity_is_stable",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.001
+    },
+    {
+      "nodeid": "tests/test_workload_spec.py::test_repeat_depth_explicit_nodes_and_condition_count_are_bounded",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.064
+    },
+    {
+      "nodeid": "tests/test_workload_spec.py::test_strict_top_level_schema_and_integer_types[bad0]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_workload_spec.py::test_strict_top_level_schema_and_integer_types[bad1]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_workload_spec.py::test_strict_top_level_schema_and_integer_types[bad2]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    },
+    {
+      "nodeid": "tests/test_workload_spec.py::test_strict_top_level_schema_and_integer_types[bad3]",
+      "status": "passed",
+      "run": "remaining",
+      "seconds": 0.0
+    }
+  ],
+  "source_manifest": "retry/source-hashes.txt",
+  "policy": "Latest rerun replaces earlier outcome by exact nodeid; failures are retained in original JUnit; all collected nodeids must be covered"
+}

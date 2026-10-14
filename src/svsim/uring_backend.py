@@ -7,6 +7,7 @@ Ordinary negative CQEs are terminal completions and release ownership normally.
 """
 import ctypes
 import errno
+import hashlib
 import os
 from pathlib import Path
 import shutil
@@ -36,6 +37,12 @@ class NativeUringShim:
             result = subprocess.run(command, capture_output=True, text=True, timeout=30)
             if result.returncode:
                 raise NotImplementedError('Cannot build io_uring adapter with installed liburing: '+result.stderr[-2000:])
+            self.build_metadata = {
+                'compiler': compiler,
+                'flags': ['-O2', '-fPIC', '-shared', '-luring'],
+                'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+                'binary_sha256': hashlib.sha256(library.read_bytes()).hexdigest(),
+            }
             self.lib = ctypes.CDLL(str(library))
         lib = self.lib
         lib.sv_uring_open.argtypes = [ctypes.c_uint, ctypes.POINTER(ctypes.c_int)]
@@ -128,11 +135,20 @@ class NativeUringEngine:
                     if _buffer_address(view)%handle.alignment: raise ValueError('Unaligned native direct I/O buffer')
             else: handle._check_open()
             if not isinstance(offset,int) or not 0<=offset<2**63: raise ValueError('Invalid native I/O offset')
-            request=IORequest(self._next_id,operation,_view=view,_lease=lease)
+            request=IORequest(self._next_id,operation,_view=view,_lease=lease,
+                submitted_at=time.perf_counter(),queue_seconds=None)
+            path=getattr(handle,'path',None)
+            try:device=f'device-{os.stat(path).st_dev}' if path is not None else 'unknown'
+            except OSError:device='unknown'
+            request.storage_metadata={'resolved_backend':getattr(handle,'backend_identity','unknown'),
+                'device_id':device,'alignment':getattr(handle,'alignment',None),
+                'offset':offset,'transfer_bytes':len(view) if view is not None else 0,
+                'submitted_in_flight':len(self.pending)+1,
+                'timing_scope':'submission-to-cqe','service_seconds_known':False}
             self._next_id+=1
             request._handle=handle; request._offset=offset; request._position=0
             request._length=len(view) if view is not None else 0
-            request._start=time.perf_counter(); request._cancelled=False
+            request._start=request.submitted_at; request._cancelled=False
             self._queue(request)
             self.pending[request.request_id]=request
             self.submitted+=1; self.peak_requests=max(self.peak_requests,len(self.pending))
@@ -166,6 +182,7 @@ class NativeUringEngine:
                 except BaseException as exc:
                     if request.error is None: request.error=exc
         finally:
+            request.wall_seconds=max(0.0,time.perf_counter()-request.submitted_at)
             request._callbacks.clear()
             if request._view is not None: request._view.release(); request._view=None
             if request._lease is not None: request._lease.release_pin(); request._lease=None

@@ -113,6 +113,13 @@ def _measured(raw, remat=0, writeback=None):
                      source='validated-test-profile', scope='single-node-cache')
 
 
+def _require_eviction_after_hint_release(cache, budget):
+    summary_charge = cache.metadata.allocations['cost-summary']
+    # Make the post-release budget exactly full. The pressure therefore survives
+    # summary shedding on both 4 KiB and 16 KiB mmap page-size platforms.
+    budget.limit = budget.used - summary_charge
+
+
 def test_async_cache_cost_choice_and_stale_context_lru_fallback(tmp_path):
     config, store, engine, budget, cache = _cache(tmp_path, metadata_capacity=24576)
     # Install two clean cached versions in LRU order.
@@ -135,7 +142,7 @@ def test_async_cache_cost_choice_and_stale_context_lru_fallback(tmp_path):
     current = {'root': 'r2'}
     cache.set_cost_hints(hints, context={'root': 'r1'}, context_getter=lambda: current,
                          cost_resolver=lambda *_: CacheCost(raw_read=100, rematerialize=0))
-    budget.limit = budget.used
+    _require_eviction_after_hint_release(cache, budget)
     cache.ensure(cache.buffer_cost)
     assert list(cache.entries) == ['initial-one']
     assert cache.cost_summary is None
@@ -153,7 +160,7 @@ def test_unvalidated_or_missing_freshness_evidence_always_falls_back_to_lru(tmp_
                          cost_resolver=lambda *_: CacheCost(raw_read=100, rematerialize=0,
                                                             evidence='injected', validated=False,
                                                             source='manual', scope='test'))
-    budget.limit = budget.used
+    _require_eviction_after_hint_release(cache, budget)
     cache.ensure(cache.buffer_cost)
     assert list(cache.entries) == ['initial-one']
     cache.clear(); cache.close_metadata(); engine.close(); store.close()

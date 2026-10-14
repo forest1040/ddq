@@ -1,0 +1,250 @@
+..............F..F...................................................... [ 23%]
+........................................................................ [ 47%]
+..........................................................Timeout (0:05:00)!
+Thread 0x000078d900a37b80 (most recent call first):
+  File "/workspace/src/svsim/disk_budget.py", line 296 in _ledger_transaction
+  File "/usr/local/lib/python3.12/contextlib.py", line 144 in __exit__
+  File "/workspace/src/svsim/disk_budget.py", line 452 in release
+  File "/workspace/src/svsim/disk_budget.py", line 462 in allocation
+  File "/usr/local/lib/python3.12/contextlib.py", line 144 in __exit__
+  File "/workspace/src/svsim/telemetry.py", line 77 in record
+  File "/workspace/src/svsim/storage.py", line 272 in _event
+  File "/workspace/src/svsim/storage.py", line 300 in read_version
+  File "/workspace/src/svsim/cache.py", line 187 in pin
+  File "/usr/local/lib/python3.12/contextlib.py", line 137 in __enter__
+  File "/workspace/src/svsim/stored_runtime.py", line 379 in _epoch_phase2
+  File "/workspace/src/svsim/stored_runtime.py", line 344 in _epoch
+  File "/workspace/src/svsim/stored_runtime.py", line 314 in materialize
+  File "/workspace/src/svsim/stored_runtime.py", line 588 in state
+  File "/workspace/tests/test_stored_numerics.py", line 56 in test_stored_streaming_mixed_local_joint_and_controlled_dense_matches_oracle
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/python.py", line 167 in pytest_pyfunc_call
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/python.py", line 1707 in runtest
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/runner.py", line 184 in pytest_runtest_call
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/runner.py", line 250 in <lambda>
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/runner.py", line 361 in from_call
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/runner.py", line 249 in call_and_report
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/runner.py", line 139 in runtestprotocol
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/runner.py", line 118 in pytest_runtest_protocol
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/main.py", line 408 in pytest_runtestloop
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/main.py", line 384 in _main
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/main.py", line 330 in wrap_session
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/main.py", line 377 in pytest_cmdline_main
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_callers.py", line 121 in _multicall
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_manager.py", line 120 in _hookexec
+  File "/workspace/.venv/lib/python3.12/site-packages/pluggy/_hooks.py", line 512 in __call__
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/config/__init__.py", line 229 in _main
+  File "/workspace/.venv/lib/python3.12/site-packages/_pytest/config/__init__.py", line 253 in _console_main
+  File "/workspace/.venv/bin/pytest", line 10 in <module>
+.............. [ 70%]
+.........................................F.F.F.F...............s.s...... [ 94%]
+..................                                                       [100%]
+=================================== FAILURES ===================================
+____ test_async_exact_state_resume_and_rank_local_manifests[buffered-S2-4] _____
+
+tmp_path = PosixPath('/scratch/remaining/test_async_exact_state_resume_5')
+ranks = 4, policy = 'S2', backend = 'buffered'
+
+    @pytest.mark.parametrize('ranks',[1,2,4])
+    @pytest.mark.parametrize('policy',['S0','S2'])
+    @pytest.mark.parametrize('backend',backends)
+    def test_async_exact_state_resume_and_rank_local_manifests(tmp_path,ranks,policy,backend):
+        extended=['--extended'] if policy=='S2' and backend=='buffered' else []
+>       run_worker(tmp_path,ranks,policy,backend,*extended)
+
+tests/test_phase4_mpi.py:29:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_phase4_mpi.py:18: in run_worker
+    subprocess.run([shutil.which('mpiexec'),'-n',str(ranks),sys.executable,
+/usr/local/lib/python3.12/subprocess.py:550: in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/subprocess.py:1209: in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/subprocess.py:2141: in _communicate
+    self.wait(timeout=self._remaining_time(endtime))
+/usr/local/lib/python3.12/subprocess.py:1264: in wait
+    return self._wait(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <Popen: returncode: -9 args: ['/usr/bin/mpiexec', '-n', '4', '/workspace/.ve...>
+timeout = 119.99997977819294
+
+    def _wait(self, timeout):
+        """Internal implementation of wait() on POSIX."""
+        if self.returncode is not None:
+            return self.returncode
+
+        if timeout is not None:
+            endtime = _time() + timeout
+            # Enter a busy loop if we have a timeout.  This busy loop was
+            # cribbed from Lib/threading.py in Thread.wait() at r71065.
+            delay = 0.0005 # 500 us -> initial delay of 1 ms
+            while True:
+                if self._waitpid_lock.acquire(False):
+                    try:
+                        if self.returncode is not None:
+                            break  # Another thread waited.
+                        (pid, sts) = self._try_wait(os.WNOHANG)
+                        assert pid == self.pid or pid == 0
+                        if pid == self.pid:
+                            self._handle_exitstatus(sts)
+                            break
+                    finally:
+                        self._waitpid_lock.release()
+                remaining = self._remaining_time(endtime)
+                if remaining <= 0:
+>                   raise TimeoutExpired(self.args, timeout)
+E                   subprocess.TimeoutExpired: Command '['/usr/bin/mpiexec', '-n', '4', '/workspace/.venv/bin/python', '/workspace/tests/mpi_phase4_worker.py', '/scratch/remaining/test_async_exact_state_resume_5', '--backend', 'buffered', '--policy', 'S2', '--extended']' timed out after 119.99997977819294 seconds
+
+/usr/local/lib/python3.12/subprocess.py:2045: TimeoutExpired
+_____________ test_async_file_state_larger_than_managed_budget[4] ______________
+
+tmp_path = PosixPath('/scratch/remaining/test_async_file_state_larger_t2')
+ranks = 4
+
+    @pytest.mark.parametrize('ranks',[1,2,4])
+    def test_async_file_state_larger_than_managed_budget(tmp_path,ranks):
+>       run_worker(tmp_path,ranks,'S2','buffered','--bounded')
+
+tests/test_phase4_mpi.py:34:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests/test_phase4_mpi.py:18: in run_worker
+    subprocess.run([shutil.which('mpiexec'),'-n',str(ranks),sys.executable,
+/usr/local/lib/python3.12/subprocess.py:550: in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/subprocess.py:1209: in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/subprocess.py:2141: in _communicate
+    self.wait(timeout=self._remaining_time(endtime))
+/usr/local/lib/python3.12/subprocess.py:1264: in wait
+    return self._wait(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <Popen: returncode: -9 args: ['/usr/bin/mpiexec', '-n', '4', '/workspace/.ve...>
+timeout = 119.99998227087781
+
+    def _wait(self, timeout):
+        """Internal implementation of wait() on POSIX."""
+        if self.returncode is not None:
+            return self.returncode
+
+        if timeout is not None:
+            endtime = _time() + timeout
+            # Enter a busy loop if we have a timeout.  This busy loop was
+            # cribbed from Lib/threading.py in Thread.wait() at r71065.
+            delay = 0.0005 # 500 us -> initial delay of 1 ms
+            while True:
+                if self._waitpid_lock.acquire(False):
+                    try:
+                        if self.returncode is not None:
+                            break  # Another thread waited.
+                        (pid, sts) = self._try_wait(os.WNOHANG)
+                        assert pid == self.pid or pid == 0
+                        if pid == self.pid:
+                            self._handle_exitstatus(sts)
+                            break
+                    finally:
+                        self._waitpid_lock.release()
+                remaining = self._remaining_time(endtime)
+                if remaining <= 0:
+>                   raise TimeoutExpired(self.args, timeout)
+E                   subprocess.TimeoutExpired: Command '['/usr/bin/mpiexec', '-n', '4', '/workspace/.venv/bin/python', '/workspace/tests/mpi_phase4_worker.py', '/scratch/remaining/test_async_file_state_larger_t2', '--backend', 'buffered', '--policy', 'S2', '--bounded']' timed out after 119.99998227087781 seconds
+
+/usr/local/lib/python3.12/subprocess.py:2045: TimeoutExpired
+______________ test_tile_swap_matches_index_oracle[pairs0-direct] ______________
+
+tmp_path = PosixPath('/scratch/remaining/test_tile_swap_matches_index_o1')
+pairs = [(0, 1)], backend = 'direct'
+
+    @pytest.mark.parametrize('backend', ['buffered', 'direct'])
+    @pytest.mark.parametrize('pairs', [[(0, 1)], [(0, 4)], [(4, 5)], [(0, 4), (1, 5)]])
+    def test_tile_swap_matches_index_oracle(tmp_path, pairs, backend):
+        initial = np.arange(1 << 7, dtype=np.complex128) + 1j
+        with StoredSimulator(7, cfg(tmp_path/'sim', backend=backend), initial_state=initial) as sim:
+            identity = sim.store._file(0).backend_identity
+>           assert identity == ('macos-f-nocache' if backend == 'direct' else 'buffered')
+E           AssertionError: assert 'linux-o-direct' == 'macos-f-nocache'
+E
+E             - macos-f-nocache
+E             + linux-o-direct
+
+tests/test_tile_transpose.py:22: AssertionError
+______________ test_tile_swap_matches_index_oracle[pairs1-direct] ______________
+
+tmp_path = PosixPath('/scratch/remaining/test_tile_swap_matches_index_o3')
+pairs = [(0, 4)], backend = 'direct'
+
+    @pytest.mark.parametrize('backend', ['buffered', 'direct'])
+    @pytest.mark.parametrize('pairs', [[(0, 1)], [(0, 4)], [(4, 5)], [(0, 4), (1, 5)]])
+    def test_tile_swap_matches_index_oracle(tmp_path, pairs, backend):
+        initial = np.arange(1 << 7, dtype=np.complex128) + 1j
+        with StoredSimulator(7, cfg(tmp_path/'sim', backend=backend), initial_state=initial) as sim:
+            identity = sim.store._file(0).backend_identity
+>           assert identity == ('macos-f-nocache' if backend == 'direct' else 'buffered')
+E           AssertionError: assert 'linux-o-direct' == 'macos-f-nocache'
+E
+E             - macos-f-nocache
+E             + linux-o-direct
+
+tests/test_tile_transpose.py:22: AssertionError
+______________ test_tile_swap_matches_index_oracle[pairs2-direct] ______________
+
+tmp_path = PosixPath('/scratch/remaining/test_tile_swap_matches_index_o5')
+pairs = [(4, 5)], backend = 'direct'
+
+    @pytest.mark.parametrize('backend', ['buffered', 'direct'])
+    @pytest.mark.parametrize('pairs', [[(0, 1)], [(0, 4)], [(4, 5)], [(0, 4), (1, 5)]])
+    def test_tile_swap_matches_index_oracle(tmp_path, pairs, backend):
+        initial = np.arange(1 << 7, dtype=np.complex128) + 1j
+        with StoredSimulator(7, cfg(tmp_path/'sim', backend=backend), initial_state=initial) as sim:
+            identity = sim.store._file(0).backend_identity
+>           assert identity == ('macos-f-nocache' if backend == 'direct' else 'buffered')
+E           AssertionError: assert 'linux-o-direct' == 'macos-f-nocache'
+E
+E             - macos-f-nocache
+E             + linux-o-direct
+
+tests/test_tile_transpose.py:22: AssertionError
+______________ test_tile_swap_matches_index_oracle[pairs3-direct] ______________
+
+tmp_path = PosixPath('/scratch/remaining/test_tile_swap_matches_index_o7')
+pairs = [(0, 4), (1, 5)], backend = 'direct'
+
+    @pytest.mark.parametrize('backend', ['buffered', 'direct'])
+    @pytest.mark.parametrize('pairs', [[(0, 1)], [(0, 4)], [(4, 5)], [(0, 4), (1, 5)]])
+    def test_tile_swap_matches_index_oracle(tmp_path, pairs, backend):
+        initial = np.arange(1 << 7, dtype=np.complex128) + 1j
+        with StoredSimulator(7, cfg(tmp_path/'sim', backend=backend), initial_state=initial) as sim:
+            identity = sim.store._file(0).backend_identity
+>           assert identity == ('macos-f-nocache' if backend == 'direct' else 'buffered')
+E           AssertionError: assert 'linux-o-direct' == 'macos-f-nocache'
+E
+E             - macos-f-nocache
+E             + linux-o-direct
+
+tests/test_tile_transpose.py:22: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_phase4_mpi.py::test_async_exact_state_resume_and_rank_local_manifests[buffered-S2-4]
+FAILED tests/test_phase4_mpi.py::test_async_file_state_larger_than_managed_budget[4]
+FAILED tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs0-direct]
+FAILED tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs1-direct]
+FAILED tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs2-direct]
+FAILED tests/test_tile_transpose.py::test_tile_swap_matches_index_oracle[pairs3-direct]
+6 failed, 298 passed, 2 skipped, 350 deselected in 2442.36s (0:40:42)

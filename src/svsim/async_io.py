@@ -20,7 +20,7 @@ class IORequest:
     error: BaseException | None = None
     elapsed_seconds: float = 0
     submitted_at: float = 0
-    queue_seconds: float = 0
+    queue_seconds: float | None = 0
     wall_seconds: float = 0
     validated: bool = False
     storage_metadata: dict = field(default_factory=dict)

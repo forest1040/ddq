@@ -16,11 +16,13 @@
 
 P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtime measurement foundations`。Mac回帰469件成功、24構成・336 trialの検証証跡を同変更に含める。
 
-着手時に担当・関連commitを追記し、完了時はテスト／reportへのリンクと、測定条件・結果を記録する。scopeを縮小する場合は設計書と開発計画に反映し、項目を黙ってDONEにしない。P4-001〜009の先行実装はCodexとLunaが担当し、それ以外は担当未定。
+着手時に担当・関連commitを追記し、完了時はテスト／reportへのリンクと、測定条件・結果を記録する。scopeを縮小する場合は設計書と開発計画に反映し、項目を黙ってDONEにしない。P4-001〜010の先行実装はCodexとLunaが担当し、P4-011は担当未定。
 
 2026-10-14に[容量予約・runtime計測の基盤](phase4_foundation_implementation.md)を実装した。catalogとledgerの同SQLite VFS、writerへの予約接続、validated completion、厳密profile adapter、有限actual-runtime campaignを追加した。Macの検証と残る受入条件は[検証資料](internal/phase4_foundation_validation/README.md)へ記録する。両項目はIN_PROGRESSで、全writerのfault／回収証跡、profile registryの全stage・自動接続、監視overhead、Linux／cross-host校正は残る。M1とPhase 4の完了は宣言しない。
 
 ## 一覧
+
+2026-10-14に[Linux Docker開発環境](linux_development.md)を追加した。利用者が許可したLinuxサーバ内だけにuv・OpenMPI・liburingを用意し、既定seccompのcapability拒否と限定profileのnative成功を別記録した。実kernelのO_DIRECT・CQE・cancelと、1／2／4 rankの明示nativeテストを追加する。P4-010は環境不足のBLOCKEDを解消してIN_PROGRESSへ変更し、全fault／durability／worker対照性能matrixは残す。
 
 2026-10-14に[同volume共有disk admissionとforeground RAM](phase4_disk_coordination_implementation.md)を追加した。独立datasetの明示共通ledger、forkのbootstrap前継承、永続policy照合、登録rootの最小祖先集合と合算容量検査を実装した。cacheの任意metadataは最低作業領域を圧迫する際に精算する。Macの独立dataset／fork／勾配とRAMを超えるstateを含む関連回帰107件を確認した。P4-009／007はIN_PROGRESSを維持し、temporary branchの安全なGC、全writerのfault／cut結合、Linux／別hostは残す。
 
@@ -41,7 +43,7 @@ P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtim
 | [P4-007](phase4_tasks/P4-007_cache_policy.md) | P1 | IN_PROGRESS | Frame・Binding共有を含むfuture-aware cache費用 | P4-001、002、009 |
 | [P4-008](phase4_tasks/P4-008_gradient_selection.md) | P1 | IN_PROGRESS | 勾配方式の自動校正と安全な選択評価 | P4-001、004、009 |
 | [P4-009](phase4_tasks/P4-009_disk_admission.md) | P1 | IN_PROGRESS | SQLite書込み前のdisk admission | Phase 5基盤 |
-| [P4-010](phase4_tasks/P4-010_native_uring.md) | P2 | BLOCKED | native io_uringのLinux実機検証 | 利用可能なliburing／kernel環境 |
+| [P4-010](phase4_tasks/P4-010_native_uring.md) | P2 | IN_PROGRESS | native io_uringのLinux実機検証 | Linux Docker環境、全fault／durability matrix |
 | [P4-011](phase4_tasks/P4-011_offline_migration.md) | P2 | OPEN | v3共有treeのoffline node-local移行 | P4-009、対応範囲の確定 |
 
 ## 完了条件と作業内容
@@ -134,7 +136,7 @@ catalog open／transaction前の予約と同SQLite VFS、ledger pool、extent・
 
 ### P4-010：native io_uringのLinux実機検証
 
-adapterとMacのfake CQE試験は実装済み。検証サイトにはliburing header/libraryが無いためBLOCKED。新規導入は今回の許可範囲に含めなかった。
+adapterとMacのfake CQE試験を維持し、許可された別LinuxサーバにDocker開発環境と明示native検証を追加した。[記録](internal/ent_linux_validation/README.md)にcapability拒否／成功、toolchain、source hashと実テスト結果を保存する。従来の研究室クラスタへは新規導入していない。初期native correctnessを全受入matrixの完了とはしない。
 
 - 利用可能な環境でworkerとの数値一致、alignment、short I/O、CQE error、cancelと元requestの終端、fsync、buffer lifetimeを検証する。
 - capability拒否とnative成功を区別して記録する。mockをnative実測に数えない。

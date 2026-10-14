@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from dataclasses import replace
+import sys
 
 from svsim.storage import StorageConfig
 from svsim.stored_runtime import StoredSimulator
@@ -8,19 +9,21 @@ from svsim.tile_transpose import execute_tile_swap
 from svsim.cache import BufferLease
 
 
-def cfg(path, block_bits=3, ram=1 << 20, backend='buffered'):
+def cfg(path, block_bits=3, ram=1 << 20, backend='buffered', alignment=64):
     return StorageConfig(str(path), block_bits, ram_budget_bytes=ram,
-                         metadata_reserve_bytes=64 * 1024, alignment=64, backend=backend)
+                         metadata_reserve_bytes=64 * 1024, alignment=alignment, backend=backend)
 
 
 @pytest.mark.parametrize('backend', ['buffered', 'direct'])
 @pytest.mark.parametrize('pairs', [[(0, 1)], [(0, 4)], [(4, 5)], [(0, 4), (1, 5)]])
 def test_tile_swap_matches_index_oracle(tmp_path, pairs, backend):
     initial = np.arange(1 << 7, dtype=np.complex128) + 1j
-    with StoredSimulator(7, cfg(tmp_path/'sim', backend=backend), initial_state=initial) as sim:
+    alignment = 4096 if backend == 'direct' and sys.platform.startswith('linux') else 64
+    with StoredSimulator(7, cfg(tmp_path/'sim', backend=backend, alignment=alignment), initial_state=initial) as sim:
         identity = sim.store._file(0).backend_identity
-        assert identity == ('macos-f-nocache' if backend == 'direct' else 'buffered')
-        execute_tile_swap(sim, pairs, tile_bytes=64)
+        expected = ('linux-o-direct' if sys.platform.startswith('linux') else 'macos-f-nocache') if backend == 'direct' else 'buffered'
+        assert identity == expected
+        execute_tile_swap(sim, pairs, tile_bytes=alignment)
         # The route changes physical coordinates and updates the layout, so
         # logical state remains identical to the input.
         np.testing.assert_array_equal(sim.state(), initial)

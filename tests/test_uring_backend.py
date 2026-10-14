@@ -127,3 +127,42 @@ def test_fatal_submission_does_not_unpin_uncertain_kernel_operation():
     engine.poll();lease.close();engine.close();assert budget.used==0
     from svsim.uring_backend import _FATAL_RINGS
     _FATAL_RINGS.remove(engine)
+
+
+def test_native_request_metadata_and_whole_wall_include_validator():
+    import time
+    shim,budget,engine,lease=setup()
+    handle=Handle()
+    handle.backend_identity='linux-o-direct'
+    request=engine.submit_write(handle,0,lease)
+    def validate(req):
+        assert req._lease.pins==1
+        time.sleep(.005)
+        req.mark_validated()
+    request.add_done_callback(validate)
+    shim.cq.append((1,4096))
+    engine.wait(request)
+    assert request.submitted_at>0 and request.wall_seconds>=request.elapsed_seconds
+    assert request.wall_seconds>=.004 and request.queue_seconds is None
+    assert request.storage_metadata['resolved_backend']=='linux-o-direct'
+    assert request.storage_metadata['transfer_bytes']==4096
+    assert request.storage_metadata['service_seconds_known'] is False
+    assert request.validated and not lease.pins
+    # Exercise the production collector adapter: the native elapsed interval
+    # includes queueing and must never become an invented pure-service sample.
+    from svsim.runtime_control import RuntimeControl
+    from svsim.runtime_measurement import RuntimeMeasurementCollector
+    from svsim.lifecycle import BenchmarkCondition
+    collector=RuntimeMeasurementCollector()
+    control=SimpleNamespace(
+        sim=SimpleNamespace(config=SimpleNamespace(backend='direct'),
+                            io_engine=engine,size=1,store=SimpleNamespace(slot_bytes=4096),
+                            environment=[{'host':'test'}]),
+        measurements=collector,profile_adapter=None,
+        io_condition=lambda *args:BenchmarkCondition('native-write'),observe=lambda *args:None)
+    RuntimeControl.io_completion(control,request)
+    row=collector.snapshot()['observations'][0]
+    assert row['service_seconds'] is None and row['queue_seconds'] is None
+    assert row['protocol_seconds']==request.wall_seconds
+    lease.close();engine.close()
+    assert budget.used==0

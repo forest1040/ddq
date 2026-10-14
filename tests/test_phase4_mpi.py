@@ -10,6 +10,9 @@ import pytest
 available=bool(shutil.which('mpiexec')) and importlib.util.find_spec('mpi4py') is not None
 pytestmark=pytest.mark.skipif(not available,reason='Local MPI runtime unavailable')
 backends=['buffered','direct'] if sys.platform=='darwin' else ['buffered']
+MPI_TEST_TIMEOUT=int(os.environ.get('DDQ_MPI_TEST_TIMEOUT','120'))
+if not 1<=MPI_TEST_TIMEOUT<=1800:
+    raise ValueError('DDQ_MPI_TEST_TIMEOUT must be in 1..1800 seconds')
 
 
 def run_worker(tmp_path,ranks,policy,backend,*extra):
@@ -18,7 +21,7 @@ def run_worker(tmp_path,ranks,policy,backend,*extra):
     subprocess.run([shutil.which('mpiexec'),'-n',str(ranks),sys.executable,
                     str(Path(__file__).with_name('mpi_phase4_worker.py')),str(tmp_path),
                     '--backend',backend,'--policy',policy,*extra],
-                   check=True,env=env,timeout=120)
+                   check=True,env=env,timeout=MPI_TEST_TIMEOUT)
 
 
 @pytest.mark.parametrize('ranks',[1,2,4])

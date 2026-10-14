@@ -17,7 +17,7 @@ uv.lock         uvのロックファイル
 
 ## 研究室クラスタの内部計画
 
-[研究室クラスタ調査・実行計画](docs/internal/lab_cluster_execution_plan.md)には、研究室固有の接続先、ノード構成、容量、運用情報を記載しています。将来リポジトリを共有する際は、この資料を非公開にするか匿名化する可能性があります。現在はリポジトリ内に保存しており、`docs/internal/` という配置だけでアクセスを制限するものではありません。公開前には資料・参照リンクと Git 履歴に含まれる情報も確認してください。
+[研究室クラスタ調査・実行計画](docs/internal/lab_cluster_execution_plan.md)には、研究室固有の接続先、ノード構成、容量、運用情報を記載しています。[Linuxサーバ検証記録](docs/internal/ent_linux_validation/README.md)もホスト情報と絶対パスを含みます。将来リポジトリを共有する際は、これらの資料を非公開にするか匿名化する可能性があります。現在はリポジトリ内に保存しており、`docs/internal/` という配置だけでアクセスを制限するものではありません。公開前には資料・参照リンクと Git 履歴に含まれる情報も確認してください。
 
 ## Python環境
 
@@ -29,6 +29,8 @@ uv run python --version
 ```
 
 仮想環境は`.venv/`に作成されます。NumPy と pytest をロックファイルから導入します。
+
+Linux x86_64では[Dockerfile](docker/linux/Dockerfile)でuv・OpenMPI・liburingを揃えます。[環境構築手順](docker/linux/README.md)と[Linux開発・検証範囲](docs/linux_development.md)を参照してください。Python依存はlockから導入し、実行時は`uv run --offline --no-sync`を使います。
 
 ## Phase 0 実装
 
@@ -96,7 +98,7 @@ P4-003／005／008の[先行実装](docs/phase4_validation_implementation.md)も
 
 [Phase 4 設計書](docs/phase4_design.md)と[実装・検証資料](docs/phase4_implementation.md)に、worker I/O、nonblocking MPI、先読み・書き戻し、S2／local fusion／FusedSWAP、Parameter batch、期待値・三方式の勾配、Runtime Guardとpolicy変更、node-local checkpoint／resume／GCを記載しています。[Mac実測比較](docs/phase4_benchmark.md)では同期／非同期／S2を同一回路で比較しています。
 
-Mac上のMPIとlocal scheduler、および許可後のPBS割当内で単一ノード・実2ノードの2／4 rankを検証しました。Linux O_DIRECT、PSM2／OFI／Ethernetで数値一致を確認しています。振幅・catalogはnode-localに保存し、checkpoint／resume／prefix lease／GCはMPI通信で管理します。[クラスタ検証記録](docs/internal/phase4_cluster_validation.md)は内部資料です。optional Linux io_uring adapterはliburingが既存環境になく、native Linux実機では未検証です。運用ETAの自動校正・一般的なtile migration等の拡張範囲は実装資料に明記しています。
+Mac上のMPIとlocal scheduler、および許可後のPBS割当内で単一ノード・実2ノードの2／4 rankを検証しました。Linux O_DIRECT、PSM2／OFI／Ethernetで数値一致を確認しています。振幅・catalogはnode-localに保存し、checkpoint／resume／prefix lease／GCはMPI通信で管理します。[クラスタ検証記録](docs/internal/phase4_cluster_validation.md)は内部資料です。optional Linux io_uringは別の[Linux Docker環境](docs/linux_development.md)でnative実kernel検証に着手しました。全fault／durability matrixと性能評価はP4-010に残します。運用ETAの自動校正・一般的なtile migration等の拡張範囲は実装資料に明記しています。
 
 ```sh
 uv sync --locked --extra mpi

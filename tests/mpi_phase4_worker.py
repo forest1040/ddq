@@ -1,4 +1,4 @@
-"""Mac-local integrated async runtime oracle and owner-local lifecycle checks."""
+"""Single-host integrated async runtime oracle and owner-local lifecycle checks."""
 import argparse
 import math
 from pathlib import Path
@@ -24,6 +24,12 @@ def assert_state(sim, expected):
     sim.transport.vote(error)
 
 
+def assert_requested_engine(sim, requested):
+    identities=comm.allgather(getattr(sim.io_engine,'identity',None))
+    assert all(identity==requested for identity in identities), (
+        f'io engine request {requested!r} resolved unexpectedly on ranks: {identities!r}')
+
+
 def configuration(directory, backend, *, nsmall=False):
     return DistributedConfig(str(directory), 6 if nsmall else 2,
                 ram_budget_bytes_per_rank=192*1024 if nsmall else 2*1024**2,
@@ -40,6 +46,7 @@ def run_state(base, backend, policy):
     initial/=np.linalg.norm(initial)
     matrix=np.array([[1, 0, 0, 0], [0, 0, 1j, 0], [0, 1, 0, 0], [0, 0, 0, -1j]], complex)
     with AsyncDistributedSimulator(6,config,comm=comm,initial_state=initial,policy=policy) as sim:
+        assert_requested_engine(sim,policy.io_engine)
         sim.gate('H',(0,)); sim.gate('T',(1,))
         sim.gate('RX',(4,),angle=.27)
         sim.gate('RY',(0,),angle=-.13)
@@ -63,6 +70,7 @@ def run_state(base, backend, policy):
         snapshot=sim.commit_snapshot()
         assert snapshot['schema_version']==4
     with AsyncDistributedSimulator.resume(config,snapshot,comm=comm) as sim:
+        assert_requested_engine(sim,policy.io_engine)
         assert_state(sim,expected)
         assert sim.policy==policy
 
@@ -72,12 +80,14 @@ def run_prefix_and_gradient(base, backend, policy):
     config=configuration(directory,backend)
     theta=ParameterSymbol('theta',parameter_id='phase4-real-mpi-theta')
     with AsyncDistributedSimulator(6,config,comm=comm,policy=policy) as sim:
+        assert_requested_engine(sim,policy.io_engine)
         sim.gate('H',(0,)); sim.gate('RY',(5,),angle=theta)
         binding=sim.bind({theta.parameter_id:.37})
         snapshot=sim.commit_prefix([theta],binding=binding)
         childdirectory=base/f'suffix-owner-{rank}'
         allowed.append(childdirectory)
         with sim.fork(snapshot,binding=binding,directory=str(childdirectory)) as child:
+            assert_requested_engine(child,policy.io_engine)
             child.materialize(binding=binding)
             expected=eager_reference(child.sequencer.operations,6,child.assets,binding)
             assert_state(child,expected)
@@ -99,7 +109,9 @@ def run_prefix_and_gradient(base, backend, policy):
         assert_state(sim,expected)
         sim.fused_index_bit_swap(((0,3),(3,5)))
         assert_state(sim,expected)
+        assert_requested_engine(sim,policy.io_engine)
         result=sim.gradient(observable,parameters=[theta],method='adjoint')
+        assert_requested_engine(sim,policy.io_engine)
         np.testing.assert_allclose(result[theta.parameter_id],-math.sin(.37),atol=2e-9)
         assert_state(sim,expected)
 
@@ -110,6 +122,7 @@ def run_bounded(base, backend, policy):
     n=14 + int(math.log2(comm.Get_size()))
     assert 16*(1<<n)//comm.Get_size()>config.ram_budget_bytes_per_rank
     with AsyncDistributedSimulator(n,config,comm=comm,policy=policy) as sim:
+        assert_requested_engine(sim,policy.io_engine)
         sim.gate('RY',(0,),angle=.21)
         sim.gate('RY',(n-1,),angle=.43)
         sim.gate('MCX',(n-2,),controls=(0,n-1),control_values=(0,1))
@@ -127,11 +140,16 @@ def run_bounded(base, backend, policy):
 
 parser=argparse.ArgumentParser()
 parser.add_argument('directory');parser.add_argument('--backend',default='buffered')
+parser.add_argument('--io-engine',choices=('worker','cooperative','io_uring'),default='worker')
 parser.add_argument('--policy',default='S2');parser.add_argument('--extended',action='store_true')
 parser.add_argument('--bounded',action='store_true')
 args=parser.parse_args()
 base=Path(args.directory)
-policy=AsyncPolicy(swap_policy=args.policy,io_engine='worker',lookahead_gates=8)
+policy=AsyncPolicy(swap_policy=args.policy,io_engine=args.io_engine,lookahead_gates=8)
+if args.io_engine == 'io_uring':
+    thread_levels=comm.allgather(MPI.Query_thread())
+    assert all(level==MPI.THREAD_SINGLE for level in thread_levels), (
+        f'native io_uring MPI requires MPI_THREAD_SINGLE, got {thread_levels!r}')
 allowed=[base/f'state-owner-{rank}',base/f'prefix-owner-{rank}',base/f'bounded-owner-{rank}']
 original_read=checkpoints._read
 

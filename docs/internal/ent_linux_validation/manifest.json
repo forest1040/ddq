@@ -1,0 +1,122 @@
+{
+  "scope": "single-host Linux Docker correctness",
+  "project_python": "uv run --offline --no-sync",
+  "campaign_cases": 5,
+  "campaign_seconds": 575.777,
+  "caps_per_container": {
+    "cpus": 4,
+    "memory_bytes": 8589934592,
+    "pids": 512,
+    "shm_bytes": 268435456,
+    "network": "none"
+  },
+  "runtime_source_unchanged_since_native": true,
+  "native_seccomp": "docker/linux/seccomp-uring.json",
+  "regression_seccomp": "Docker builtin default",
+  "no_lab_cluster_or_pbs": true,
+  "phase4_complete": false,
+  "p4_010_status": "IN_PROGRESS",
+  "regression": {
+    "collected": 656,
+    "passed": 642,
+    "skipped": 14,
+    "failed": 0,
+    "error": 0,
+    "is_single_invocation": false,
+    "coverage": "merged-regression.json"
+  },
+  "native": {
+    "passed": 12,
+    "skipped": 0,
+    "seconds": 459.146,
+    "junit": "initial/native.xml"
+  },
+  "mac_related": {
+    "passed": 63,
+    "seconds": 8.0,
+    "log": "mac-final.txt"
+  },
+  "development_image_id": "sha256:3bee5df0c2960ab030ea1e9cb5528638929ab3cb6e45ee2ee073102f1d8cce14",
+  "artifact_sha256": {
+    "merged-regression.json": "031e3453ae42da1e6ca12690d3bb0ad31fd162ba2c05a22f796bbe2b2103af89",
+    "remaining-deselections.txt": "1b1727083f26891e7853b2622c4cf1c319c7f8d3b6c7ffab2eade4b7c7b44569",
+    "host-environment.json": "96d20984d33020d00626467c755c6b3c1dfcb2f4d52a5df0fa98fda3e63ee2a2",
+    "mac-related.txt": "a033cba993bd35ebd2948be619ae25bc9c5a94157e7ad56bc432614a7355a179",
+    "mac-final.txt": "8edec9e9962c548a41b18b4b56bb731e8e3d5b1878e1a646fb01bc3fca1b7f5f",
+    "retry/retry.xml": "3dd5aef95228ec08108398da503c694d9bae399ee3254e40be95ce5eac90e4b0",
+    "retry/retry.txt": "b2865cdeba6684aa809a729c71c4b15a41aba904a09a9fc77d26a9332a510ed7",
+    "retry/source-hashes.txt": "435d22008395bb341e34ad729c29c4a8532cf4c157b6a599ab51936e58340647",
+    "retry/collection.txt": "3436c3597f49922fbfccc234a9901f4315466bb7ac605b1e472c5fc3b3744f50",
+    "retry/exit-code.txt": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "retry/image.json": "d1d1ac3be13fd120fc4eb5e84f82cc638d292c3bbd8e9e0ba690a5855c958474",
+    "initial/environment-hashes.txt": "11a4eee5069dbf33d72ab7a9cd31b272a189eb4da982d8a77499e52768e3a306",
+    "initial/native.txt": "e4ef33c40246e68fa4fd9e623d6c526515736fd432e043d77d4d5e111d86589b",
+    "initial/native.xml": "e0c86348ddb978a68b517d8170d504864e66367da98e819831a16f6a706eca6b",
+    "initial/toolchain.txt": "9a7e7beba806457b64379d3b97a8bb2171af624b8960bd0f22114287a87862d7",
+    "initial/host-mount.txt": "637c23f008fcde9e40fc241efd1c1b0ba8d1b1c0ee0745c871f68f48f83916f4",
+    "initial/regression.txt": "8e553a26da08fc67719fe5b42fdcca75baa38316ff20f6ab3395b111132c6ce7",
+    "initial/source-hashes.txt": "5dc8cce0dc3bede39c4f10eb60253c1ad7b0affeb8711c36e95105eb05d18d18",
+    "initial/probe-default.txt": "2618c83df384b7cb1bc625506c2cabc3ebe20a12981e7ad9f070bdceafaea800",
+    "initial/status.tsv": "7eda80870ab40fb0fafb00604eb5c558690bdb1259706945d77470868492c556",
+    "initial/host-kernel.txt": "5124d2622afe69deb3f66ef15aa225dbb9dd1b8c31727ff8ca414d8bf43af060",
+    "initial/regression.xml": "90114c387b81336bb718651a262fc13a7bd7219a08f5842e6b526571f1ff2fbc",
+    "initial/host-filesystem.txt": "217e44358b7593b8d6c857a1b3182cee7ab90df5bfc79598ea9e29d8c555b5ed",
+    "initial/probe-native.txt": "2f4ccac5fb6fe11ba511fdf337f265c21ba62b059b28f7356b806c863cdb62e2",
+    "initial/image.json": "3c0116e605d0c52d569070ed2e2edf80f13b63669ce506e3c7824cd5c875c2a6",
+    "initial/docker-version.txt": "dc3f77c1dd899d9dd4c8102cc792948d23adb7ccb848d42a1b5c91bcb7b743c1",
+    "campaign/campaign.xml": "6f12e5e5ebfa50fc263cd5f02bd4f9bd3c2f3053ec389fe56299f025feabccda",
+    "campaign/campaign.txt": "88c2697641fb776e15fc7ea2c971ae6f0fe71dbc770a4b8336836736e8969c7c",
+    "campaign/source-hashes.txt": "71058ac3f582c6608293ce5575ea6644bcfbc77c0ee3863689506e5a98fda892",
+    "regression-first/environment-hashes.txt": "753a1e619773e3b10d3ee12071bbaf639fd55fb709b8ff8bd2fc0356d7b5f951",
+    "regression-first/toolchain.txt": "c2670c377b6180b81e65647d0539d1902f1272c7b72361216723f40540779339",
+    "regression-first/host-mount.txt": "637c23f008fcde9e40fc241efd1c1b0ba8d1b1c0ee0745c871f68f48f83916f4",
+    "regression-first/regression.txt": "4461f9693cea9dbdc441d706b173a7a3f6cda010f0cfa38129e951544eedb264",
+    "regression-first/source-hashes.txt": "dea182aa04abcc23cff7fa142dc80423dbae72fec44ec8e646771027f1806209",
+    "regression-first/probe-default.txt": "2618c83df384b7cb1bc625506c2cabc3ebe20a12981e7ad9f070bdceafaea800",
+    "regression-first/status.tsv": "430cd755fa9b7a3bc1122180462b731c956173b9d92225350e1cc86d97dac7cf",
+    "regression-first/host-kernel.txt": "5124d2622afe69deb3f66ef15aa225dbb9dd1b8c31727ff8ca414d8bf43af060",
+    "regression-first/regression.xml": "c6080f9d1672529c89ef9dafbfd91b54771d63912c4dbb2f91d91a888523d26a",
+    "regression-first/host-filesystem.txt": "b45d1559514645effdb2e0e8bbba2be52ff27961cab4c7f7d7a1fc527a9e3c1c",
+    "regression-first/probe-native.txt": "2f4ccac5fb6fe11ba511fdf337f265c21ba62b059b28f7356b806c863cdb62e2",
+    "regression-first/image.json": "a99a12f526ccc1ad36f89edcd768312854421d4bae4bac0b45a3ca50ceb0b065",
+    "regression-first/docker-version.txt": "dc3f77c1dd899d9dd4c8102cc792948d23adb7ccb848d42a1b5c91bcb7b743c1",
+    "remaining/remaining.xml": "098d8d3198576b78d774e980b3d2fae3187be1da7e69eb8614b95d71f1ebcc8e",
+    "remaining/source-hashes.txt": "e9ab0123828eb60ae6bb6302b2a44e7be246d27712cf45a72a95e049880555a5",
+    "remaining/remaining.txt": "296ce310736563608604df9e477229f14900c169b1ed0c45bd67218f1cfeac67",
+    "remaining/exit-code.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+  },
+  "validation_runner_sha256": "35bfed41159335b441af5b13143574e9b209a2c7ffee540790b1df68dc41f4d7",
+  "full_regression_wall_limit_seconds": 7200,
+  "log_normalization": {
+    "initial/regression.txt": {
+      "original_sha256": "7856b1151e38819928100a9c93bb001370273083ea7994eea4f25ba5cd1fd2d0",
+      "normalized_sha256": "8e553a26da08fc67719fe5b42fdcca75baa38316ff20f6ab3395b111132c6ce7",
+      "operation": "remove trailing spaces/tabs only"
+    },
+    "initial/regression.xml": {
+      "original_sha256": "792f45dc5803b9c18e25f6897d95717e60ee83d1f6009e23cd2c7d93e45b0a6b",
+      "normalized_sha256": "90114c387b81336bb718651a262fc13a7bd7219a08f5842e6b526571f1ff2fbc",
+      "operation": "remove trailing spaces/tabs only"
+    },
+    "regression-first/regression.txt": {
+      "original_sha256": "becee8c9b6fa74b43425cf62c8d21dccf129ffc8bc848487d57b220a93fc76e7",
+      "normalized_sha256": "4461f9693cea9dbdc441d706b173a7a3f6cda010f0cfa38129e951544eedb264",
+      "operation": "remove trailing spaces/tabs only"
+    },
+    "regression-first/regression.xml": {
+      "original_sha256": "038401843d90b3acbf9b07c4345f21acc3eaddc31459b2ca4992e4b2588bba6c",
+      "normalized_sha256": "c6080f9d1672529c89ef9dafbfd91b54771d63912c4dbb2f91d91a888523d26a",
+      "operation": "remove trailing spaces/tabs only"
+    },
+    "remaining/remaining.xml": {
+      "original_sha256": "3b3d03414c6fb4910269ada041709ffd75af43cc6e6771869b19978f83a17b58",
+      "normalized_sha256": "098d8d3198576b78d774e980b3d2fae3187be1da7e69eb8614b95d71f1ebcc8e",
+      "operation": "remove trailing spaces/tabs only"
+    },
+    "remaining/remaining.txt": {
+      "original_sha256": "ffe2444403c4478f18389263a631b0f147dd0dcd7905b102f56fe364f617b302",
+      "normalized_sha256": "296ce310736563608604df9e477229f14900c169b1ed0c45bd67218f1cfeac67",
+      "operation": "remove trailing spaces/tabs only"
+    }
+  }
+}

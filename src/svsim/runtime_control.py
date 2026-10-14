@@ -418,7 +418,9 @@ class RuntimeControl:
                 condition=asdict(condition), stage='storage-' + request.operation,
                 units='calls', quantity=1,
                 queue_seconds=getattr(request, 'queue_seconds', None),
-                service_seconds=request.elapsed_seconds, protocol_seconds=elapsed,
+                service_seconds=(request.elapsed_seconds if
+                    getattr(request,'storage_metadata',{}).get('service_seconds_known',True) else None),
+                protocol_seconds=elapsed,
                 payload_bytes=sim.store.slot_bytes, storage_bytes=sim.store.slot_bytes,
                 evidence='injected' if getattr(sim,'_measurement_injected',False) else 'measured',
                 success=successful, validator=lambda: bool(getattr(request, 'validated', False)),

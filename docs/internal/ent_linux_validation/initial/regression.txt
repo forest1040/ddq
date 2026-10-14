@@ -1,0 +1,179 @@
+..........................FF................................FFFF.FF..... [ 10%]
+........................................................................ [ 21%]
+
+=================================== FAILURES ===================================
+_________ test_async_cache_cost_choice_and_stale_context_lru_fallback __________
+
+tmp_path = PosixPath('/scratch/regression/test_async_cache_cost_choice_a0')
+
+    def test_async_cache_cost_choice_and_stale_context_lru_fallback(tmp_path):
+        config, store, engine, budget, cache = _cache(tmp_path, metadata_capacity=24576)
+        # Install two clean cached versions in LRU order.
+        for key in ('zero', 'initial-one'):
+            with cache.pin(key): pass
+        hints = FutureUseSummary((FutureUseHint('zero', 1), FutureUseHint('initial-one', 2)),
+                                 'snap', (('root', 'r1'),))
+        cache.set_cost_hints(hints, context={'root': 'r1'},
+                             context_getter=lambda: {'root': 'r1'},
+                             cost_resolver=lambda version, entry, hint:
+                             _measured(100 if version == 'zero' else 1))
+        budget.limit = budget.used
+        cache.ensure(cache.buffer_cost)
+        assert list(cache.entries) == ['zero']
+        cache.clear()
+
+        # A live context change invalidates every hint and restores deterministic LRU.
+        for key in ('zero', 'initial-one'):
+            with cache.pin(key): pass
+        current = {'root': 'r2'}
+        cache.set_cost_hints(hints, context={'root': 'r1'}, context_getter=lambda: current,
+                             cost_resolver=lambda *_: CacheCost(raw_read=100, rematerialize=0))
+        budget.limit = budget.used
+        cache.ensure(cache.buffer_cost)
+>       assert list(cache.entries) == ['initial-one']
+E       AssertionError: assert ['zero', 'initial-one'] == ['initial-one']
+E
+E         At index 0 diff: 'zero' != 'initial-one'
+E         Left contains one more item: 'initial-one'
+E         Use -v to get more diff
+
+tests/test_cache_cost.py:140: AssertionError
+___ test_unvalidated_or_missing_freshness_evidence_always_falls_back_to_lru ____
+
+tmp_path = PosixPath('/scratch/regression/test_unvalidated_or_missing_fr0')
+
+    def test_unvalidated_or_missing_freshness_evidence_always_falls_back_to_lru(tmp_path):
+        config, store, engine, budget, cache = _cache(tmp_path, metadata_capacity=24576)
+        for key in ('zero', 'initial-one'):
+            with cache.pin(key): pass
+        hints = FutureUseSummary((FutureUseHint('zero', 1), FutureUseHint('initial-one', 2)),
+                                 'snap', (('root', 'r'),))
+        cache.set_cost_hints(hints, context={'root': 'r'},
+                             cost_resolver=lambda *_: CacheCost(raw_read=100, rematerialize=0,
+                                                                evidence='injected', validated=False,
+                                                                source='manual', scope='test'))
+        budget.limit = budget.used
+        cache.ensure(cache.buffer_cost)
+>       assert list(cache.entries) == ['initial-one']
+E       AssertionError: assert ['zero', 'initial-one'] == ['initial-one']
+E
+E         At index 0 diff: 'zero' != 'initial-one'
+E         Left contains one more item: 'initial-one'
+E         Use -v to get more diff
+
+tests/test_cache_cost.py:158: AssertionError
+_____________________ test_runs_and_writes_bounded_report ______________________
+
+tmp_path = PosixPath('/scratch/regression/test_runs_and_writes_bounded_r0')
+
+    def test_runs_and_writes_bounded_report(tmp_path):
+        with LocalDevelopmentRunner(tmp_path, max_ram_bytes=100, max_disk_bytes=100,
+                                    max_report_bytes=8) as runner:
+            rec = runner.submit(spec("print('hello from child')", rank_ram_bytes=10,
+                                     rank_disk_bytes=10, test_case="smoke")).wait(5)
+>       assert rec.state is JobState.COMPLETED
+E       AssertionError: assert <JobState.FAILED: 'FAILED'> is <JobState.COMPLETED: 'COMPLETED'>
+E        +  where <JobState.FAILED: 'FAILED'> = JobRecord(job_id='000528ae54214e87bbe8f0744822d1b6', spec=JobSpec(revision='rev-a', lock_hash='lock-a', argv=('/worksp...sion/test_runs_and_writes_bounded_r0/000528ae54214e87bbe8f0744822d1b6/report.json', stdout_path=None, stderr_path=None).state
+E        +  and   <JobState.COMPLETED: 'COMPLETED'> = JobState.COMPLETED
+
+tests/test_development_runner.py:20: AssertionError
+__________________ test_walltime_and_nonzero_exit_are_failed ___________________
+
+tmp_path = PosixPath('/scratch/regression/test_walltime_and_nonzero_exit0')
+
+    def test_walltime_and_nonzero_exit_are_failed(tmp_path):
+        with LocalDevelopmentRunner(tmp_path, max_ram_bytes=100, max_disk_bytes=100,
+                                    terminate_grace_seconds=.1) as runner:
+            failed = runner.submit(spec("raise SystemExit(7)", walltime_seconds=3)).wait(5)
+            timed = runner.submit(spec("import time; time.sleep(5)", walltime_seconds=.1)).wait(5)
+>       assert failed.state is JobState.FAILED and failed.exit_code == 7
+E       AssertionError: assert (<JobState.FAILED: 'FAILED'> is <JobState.FAILED: 'FAILED'> and None == 7)
+E        +  where <JobState.FAILED: 'FAILED'> = JobRecord(job_id='79f0317efe9843ab9e21698d99e34ee8', spec=JobSpec(revision='rev-a', lock_hash='lock-a', argv=('/worksp...sion/test_walltime_and_nonzero_exit0/79f0317efe9843ab9e21698d99e34ee8/report.json', stdout_path=None, stderr_path=None).state
+E        +  and   <JobState.FAILED: 'FAILED'> = JobState.FAILED
+E        +  and   None = JobRecord(job_id='79f0317efe9843ab9e21698d99e34ee8', spec=JobSpec(revision='rev-a', lock_hash='lock-a', argv=('/worksp...sion/test_walltime_and_nonzero_exit0/79f0317efe9843ab9e21698d99e34ee8/report.json', stdout_path=None, stderr_path=None).exit_code
+
+tests/test_development_runner.py:33: AssertionError
+________________ test_cancel_queued_job_and_resource_admission _________________
+
+tmp_path = PosixPath('/scratch/regression/test_cancel_queued_job_and_res0')
+
+    def test_cancel_queued_job_and_resource_admission(tmp_path):
+        with LocalDevelopmentRunner(tmp_path, max_ram_bytes=10, max_disk_bytes=10,
+                                    max_concurrent_jobs=1) as runner:
+            first = runner.submit(spec("import time; time.sleep(.3)", host_ram_bytes=10, host_disk_bytes=10))
+            second = runner.submit(spec("print('should not run')", host_ram_bytes=10, host_disk_bytes=10))
+            assert second.cancel()
+            assert second.wait(2).state is JobState.CANCELLED
+>           assert first.wait(3).state is JobState.COMPLETED
+E           AssertionError: assert <JobState.FAILED: 'FAILED'> is <JobState.COMPLETED: 'COMPLETED'>
+E            +  where <JobState.FAILED: 'FAILED'> = JobRecord(job_id='7f7650dd54704f078cdc571eb9b34c9e', spec=JobSpec(revision='rev-a', lock_hash='lock-a', argv=('/worksp...sion/test_cancel_queued_job_and_res0/7f7650dd54704f078cdc571eb9b34c9e/report.json', stdout_path=None, stderr_path=None).state
+E            +    where JobRecord(job_id='7f7650dd54704f078cdc571eb9b34c9e', spec=JobSpec(revision='rev-a', lock_hash='lock-a', argv=('/worksp...sion/test_cancel_queued_job_and_res0/7f7650dd54704f078cdc571eb9b34c9e/report.json', stdout_path=None, stderr_path=None) = wait(3)
+E            +      where wait = <svsim.development_runner.JobHandle object at 0x73d17cb9a630>.wait
+E            +  and   <JobState.COMPLETED: 'COMPLETED'> = JobState.COMPLETED
+
+tests/test_development_runner.py:44: AssertionError
+_____________ test_rejects_shell_metacharacters_as_argv_not_shell ______________
+
+tmp_path = PosixPath('/scratch/regression/test_rejects_shell_metacharact0')
+
+    def test_rejects_shell_metacharacters_as_argv_not_shell(tmp_path):
+        payload = "x; touch SHOULD_NOT_EXIST"
+        with LocalDevelopmentRunner(tmp_path, max_ram_bytes=10, max_disk_bytes=10) as runner:
+            rec = runner.submit(JobSpec("r", "h", (sys.executable, "-c", "import sys; print(sys.argv[1])", payload))).wait(5)
+>       assert rec.state is JobState.COMPLETED
+E       AssertionError: assert <JobState.FAILED: 'FAILED'> is <JobState.COMPLETED: 'COMPLETED'>
+E        +  where <JobState.FAILED: 'FAILED'> = JobRecord(job_id='d873e92651be4216be9231c1747c8585', spec=JobSpec(revision='r', lock_hash='h', argv=('/workspace/.venv...sion/test_rejects_shell_metacharact0/d873e92651be4216be9231c1747c8585/report.json', stdout_path=None, stderr_path=None).state
+E        +  and   <JobState.COMPLETED: 'COMPLETED'> = JobState.COMPLETED
+
+tests/test_development_runner.py:51: AssertionError
+_______ test_descendant_inherited_pipes_do_not_hold_worker_past_walltime _______
+
+tmp_path = PosixPath('/scratch/regression/test_descendant_inherited_pipe0')
+
+    def test_descendant_inherited_pipes_do_not_hold_worker_past_walltime(tmp_path):
+        code = "import subprocess,sys; subprocess.Popen([sys.executable,'-c','import time; time.sleep(10)'])"
+        started = time.monotonic()
+        with LocalDevelopmentRunner(tmp_path, max_ram_bytes=10, max_disk_bytes=10) as runner:
+            rec = runner.submit(spec(code, walltime_seconds=.3)).wait(3)
+        assert time.monotonic() - started < 2
+>       assert rec.state is JobState.COMPLETED
+E       AssertionError: assert <JobState.FAILED: 'FAILED'> is <JobState.COMPLETED: 'COMPLETED'>
+E        +  where <JobState.FAILED: 'FAILED'> = JobRecord(job_id='f5d5aa4e51b44ecd9ac27117311dc70a', spec=JobSpec(revision='rev-a', lock_hash='lock-a', argv=('/worksp...sion/test_descendant_inherited_pipe0/f5d5aa4e51b44ecd9ac27117311dc70a/report.json', stdout_path=None, stderr_path=None).state
+E        +  and   <JobState.COMPLETED: 'COMPLETED'> = JobState.COMPLETED
+
+tests/test_development_runner.py:78: AssertionError
+_______________________ test_two_rank_mpi_when_available _______________________
+
+tmp_path = PosixPath('/scratch/regression/test_two_rank_mpi_when_availab0')
+
+    def test_two_rank_mpi_when_available(tmp_path):
+        launcher = shutil.which("mpiexec") or shutil.which("mpirun")
+        if not launcher or importlib.util.find_spec("mpi4py") is None:
+            import pytest
+            pytest.skip("local MPI launcher and mpi4py are not both installed")
+        env = {"OMPI_ALLOW_RUN_AS_ROOT": "1", "OMPI_ALLOW_RUN_AS_ROOT_CONFIRM": "1"}
+        mpi_code = "from mpi4py import MPI; print(f'rank={MPI.COMM_WORLD.Get_rank()} size={MPI.COMM_WORLD.Get_size()}')"
+        job = JobSpec("local", "lock", (sys.executable, "-c", mpi_code), ranks=2,
+                      rank_ram_bytes=1, rank_disk_bytes=1,
+                      launcher_argv=(launcher, "-n", "2"), env=env, walltime_seconds=30)
+        with LocalDevelopmentRunner(tmp_path, max_ram_bytes=2, max_disk_bytes=2) as runner:
+            rec = runner.submit(job).wait(35)
+>       assert rec.state is JobState.COMPLETED
+E       AssertionError: assert <JobState.FAILED: 'FAILED'> is <JobState.COMPLETED: 'COMPLETED'>
+E        +  where <JobState.FAILED: 'FAILED'> = JobRecord(job_id='a0711f17fa2148ff889a7218c0084b81', spec=JobSpec(revision='local', lock_hash='lock', argv=('/workspac...sion/test_two_rank_mpi_when_availab0/a0711f17fa2148ff889a7218c0084b81/report.json', stdout_path=None, stderr_path=None).state
+E        +  and   <JobState.COMPLETED: 'COMPLETED'> = JobState.COMPLETED
+
+tests/test_development_runner.py:93: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_cache_cost.py::test_async_cache_cost_choice_and_stale_context_lru_fallback
+FAILED tests/test_cache_cost.py::test_unvalidated_or_missing_freshness_evidence_always_falls_back_to_lru
+FAILED tests/test_development_runner.py::test_runs_and_writes_bounded_report
+FAILED tests/test_development_runner.py::test_walltime_and_nonzero_exit_are_failed
+FAILED tests/test_development_runner.py::test_cancel_queued_job_and_resource_admission
+FAILED tests/test_development_runner.py::test_rejects_shell_metacharacters_as_argv_not_shell
+FAILED tests/test_development_runner.py::test_descendant_inherited_pipes_do_not_hold_worker_past_walltime
+FAILED tests/test_development_runner.py::test_two_rank_mpi_when_available - A...
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! KeyboardInterrupt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+/usr/local/lib/python3.12/subprocess.py:2047: KeyboardInterrupt
+(to show a full traceback on KeyboardInterrupt use --full-trace)
+8 failed, 136 passed in 222.77s (0:03:42)

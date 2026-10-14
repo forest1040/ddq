@@ -1,0 +1,43 @@
+{
+  "captured_utc": "2026-10-14T00:27:57.146683+00:00",
+  "docker": {
+    "CgroupDriver": "systemd",
+    "CgroupVersion": "2",
+    "DockerRootDir": "/var/lib/docker",
+    "Driver": "overlayfs",
+    "MemTotal": 33369694208,
+    "NCPU": 20,
+    "SecurityOptions": [
+      "name=apparmor",
+      "name=seccomp,profile=builtin",
+      "name=cgroupns"
+    ],
+    "ServerVersion": "29.7.2"
+  },
+  "gid": 1000,
+  "io_uring_disabled": "0",
+  "logical_cpus": 20,
+  "memory": {
+    "MemAvailable": "28554628 kB",
+    "MemTotal": "32587592 kB"
+  },
+  "os_release": "NAME=\"Linux Mint\"\nVERSION=\"22.1 (Xia)\"\nID=linuxmint\nID_LIKE=\"ubuntu debian\"\nPRETTY_NAME=\"Linux Mint 22.1\"\nVERSION_ID=\"22.1\"\nHOME_URL=\"https://www.linuxmint.com/\"\nSUPPORT_URL=\"https://forums.linuxmint.com/\"\nBUG_REPORT_URL=\"http://linuxmint-troubleshooting-guide.readthedocs.io/en/latest/\"\nPRIVACY_POLICY_URL=\"https://www.linuxmint.com/\"\nVERSION_CODENAME=xia\nUBUNTU_CODENAME=noble\n",
+  "scope": "single-host Linux Docker development; no PBS jobs or host package changes",
+  "scratch_device_id": 66306,
+  "scratch_disk_usage": [
+    982820896768,
+    81502781440,
+    851318030336
+  ],
+  "scratch_mount": "{\n   \"filesystems\": [\n      {\n         \"target\": \"/\",\n         \"source\": \"/dev/nvme0n1p2\",\n         \"fstype\": \"ext4\",\n         \"options\": \"rw,relatime,errors=remount-ro\"\n      }\n   ]\n}\n",
+  "scratch_root": "/tmp/ddq-linux-dev-20261014-bnuv6j",
+  "uid": 1000,
+  "uname": [
+    "Linux",
+    "entt",
+    "6.8.0-138-generic",
+    "#138-Ubuntu SMP PREEMPT_DYNAMIC Fri Jul 31 22:41:49 UTC 2026",
+    "x86_64",
+    "x86_64"
+  ]
+}

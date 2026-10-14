@@ -1,0 +1,26 @@
+# Allow-list only the runtime, test and example inputs copied by docker/linux/Dockerfile.
+**
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!src/**
+!tests/
+!tests/**
+!examples/
+!examples/**
+!docker/
+!docker/linux/
+!docker/linux/**
+!.dockerignore
+
+# Keep generated state out even when it lives under an allowed source tree.
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.venv/
+**/venv/
+**/.cache/
+**/*.py[cod]
+**/*.pyo

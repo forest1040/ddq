@@ -1,0 +1,84 @@
+[
+    {
+        "Id": "sha256:26a3a74ea2bb262453ac2f07c7c171a86a5c9fb7ae15505ff96e81c9ac18d972",
+        "RepoTags": [
+            "ddq-linux:dev-20261014"
+        ],
+        "RepoDigests": [
+            "ddq-linux@sha256:26a3a74ea2bb262453ac2f07c7c171a86a5c9fb7ae15505ff96e81c9ac18d972"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-10-14T09:34:07.138726241+09:00",
+        "Config": {
+            "User": "ddq:ddq",
+            "Env": [
+                "PATH=/workspace/.venv/bin:/usr/local/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+                "PYTHON_VERSION=3.12.15",
+                "PYTHON_SHA256=c2c4321961fab0fb999d66e0cecf521c2ab3994c7992873ea99e306c1094fd5a",
+                "DEBIAN_FRONTEND=noninteractive",
+                "UV_PROJECT_ENVIRONMENT=/workspace/.venv",
+                "UV_PYTHON_DOWNLOADS=0",
+                "UV_LINK_MODE=copy",
+                "UV_COMPILE_BYTECODE=1",
+                "MPI4PY_BUILD_MPICC=mpicc",
+                "MPI4PY_BUILD_MPIABI=0",
+                "OMP_NUM_THREADS=1",
+                "OPENBLAS_NUM_THREADS=1",
+                "MKL_NUM_THREADS=1",
+                "NUMEXPR_NUM_THREADS=1",
+                "VECLIB_MAXIMUM_THREADS=1",
+                "TMPDIR=/scratch",
+                "UV_OFFLINE=1",
+                "HOME=/home/ddq",
+                "PYTHONDONTWRITEBYTECODE=1"
+            ],
+            "Cmd": [
+                "python",
+                "--version"
+            ],
+            "WorkingDir": "/workspace",
+            "ArgsEscaped": true
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 250803171,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:e58989146fcec76699871403b9897b5c014af1ccd85f5a9300a215e7975525d7",
+                "sha256:916eda96356f5280ba200349e111e70c46d7ec98a4a3dd2c38e88f7b133c17ba",
+                "sha256:694fd645f7c3f2166f87f2929facc4eccb7e1cfda9bfb5d1373f77e6c9c57ea6",
+                "sha256:742affd58633b3e2b85ef86583f2775486468b1317f7214d12e193d948421098",
+                "sha256:0ba6121af19a6fe8fc1df4d7a729c9e2ecc2fa41b8fa28e6e211993c05331164",
+                "sha256:4a776acb244447ac3ae411782892e9d4f5475e1fafa4d0860f370a51d476e9c8",
+                "sha256:0e524020efcf8513f4cacd11e3013e154d3c051d0e258d4f6c52319cd94faa02",
+                "sha256:0e134fddb2e6c1d541f9b4a5e1aac09c4596db34f0d04c39770c1e629d153890",
+                "sha256:f81b30e8f60e694202efc88eaaa92371e53ec5f1039d101f81ab852496cbe415",
+                "sha256:154de78c59ebcc7fa5b496db08926d1700e0843c716d49ff4dc0c8b350c1b519",
+                "sha256:db267b734999feadc0dfa3b4c00b5b5c0fba12a0b6aae704f71e661bfc585bfb",
+                "sha256:64c71e7446d55b7360be53df42162d0e32bf5de6fda7e0a0b456b8bdfed9b644",
+                "sha256:8c32f1a2ea34b68bca2abb828c81f6fa882e251d5034466791b0df6b6edeec0e",
+                "sha256:4dc822b0cc6420a64c979d9dba07d0832676c525ea38cb5e5dea1c9abf564b2a",
+                "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-10-14T00:34:09.558543647Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": "sha256:26a3a74ea2bb262453ac2f07c7c171a86a5c9fb7ae15505ff96e81c9ac18d972",
+            "size": 856
+        },
+        "Identity": {
+            "Build": [
+                {
+                    "Ref": "zsfk55uyd7o13d4rk0me1jrv1",
+                    "CreatedAt": "2026-10-14T09:34:10.117025467+09:00"
+                }
+            ]
+        }
+    }
+]

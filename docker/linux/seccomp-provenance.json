@@ -1,0 +1,8 @@
+{
+  "upstream": "https://github.com/moby/profiles/blob/4b8214fc4971e06172938a1f1554ccff6647ee80/seccomp/default.json",
+  "commit": "4b8214fc4971e06172938a1f1554ccff6647ee80",
+  "upstream_sha256": "6416b47770785a41ac59073cdc77d9fe98517df2799dc83ef207e622de3053f6",
+  "profile_sha256": "4baf3b268185f55527933e7df090e85936003674e34b5f5396461fd9d3efeb17",
+  "change": "Add SCMP_ACT_ALLOW only for io_uring_setup, io_uring_enter, io_uring_register",
+  "license": "Apache-2.0"
+}
