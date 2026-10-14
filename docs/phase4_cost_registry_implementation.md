@@ -86,6 +86,22 @@
 - **未測定。** 大きなBlockや長いrunでの比率は測っていない。
 - **証跡。** [内部記録](internal/phase4_monitor_overhead/)。
 
+## Linux O_DIRECTの実runtime校正（2026-10-15追加）
+
+ent Dockerで、`svbench runtime`（8 qubit、b=4、O_DIRECT、5回、warmup 1）をworker／cooperativeと1／2 rankで実行した（[証跡](internal/phase5_timing_validation/odirect-linux/)）。研究室クラスタ2 nodeの結果は[cross-host記録](internal/phase5_crosshost/README.md)にある。
+
+| engine | rank | kernel-storage | memory-mpi | storage-mpi |
+|---|---|---|---|---|
+| worker | 1 | 7.084 s | — | — |
+| cooperative | 1 | 1.719 s | — | — |
+| worker | 2 | 6.525 s | 0.622 s | 5.164 s |
+| cooperative | 2 | 1.656 s | 0.612 s | 2.000 s |
+| worker（cluster、2 node） | 2 | 1.109 s | 0.499 s | 1.299 s |
+
+- **engineの差。** O_DIRECTのstorageを含むsuiteでは、ent上でworkerがcooperativeの約2.6〜4倍遅かった。workerのthread間の受け渡しと、durable同期の待ちが重なることが疑われるが、未検証である。
+- **品質。** すべて`partial`で、品質は「finite diagnostics only」だった。held-outからenvelopeを作るには、反復数が足りない。数値検証はすべて合格した。
+- **未実施。** 1 rankではMPI系のsuiteは対象外である。
+
 ## 検証
 
 `tests/test_runtime_cost_registry.py`（6件）で次を確認した。

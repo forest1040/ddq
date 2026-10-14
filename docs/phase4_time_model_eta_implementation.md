@@ -29,6 +29,8 @@
 
 > 2026-10-15追記：研究室クラスタの2 node（009＋010、PSM2、1 rank／node、file store、O_DIRECT）で、cross-hostの校正とruntime ETAを測った。median ｜相対誤差｜ 7.8%、worst 10.3%、coverage 95.8%（[内部記録](internal/phase5_crosshost/README.md)）。benchmarkは複数hostに対応した：node数をhost名から数え、rank 0が入力を読んで全rankへ配り、fingerprintはrank 0で照合し、hostごとのleaderが自分のvolumeを走査・削除する。
 
+> 2026-10-15追記：ent Docker（Linux ext4）で、file store・**O_DIRECT**（`BACKEND=direct`）のruntime ETAを測った。1 rankはmedian 10.6％、p95 47.1％、worst 124％、coverage 52.5％。2 rankはmedian 9.4％、p95 54.2％、worst 59.3％、coverage 95.0％（[証跡](internal/phase5_timing_validation/odirect-linux/)）。medianはどちらも30％目標内である。1 rankのcoverageの低さは、bufferedと同様に装置状態が切り替わることによる。
+
 ### rank数とstorageのmatrix
 
 rank bitを対象とするgateは、MPI交換を伴う`remote` route classとして別に校正する（`calibration-suite --ranks`）。multi-rankでは全rankが1つのdatasetを共有し、disk計上とcleanupはrank 0が行う。手順は[run_matrix.sh](internal/phase5_timing_validation/run_matrix.sh)、証跡は[Mac](internal/phase5_timing_validation/matrix-mac/)と[Linux](internal/phase5_timing_validation/matrix-linux/)。各条件40 checkで、Linuxは直前probeで予測した。
