@@ -36,7 +36,8 @@ def svbench_main(argv=None):
     probe.add_argument('--output',required=True)
     probe.add_argument('--storage-path',action='append',default=[])
     probe.add_argument('--threads',type=_positive,default=1)
-    probe.add_argument('--ranks',type=_positive,default=1,help='allocation label for MPI runs on this host')
+    probe.add_argument('--ranks',type=_positive,default=1,help='allocation label: MPI ranks of the runs')
+    probe.add_argument('--nodes',type=_positive,default=1,help='allocation label: hosts of the runs')
     probe.add_argument('--overwrite',action='store_true')
     bench = commands.add_parser('all',help='small RAM/kernel/storage/mixed campaign in explicit scratch')
     bench.add_argument('--profile')
@@ -75,7 +76,7 @@ def svbench_main(argv=None):
         if args.command == 'runtime':
             return _runtime_command(args)
         if args.command == 'probe':
-            profile = probe_profile({'scope':'local','ranks':args.ranks,'nodes':1,'threads':args.threads},args.storage_path)
+            profile = probe_profile({'scope':'local','ranks':args.ranks,'nodes':args.nodes,'threads':args.threads},args.storage_path)
             profile.save(args.output,overwrite=args.overwrite)
             return 0
         # Reject accidental output replacement before executing expensive probes.
@@ -268,27 +269,45 @@ def _benchmark_command(args):
     from .benchmark_run import CapacityError, RunCase, RunOptions, run_cases
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
-    error, code, cases, profile, options, eta_model = None, 2, [], None, None, None
+    error, code, cases, profile, options, eta_model, hosts = None, 2, [], None, None, None, None
+    import socket
+    from .profile_document import read_document
+    hosts = comm.allgather(socket.gethostname())
+    nodes = len(set(hosts))
+    # Inputs live on the coordinator's node-local disk: rank 0 reads and checks them, every rank
+    # receives the same documents (other hosts never need a shared tree or a copy).
+    payload = None
+    if comm.Get_rank() == 0:
+        try:
+            count = len(args.workload)
+            for name, values in (('label',args.label),('variant',args.variant),('plan',args.plan)):
+                if values and len(values) != count: raise ValueError(f'--{name} must be given once per --workload')
+            profile_data = read_document(args.profile)
+            current = probe_profile({'scope':'local','ranks':comm.Get_size(),'nodes':nodes,'threads':args.threads},(args.scratch,))
+            if current.configuration_fingerprint != ProfileDocument.from_dict(profile_data).configuration_fingerprint:
+                raise ValueError('profile configuration differs from current host/build/allocation; run svbench probe with the same scratch')
+            payload = {'profile': profile_data,
+                       'workloads': [read_document(path) for path in args.workload],
+                       'plans': [read_document(path, max_bytes=4*1024**2) for path in args.plan] if args.plan else None,
+                       'eta_model': read_document(args.eta_model, max_bytes=4*1024**2) if args.eta_model else None}
+        except (ValueError,TypeError,OSError,KeyError,RecursionError) as exc: payload = {'error': str(exc)}
+    payload = comm.bcast(payload, root=0)
     try:
-        count = len(args.workload)
-        for name, values in (('label',args.label),('variant',args.variant),('plan',args.plan)):
-            if values and len(values) != count: raise ValueError(f'--{name} must be given once per --workload')
-        profile = ProfileDocument.load(args.profile)
-        current = probe_profile({'scope':'local','ranks':comm.Get_size(),'nodes':1,'threads':args.threads},(args.scratch,))
-        if current.configuration_fingerprint != profile.configuration_fingerprint:
-            raise ValueError('profile configuration differs from current host/build/allocation; run svbench probe with the same scratch')
-        for i, path in enumerate(args.workload):
-            plan = ExecutionPlanDocument.load(args.plan[i]).data if args.plan else None
-            cases.append(RunCase(WorkloadSpec.load(path),args.label[i] if args.label else Path(path).stem,
+        if 'error' in payload: raise ValueError(payload['error'])
+        profile = ProfileDocument.from_dict(payload['profile'])
+        for i, (path, data) in enumerate(zip(args.workload, payload['workloads'])):
+            plan = ExecutionPlanDocument(payload['plans'][i]).data if payload['plans'] else None
+            cases.append(RunCase(WorkloadSpec(data),args.label[i] if args.label else Path(path).stem,
                                  args.variant[i] if args.variant else 'default',plan))
         options = RunOptions(block_bits=args.block_bits,repetitions=args.repetitions,warmup=args.warmup,
                              ram_budget_bytes_per_rank=args.ram_budget_per_rank,disk_budget_bytes=args.disk_budget,
                              walltime_seconds=args.wall_seconds,backend=args.backend,seed=args.seed,
-                             threads=args.threads,oracle_max_qubits=args.oracle_max_qubits,executor=args.executor)
+                             threads=args.threads,oracle_max_qubits=args.oracle_max_qubits,executor=args.executor,
+                             nodes=nodes)
         eta_model = None
-        if args.eta_model:
+        if payload['eta_model'] is not None:
             from .time_model import TimeModelDocument
-            eta_model = TimeModelDocument.load(args.eta_model)
+            eta_model = TimeModelDocument(payload['eta_model'])
         outputs = [Path(args.output_dir)/f'{case.label}.run.json' for case in cases]
         if not args.overwrite and any(p.exists() for p in outputs): raise FileExistsError('output document already exists')
     except (ValueError,TypeError,OSError,KeyError,RecursionError) as exc: error = str(exc)
@@ -297,7 +316,7 @@ def _benchmark_command(args):
         if comm.Get_rank() == 0: print(f'svsim: {errors[0]}',file=sys.stderr)
         return 2
     try:
-        documents = run_cases(cases,profile,args.scratch,options,comm,eta_model=eta_model)
+        documents = run_cases(cases,profile,args.scratch,options,comm,eta_model=eta_model,hosts=hosts)
     except CapacityError as exc:
         if comm.Get_rank() == 0: print(f'svsim: {exc}',file=sys.stderr)
         return 3

@@ -48,6 +48,7 @@ class RunOptions:
     threads: int = 1
     oracle_max_qubits: int = 14
     executor: str = 'sync'
+    nodes: int = 1
 
     def __post_init__(self):
         for name in ('block_bits', 'repetitions', 'warmup', 'ram_budget_bytes_per_rank', 'disk_budget_bytes',
@@ -112,7 +113,7 @@ def _supported(workload):
 def condition(case, options, ranks):
     w = case.workload
     return {'label': case.label, 'variant': case.variant, 'qubits': w.qubits, 'block_bits': options.block_bits,
-            'ranks': ranks, 'nodes': 1, 'threads': options.threads, 'storage': w.policies['storage'], 'backend': options.backend,
+            'ranks': ranks, 'nodes': options.nodes, 'threads': options.threads, 'storage': w.policies['storage'], 'backend': options.backend,
             'mode': f'distributed-{options.executor}', 'executor_policy': executor_policy(options),
             'frame': w.policies['frame'], 'swap': w.policies['swap'],
             'execution': w.policies['execution'], 'initial_state': w._data.get('initial_state', 'zero')}
@@ -122,7 +123,7 @@ def preflight(case, profile, options, ranks):
     """Reject unsupported or over-budget runs before creating any dataset."""
     reasons = _supported(case.workload)
     if reasons: raise CapacityError(f'{case.label}: unsupported run: {", ".join(reasons)}')
-    estimate_options = EstimateOptions(block_bits=options.block_bits, ranks=ranks, nodes=1, threads=options.threads,
+    estimate_options = EstimateOptions(block_bits=options.block_bits, ranks=ranks, nodes=options.nodes, threads=options.threads,
                                        ram_budget_bytes_per_rank=options.ram_budget_bytes_per_rank,
                                        ram_budget_bytes_per_host=None,
                                        disk_budget_bytes_per_host=options.disk_budget_bytes)
@@ -182,7 +183,7 @@ def sync_probe(directory, count=SYNC_PROBE_COUNT):
     return statistics.median(samples)
 
 
-def _trial(case, options, directory, comm, eta_model=None, fingerprint=None):
+def _trial(case, options, directory, comm, eta_model=None, fingerprint=None, host_leader=None):
     """One collective trial; returns rank-MAX phase walls and validation outside timing."""
     from .distributed import DistributedConfig, DistributedSimulator
     workload = case.workload
@@ -190,9 +191,12 @@ def _trial(case, options, directory, comm, eta_model=None, fingerprint=None):
     config = DistributedConfig(str(directory), options.block_bits,
                                ram_budget_bytes_per_rank=options.ram_budget_bytes_per_rank,
                                backend=options.backend, amplitude_store=workload.policies['storage'],
-                               frame_policy='materialize', swap_policy='S0')
+                               frame_policy='materialize', swap_policy='S0',
+                               # Separate hosts never share one tree, even under the same path string.
+                               storage_scope='node-local' if options.nodes > 1 else 'shared')
     walls, sim = {}, None
     rank = comm.Get_rank()
+    leader = rank == 0 if host_leader is None else host_leader
     probe = sync_probe(directory / f'probe-rank-{rank}')
     comm.Barrier()
     cpu0 = time.process_time()
@@ -225,8 +229,9 @@ def _trial(case, options, directory, comm, eta_model=None, fingerprint=None):
         # State check after the timed phases: a device that switched sync state
         # mid-trial makes the trial unusable as a single-state calibration row.
         probe_after = sync_probe(directory / f'probe-after-rank-{rank}')
-        # One shared dataset tree for all ranks on this host; scan it once.
-        payload, total = comm.bcast(_directory_bytes(directory) if rank == 0 else None, root=0)
+        # One dataset tree per host; each host's leader scans its own volume.
+        scanned = _directory_bytes(directory) if leader else (0, 0)
+        payload, total = comm.allreduce(scanned[0]), comm.allreduce(scanned[1])
         validation = {'oracle': 'not-run', 'max_abs_error': None, 'passed': None}
         if workload.qubits <= options.oracle_max_qubits:
             state = sim.state(binding=binding, allow_gather=True)
@@ -240,7 +245,7 @@ def _trial(case, options, directory, comm, eta_model=None, fingerprint=None):
         sim.close()
         sim = None
         comm.Barrier()
-        if rank == 0: shutil.rmtree(directory, ignore_errors=True)
+        if leader: shutil.rmtree(directory, ignore_errors=True)
         walls['cleanup'] = time.perf_counter() - t
     finally:
         if sim is not None: sim.close()
@@ -302,7 +307,7 @@ def _max():
     return MPI.MAX
 
 
-def run_cases(cases, profile: ProfileDocument, scratch, options: RunOptions, comm, eta_model=None):
+def run_cases(cases, profile: ProfileDocument, scratch, options: RunOptions, comm, eta_model=None, hosts=None):
     """Run interleaved cases; returns one benchmark-run document per case.
 
     With ``eta_model`` (async executor only) every trial also records the
@@ -313,6 +318,9 @@ def run_cases(cases, profile: ProfileDocument, scratch, options: RunOptions, com
     if not 1 <= len(cases) <= MAX_CASES: raise ValueError(f'run needs 1..{MAX_CASES} cases')
     if len({case.label for case in cases}) != len(cases): raise ValueError('case labels must be unique')
     ranks = comm.Get_size()
+    import socket
+    hosts = tuple(hosts or comm.allgather(socket.gethostname()))
+    host_leader = comm.Get_rank() == min(i for i, h in enumerate(hosts) if h == hosts[comm.Get_rank()])
     plans = [preflight(case, profile, options, ranks) for case in cases]
     root = Path(scratch).expanduser().resolve()
     job = root / f'svsim-run-{comm.bcast(uuid.uuid4().hex if comm.Get_rank() == 0 else None, root=0)}'
@@ -332,7 +340,7 @@ def run_cases(cases, profile: ProfileDocument, scratch, options: RunOptions, com
                 directory = job / f'case-{index}-round-{round_index}'
                 try:
                     trial, validation = _trial(cases[index], options, directory, comm, eta_model,
-                                               profile.configuration_fingerprint)
+                                               profile.configuration_fingerprint, host_leader)
                 except (ArithmeticError, OSError, MemoryError, ValueError, RuntimeError) as exc:
                     failure = {'case': cases[index].label, 'round': round_index, 'error': f'{type(exc).__name__}: {exc}'}
                     raise
@@ -348,11 +356,11 @@ def run_cases(cases, profile: ProfileDocument, scratch, options: RunOptions, com
         if failure is None: raise
     finally:
         shutil.rmtree(job, ignore_errors=True)
-    return [_document(case, plan, profile, options, ranks, trials[i], validations[i], omitted, failure, eta_model)
+    return [_document(case, plan, profile, options, ranks, trials[i], validations[i], omitted, failure, eta_model, hosts)
             for i, (case, plan) in enumerate(zip(cases, plans))]
 
 
-def _document(case, plan, profile, options, ranks, trials, validations, omitted, failure, eta_model=None):
+def _document(case, plan, profile, options, ranks, trials, validations, omitted, failure, eta_model=None, hosts=None):
     workload = case.workload
     features, _ = workload_features(workload, options.block_bits, ranks)
     lowered = sum(entry.count for entry in workload.lowered()[0])
@@ -379,6 +387,7 @@ def _document(case, plan, profile, options, ranks, trials, validations, omitted,
         'omitted': case_omitted + ([failure] if failure and failure['case'] == case.label else []),
         'failure': failure, 'seed': options.seed, 'options': asdict(options),
         'eta_model_id': eta_model.model_id if eta_model is not None else None,
+        'host_ids': sorted({content_hash({'host': h}) for h in hosts}) if hosts else None,
         'limits': {'executed_gate_limit_count': MAX_EXECUTED_GATES, 'max_case_count': MAX_CASES,
                    'deadline_scope': 'cooperative between trials; an in-flight trial is not preempted',
                    'ram_scope': 'managed budget per rank; process RSS is not limited'},

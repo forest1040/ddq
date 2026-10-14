@@ -9,6 +9,12 @@ SQLITE_EXTENSION_INIT1
 #include <stdint.h>
 #include <stdio.h>
 
+/* Older system headers (e.g. 3.26) lack this flag; the extension runs inside the
+ * loading library, so its value is valid whenever that library is >= 3.30
+ * (checked in sqlite3_svsimdisk_init). */
+#ifndef SQLITE_DIRECTONLY
+#define SQLITE_DIRECTONLY 0x000080000
+#endif
 #define VFS_NAME "svsim-budget-v1"
 #define PATH_LIMIT 4096
 
@@ -315,6 +321,10 @@ static void compileOptionFn(sqlite3_context*ctx,int argc,sqlite3_value**argv){
 
 int sqlite3_svsimdisk_init(sqlite3 *db,char **pzErrMsg,const sqlite3_api_routines *pApi){
   int rc; SQLITE_EXTENSION_INIT2(pApi);
+  if(sqlite3_libversion_number()<3030000){
+    if(pzErrMsg)*pzErrMsg=sqlite3_mprintf("svsim budget VFS requires SQLite >= 3.30 (SQLITE_DIRECTONLY)");
+    return SQLITE_ERROR;
+  }
   gParent=sqlite3_vfs_find(0); if(!gParent)return SQLITE_ERROR;
   if(!sqlite3_vfs_find(VFS_NAME)){
     memset(&gVfs,0,sizeof(gVfs)); gVfs.iVersion=2;gVfs.szOsFile=(int)(sizeof(BudgetFile)+gParent->szOsFile+8);gVfs.mxPathname=gParent->mxPathname;gVfs.zName=VFS_NAME;gVfs.pAppData=gParent;
