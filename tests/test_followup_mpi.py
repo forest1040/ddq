@@ -25,7 +25,8 @@ def test_actual_followup_campaign_keeps_unknown_costs_and_state(tmp_path,ranks):
         OMPI_ALLOW_RUN_AS_ROOT='1',OMPI_ALLOW_RUN_AS_ROOT_CONFIRM='1')
     subprocess.run([shutil.which('mpiexec'),'-n',str(ranks),sys.executable,
         'examples/phase4_remaining_campaign.py','--action','all','--scratch',str(tmp_path/'scratch'),
-        '--output',str(output),'--repetitions','1','--warmup','0','--wall-seconds',CAMPAIGN_WALL_SECONDS],
+        '--output',str(output),'--repetitions','1','--warmup','0','--wall-seconds',CAMPAIGN_WALL_SECONDS,
+        '--injection-delay','.2'],  # above Linux durable-commit service jitter, so the priced gain is certain
         check=True,env=env,timeout=SUBPROCESS_TIMEOUT_SECONDS)
     data=json.loads(output.read_text())
     assert not data['cluster_used'] and data['ranks']==ranks
@@ -34,8 +35,13 @@ def test_actual_followup_campaign_keeps_unknown_costs_and_state(tmp_path,ranks):
         assert all(row['claim']=='unconfirmed' for row in data[group]['comparisons'])
     for row in data['adaptive']['rows']:
         report=row['trials'][0]['raw']['adaptive']
-        assert report['switch_count']==0 and report['eligible_candidate_count']==0
-        assert not report['positive_gain_verified']
+        if row['variant_id']=='fixed':  # observe mode: priced recommendation is never applied
+            assert report['switch_count']==0 and report['verification'] is None
+            assert report['event_summary']['first_degraded_ordinal'] is not None
+        else:  # runtime-priced S2 fusion is applied once and verified against its predicted upper bound
+            assert report['switch_count']==1 and report['verification']['verified'] is True
+            assert any(d['kind']=='apply' and d['predicted_gain_lower_seconds']>0 for d in report['replan_decisions'])
+        assert not report['positive_gain_verified']  # only the paired campaign comparison may claim it
     gradient=data['gradient']
     assert all(row['validated'] and row['success'] for row in gradient['calibration']['observations'])
     assert gradient['production_cost_count']==0

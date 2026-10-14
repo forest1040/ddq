@@ -71,6 +71,12 @@ class RuntimeControl:
         self._eta_cost_views={}
         self.latest_eta=None
         self.generated_candidates={}
+        self.evaluation_estimate=None
+        self.checkpoint_walls=[]
+        self.max_switches=4
+        self.switch_count=0
+        self.verifying=None
+        self.replan_decisions=[]
         self._eta_last_progress=0
         self.performance_injection=None
         self._executor_observer=None
@@ -582,6 +588,12 @@ class RuntimeControl:
                 sim._install_policy(old)
                 self.plan_version, self.policy_epoch = old_versions
             raise
+        if getattr(self, 'time_model', None) is not None:
+            # The time-model condition hashes the executor policy; price the new one.
+            from .runtime_time_model_eta import runtime_condition
+            context = self._time_model_context
+            context['condition'] = runtime_condition(sim, nodes=context['condition']['nodes'],
+                                                     threads=context['condition']['threads'])
         self.invalidate_eta('POLICY_CHANGED')
         self.last_change = monotonic()
         transition = {'policy_epoch': self.policy_epoch, 'plan_version': self.plan_version,
@@ -593,22 +605,101 @@ class RuntimeControl:
                          metadata={'path': classification, **transition})
         return transition
 
+    def observe_evaluation(self, row):
+        """Accept one agreed evaluation row (health, and evidence when degraded)."""
+        self.health = row['health']
+        if row.get('estimate') is not None:self.evaluation_estimate = dict(row['estimate'])
+        if row['health'] in {'STABLE','VERIFY_FAILED'} and self.verifying is not None:
+            self.verifying = {**self.verifying, 'result': row['health'], 'reason': row.get('reason')}
+            self.replan_decisions.append({'kind':'verify', **self.verifying})
+            self.verifying = None
+
+    def record_checkpoint_wall(self, seconds):
+        self.checkpoint_walls = (self.checkpoint_walls + [seconds])[-16:]
+
     def frontier(self):
         sim = self.sim
         self.update_eta(collective=True)
         states = sim.transport.control.allgather(self.health)
-        if sim.policy.mode != 'auto' or 'DEGRADED' not in states:
+        if sim.policy.mode not in {'auto','recommend'} or 'DEGRADED' not in states or self.verifying is not None:
             return
         ready = sim.transport.broadcast_json(
-            monotonic()-self.last_change >= sim.policy.cooldown_seconds if sim.rank == 0 else None)
+            monotonic()-self.last_change >= sim.policy.cooldown_seconds and self.switch_count < self.max_switches
+            if sim.rank == 0 else None)
         if not ready:
             return
-        # Performance changes need calibrated transition costs. Capacity
-        # throttling belongs to admission, not to an unpriced health trigger.
-        candidates=self.search_candidates(collective=True)
-        sim.trace.record('replan-search',performance_class='planning',metadata={
-            'path':'BOUNDED_REPLAN_SEARCH','reason':'INSUFFICIENT_CALIBRATED_COST',
-            'candidate_count':len(candidates),'eligible_count':0})
+        decision = self._evaluate_candidates()
+        if decision['selected'] is not None and sim.policy.mode == 'auto':
+            self._apply_selected(decision)
+
+    def _evaluate_candidates(self):
+        """Price every generated proposal from runtime evidence; rank-conservative selection."""
+        from .replan_candidates import ReplanProposal
+        from .replan_cost import evaluate
+        from .replan_cost_producer import costs_for
+        sim = self.sim
+        started = monotonic()
+        rows = self.search_candidates(collective=True)
+        planning = sim.transport.max_value(monotonic()-started)
+        started = monotonic(); sim.drain()
+        drain = sim.transport.max_value(monotonic()-started)
+        walls = sim.transport.control.allgather(max(self.checkpoint_walls) if self.checkpoint_walls else None)
+        checkpoint = None if any(w is None for w in walls) else max(walls)
+        end = self._eta_endpoint if self._eta_endpoint is not None else len(sim.sequencer.operations)-1
+        local = []
+        for row in rows:
+            proposal = ReplanProposal(**{**row, 'updates': tuple(tuple(item) for item in row['updates'])})
+            costs, counts = costs_for(sim, row, self.evaluation_estimate, end=end, planning_seconds=planning,
+                                      drain_seconds=drain, checkpoint_seconds=checkpoint)
+            result = evaluate(proposal, costs, minimum_gain_fraction=sim.policy.minimum_gain_fraction)
+            local.append({'proposal_id': row['proposal_id'], 'updates': row['updates'],
+                          'classification': row['classification'], 'gain_lower_seconds': result.gain_lower_seconds,
+                          'candidate_upper_seconds': result.total_candidate_upper_seconds,
+                          'continue_lower_seconds': costs.continue_lower_seconds,
+                          'eligible': result.eligible, 'reason': result.reason, **counts})
+        ranks = sim.transport.control.allgather(local)
+        merged = []
+        for index, row in enumerate(local):
+            peers = [rank[index] for rank in ranks]
+            gains = [p['gain_lower_seconds'] for p in peers]
+            merged.append({**row, 'gain_lower_seconds': None if any(g is None for g in gains) else min(gains),
+                           'eligible': all(p['eligible'] for p in peers),
+                           'reason': row['reason'] if all(p['eligible'] for p in peers) else
+                                     next((p['reason'] for p in peers if not p['eligible']), row['reason'])})
+        eligible = [r for r in merged if r['eligible'] and r['classification'] != 'reference']
+        selected = max(eligible, key=lambda r: (r['gain_lower_seconds'], r['proposal_id'])) if eligible else None
+        for row in merged: self.generated_candidates.setdefault(row['proposal_id'], {}).update(row)
+        decision = {'kind': 'evaluate', 'frontier': sim.frontier, 'candidates': merged,
+                    'selected': selected['proposal_id'] if selected else None,
+                    'estimate': self.evaluation_estimate, 'planning_seconds': planning, 'drain_seconds': drain,
+                    'checkpoint_seconds': checkpoint, 'mode': sim.policy.mode}
+        self.replan_decisions.append(decision)
+        sim.trace.record('replan-search', performance_class='planning', metadata={
+            'path': 'BOUNDED_REPLAN_SEARCH', 'candidate_count': len(merged), 'eligible_count': len(eligible),
+            'selected': decision['selected'],
+            'reason': 'MEASURED_POSITIVE_GAIN' if selected else
+                      sorted({r['reason'] for r in merged if r['classification'] != 'reference'})})
+        return decision
+
+    def _apply_selected(self, decision):
+        sim = self.sim
+        row = next(r for r in decision['candidates'] if r['proposal_id'] == decision['selected'])
+        updates = tuple(sorted(tuple(item) for item in row['updates']))
+        candidate = PlanCandidate(row['proposal_id'], sim.root, self.plan_version, self.policy_epoch, updates,
+                                  row['classification'], row['gain_lower_seconds'], True, row['reason'],
+                                  monotonic()+sim.policy.candidate_ttl_seconds)
+        if len(self.candidates) >= 16:
+            self.candidates.pop(next(iter(self.candidates)))
+        self.candidates[candidate.candidate_id] = candidate
+        self.apply_candidate(candidate.candidate_id)
+        self.switch_count += 1
+        estimate = decision['estimate']
+        self.verifying = {'proposal_id': row['proposal_id'], 'predicted_gain_lower_seconds': row['gain_lower_seconds'],
+                          'service_upper_per_gate': estimate['service_upper_per_gate'],
+                          'extra_upper_per_call': estimate['extra_upper_per_call'],
+                          'policy_epoch': self.policy_epoch, 'plan_version': self.plan_version}
+        self.health = 'VERIFYING'
+        self.replan_decisions.append({'kind': 'apply', **self.verifying})
 
     def state(self):
         return {'plan_version': self.plan_version, 'policy_epoch': self.policy_epoch,

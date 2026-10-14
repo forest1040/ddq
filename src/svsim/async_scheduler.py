@@ -521,7 +521,10 @@ class AsyncDistributedSimulator(DistributedSimulator):
         if self._private_epoch:
             raise ValueError('Cannot checkpoint an unpublished epoch')
         self.drain()
+        started=perf_counter()
         snapshot=super().commit_snapshot(**kwargs)
+        # Measured durable-cut cost prices FRONTIER_REPLAN candidates later in the run.
+        self.runtime.record_checkpoint_wall(self.transport.max_value(perf_counter()-started))
         self.runtime.invalidate_eta('CHECKPOINT_COMMITTED')
         return snapshot
 

@@ -51,16 +51,17 @@ def config(path,args):
 
 def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='sustained'):
     rank=comm.Get_rank();size=comm.Get_size()
-    recipe=([('RX',(0,),.025)]*12 if adaptive else
+    recipe=([('RX',(0,),.025)]*32 if adaptive else
         [('H',(3,),None)]+[item for _ in range(4) for item in [('RY',(0,),.07),('RZ',(1,),.1)]])
     variants=(Variant('fixed',{'mode':'observe'}),Variant('auto',{'mode':'auto'})) if adaptive else (
         Variant('S0',{'swap_policy':'S0'}),Variant('S2',{'swap_policy':'S2'}))
     if monitoring:
         variants=(Variant('collector-off',{'completion_collection':False}),
                   Variant('collector-on',{'completion_collection':True}))
-    starts={'sustained':(4,12),'transient':(4,5),'recovery':(4,8),'missing-baseline':(0,12)}
+    starts={'sustained':(4,33),'transient':(4,6),'recovery':(4,12),'missing-baseline':(0,33)}
     start,end=starts[scenario]
-    spec=InjectionSpec(1,'compute','work',start,end,.15,('executor-group',),1.5,16,barrier='semantic-prefix') if adaptive else None
+    # Per-call compute delay; fusing calls (S2) is the only legal way to pay fewer of them.
+    spec=InjectionSpec(1,'compute','work',start,end,args.injection_delay,('executor-group',),60.0,256,barrier='semantic-prefix') if adaptive else None
     shared_recipe={'recipe':recipe,'injection':asdict(spec) if spec else None}
     normalizer=GateNormalizer(4);sequencer=GlobalSequencer()
     expected_source=content_hash([gate_data(sequencer.append(normalizer.gate(kind,target,
@@ -103,14 +104,21 @@ def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='
                 if source!=source_actual:raise AssertionError('Trial source differs from preregistered source')
                 expected=eager_reference(sim.sequencer.operations,4,sim.assets,binding)
                 if adaptive:
+                    # Both variants pay one measured durable cut; auto prices FRONTIER candidates with it.
+                    sim.commit_snapshot()
                     def observe(event):
                         event={**event,'actual_service_seconds':sim.transport.max_value(event['actual_service_seconds']),
                             'injected_delay_seconds':sim.transport.max_value(event['injected_delay_seconds'])}
                         row=None
-                        if rank==0:row=session.observe(event,profile=sim.local.profile,circuit_hash=sim.circuit_hash,
-                            num_qubits=4,block_bits=2,ranks=size)
+                        if rank==0:
+                            verifying=sim.runtime.verifying
+                            if verifying is not None and session.verify is None and session.verification is None:
+                                session.begin_verify(service_upper_per_gate=verifying['service_upper_per_gate'],
+                                                     extra_upper_per_call=verifying['extra_upper_per_call'])
+                            row=session.observe(event,profile=sim.local.profile,circuit_hash=sim.circuit_hash,
+                                num_qubits=4,block_bits=2,ranks=size)
                         row=comm.bcast(row,root=0)
-                        sim.runtime.health=row['health']
+                        sim.runtime.observe_evaluation(row)
                     driver=sim.runtime.configure_performance_injection(spec,observer=observe)
                     driver.barrier('semantic-prefix')
                 execute_start=perf_counter();sim.materialize(binding=binding)
@@ -123,14 +131,34 @@ def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='
                 sim.transport.vote(error)
                 adaptive_report=session.report(transitions=sim.runtime.transitions,
                     candidates=tuple(sim.runtime.generated_candidates.values())) if adaptive and rank==0 else None
+                if adaptive_report is not None:
+                    # Keep the per-trial raw record bounded: summarize events, keep a short head.
+                    events=adaptive_report.pop('events')
+                    health_counts={}
+                    for event in events:health_counts[event['health']]=health_counts.get(event['health'],0)+1
+                    first=lambda state:next((e['ordinal'] for e in events if e['health']==state),None)
+                    adaptive_report['event_summary']={'count':len(events),'health_counts':health_counts,
+                        'first_degraded_ordinal':first('DEGRADED'),'first_verifying_ordinal':first('VERIFYING'),
+                        'first_stable_ordinal':first('STABLE'),'injection_start_ordinal':start}
+                    adaptive_report['events_head']=[{k:e.get(k) for k in ('ordinal','health','reason','actual_service_seconds',
+                        'injected_delay_seconds')} for e in events[:6]]
+                    adaptive_report['replan_decisions']=[{k:v for k,v in d.items() if k!='candidates'} |
+                        {'candidates':[{k:c.get(k) for k in ('updates','gain_lower_seconds','current_calls','candidate_calls',
+                         'eligible','reason')} for c in d.get('candidates',()) if c.get('classification')!='reference']}
+                        for d in sim.runtime.replan_decisions[:6]]
                 if adaptive:
-                    assert not sim.runtime.transitions
+                    assert len(sim.runtime.transitions)<=sim.runtime.max_switches
                     assert not any(row.evidence=='injected' for row in sim.runtime.measurements.cost_observations())
                 metrics={'execute_seconds':execute_seconds,'managed_peak_bytes_max':int(sim.transport.max_value(sim.budget.peak)),
                     'send_bytes_sum':comm.allreduce(sim.transport.send_bytes,op=MPI.SUM),
                     'read_bytes_sum':comm.allreduce(sim.trace.read_bytes,op=MPI.SUM),
                     'write_bytes_sum':comm.allreduce(sim.trace.write_bytes,op=MPI.SUM),
                     'scratch_bytes_max':int(sim.transport.max_value(tree_bytes(directory)))}
+                if adaptive:
+                    verified=comm.bcast(bool(session.verification and session.verification['verified']) if rank==0 else None,root=0)
+                    metrics.update(switch_count=len(sim.runtime.transitions),verified=int(verified))
+                    gain=next((d['predicted_gain_lower_seconds'] for d in sim.runtime.replan_decisions if d['kind']=='apply'),None)
+                    if gain is not None:metrics['predicted_gain_lower_seconds']=gain
                 sim.commit_snapshot()
                 metrics['scratch_bytes_max']=int(sim.transport.max_value(tree_bytes(directory)))
                 resolved=sorted({value for identities in comm.allgather(_resolved_storage_backends(sim))
@@ -161,8 +189,18 @@ def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='
                 rank_wall_seconds=rank_wall,metrics=metrics))
     if rank!=0:return None
     report=Campaign(case,variants,tuple(trials)).compare().to_dict()
+    positive=None
+    if adaptive:
+        # Positive only if every auto trial switched and verified and the paired
+        # wall difference interval lies entirely below zero.
+        comparison=next((c for c in report['comparisons'] if c['variant']=='auto'),None)
+        auto=[t for t in trials if t.variant_id=='auto' and t.status=='completed']
+        ci=comparison and comparison.get('difference_ci95')
+        positive=bool(auto and len(auto)==args.repetitions and ci and ci[1]<0 and
+                      all(t.metrics.get('switch_count')==1 and t.metrics.get('verified')==1 for t in auto))
     report.update({'case':case.identity(),'warmup_rows':warmup_rows,'scope':'injected-same-host' if adaptive else 'same-host',
-        'injection':asdict(spec) if spec else None,'pilot_positive_gain_verified':False})
+        'injection':asdict(spec) if spec else None,'pilot_positive_gain_verified':positive,
+        'positive_rule':'all auto trials switch once and verify; paired wall difference CI95 upper < 0' if adaptive else None})
     return report
 
 
@@ -218,6 +256,8 @@ def main():
     parser.add_argument('--repetitions',type=int,default=7);parser.add_argument('--warmup',type=int,default=2)
     parser.add_argument('--backend',choices=('buffered','direct'),default='buffered')
     parser.add_argument('--wall-seconds',type=float,default=300)
+    parser.add_argument('--injection-delay',type=float,default=.02,
+                        help='per-executor-call compute delay; size it above the host service jitter for a positive case')
     parser.add_argument('--ram-bytes',type=int,default=8*1024**2)
     parser.add_argument('--disk-bytes',type=int,default=64*1024**2)
     args=parser.parse_args()
