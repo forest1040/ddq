@@ -29,19 +29,26 @@ def _profile():
     return ProfileDocument.create({}, {}, {'ranks': 1, 'nodes': 1, 'threads': 1})
 
 
-def _run(workload, profile, *, scale=1.0, status='completed', passed=True, condition=None):
+SYNC_COST = {'execute': {'passes': 2.0}, 'flush': {'blocks': 3.0}}  # seconds per count per sync-second
+
+
+def _phase_seconds(features, phase, sync):
+    return (sum(c * features.get(k, 0) for k, c in TRUE[phase].items()) +
+            sync * sum(c * features.get(k, 0) for k, c in SYNC_COST.get(phase, {}).items()))
+
+
+def _run(workload, profile, *, status='completed', passed=True, condition=None, syncs=(1e-3, 5e-3)):
     features, _ = workload_features(workload, 3, 1)
-    summary = {}
-    for phase in PHASES:
-        value = scale * sum(c * features.get(k, 0) for k, c in TRUE[phase].items())
-        summary[phase] = {'median_seconds': value, 'mean_seconds': value, 'min_seconds': .9 * value,
-                          'max_seconds': 1.1 * value, 'p95_seconds': 1.1 * value}
+    trials = [{'wall_seconds': {p: _phase_seconds(features, p, s) for p in PHASES}, 'sync_probe_median_seconds': s}
+              for s in syncs]
+    for t in trials: t['wall_seconds']['total'] = sum(t['wall_seconds'][p] for p in PHASES)
+    summary = {p: {'median_seconds': float(np.median([t['wall_seconds'][p] for t in trials]))} for p in (*PHASES, 'total')}
     data = {'schema_version': 1, 'kind': 'benchmark-run', 'run_type': 'workload-execution',
             'workload_id': workload.workload_id, 'plan_id': None, 'profile_id': profile.profile_id,
             'configuration_fingerprint': profile.configuration_fingerprint,
             'case': {**(condition or CONDITION), 'label': 'x', 'variant': 'default', 'qubits': workload.qubits},
             'work': {'features': [{'feature': k, 'count': v} for k, v in sorted(features.items())]},
-            'summary': summary, 'status': status,
+            'trials': trials, 'summary': summary, 'status': status,
             'validation': {'oracle': 'eager-reference', 'max_abs_error': 0.0, 'passed': passed}}
     encoded = wire_encode(data)
     encoded['run_id'] = content_hash(encoded)
@@ -69,11 +76,22 @@ def test_fitted_model_predicts_held_out_work_and_labels_extrapolation():
                                                                   {'kind': 'RX', 'targets': [1], 'angle': .37},
                                                                   {'kind': 'H', 'targets': [4]}]}])
     features, _ = workload_features(held, 3, 1)
-    truth = sum(c * features.get(k, 0) for phase in PHASES for k, c in TRUE[phase].items())
+    truth = lambda sync: sum(_phase_seconds(features, phase, sync) for phase in PHASES)
     predicted = model.predict(features, CONDITION, profile.configuration_fingerprint)
     assert predicted['evidence'] == 'derived'
-    assert predicted['expected_seconds'] == pytest.approx(truth, rel=1e-6)
-    assert predicted['lower_seconds'] <= predicted['expected_seconds'] <= predicted['conditional_upper_seconds']
+    assert predicted['sync_latency_assumption'] == {'min_seconds': 1e-3, 'median_seconds': 3e-3, 'max_seconds': 5e-3}
+    assert predicted['expected_seconds'] == pytest.approx(truth(3e-3), rel=1e-6)
+    assert predicted['lower_seconds'] == pytest.approx(truth(1e-3), rel=1e-6)
+    assert predicted['conditional_upper_seconds'] >= truth(5e-3) * (1 - 1e-9)
+    assert predicted['sync_scenarios']['slow_sync_seconds'] == pytest.approx(truth(5e-3), rel=1e-6)
+    assert predicted['warnings'][0].startswith('DEVICE_SYNC_LATENCY_NONSTATIONARY')
+    probed = model.predict(features, CONDITION, profile.configuration_fingerprint, sync_seconds=4e-3)
+    assert probed['expected_seconds'] == pytest.approx(truth(4e-3), rel=1e-6) and probed['evidence'] == 'derived'
+    outside = model.predict(features, CONDITION, profile.configuration_fingerprint, sync_seconds=2e-2)
+    assert outside['evidence'] == 'extrapolated' and 'SYNC_LATENCY_OUTSIDE_CALIBRATED_RANGE' in outside['warnings']
+    assert outside['conditional_upper_seconds'] >= truth(2e-2) * (1 - 1e-9)
+    with pytest.raises(ValueError):
+        model.predict(features, CONDITION, profile.configuration_fingerprint, sync_seconds=0)
     assert set(predicted['phases']) == set(PHASES)
     big = _workload(9, [{'kind': 'REPEAT', 'count': 40, 'body': [{'kind': 'H', 'targets': [0]}]}])
     far = model.predict(workload_features(big, 3, 1)[0], CONDITION, profile.configuration_fingerprint)
@@ -104,12 +122,16 @@ def test_fit_rejects_mixed_invalid_or_insufficient_runs_and_document_is_tamper_e
         fit(runs + [_run(some, profile, passed=False)])
     with pytest.raises(ValueError, match='calibration runs'):
         fit(runs[:3])
+    legacy = json.loads(json.dumps(runs[0]))
+    del legacy['trials'][0]['sync_probe_median_seconds']
+    with pytest.raises(ValueError, match='sync probe'):
+        fit(runs[1:] + [legacy])
     model = fit(runs)
     path = tmp_path / 'model.json'
     model.save(path)
     assert TimeModelDocument.load(path).model_id == model.model_id
     data = json.loads(path.read_text())
-    data['phases']['execute']['expected'][0] = 1.0
+    data['phases']['execute']['base'][0] = 1.0
     with pytest.raises(ValueError, match='hash mismatch'):
         TimeModelDocument(data)
 
@@ -177,6 +199,7 @@ def test_real_interleaved_runs_validate_and_clean_scratch(tmp_path):
         for trial in doc['trials']:
             assert trial['wall_seconds']['total'] == pytest.approx(sum(trial['wall_seconds'][p] for p in PHASES))
     assert int(docs[1]['trials'][0]['disk_payload_bytes']) > 0
+    assert all(t['sync_probe_median_seconds'] > 0 for d in docs for t in d['trials'])
     orders = sorted(t['order_index'] for d in docs for t in d['trials'])
     assert orders == [2, 3, 4, 5]  # warmup round excluded, both cases interleaved per round
     assert list(tmp_path.iterdir()) == []

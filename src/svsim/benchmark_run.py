@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import math
+import os
 from pathlib import Path
 import shutil
 import statistics
@@ -141,6 +142,31 @@ def _directory_bytes(path):
     return payload, total
 
 
+SYNC_PROBE_COUNT = 16
+
+
+def sync_probe(directory, count=SYNC_PROBE_COUNT):
+    """Median 4 KiB pwrite+fsync latency in seconds on the trial device, outside timing.
+
+    Durable catalog commits dominate small-Block runs on devices whose fsync
+    flushes a volatile cache; this samples the device state each trial sees.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / 'sync-probe.bin'
+    fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        payload, samples = b'\0' * 4096, []
+        for i in range(count):
+            os.pwrite(fd, payload, (i % 8) * 4096)
+            t = time.perf_counter()
+            os.fsync(fd)
+            samples.append(time.perf_counter() - t)
+    finally:
+        os.close(fd)
+        path.unlink(missing_ok=True)
+    return statistics.median(samples)
+
+
 def _trial(case, options, directory, comm):
     """One collective trial; returns rank-MAX phase walls and validation outside timing."""
     from .distributed import DistributedConfig, DistributedSimulator
@@ -151,6 +177,7 @@ def _trial(case, options, directory, comm):
                                backend=options.backend, amplitude_store=workload.policies['storage'],
                                frame_policy='materialize', swap_policy='S0')
     walls, sim = {}, None
+    probe = sync_probe(directory)
     comm.Barrier()
     cpu0 = time.process_time()
     try:
@@ -194,6 +221,7 @@ def _trial(case, options, directory, comm):
     return {'wall_seconds': walls, 'cpu_seconds': comm.allreduce(time.process_time() - cpu0),
             'managed_peak_bytes': comm.allreduce(peak, op=_max()),
             'disk_payload_bytes': comm.allreduce(payload), 'disk_total_bytes': comm.allreduce(total),
+            'sync_probe_median_seconds': comm.allreduce(probe, op=_max()),
             'timestamp': _timestamp()}, validation
 
 
@@ -275,7 +303,9 @@ def _document(case, plan, profile, options, ranks, trials, validations, omitted,
                    'deadline_scope': 'cooperative between trials; an in-flight trial is not preempted',
                    'ram_scope': 'managed budget per rank; process RSS is not limited'},
         'timing': {'phase_scope': 'rank MAX of local serial phase wall; total is the sum of phase MAX values',
-                   'excluded': ['oracle gather and validation', 'disk usage scan', 'barriers between phases'],
+                   'excluded': ['oracle gather and validation', 'disk usage scan', 'barriers between phases',
+                                f'pre-trial sync probe ({SYNC_PROBE_COUNT} x 4 KiB pwrite+fsync, rank MAX of medians)'],
+                   'sync_probe_scope': 'device state context only; macOS fsync does not flush the device cache',
                    'order': 'seeded shuffled case order per round; warmup rounds discarded'},
         'provenance': profile.data['provenance']}
     encoded = wire_encode(document)

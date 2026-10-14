@@ -1,16 +1,16 @@
 # Comparison Report (static-vs-observed-v1)
 
-- **Report ID**: `de8075443bc4c513e6857469dd5bd73dba07c58d10b9b8d2b10364a7b1e1ec41`
+- **Report ID**: `38b3e89b4177a519210aae5aec4daace51bdb5d0bfd47d58594cb716496837c0`
 - **Campaign SHA-256**: `7fe0538963763714a775fea4a8a057aacfbdec041ca81a0f474685822c263bb7`
 
 ## Cases
 
 | Case ID | Variant | Held-Out | Predicted Expected [Lower, Upper] | Observed Median | Rel. Error % | Within Interval | Observed Bottleneck |
 |---|---|---|---|---|---|---|---|
-| held-a | default | True | 0.7474 [0.7381, 0.9661] | 0.7528 | -0.7145% | True | execute |
-| held-b | default | True | 1.914 [1.89, 2.408] | 1.964 | -2.546% | True | execute |
-| held-c | default | True | n/a [n/a, n/a] | 0.3867 | n/a | n/a | execute |
-| held-d | default | True | 0.9168 [0.9047, 1.175] | 0.9227 | -0.6468% | True | execute |
+| held-a | default | True | 0.7444 [0.74, 1.034] | 0.747 | -0.3436% | True | execute |
+| held-b | default | True | 1.906 [1.896, 2.489] | 1.945 | -1.998% | True | execute |
+| held-c | default | True | n/a [n/a, n/a] | 0.3748 | n/a | n/a | execute |
+| held-d | default | True | 0.9121 [0.905, 1.247] | 0.9083 | +0.4228% | True | execute |
 
 ## Accuracy
 
@@ -21,9 +21,9 @@
 
 ### Held-Out Evaluation
 - **Case Count**: 3
-- **Median |Relative Error|**: 0.007145
-- **p95 |Relative Error|**: 0.02363
-- **Worst |Relative Error|**: 0.02546
+- **Median |Relative Error|**: 0.004228
+- **p95 |Relative Error|**: 0.01841
+- **Worst |Relative Error|**: 0.01998
 - **Worst Case ID**: held-b
 - **Interval Coverage**: 1
 - **Interval Case Count**: 3

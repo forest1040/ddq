@@ -161,6 +161,7 @@ def svsim_main(argv=None):
     est.add_argument('--segment-bytes',type=_positive,default=1<<30)
     est.add_argument('--backend',choices=('buffered','direct'),default='buffered')
     est.add_argument('--time-model',help='fitted end-to-end model from svsim calibrate-time')
+    est.add_argument('--sync-latency-seconds',type=float,help='freshly probed device fsync latency for expected time')
     bench = commands.add_parser('benchmark',help='budgeted real runs of small workloads in explicit scratch; MPI is initialized only here')
     bench.add_argument('--workload',action='append',required=True,help='repeat for interleaved A/B cases')
     bench.add_argument('--label',action='append',default=[],help='one per workload; defaults to the file stem')
@@ -236,7 +237,8 @@ def svsim_main(argv=None):
         if args.time_model:
             from .time_model import TimeModelDocument
             time_model = TimeModelDocument.load(args.time_model)
-        report = estimate(workload,profile,options,time_model=time_model)
+        if args.sync_latency_seconds is not None and time_model is None: raise ValueError('--sync-latency-seconds requires --time-model')
+        report = estimate(workload,profile,options,time_model=time_model,sync_seconds=args.sync_latency_seconds)
         report = ExecutionPlanDocument(report).to_dict()
         _output(args.output,report,args.overwrite)
         if args.planning_only: return 0

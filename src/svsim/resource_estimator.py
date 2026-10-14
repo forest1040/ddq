@@ -73,7 +73,8 @@ def _seconds(record, count, field):
     return result if math.isfinite(result) else None
 
 
-def estimate(workload: WorkloadSpec, profile: ProfileDocument, options: EstimateOptions, time_model=None) -> dict:
+def estimate(workload: WorkloadSpec, profile: ProfileDocument, options: EstimateOptions, time_model=None,
+             sync_seconds=None) -> dict:
     """Return a bounded report without constructing simulators, blocks or scratch.
 
     A fitted end-to-end time model supplies total time only for its exact
@@ -199,7 +200,7 @@ def estimate(workload: WorkloadSpec, profile: ProfileDocument, options: Estimate
                   'backend':options.backend,'mode':'distributed-sync','frame':workload.policies['frame'],
                   'swap':workload.policies['swap'],'execution':workload.policies['execution'],
                   'initial_state':workload._data.get('initial_state','zero')}
-        predicted = time_model.predict(features, target, profile.configuration_fingerprint)
+        predicted = time_model.predict(features, target, profile.configuration_fingerprint, sync_seconds)
         if workload.algorithm['kind'] != 'circuit':
             predicted = {**predicted,'lower_seconds':None,'expected_seconds':None,'conditional_upper_seconds':None,
                          'phases':None,'evidence':'unknown','reason':'algorithm endpoint is outside the fitted circuit model'}
