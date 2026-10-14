@@ -43,6 +43,13 @@
 - **ETA。** baseline viewは最初の不変profileのままにした。observed viewは、最新profileのcellが無ければrunのrolling観測で価格付けする（label `rolling-observed`、profileがあれば`conditional-envelope+rolling-observed`）。
 - **cache eviction。** storage readのmedianを`whole_fetch`、writeのmedianを`dirty_writeback`とするmeasured `CacheCost`を登録した。callerが自己申告したcostは引き続きproductionへ流れない。前回の残件「productionでcacheのmeasured sourceが無い」はこれで解消した。
 
+### rolling観測の鮮度と品質（2026-10-15追加、sonnetへ委譲して実装・検証）
+
+- **鮮度。** executor groupとstorage completionのcontextに`policy_epoch`と`plan_version`を記録する。現在の値と一致する行だけを使うので、policy切替前の観測で切替後の作業を価格付けしない。各classは新しい32件（`WINDOW`）までに限る。
+- **品質。** 窓内の値を古い半分（学習）と新しい半分（held-out）に分ける。学習の[min, max]にheld-outが入る割合（coverage）を測り、8件以上（`CERTIFY_SAMPLES`）かつcoverage 0.8以上のclassだけを認証する。
+- **registryへの登録。** 認証済みの値だけを、measured source（`runtime-collector`／`runtime-collector-io`）として返す。認証されない値は、derivedの診断source（`*-diagnostic`）が理由とcoverageのlabel付きで返す。productionはmeasuredしか受けないので、未認証の観測でETAのobserved viewやcache evictionを決めることはない。class別の最後の判定理由は`RuntimeControl.cost_decisions`に残す（`CERTIFIED`、`INSUFFICIENT_SAMPLES`、`LOW_HELD_OUT_COVERAGE`、`STALE_POLICY_EPOCH`）。
+- **既知の制約。** 実runではwarmup中にexecutorの時間が単調に変わるため、時間順のheld-outが学習範囲から外れ、classが認証されないことが多い（試験ではcoverage 0.00を観測した）。将来を予測できるかを確かめる保守的な基準なので、そのまま採用した。実運用で使うには、burn-inの除外や十分な観測数が必要である。
+
 ## stage記録（2026-10-15追加）
 
 次をcompletion記録の独立したstageにした。いずれも、開いているexecutor／epoch groupの子として`parent_id`を持つので、group sampleとの二重加算は`consumed_children`で防がれる。
@@ -98,7 +105,7 @@ Mac全回帰は869 passed／14 skipped。Linuxの高速版（`-m "not slow"`）�
 ## 残件（P4-001）
 
 - async runtimeでのpacking経路と、その計測。
-- rolling観測の鮮度・品質基準（現在はsample数のみ）と、held-outのenvelope化。
+- rolling観測のburn-in除外（warmup中の時間変化で認証されにくい）。
 - 上限付きraw chunkのflushと、epoch境界でのrank summary。
 - 大きなBlockや長いrunでの監視overheadの比率。
 - Linux O_DIRECTとcross-hostの校正。

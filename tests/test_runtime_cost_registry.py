@@ -136,6 +136,9 @@ def test_rolling_observations_answer_production_after_enough_same_class_groups(t
         runtime.configure_eta(max_bytes=64 * 1024, scan_items=4096, scan_seconds=1.0)
         for _ in range(12): sim.gate('RX', (0,), angle=.3)
         sim.materialize(frontier=7, binding=sim.bind())  # eight same-class executor calls measured
+        # Real wall times drift (warmup), so add stable same-class rows to certify the class deterministically.
+        probe = next(t for t in runtime.remaining_extractor.capture(sim, endpoint_frontier=11).window if t.kind != 'publication')
+        _task_rows(runtime, [.0095] * 12, condition=probe.condition, start=500)
         eta = runtime.update_eta(endpoint_frontier=11)
         observed = eta['views']['observed']
         assert eta['cost_view_sources']['observed'] == 'rolling-observed'
@@ -155,14 +158,94 @@ def test_cache_eviction_uses_measured_storage_completions_from_the_collector(tmp
         _check_cache_costs(fresh.runtime)
 
 
+def _ctx(runtime):
+    return {'policy_epoch': runtime.policy_epoch, 'plan_version': runtime.plan_version}
+
+
+def _io(runtime, rows, context=None):
+    for i, (operation, seconds) in enumerate(rows):
+        runtime.measurements.complete(f'io-{operation}-{i}-{seconds}', context=context or _ctx(runtime),
+                                      condition={'operation': operation}, stage='storage-' + operation,
+                                      protocol_seconds=seconds, validated=True,
+                                      evidence='injected' if seconds == 9.0 else 'measured')
+
+
 def _check_cache_costs(runtime):
     runtime.configure_measurements(max_bytes=64 * 1024)
-    collector = runtime.measurements
-    for i, (operation, seconds) in enumerate([('read', .01)] * 5 + [('write', .02)] * 5 + [('read', 9.0)] * 3):
-        collector.complete(f'io-{i}', context={}, condition={'operation': operation}, stage='storage-' + operation,
-                           protocol_seconds=seconds, validated=True,
-                           evidence='injected' if seconds == 9.0 else 'measured')
+    _io(runtime, [('read', .01)] * 8 + [('write', .02)] * 8 + [('read', 9.0)] * 3)
     cost = runtime.costs.resolve('cache-entry', ('v', None, None))
     assert cost.known and cost.source_id == 'runtime-collector-io'
     assert cost.value.whole_fetch == pytest.approx(.01) and cost.value.dirty_writeback == pytest.approx(.02)
     assert cost.value.eviction_score(True) == pytest.approx(.03)  # injected 9 s reads never counted
+
+
+def _task_rows(runtime, seconds, context=None, start=0, condition=None):
+    condition = condition or {'operation': 'executor-group', 'kind': 'x'}
+    for i, value in enumerate(seconds):
+        runtime.measurements.complete(f'g-{start + i}', context=context or _ctx(runtime), condition=condition,
+                                      group_id=f'g-{start + i}', stage=condition['operation'], units='groups', quantity=1,
+                                      protocol_seconds=value, success=True, validated=True)
+    return condition
+
+
+def _resolve(runtime, condition, purpose='production'):
+    return runtime.costs.resolve('observed-task-seconds', None, condition, purpose=purpose)
+
+
+def _runtime(tmp_path, **kw):
+    policy = AsyncPolicy(io_engine='cooperative', io_workers=1, prefetch_blocks=0)
+    config = DistributedConfig(str(tmp_path / 'd'), 2, ram_budget_bytes_per_rank=8 * 1024**2, storage_scope='node-local')
+    return AsyncDistributedSimulator(4, config, comm=MPI.COMM_SELF, policy=policy)
+
+
+def test_certified_rolling_cost_answers_production_and_refuses_diagnostic(tmp_path):
+    with _runtime(tmp_path) as sim:
+        runtime = sim.runtime
+        runtime.configure_measurements(max_bytes=256 * 1024)
+        condition = _task_rows(runtime, [.01, .011, .0105, .0102, .0108, .0104, .0109, .0103])
+        resolved = _resolve(runtime, condition)
+        assert resolved.known and resolved.provenance == 'measured' and resolved.value.measured
+        assert resolved.value.lower_seconds <= resolved.value.mean_seconds <= resolved.value.upper_seconds
+        assert 'CERTIFIED' in runtime.cost_decisions.values()
+        assert not _resolve(runtime, condition, 'diagnostic').value.condition.startswith('diagnostic')
+
+
+def test_stale_policy_epoch_refuses_rows_recorded_before_the_change(tmp_path):
+    with _runtime(tmp_path) as sim:
+        runtime = sim.runtime
+        runtime.configure_measurements(max_bytes=256 * 1024)
+        condition = _task_rows(runtime, [.01] * 10)
+        assert _resolve(runtime, condition).known
+        runtime.apply_policy({'prefetch_blocks': 1})
+        assert not _resolve(runtime, condition).known
+        assert runtime.cost_decisions[next(iter(runtime.cost_decisions))] == 'STALE_POLICY_EPOCH'
+        _task_rows(runtime, [.01] * 3, start=100)
+        assert not _resolve(runtime, condition).known
+        assert 'INSUFFICIENT_SAMPLES' in runtime.cost_decisions.values()
+        _task_rows(runtime, [.01] * 5, start=200)
+        assert _resolve(runtime, condition).known
+
+
+def test_low_held_out_coverage_refuses_production_but_diagnostic_is_labelled(tmp_path):
+    with _runtime(tmp_path) as sim:
+        runtime = sim.runtime
+        runtime.configure_measurements(max_bytes=256 * 1024)
+        condition = _task_rows(runtime, [.01, .011, .0105, .0102, .5, .6, .7, .0104])
+        assert not _resolve(runtime, condition).known
+        assert 'LOW_HELD_OUT_COVERAGE' in runtime.cost_decisions.values()
+        diagnostic = _resolve(runtime, condition, 'diagnostic')
+        assert diagnostic.known and diagnostic.provenance == 'derived' and not diagnostic.value.measured
+        assert 'LOW_HELD_OUT_COVERAGE' in diagnostic.value.condition
+        assert diagnostic.value.upper_seconds >= .7
+
+
+def test_cache_cost_requires_fresh_certified_reads_and_writes(tmp_path):
+    with _runtime(tmp_path) as sim:
+        runtime = sim.runtime
+        runtime.configure_measurements(max_bytes=64 * 1024)
+        _io(runtime, [('read', .01)] * 8 + [('write', .02)] * 6)
+        cost = runtime.costs.resolve('cache-entry', ('v', None, None))
+        assert cost.known and cost.value.dirty_writeback is None
+        runtime.apply_policy({'prefetch_blocks': 1})
+        assert not runtime.costs.resolve('cache-entry', ('v', None, None)).known
+        assert runtime.cost_decisions['storage-read'] == 'STALE_POLICY_EPOCH'

@@ -158,7 +158,7 @@ def test_native_request_metadata_and_whole_wall_include_validator():
         sim=SimpleNamespace(config=SimpleNamespace(backend='direct'),
                             io_engine=engine,size=1,store=SimpleNamespace(slot_bytes=4096),
                             environment=[{'host':'test'}]),
-        measurements=collector,profile_adapter=None,
+        measurements=collector,profile_adapter=None,policy_epoch=1,plan_version=1,
         io_condition=lambda *args:BenchmarkCondition('native-write'),observe=lambda *args:None)
     RuntimeControl.io_completion(control,request)
     row=collector.snapshot()['observations'][0]

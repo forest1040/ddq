@@ -83,11 +83,15 @@ class RuntimeControl:
         self.costs=RuntimeCostRegistry()
         # Rolling measured completions of this run (validated, non-warmup, non-injected).
         from .runtime_observed_costs import observed_cache_cost, observed_task_cost
-        self.costs.register('observed-task-seconds','runtime-collector','measured',
-            lambda _context,condition:observed_task_cost(self.measurements,condition),units='seconds/call')
-        self.costs.register('cache-entry','runtime-collector-io','measured',
-            lambda _key,_condition:observed_cache_cost(self.measurements,
-                'same-host' if len({r['host'] for r in sim.environment})==1 else 'cross-host'),units='seconds')
+        self.cost_decisions={}  # last freshness/quality reason per rolling cost class
+        scope=lambda:'same-host' if len({r['host'] for r in sim.environment})==1 else 'cross-host'
+        for suffix,diagnostic,provenance in (('-diagnostic',True,'derived'),('',False,'measured')):  # measured registered last: newest
+            self.costs.register('observed-task-seconds','runtime-collector'+suffix,provenance,
+                lambda _context,condition,d=diagnostic:observed_task_cost(self.measurements,condition,
+                    self.policy_epoch,self.plan_version,diagnostic=d,decisions=self.cost_decisions),units='seconds/call')
+            self.costs.register('cache-entry','runtime-collector-io'+suffix,provenance,
+                lambda _key,_condition,d=diagnostic:observed_cache_cost(self.measurements,scope(),
+                    self.policy_epoch,self.plan_version,diagnostic=d,decisions=self.cost_decisions),units='seconds')
         self.condition_provenance=None
         self.gradient_cost_reason=None
         self.evaluation_estimate=None
@@ -590,7 +594,7 @@ class RuntimeControl:
                 f'io:{request.request_id}',
                 context={'configuration_fingerprint': getattr(self.profile_adapter, 'fingerprint', None),
                          'backend': sim.config.backend, 'engine': sim.io_engine.identity,
-                         'ranks': sim.size},
+                         'ranks': sim.size, 'policy_epoch': self.policy_epoch, 'plan_version': self.plan_version},
                 condition=asdict(condition), stage='storage-' + request.operation,
                 units='calls', quantity=1,
                 queue_seconds=getattr(request, 'queue_seconds', None),

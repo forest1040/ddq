@@ -139,7 +139,8 @@ class AsyncDistributedSimulator(DistributedSimulator):
                 'n': self.num_qubits, 'block_bits': self.block_bits,
                 'backend': self.config.backend, 'engine': self.io_engine.identity,
                 'ranks': self.size, 'threads': self.policy.io_workers,
-                'binding_id':self.binding.binding_id if self.binding else None}
+                'binding_id':self.binding.binding_id if self.binding else None,
+                'policy_epoch':self.runtime.policy_epoch,'plan_version':self.runtime.plan_version}
 
     def _record_executor_group(self, event_id, group_id, condition, quantity,
                                wall_seconds, cpu_seconds, *, success, parent_id=None):
