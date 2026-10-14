@@ -42,6 +42,13 @@ uv run pytest
 uv run python examples/phase0.py
 ```
 
+開発中の確認には高速版を使えます。`tests/conftest.py`が、より速い代表ケースで同じ経路を検証済みのテストに`slow`を付けています（4 rankの組合せ、campaignの子process、大きなサイズ、重複したパラメータ）。MacではMPIを含めて約70秒、全回帰は約4分半です。受入れの判定とcommit前の最終確認は全回帰で行います。
+
+```sh
+uv run --locked --extra mpi pytest -q -m "not slow"   # 高速版
+uv run --locked --extra mpi pytest -q                 # 全回帰
+```
+
 [Phase 0 設計書](docs/phase0_design.md) に API・不変条件・検証範囲を記載しています。[I/O 資料](ref/direct_io_linux_macos.md) に OS ごとの相違点があります。外部記憶との接続は以下の Phase 1 実装で提供します。MPI と非同期実行は後続 Phase の範囲です。
 
 ## Phase 1 実装
