@@ -19,10 +19,12 @@ def _config(path):
                              tile_bytes=4096, frame_policy='materialize', storage_scope='node-local')
 
 
-# The injected per-call delay must dominate host service jitter (Linux durable commits vary by
-# tens of ms per gate); otherwise the conservative bound correctly refuses as uncertain gain.
+# These integration tests exercise the real executor, durable cut, injection driver and
+# numerical oracle. Only the evaluation observer receives explicit injected timing
+# fixtures: host I/O jitter must not decide whether a functional VERIFY test passes.
+# Actual service envelopes/performance remain the separate paired campaign's job.
 def _run(tmp_path, *, mode='auto', gates=32, start=4, end=None, delay=.2, prime_checkpoint=True, baseline=4,
-         resource='compute'):
+         resource='compute', verify_overrun=False):
     policy = AsyncPolicy(mode=mode, io_engine='cooperative', io_workers=1, prefetch_blocks=0, lookahead_gates=4,
                          cooldown_seconds=0)
     session = AdaptiveEvaluation(baseline_groups=baseline)
@@ -37,7 +39,23 @@ def _run(tmp_path, *, mode='auto', gates=32, start=4, end=None, delay=.2, prime_
                              operations, 60.0, 256, barrier='semantic-prefix')
 
         def observe(event):
+            # A single gate costs 1 ms in this evaluation-only fixture; the
+            # candidate's fused call costs the sum of its constituent gates.
+            service=.001*len(event['source_ids'])
+            if resource=='storage':
+                # Resource waits are inside service; inactive no-op tickets do
+                # not count, and a fused call still writes all four Blocks once.
+                injected=delay if event['resource_injected_seconds']>0 else 0.0
+                event={**event,'actual_service_seconds':service+injected,
+                       'resource_injected_seconds':injected}
+            else:
+                event={**event,'actual_service_seconds':service,
+                       'injected_delay_seconds':event['planned_delay_seconds']}
+            assert event['evidence']=='injected'
             verifying = sim.runtime.verifying
+            if verify_overrun and verifying is not None:
+                upper=len(event['source_ids'])*verifying['service_upper_per_gate']+verifying['extra_upper_per_call']
+                event={**event,'actual_service_seconds':2*upper}
             if verifying is not None and session.verify is None and session.verification is None:
                 session.begin_verify(service_upper_per_gate=verifying['service_upper_per_gate'],
                                      extra_upper_per_call=verifying['extra_upper_per_call'])
@@ -76,6 +94,14 @@ def test_sustained_injected_slowdown_switches_to_fused_policy_and_verifies(tmp_p
     assert runtime.plan_version == 2 and session.verification == {'verified': True, 'calls': 2}
     assert runtime.health == 'STABLE'
     assert [d for d in runtime.replan_decisions if d['kind'] == 'verify'][0]['result'] == 'STABLE'
+
+
+def test_sustained_switch_rejects_a_call_exceeding_the_predicted_upper(tmp_path):
+    runtime,session=_run(tmp_path,verify_overrun=True)
+    assert runtime.plan_version==2 and len(runtime.transitions)==1
+    assert session.verification['verified'] is False
+    assert session.verification['observed']>session.verification['predicted_upper']*1.1
+    assert [d for d in runtime.replan_decisions if d['kind']=='verify'][0]['result']=='VERIFY_FAILED'
 
 
 @pytest.mark.parametrize('case', ['observe', 'recommend', 'short-remaining', 'no-checkpoint-cost', 'transient',
