@@ -25,3 +25,5 @@ native requestにはbackend、device、alignment、実際の転送byte、発行�
 ## 残る範囲
 
 この環境と初期native検証によって[P4-010](phase4_tasks/P4-010_native_uring.md)の環境不足は解消するが、全受入matrixの完了とは扱わない。cancel勝敗の個別証跡、aligned short I/Oの再発行、fsync失敗とauthoritative checkpoint cut、全CQE順序・lifetime・shutdown、workerとの同条件性能比較、native大状態とcross-host検証は引き続き必要。Phase 4全体の残件は[backlog](phase4_backlog.md)で管理する。
+
+**profileのfingerprintとhost名（2026-10-15追記）。** 構成fingerprintの`host_id`はhost名のhashである。`docker run --rm`はcontainerごとにhost名を変えるので、あるcontainerで校正したprofile（runtime profile、executor class profile）は、次のcontainerでは構成不一致として拒否される。profileを作るrunと使うrunでは、`docker run --hostname <固定名>`を指定する。

@@ -1,0 +1,68 @@
+{
+ "configuration_fingerprint": "07f392cbfa77d262f2e166641dd7c3aac6b81882ff926721c502f4805f62a2d2",
+ "kind": "executor-class-profile",
+ "profile_id": "c0c9444b07306ebf71ff6f24d6112c3a2556a78a2334006aa93916f621ea4ade",
+ "rows": [
+  {
+   "class_key": "{\"backend\":\"buffered\",\"block_bits\":2,\"engine\":\"cooperative\",\"executor\":\"single-gate\",\"layout\":[0,1,2,3],\"n\":4,\"operation\":\"executor-gate\",\"operations\":[{\"angle\":{\"op\":\"const\",\"value\":0.025},\"approximation_error\":0.0,\"clifford\":false,\"control_values\":[],\"controls\":[],\"diagonal\":false,\"kind\":\"RX\",\"matrix_asset_ref\":null,\"permutation\":false,\"targets\":[3]}],\"swap_policy\":\"S0\"}",
+   "context": {
+    "backend": "buffered",
+    "block_bits": 2,
+    "engine": "cooperative",
+    "n": 4,
+    "ranks": 2,
+    "threads": 1
+   },
+   "evidence": "measured",
+   "expected_seconds": 0.06257903575897217,
+   "held_out_count": 15,
+   "held_out_coverage": 1.0,
+   "lower_seconds": 0.05606954824179411,
+   "samples": 29,
+   "units": "seconds/call",
+   "upper_seconds": 0.07555924588814378,
+   "validation": "held-out"
+  },
+  {
+   "class_key": "{\"backend\":\"buffered\",\"block_bits\":2,\"engine\":\"cooperative\",\"executor\":\"single-gate\",\"layout\":[3,1,2,0],\"n\":4,\"operation\":\"executor-gate\",\"operations\":[{\"angle\":{\"op\":\"const\",\"value\":0.025},\"approximation_error\":0.0,\"clifford\":false,\"control_values\":[],\"controls\":[],\"diagonal\":false,\"kind\":\"RX\",\"matrix_asset_ref\":null,\"permutation\":false,\"targets\":[0]}],\"swap_policy\":\"S0\"}",
+   "context": {
+    "backend": "buffered",
+    "block_bits": 2,
+    "engine": "cooperative",
+    "n": 4,
+    "ranks": 2,
+    "threads": 1
+   },
+   "evidence": "measured",
+   "expected_seconds": 0.06430460209958255,
+   "held_out_count": 13,
+   "held_out_coverage": 1.0,
+   "lower_seconds": 0.058010068256407976,
+   "samples": 26,
+   "units": "seconds/call",
+   "upper_seconds": 0.07342880172654986,
+   "validation": "held-out"
+  },
+  {
+   "class_key": "{\"backend\":\"buffered\",\"bits\":[0,3],\"block_bits\":2,\"engine\":\"cooperative\",\"n\":4,\"operation\":\"physical-bit-swap\",\"path\":\"swap-kernel\",\"ranks\":2}",
+   "context": {
+    "backend": "buffered",
+    "block_bits": 2,
+    "engine": "cooperative",
+    "n": 4,
+    "ranks": 2,
+    "threads": 1
+   },
+   "evidence": "measured",
+   "expected_seconds": 0.09496633801609278,
+   "held_out_count": 8,
+   "held_out_coverage": 1.0,
+   "lower_seconds": 0.0905528231523931,
+   "samples": 16,
+   "units": "seconds/call",
+   "upper_seconds": 0.10333062522113323,
+   "validation": "held-out"
+  }
+ ],
+ "schema_version": 1
+}

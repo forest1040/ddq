@@ -1,0 +1,25 @@
+cd ~/ddq-p4004
+run(){ name=$1; shift; ./dk.sh sh -c "mpiexec -n 2 python examples/phase4_remaining_campaign.py --action adaptive --resource mpi --repetitions 7 --warmup 2 --output /output/linux/$name.json --scratch /scratch/$name $*" > ~/p4004-out/linux/$name.log 2>&1; echo $name rc=$? >> ~/p4004-out/batch.status; }
+P="--executor-profile /output/linux/profile"
+#run macprofile_refusal --scenario sustained --injection-delay .1 --repetitions 1 --warmup 0 --executor-profile /output/macprofile
+run sustained_d.1_profile --scenario sustained --injection-delay .1 $P
+run sustained_d.1_noprofile --scenario sustained --injection-delay .1
+run transient_d.1_profile --scenario transient --injection-delay .1 $P
+run sustained_d.2_profile --scenario sustained --injection-delay .2 $P
+run transient_d.2_profile --scenario transient --injection-delay .2 $P
+cd ~/ddq-p4004
+./dk.sh sh -c "mpiexec -n 2 python examples/p4_004_layout_migration.py --output /output/linux/profile --scratch /scratch/cal" > ~/p4004-out/linux/calibrate.log 2>&1
+sh ~/p4004-out/batch.sh
+cd ~/ddq-p4004
+run(){ name=$1; shift; ./dk.sh sh -c "mpiexec -n 2 python examples/phase4_remaining_campaign.py --action adaptive --resource mpi --repetitions 7 --warmup 2 --output /output/linux/$name.json --scratch /scratch/$name $*" > ~/p4004-out/linux/$name.log 2>&1; echo $name rc=$? >> ~/p4004-out/batch2.status; }
+run macprofile_refusal --scenario sustained --injection-delay .1 --repetitions 1 --warmup 0 --executor-profile /output/macprofile
+./dk.sh sh -c "mpiexec -n 2 python examples/p4_004_layout_migration.py --backend direct --output /output/linux/profile-direct --scratch /scratch/cald" > ~/p4004-out/linux/calibrate-direct.log 2>&1; echo caldirect rc=$? >> ~/p4004-out/batch2.status
+run direct_sustained_d.1_profile --backend direct --scenario sustained --injection-delay .1 --executor-profile /output/linux/profile-direct
+#!/bin/sh
+# usage: dk.sh <name> <cmd...> ; runs in container with scratch ~/p4004-scratch
+R=$HOME/ddq-p4004; S=$HOME/p4004-scratch; O=$HOME/p4004-out; mkdir -p $S $O
+exec docker run --rm --hostname ddq-p4004 --network none --cpus=4 --memory=8g --pids-limit=512 --shm-size=256m \
+ -v $R/src:/workspace/src:ro -v $R/tests:/workspace/tests:ro -v $R/examples:/workspace/examples:ro \
+ -v $S:/scratch -v $O:/output -e UV_CACHE_DIR=/scratch/uv-cache -e TMPDIR=/scratch \
+ -e PYTHONPATH=src -e OMP_NUM_THREADS=1 -e OPENBLAS_NUM_THREADS=1 -e MKL_NUM_THREADS=1 -e NUMEXPR_NUM_THREADS=1 \
+ -e DDQ_GIT_REV=65f268f37e49df817ac38d6a18edfd62c8f5e282 ddq-linux:dev-20261014 "$@"
