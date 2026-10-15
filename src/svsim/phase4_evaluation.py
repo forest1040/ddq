@@ -510,21 +510,31 @@ class MatrixEntry:
             raise ValueError("unknown matrix slot for group")
         if not isinstance(self.campaign, Campaign):
             raise TypeError("campaign must be Campaign")
+        if len(self.campaign.variants) < 2:
+            raise ValueError("comparison matrix entry requires at least two variants")
+        if self.campaign.case.warmups < 2:
+            raise ValueError("comparison matrix entry requires at least two warmups")
         resources = self.campaign.case.resources
         if self.slot == "large-state":
             budget = resources.get("ram_per_rank_bytes")
             if type(budget) is not int or budget < 1:
                 raise ValueError("large-state slot requires ram_per_rank_bytes")
+            if self.campaign.case.ranks < 2 or "mpi" not in self.campaign.case.backend.lower():
+                raise ValueError("large-state slot requires an MPI backend and at least two ranks")
+            if resources.get("storage_kind") != "file":
+                raise ValueError("large-state slot requires storage_kind=file")
             # ceil(16 * 2**n / ranks) > budget iff 2**(n+4) > budget*ranks.
             # Compare bit lengths so a hostile manifest cannot trigger a giant shift.
             if self.campaign.case.n + 4 < (budget * self.campaign.case.ranks).bit_length():
                 raise ValueError("large-state slot does not exceed the declared per-rank managed budget")
         elif self.slot == "same-host":
-            if resources.get("host_count") != 1:
+            host_count = resources.get("host_count")
+            if type(host_count) is not int or host_count != 1:
                 raise ValueError("same-host slot requires host_count=1")
         elif self.slot == "cross-host-linux":
             platform_name = str(self.campaign.case.build.get("platform", "")).lower()
-            if resources.get("host_count", 0) < 2 or "linux" not in platform_name:
+            host_count = resources.get("host_count")
+            if type(host_count) is not int or host_count < 2 or "linux" not in platform_name:
                 raise ValueError("cross-host-linux slot requires multiple hosts and Linux build platform")
 
 
@@ -563,7 +573,12 @@ class ComparisonMatrix:
                 row["status"] = "insufficient-sample"
         all_rows_complete = all(row["status"] == "completed" for row in rows)
         counts = [row["statuses"]["completed"] - row["statuses"]["validation_failed"] for row in rows]
-        qualifies = all_rows_complete and min(counts, default=0) >= 7 and entry.campaign.case.trials >= 7
+        paired_complete = bool(report["comparisons"]) and all(
+            row["matched_pairs"] >= 7 and row["scope_mismatches"] == 0
+            for row in report["comparisons"])
+        qualifies = (len(rows) >= 2 and all_rows_complete and min(counts, default=0) >= 7
+                     and entry.campaign.case.trials >= 7 and entry.campaign.case.warmups >= 2
+                     and paired_complete)
         statuses = {status: sum(row["statuses"].get(status, 0) for row in rows) for status in sorted(STATUSES)}
         statuses["validation_failed"] = sum(row["statuses"].get("validation_failed", 0) for row in rows)
         if qualifies:
@@ -601,13 +616,18 @@ class ComparisonMatrix:
             status = "completed" if complete else next(
                 (row["status"] for row in slot_rows if row["status"] == "failed"),
                 next((row["status"] for row in slot_rows if not row["qualifies"]), "completed"))
-            groups.append({"group": group, "status": status, "complete": complete, "slots": slot_rows})
+            groups.append({"group": group, "status": status,
+                           "representative_coverage_complete": complete, "slots": slot_rows})
         missing = [{"group": row["group"], "slot": slot["slot"], "status": slot["status"]}
                    for row in groups for slot in row["slots"] if not slot["qualifies"]]
         result = {"schema_version": 1, "kind": "phase4-comparison-matrix",
                   "required_groups": list(MANDATORY_MATRIX_SLOTS),
                   "required_slots": {key: list(value) for key, value in MANDATORY_MATRIX_SLOTS.items()},
-                  "complete": not missing, "groups": groups, "remaining": missing,
+                  "coverage_kind": "representative coverage only",
+                  "representative_coverage_complete": not missing,
+                  "phase4_acceptance": {"status": "not-assessed",
+                                        "reason": "representative cases do not validate every required axis and acceptance condition"},
+                  "groups": groups, "remaining": missing,
                   "registered_cases": len(self.entries), "extrapolation": "none",
                   "predictive_interval": False}
         if len(canonical(result).encode("utf-8")) > MAX_REPORT_BYTES:

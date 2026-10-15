@@ -3,7 +3,7 @@
 状態：IN_PROGRESS（2026-10-14）。依存：001〜004、006〜009。011は移行の完了証跡へ、010は利用可能環境のnative証跡へ接続する。共通契約は[全体設計](../phase4_remaining_design.md)。
 
 
-manifest／raw測定hash／rank MAX／resource検証、全metricのpaired統計と有限Mac runnerを実装した。必須group／slot coverage validatorを追加したが、large state／tile／cache／control／lifecycle／別hostの実測matrixは残る。 [実装範囲と検証](../phase4_validation_implementation.md)、[comparison matrix validator](../phase4_comparison_matrix.md)。
+manifest／raw測定hash／rank MAX／resource検証、全metricのpaired統計と有限Mac runnerを実装した。代表caseの必須group／slot coverage validatorを追加した。代表coverageはaxis全条件の受入やPhase 4完了を意味せず、large state／tile／cache／control／lifecycle／別host等の実測matrixは残る。 [実装範囲と検証](../phase4_validation_implementation.md)、[comparison matrix validator](../phase4_comparison_matrix.md)。
 
 ## 現状・成果物
 

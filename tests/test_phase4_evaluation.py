@@ -229,7 +229,9 @@ def test_small_sample_and_zero_crossing_are_unconfirmed():
 
 def test_matrix_lists_all_unregistered_mandatory_groups_and_large_transport_slots():
     report = ComparisonMatrix().compare(bootstrap_samples=100)
-    assert not report["complete"]
+    assert not report["representative_coverage_complete"]
+    assert report["coverage_kind"] == "representative coverage only"
+    assert report["phase4_acceptance"]["status"] == "not-assessed"
     assert report["required_groups"] == ["layout/compiler", "physical swap", "execution", "control",
                                          "batch/cache", "gradient", "lifecycle", "transport"]
     assert {(row["group"], row["slot"]) for row in report["remaining"]} >= {
@@ -279,14 +281,30 @@ def test_matrix_keeps_unsupported_and_budget_rows_and_checks_special_slot_identi
 
     with pytest.raises(ValueError, match="does not exceed"):
         MatrixEntry("execution", "large-state", Campaign(
-            case(resources={"ram_per_rank_bytes": 4096}), variants()))
-    huge = case(n=10**9, b=1, ranks=1, resources={"ram_per_rank_bytes": 1})
+            case(ranks=2, backend="MPI", resources={"ram_per_rank_bytes": 4096,
+                                                     "storage_kind": "file"}), variants()))
+    huge = case(n=10**9, b=1, ranks=2, backend="MPI-file", resources={
+        "ram_per_rank_bytes": 1, "storage_kind": "file"})
     assert MatrixEntry("execution", "large-state", Campaign(huge, variants())).slot == "large-state"
     with pytest.raises(ValueError, match="host_count=1"):
         MatrixEntry("transport", "same-host", Campaign(case(), variants()))
     with pytest.raises(ValueError, match="multiple hosts and Linux"):
         MatrixEntry("transport", "cross-host-linux", Campaign(case(
             resources={"host_count": 2}, build={"platform": "Darwin"}), variants()))
+    for host_count in (True, "2", 2.0, None):
+        with pytest.raises(ValueError):
+            MatrixEntry("transport", "cross-host-linux", Campaign(case(
+                resources={"host_count": host_count}, build={"platform": "Linux"}), variants()))
+
+    large_values = {"n": 8, "b": 4, "ranks": 2, "backend": "MPI-file",
+                    "resources": {"ram_per_rank_bytes": 100, "storage_kind": "file"}}
+    assert MatrixEntry("execution", "large-state", Campaign(case(**large_values), variants())).slot == "large-state"
+    with pytest.raises(ValueError, match="storage_kind=file"):
+        MatrixEntry("execution", "large-state", Campaign(case(**{
+            **large_values, "resources": {"ram_per_rank_bytes": 100}}), variants()))
+    with pytest.raises(ValueError, match="MPI backend and at least two ranks"):
+        MatrixEntry("execution", "large-state", Campaign(case(**{
+            **large_values, "ranks": 1}), variants()))
 
 
 def test_campaign_rejects_raw_case_identity_mismatch_before_matrix_scoring():
@@ -296,3 +314,47 @@ def test_campaign_rejects_raw_case_identity_mismatch_before_matrix_scoring():
     trial = Trial.completed("base", 0, 1, raw, rank_wall_seconds=(1, 1))
     with pytest.raises(ValueError, match="identity"):
         Campaign(manifest, variants(), (trial,))
+
+
+def test_matrix_requires_pairable_variants_two_warmups_and_all_planned_trials():
+    single = (Variant("only", {"policy": "S0"}),)
+    with pytest.raises(ValueError, match="at least two variants"):
+        MatrixEntry("layout/compiler", "representative", Campaign(case(), single))
+    with pytest.raises(ValueError, match="two warmups"):
+        MatrixEntry("layout/compiler", "representative",
+                    Campaign(case(warmups=0), variants()))
+
+    manifest = case(trials=8, warmups=2)
+    rows = tuple(trial for i in range(7) for trial in (
+        measured("base", i, 1 + i / 10, manifest=manifest),
+        measured("candidate", i, .9 + i / 10, manifest=manifest)))
+    entry = MatrixEntry("layout/compiler", "representative", Campaign(manifest, variants(), rows))
+    slot = ComparisonMatrix((entry,)).compare(bootstrap_samples=100)["groups"][0]["slots"][0]
+    assert slot["status"] == "insufficient-sample" and not slot["qualifies"]
+    assert all(row["status"] == "insufficient-sample" for row in slot["variant_statuses"])
+    assert all(row["statuses"]["unmeasured"] == 1 for row in slot["variant_statuses"])
+
+
+def test_matrix_accepts_only_seven_valid_pairs_as_representative_coverage():
+    manifest = case(trials=7, warmups=2)
+    rows = tuple(trial for i in range(7) for trial in (
+        measured("base", i, 1 + i / 10, manifest=manifest),
+        measured("candidate", i, .9 + i / 10, manifest=manifest)))
+    result = ComparisonMatrix((MatrixEntry(
+        "layout/compiler", "representative", Campaign(manifest, variants(), rows)),)).compare(
+            bootstrap_samples=100)
+    slot = result["groups"][0]["slots"][0]
+    assert slot["status"] == "completed" and slot["qualifies"]
+    assert slot["comparisons"][0]["matched_pairs"] == 7
+    assert result["groups"][0]["representative_coverage_complete"]
+    assert result["phase4_acceptance"]["status"] == "not-assessed"
+
+    mismatched = tuple(trial for i in range(7) for trial in (
+        measured("base", i, 1 + i / 10, manifest=manifest),
+        measured("candidate", i, .9 + i / 10, manifest=manifest,
+                 scope="diagnostic" if i == 0 else "primary-e2e")))
+    mismatch_slot = ComparisonMatrix((MatrixEntry(
+        "layout/compiler", "representative", Campaign(manifest, variants(), mismatched)),)).compare(
+            bootstrap_samples=100)["groups"][0]["slots"][0]
+    assert mismatch_slot["comparisons"][0]["matched_pairs"] == 6
+    assert mismatch_slot["status"] == "insufficient-sample" and not mismatch_slot["qualifies"]
