@@ -30,15 +30,16 @@ QUOTA = 64 * 1024**2
 SLOT = 4096  # block_bits=2 -> 64 payload bytes, one aligned slot
 
 # stage -> (new extent published in the catalog, new slot bytes already in the segment file,
-#           token materialized before the kill). The extent token is released right after the publishing
-#           commit, so a kill at the fsync stages (which run after publication) leaves no live token.
+#           token materialized before the kill). The segment is fsynced *before* the publishing commit (a
+#           published row must never reference non-durable bytes), so the fsync stages precede publication
+#           and the materialized token is still live there.
 STAGES = {
     'before-segment-write': (False, False, False),
     'after-segment-write': (False, True, False),
     'before-catalog-commit': (False, True, True),
     'after-catalog-commit': (True, True, True),
-    'before-segment-fsync': (True, True, True),
-    'after-segment-fsync': (True, True, True),
+    'before-segment-fsync': (False, True, True),
+    'after-segment-fsync': (False, True, True),
 }
 
 CHILD = '''
@@ -135,7 +136,7 @@ def _settle(root, config=None, num_qubits=4):
 @pytest.mark.parametrize('stage', list(STAGES))
 def test_segment_stage_kill_recovers_whole_cut_and_charges_partial_segment(tmp_path, path, stage):
     published, slot_written, materialized = STAGES[stage]
-    token_live = 'fsync' not in stage
+    token_live = True
     child = _run(CHILD, tmp_path, path, stage, BACKEND)
     assert child.returncode == 0 and 'completed' not in child.stdout, child.stderr
     old, new = child.stdout.split()[:2]
@@ -155,8 +156,7 @@ def test_segment_stage_kill_recovers_whole_cut_and_charges_partial_segment(tmp_p
     if token_live:
         assert entry['release_pending_bytes'] == (0 if materialized else SLOT)
         assert applied['observed_usage_after_bytes'] >= segment.stat().st_size  # written slot bytes remain charged
-    else:  # published and released before the kill: no extent token is left to settle
-        assert entry is None
+    else: assert entry is None
     assert segment.stat().st_size == SLOT * (2 if slot_written else 1)  # recovery never truncates a segment
 
     # The durable cut is whole: the old extent always reads back; the new one exists iff it was published.

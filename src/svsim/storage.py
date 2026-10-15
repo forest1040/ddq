@@ -76,6 +76,7 @@ class FileBlockStore:
         self.guard = None
         self.transport_factory = transport_factory
         self._pending_extents = {}
+        self._dirty_segments, self._synced_segments = set(), set()
         if create:
             self.directory.mkdir(parents=True,exist_ok=True)
             if (self.directory/'metadata/catalog.sqlite3').exists(): raise FileExistsError('Storage directory already contains a state')
@@ -272,10 +273,36 @@ class FileBlockStore:
         self.segment,self.offset = segment,offset+self.slot_bytes
         return segment, offset
 
+    def _sync_segments(self, segments=None):
+        """Make written segment bytes durable before a catalog row may reference them.
+
+        The catalog commits with synchronous=FULL, so a published extent must not be weaker than
+        the row: its segment bytes (and the directory entry of a new segment file) are fsynced
+        first. Inside a gate batch this runs once per stage, at publication, for every touched
+        segment.
+        """
+        todo = sorted(self._dirty_segments if segments is None else set(segments))
+        for segment in todo:
+            handle = self.files.get(segment)
+            if handle is not None: handle.flush()
+            else:
+                path = self.directory/'state'/f'segment-{segment:06d}.bin'
+                handle = self.transport_factory(path,'r+b',backend=self.config.backend,alignment=self.config.alignment)
+                try: handle.flush()
+                finally: handle.close()
+            self._dirty_segments.discard(segment)
+        new = [s for s in todo if s not in self._synced_segments]
+        if new:
+            fd = os.open(self.directory/'state',os.O_RDONLY)
+            try: os.fsync(fd)
+            finally: os.close(fd)
+            self._synced_segments.update(new)
+
     def seal_extent(self, version, segment, offset, checksum):
         """Catalog a completed private slot only after all bytes and checksum exist."""
         ref = self.ref(version)
         if ref.segment is not None: raise ValueError('Cannot overwrite immutable Block extent')
+        self._sync_segments({segment}|self._dirty_segments)
         self.db.execute('UPDATE versions SET segment=?,offset=?,checksum=? WHERE id=?',
                         (segment,offset,checksum,version)); self.db.commit()
 
@@ -291,7 +318,9 @@ class FileBlockStore:
         The bytes already exist, so the address must survive a batch rollback;
         ``ref`` serves pending addresses until the separate update commits.
         """
+        self._dirty_segments.add(segment)
         if not self._in_batch():
+            self._sync_segments()
             with self.db:
                 self.db.execute('UPDATE versions SET segment=?,offset=?,checksum=? WHERE id=?',(segment,offset,checksum,version))
             return
@@ -299,6 +328,7 @@ class FileBlockStore:
         def apply():
             row = self._pending_extents.pop(version, None)
             if row is not None:
+                if self._dirty_segments: self._sync_segments()
                 self.db.execute('UPDATE versions SET segment=?,offset=?,checksum=? WHERE id=?',(*row,version))
         self.db.after_batch(apply)
 
