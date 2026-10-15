@@ -200,6 +200,14 @@ def catalog_birth_identity(path, info):
         return None
 
 
+def _canonical_catalog_path(path):
+    """Resolve parent spelling while rejecting an alias of the database itself."""
+    path = Path(path).absolute()
+    if path.is_symlink():
+        raise CatalogAdmissionError('Catalog database must not be a symlink')
+    return path.parent.resolve() / path.name
+
+
 def catalog_file_owner(path, info=None):
     """Bounded, versioned attribution to one canonical database inode.
 
@@ -207,9 +215,7 @@ def catalog_file_owner(path, info=None):
     they remain unsafe to settle until admitted SQLite recovery consumes them.
     A startup token for an absent database deliberately carries no identity.
     """
-    path = Path(path).absolute()
-    if path.resolve() != path or path.is_symlink():
-        raise CatalogAdmissionError('Catalog path must not contain symlinks')
+    path = _canonical_catalog_path(path)
     if info is None:
         try: info = path.lstat()
         except FileNotFoundError:
@@ -289,8 +295,8 @@ class CatalogConnection:
                  growth_bytes=256*1024,require_native=False):
         if type(growth_bytes) is not int or growth_bytes<4096:
             raise ValueError('Invalid catalog growth envelope')
-        self.path=Path(path).absolute()
-        catalog_file_owner(self.path)  # Refuse aliases before SQLite opens anything.
+        self.path=_canonical_catalog_path(path)
+        catalog_file_owner(self.path)  # Refuse database aliases before SQLite opens anything.
         self._file_identity=None
         self._budget_getter,self._drain_getter=budget_getter,drain_getter
         self.growth_bytes=growth_bytes

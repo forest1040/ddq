@@ -167,12 +167,30 @@ def test_catalog_replacement_while_open_refuses_mutation(catalog):
     assert db.path.read_bytes() == before
 
 
-def test_catalog_symlink_alias_is_refused_before_open(catalog):
+def test_catalog_database_symlink_alias_is_refused_before_open(catalog):
     db, budget = catalog
     alias = db.path.with_name('alias.sqlite3')
     alias.symlink_to(db.path)
-    with pytest.raises(CatalogAdmissionError, match='symlinks'):
+    with pytest.raises(CatalogAdmissionError, match='symlink'):
         CatalogConnection(alias, budget_getter=lambda: budget)
+
+
+def test_catalog_parent_alias_uses_the_canonical_file_owner(catalog):
+    from svsim.catalog_admission import catalog_file_owner
+    db, budget = catalog
+    original = db.path
+    owner = catalog_file_owner(original)
+    alias = original.parent.parent / 'parent-alias'
+    alias.symlink_to(original.parent, target_is_directory=True)
+    db.close()
+    reopened = CatalogConnection(alias / original.name, budget_getter=lambda: budget)
+    try:
+        assert reopened.path == original
+        assert catalog_file_owner(alias / original.name) == owner
+        with reopened:
+            reopened.execute('INSERT INTO items VALUES(7)')
+    finally:
+        reopened.close()
 
 
 def test_catalog_birth_identity_change_refuses_even_with_same_inode(catalog, monkeypatch):
