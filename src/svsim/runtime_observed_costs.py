@@ -4,7 +4,9 @@ Only collector rows that are successful, validated, measured and outside
 warmup are used (``cost_observations``), and a class answers only after
 ``MIN_SAMPLES`` of them. Executor conditions (and the once-per-epoch publication and boundary stages) are matched by gate class: the
 per-occurrence ``op_id``/``source_op_id`` are removed, everything else
-(angles, layout, policy, engine) must be equal. Values are seconds per unit;
+(angles, layout, policy, engine) must be equal; an exact class with too few samples falls back to its
+angle-pooled class (angles removed, Clifford/diagonal/permutation flags kept), labelled ``observed-pooled-angle``
+and certified by the same held-out rule. Values are seconds per unit;
 lower/upper are the training envelope widened by the held-out extrema, not a
 confidence interval.
 
@@ -50,6 +52,14 @@ def _class(condition):
     return canonical(condition)
 
 
+def _pooled(condition):
+    """Class key with gate angles removed (Clifford/diagonal/permutation flags kept), or None without angles."""
+    ops = condition.get('operations')
+    if not isinstance(ops, list) or all(op.get('angle') is None for op in ops): return None
+    return canonical({**condition, 'operations': [{k: v for k, v in op.items() if k not in {'op_id', 'source_op_id', 'angle'}}
+                                                  for op in ops]})
+
+
 def _by_class(collector, stages):
     """Fresh-revision index {class key: rows (oldest first)} of the collector's cost observations in ``stages``."""
     cache = getattr(collector, '_class_index', None)
@@ -60,6 +70,8 @@ def _by_class(collector, stages):
         for row in rows:
             if row.stage in EXECUTOR_STAGES or row.stage in EPOCH_STAGES:
                 index.setdefault((row.stage in EXECUTOR_STAGES, _class(row.condition)), []).append(row)
+                pooled = _pooled(row.condition)
+                if pooled is not None: index.setdefault((row.stage in EXECUTOR_STAGES, 'pooled', pooled), []).append(row)
         cache = (revision, index)
         if revision is not None: collector._class_index = cache
     return cache[1]
@@ -99,6 +111,24 @@ def _note(decisions, key, reason):
     if decisions is not None: decisions[key] = reason
 
 
+def _select(collector, condition, stages, policy_epoch, plan_version, decisions):
+    """(label, reason, values, lower, upper, coverage) of the exact class, else of its angle-pooled class.
+
+    Pooling is tried only when the exact class lacks samples; it must pass the
+    same held-out certification, so it is accepted only where the measured
+    durations do not depend on the angle values.
+    """
+    index, executor = _by_class(collector, stages), stages is EXECUTOR_STAGES
+    key = _class(condition)
+    result = _assess(index.get((executor, key), []), policy_epoch, plan_version, BURN_IN)
+    _note(decisions, key, result[0])
+    pooled = _pooled(condition)
+    if result[0] != INSUFFICIENT or pooled is None: return ('observed',) + result
+    other = _assess(index.get((executor, 'pooled', pooled), []), policy_epoch, plan_version, BURN_IN)
+    _note(decisions, 'pooled-angle:' + pooled, other[0])
+    return ('observed-pooled-angle',) + other if other[0] == CERTIFIED else ('observed',) + result
+
+
 def observed_task_cost(collector, condition, policy_epoch=None, plan_version=None, *, diagnostic=False, decisions=None):
     """Certified CostSample for an executor task class (or, with ``diagnostic``, the uncertified one, labelled), or None.
 
@@ -109,15 +139,12 @@ def observed_task_cost(collector, condition, policy_epoch=None, plan_version=Non
         return _residual_cost(collector, condition, policy_epoch, plan_version, diagnostic, decisions)
     stages = EXECUTOR_STAGES if condition.get('operation') in EXECUTOR_STAGES else EPOCH_STAGES
     if condition.get('operation') not in stages: return None
-    key = _class(condition)
-    reason, values, lower, upper, coverage = _assess(
-        _by_class(collector, stages).get((stages is EXECUTOR_STAGES, key), []),
-        policy_epoch, plan_version, BURN_IN)
-    _note(decisions, key, reason)
+    label, reason, values, lower, upper, coverage = _select(collector, condition, stages, policy_epoch, plan_version,
+                                                            decisions)
     if not values or len(values) < MIN_SAMPLES: return None
     if reason == CERTIFIED:
         if diagnostic: return None
-        return CostSample('observed:' + condition['operation'], median(values), lower, upper, measured=True)
+        return CostSample(label + ':' + condition['operation'], median(values), lower, upper, measured=True)
     if not diagnostic: return None
     return CostSample(f"diagnostic:{condition['operation']}:{reason}:coverage={coverage:.2f}", median(values), lower, upper,
                       measured=False)
@@ -133,15 +160,13 @@ def _residual_cost(collector, condition, policy_epoch, plan_version, diagnostic,
     inner, elapsed = condition['class'], condition['elapsed_seconds']
     stages = EXECUTOR_STAGES if inner.get('operation') in EXECUTOR_STAGES else EPOCH_STAGES
     if inner.get('operation') not in stages or diagnostic: return None
-    key = _class(inner)
-    reason, values = _assess(_by_class(collector, stages).get((stages is EXECUTOR_STAGES, key), []),
-                             policy_epoch, plan_version, BURN_IN)[:2]
+    label, reason, values = _select(collector, inner, stages, policy_epoch, plan_version, None)[:3]
     if reason != CERTIFIED: return None
     longer = [v - elapsed for v in values if v > elapsed]
     if len(longer) < MIN_SAMPLES:
-        _note(decisions, key + ':residual', OVERRUN)
+        _note(decisions, _class(inner) + ':residual', OVERRUN)
         return None
-    return CostSample('observed:residual:' + inner['operation'], median(longer), min(longer) * (1 - TOLERANCE),
+    return CostSample(label + ':residual:' + inner['operation'], median(longer), min(longer) * (1 - TOLERANCE),
                       max(longer) * (1 + TOLERANCE), measured=True)
 
 

@@ -392,3 +392,25 @@ def test_call_residual_prices_the_remainder_of_a_certified_class():
     overrun = observed_task_cost(collector, {"operation": "call-residual", "class": condition,
                                              "elapsed_seconds": 5.0}, 0, 0, decisions=decisions)
     assert overrun is None and "RESIDUAL_OVERRUN" in decisions.values()
+
+
+def test_distinct_angles_certify_through_the_angle_pooled_class():
+    from svsim.runtime_measurement import RuntimeMeasurementCollector
+    from svsim.runtime_observed_costs import observed_task_cost
+    collector = RuntimeMeasurementCollector(max_bytes=512 * 1024)
+    def op(angle):
+        return {"kind": "RX", "targets": [1], "controls": [], "angle": {"op": "const", "value": angle},
+                "clifford": False, "diagonal": False, "permutation": False}
+    def condition(angle):
+        return {"operation": "executor-gate", "executor": "single-gate", "operations": [op(angle)], "n": 4}
+    for i in range(20):
+        collector.complete(f"g{i}", context={"policy_epoch": 0, "plan_version": 0}, condition=condition(0.1 * i),
+                           stage="executor-gate", units="groups", quantity=1, protocol_seconds=0.01,
+                           success=True, validated=True, evidence="measured")
+    decisions = {}
+    cost = observed_task_cost(collector, condition(9.9), 0, 0, decisions=decisions)
+    assert cost.measured and cost.condition.startswith("observed-pooled-angle:")
+    assert "INSUFFICIENT_SAMPLES" in decisions.values() and "CERTIFIED" in decisions.values()
+    # Pooling never crosses a different gate shape (here: another target).
+    other = condition(0.5); other["operations"][0]["targets"] = [2]
+    assert observed_task_cost(collector, other, 0, 0) is None
