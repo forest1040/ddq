@@ -144,7 +144,7 @@ raw／resolved identityとbounded cost hintを追加した。validated・同unit
 
 ### P4-009：SQLite書込み前のdisk admission
 
-catalog open／transaction前の予約と同SQLite VFS、ledger pool、extent・journal・trace・assetへの接続を実装した。実子processの異常終了後に予約とpartial fileを保持し、明示回収の二重適用と既記録byteの減算を拒否する。checkpoint sidecarについては最新committed v4 cutに結び付けた限定的なoffline回収を追加した。全writerのfault／recovery、unlinked/uncommitted reservation、temporary branch GC、異なるledger／外部jobを含むhost調停、Linuxを含む全matrixは残る。Linuxの一部機能検証は済んでいる。
+catalog open／transaction前の予約と同SQLite VFS、ledger pool、extent・journal・trace・assetへの接続を実装した。実子processの異常終了後に予約とpartial fileを保持し、明示回収の二重適用と既記録byteの減算を拒否する。checkpoint sidecarについては最新committed v4 cutに結び付けた限定的なoffline回収を追加した。2026-10-15に[disk faultマトリクス](phase4_disk_fault_matrix_implementation.md)でquota境界の1 byte／page掃引と実process kill matrix（catalog gate batch、ledger lease append、sidecar、SIGKILL連続commit）を追加した（Mac・Linux成功、実装バグなし）。残りはunlinked/uncommitted reservation、temporary branch GC、異なるledger／外部jobを含むhost調停、segment・prepare／decisionの複数rank kill、O_DIRECTを含むLinux全matrix、実ENOSPCである。Linuxの一部機能検証は済んでいる。
 
 - catalog／journalの成長をtransaction前に予約し、並行rankのdataset／host／device総予算に含める。
 - commit/rollback後の予約精算と、drain用余裕の保護、容量不足時の一貫した失敗を検証する。

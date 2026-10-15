@@ -14,6 +14,8 @@
 
 [recovery-only metadata pool](../phase4_recovery_pool_design.md)と[実装](../phase4_recovery_pool_implementation.md)を追加した。dry runを含むrecovery openは既存production shared ledgerのschema/policy/root/volume/native VFSを検証し、migration/create/root登録/policy変更を行わない。logical quota・pending・drain marginを除外してcheckpoint CAS/receiptだけを許し、min_freeと未割当metadata pool、page/journal capは維持する。schema不一致、hot sidefile、pool/page full、physical headroom不足、実I/O errorは拒否する。検証記録は[recovery pool validation](../internal/phase4_recovery_pool_validation/README.md)。
 
+[disk faultマトリクス](../phase4_disk_fault_matrix_implementation.md)で、catalog／trace／journal／sidecar／extentのquota境界を1 byte・1 page刻みで掃引し、書込み前の拒否（namespace・durable cut不変）と書込み途中の安全な失敗を区別して確認した。実processのkill matrix（catalog gate batchの各stage、ledger lease append、sidecarのfsync／rename前後、SIGKILL連続commit）で旧／新cutの完全性、hot journal、partial temporary、token保持と単一reconcileを確認した。Mac・Linux（ent）で成功した。unlinked/uncommitted reservation、temporary branch GC、別ledger／外部job、segment・prepare／decision・複数rankのkill、O_DIRECT全matrix、実ENOSPCは残り、P4-009はIN_PROGRESSのままである。
+
 ## 設計時点（6aa8581）の現状とwriter棚卸し
 
 上記recovery-only metadata poolはlogical quota/pending/drain超過を越えて既存pool内のcheckpoint CASを許す。物理headroom、min_free、native journal/page capは引き続き強制する。実hardware ENOSPCや電源断時durability、全writer回収は009Cの残件である。
