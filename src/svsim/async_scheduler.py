@@ -67,6 +67,7 @@ class AsyncDistributedSimulator(DistributedSimulator):
         self.policy = policy or AsyncPolicy()
         self.io_engine = None
         self._private_epoch = False
+        self._executor_in_flight = None
         self._saved_runtime_state = None
         self._gradient_origin = None
         self._angle_overrides = {}
@@ -421,6 +422,8 @@ class AsyncDistributedSimulator(DistributedSimulator):
                     injection_ticket=None
                     service_begin=gate_begin
                     measurements.begin_group(gate_group)
+                    # Lets a private-epoch ETA price the rest of this call as a measured residual.
+                    self._executor_in_flight = (tuple(g.op_id for g in ops), gate_begin)
                     try:
                         injection_ticket=self.runtime.before_executor(gate_event,len(ops))
                         service_begin=perf_counter()
@@ -460,6 +463,7 @@ class AsyncDistributedSimulator(DistributedSimulator):
                                 'n':self.num_qubits,'b':self.block_bits,'P':self.size,'binding':self.binding.binding_id})
                         self.runtime.after_executor(injection_ticket,service_seconds=perf_counter()-service_begin,
                             source_ids=tuple(g.op_id for g in ops),success=gate_success,work_class=injection_class)
+                        self._executor_in_flight = None
                         measurements.end_group(gate_group)
                         condition = {'operation': 'executor-group' if len(ops) > 1 else 'executor-gate',
                                      'executor': executor if gate_success else ('fused-local' if is_fused else 'single-gate'),
@@ -473,12 +477,14 @@ class AsyncDistributedSimulator(DistributedSimulator):
                                                     success=gate_success, parent_id=epoch_group)
                 ledger.validate_coverage()
                 publish_begin, publish_cpu = perf_counter(), process_time()
+                self._executor_in_flight = (('publish',), publish_begin)
                 with self._catalog_batch():
                     self.drain()
                     published = self._new_root(self.root)
                     self.local.phase2.progress(published, end)
                     self._commit_stage(published, end)
                 ledger.commit()
+                self._executor_in_flight = None
                 # Priced per epoch by the remaining-work ETA (child of the epoch group).
                 self._record_stage('epoch-publication', _stage_condition(publication_condition(self)),
                                    seconds=perf_counter()-publish_begin, cpu_seconds=process_time()-publish_cpu)
@@ -488,6 +494,7 @@ class AsyncDistributedSimulator(DistributedSimulator):
                                             'actual_order': order, 'elapsed_seconds': perf_counter()-begin,
                                             'private_cut': False, 'plan_version': self.runtime.plan_version})
             except BaseException:
+                self._executor_in_flight = None
                 if ledger is not None and not ledger.committed:
                     ledger.fail('epoch-failed')
                 self.root, self.frontier, self.layout, self.placement_epoch, length = prior

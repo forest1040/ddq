@@ -79,7 +79,8 @@ class RuntimeETA:
             unknown.append("STALE_SNAPSHOT")
 
         remaining_flights = tuple(work for work in flights if not work.completed)
-        total = sum(task.count for task in tasks) + len(remaining_flights)
+        total = sum(task.count for task in tasks) + (0 if getattr(snapshot, "in_flight_covered", False)
+                                                      else len(remaining_flights))
         sample_map = {}
         known_count = 0
         for task in tasks:
@@ -100,9 +101,10 @@ class RuntimeETA:
                 continue
             sample_map[task.task_id] = sample
             known_count += task.count
-        for work in remaining_flights:
-            unknown.extend(work.unknown_reasons)
-            unknown.append("IN_FLIGHT:" + work.request_id)
+        if not getattr(snapshot, "in_flight_covered", False):
+            for work in remaining_flights:
+                unknown.extend(work.unknown_reasons)
+                unknown.append("IN_FLIGHT:" + work.request_id)
         if total == 0:
             # Empty, complete snapshots are an exact quiescent state.
             if not unknown:

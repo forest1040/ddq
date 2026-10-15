@@ -1,4 +1,5 @@
 from dataclasses import asdict
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -98,8 +99,24 @@ def test_private_staged_delta_keeps_published_cut_and_marks_unknown(tmp_path):
         assert private.published_frontier == published.published_frontier
         assert private.snapshot_id != published.snapshot_id
         assert private.staged_sources == 1
-        assert "PRIVATE_EPOCH_RESIDUAL_UNCALIBRATED" in private.unknown_reasons
         assert all(first_source not in task.source_ids for task in private.window)
+        # Between calls nothing runs: requests are inside the measured publication.
+        assert private.in_flight_covered
+        assert "PRIVATE_EPOCH_RESIDUAL_UNCALIBRATED" not in private.unknown_reasons
+        # A running call becomes one measured residual task for its elapsed time.
+        running = next(task for task in private.window if task.source_ids)
+        sim._executor_in_flight = (running.source_ids, time.perf_counter() - 0.5)
+        residual = extractor.capture(sim)
+        task = next(task for task in residual.window if task.kind == "residual")
+        assert task.source_ids == running.source_ids and task.condition["operation"] == "call-residual"
+        assert task.condition["elapsed_seconds"] >= 0.5 and "op_id" not in task.condition["class"]["operations"][0]
+        assert residual.in_flight_covered
+        # A running call the window cannot price leaves the epoch residual unknown.
+        sim._executor_in_flight = ((10**6,), time.perf_counter())
+        unknown = extractor.capture(sim)
+        assert not unknown.in_flight_covered
+        assert "PRIVATE_EPOCH_RESIDUAL_UNCALIBRATED" in unknown.unknown_reasons
+        sim._executor_in_flight = None
         sim._private_epoch = False
         sim._active_epoch_ledger = None
 
@@ -115,7 +132,7 @@ def test_private_snapshot_marks_profile_context_change_stale(tmp_path):
         assert private.private
         assert private.stale
         assert private.published_frontier == published.published_frontier
-        assert "PRIVATE_EPOCH_RESIDUAL_UNCALIBRATED" in private.unknown_reasons
+        assert RuntimeETA().evaluate(private).expected_seconds is None
         sim._private_epoch = False
 
 
@@ -330,3 +347,48 @@ def test_cost_rows_cache_follows_collector_revision():
     assert copies[0] == first[0] and copies[0] is not first[0]
     add(1)
     assert len(collector.cost_rows()) == 2
+
+
+def _shape(snapshot):
+    return ({(t.kind, canonical(t.condition)): t.count for t in snapshot.future},
+            {canonical(t.condition): t.count for t in snapshot.tail})
+
+
+def test_scans_survive_whole_epoch_advances_and_match_a_fresh_scan(tmp_path):
+    with make_sim(tmp_path / "advance", swap_policy="S2", lookahead=2) as sim:
+        _layers(sim, 10)
+        sim.materialize(frontier=1)  # binds parameters; a Binding change rescans
+        extractor = RemainingWorkExtractor(CaptureLimits(scan_items=8, scan_seconds=0.5))
+        while not (snap := extractor.capture(sim)).future_complete or not snap.complete:
+            pass
+        for frontier in (3, 7, 13):  # whole epochs of 2
+            sim.materialize(frontier=frontier)
+            incremental = extractor.capture(sim)
+            fresh = RemainingWorkExtractor(CaptureLimits(scan_items=4096, scan_seconds=1)).capture(sim)
+            # One bounded capture suffices: nothing already scanned is rescanned.
+            assert incremental.complete and incremental.future_complete
+            assert _shape(incremental) == _shape(fresh)
+        # A non-aligned advance rescans from the new epoch alignment.
+        sim.materialize(frontier=16)
+        assert not extractor.capture(sim).future_complete
+
+
+def test_call_residual_prices_the_remainder_of_a_certified_class():
+    from svsim.runtime_measurement import RuntimeMeasurementCollector
+    from svsim.runtime_observed_costs import observed_task_cost
+    collector = RuntimeMeasurementCollector(max_bytes=256 * 1024)
+    condition = {"operation": "epoch-publication", "n": 4}
+    for i in range(20):
+        collector.complete(f"p{i}", context={"policy_epoch": 0, "plan_version": 0}, condition=condition,
+                           stage="epoch-publication", units="calls", quantity=1, protocol_seconds=1.0 + 0.01 * (i % 3),
+                           success=True, validated=True, evidence="measured")
+    whole = observed_task_cost(collector, condition, 0, 0)
+    assert whole is not None and whole.measured
+    residual = observed_task_cost(collector, {"operation": "call-residual", "class": condition,
+                                              "elapsed_seconds": 0.4}, 0, 0)
+    assert residual.mean_seconds == pytest.approx(whole.mean_seconds - 0.4, abs=0.02)
+    assert residual.lower_seconds <= residual.mean_seconds <= residual.upper_seconds
+    decisions = {}
+    overrun = observed_task_cost(collector, {"operation": "call-residual", "class": condition,
+                                             "elapsed_seconds": 5.0}, 0, 0, decisions=decisions)
+    assert overrun is None and "RESIDUAL_OVERRUN" in decisions.values()

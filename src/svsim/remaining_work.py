@@ -51,6 +51,9 @@ class RemainingWork:
     future: tuple[CountedTask,...] = ()
     future_complete: bool = False
     future_reasons: tuple[str,...] = ()
+    # Private epoch: the running call is a measured residual task that covers
+    # the outstanding requests, so they do not each leave the total unknown.
+    in_flight_covered: bool = False
 
 
 def executor_groups(window,layout,block_bits,policy):
@@ -72,6 +75,11 @@ def future_shape_reasons(sim):
     # S1 decision (multi-rank) or an explicit physical swap/replan moves it, and
     # the latter two invalidate the snapshot.
     return ('FUTURE_S1_LAYOUT_UNKNOWN',) if sim.policy.swap_policy=='S1' and sim.size>1 else ()
+
+
+def semantic_class(op):
+    data=gate_data(op);data.pop('op_id',None);data.pop('source_op_id',None)
+    return data,content_hash(data)
 
 
 def strip_ids(condition):
@@ -133,6 +141,7 @@ class RemainingWorkExtractor:
         self.limits=limits or CaptureLimits()
         self._scan_key=None;self._scan_cursor=0;self._tail={};self._tail_overflow=0
         self._published=None
+        self._tail_start=0;self._future_origin=0
         self._future_cursor=0;self._future={};self._future_epochs=0;self._future_bytes=0;self._future_overflow=False
 
     def invalidate(self):
@@ -169,13 +178,30 @@ class RemainingWorkExtractor:
                 if key in kept:return (key,)
                 return tuple(p for dep in old[key].dependencies for p in predecessors(dep))
             window=tuple(replace(t,dependencies=tuple(dict.fromkeys(p for dep in t.dependencies for p in predecessors(dep)))) for t in window)
+            # The call executing now is priced as a measured residual given its
+            # elapsed time; its requests (and earlier writebacks drained by the
+            # publication) are inside the calibrated call/publication times.
+            # Between calls nothing runs and outstanding writebacks are drained
+            # inside the measured publication.
+            residual=True
+            running=getattr(sim,'_executor_in_flight',None)
+            if running is not None and not (running[0]!=('publish',) and all(i in staged for i in running[0])):
+                ids,begin=running
+                match=next((i for i,t in enumerate(window) if (t.kind=='publication' and ids==('publish',))
+                            or (t.source_ids and t.source_ids==ids)),None)
+                if match is None or window[match].unknown_reasons:residual=False
+                else:
+                    t=window[match]
+                    condition=strip_ids(t.condition) if 'operations' in t.condition else t.condition
+                    window=window[:match]+(replace(t,condition={'operation':'call-residual','class':condition,
+                        'elapsed_seconds':max(0.,perf_counter()-begin)},kind='residual'),)+window[match+1:]
             current=runtime_context(sim)
             stale=end!=base.endpoint_frontier or any(current.get(k)!=v for k,v in base.context.items()
                 if k not in {'root','frontier','layout','placement_epoch','endpoint_frontier'})
             snap=replace(base,snapshot_id=content_hash({'base':base.snapshot_id,'staged':sorted(staged),
                 'requests':[r.request_id for r in flights]}),window=window,in_flight=flights,
-                private=True,staged_sources=len(staged),stale=stale,
-                unknown_reasons=tuple(dict.fromkeys(base.unknown_reasons+('PRIVATE_EPOCH_RESIDUAL_UNCALIBRATED',))),
+                private=True,staged_sources=len(staged),stale=stale,in_flight_covered=residual,
+                unknown_reasons=tuple(dict.fromkeys(base.unknown_reasons+(() if residual else ('PRIVATE_EPOCH_RESIDUAL_UNCALIBRATED',)))),
                 extraction_seconds=perf_counter()-started)
             size=len(canonical(asdict(snap)).encode())
             if size+8>self.limits.max_bytes:
@@ -186,7 +212,8 @@ class RemainingWorkExtractor:
         if end<sim.frontier:
             return self._minimal(sim,end,flights,('ENDPOINT_ALREADY_PASSED',),started)
         context['endpoint_frontier']=end
-        key=content_hash(context)
+        # Scans survive frontier advances; everything else that shapes the work resets them.
+        key=content_hash({k:v for k,v in context.items() if k not in {'root','frontier'}})
         first=sim.frontier+1
         width=min(self.limits.window,sim.policy.lookahead_gates)
         stop=min(end+1,first+width)
@@ -213,17 +240,16 @@ class RemainingWorkExtractor:
                                dependencies=previous,resource='main',kind='publication'))
             previous=('window:publish',)
         window_tail=previous
-        if self._scan_key!=key:
-            self._scan_key=key;self._scan_cursor=stop;self._tail={};self._tail_overflow=0
-            self._future_cursor=first+sim.policy.lookahead_gates;self._future={};self._future_epochs=0
+        if self._scan_key!=key or not self._advance(sim,first,stop,end):
+            self._scan_key=key;self._scan_cursor=self._tail_start=stop;self._tail={};self._tail_overflow=0
+            self._future_cursor=self._future_origin=first+sim.policy.lookahead_gates;self._future={};self._future_epochs=0
             self._future_bytes=0;self._future_overflow=False
         deadline=monotonic()+self.limits.scan_seconds
         self._scan_future(sim,end,shape+(('EXECUTOR_WINDOW_TRUNCATED',) if truncated else ()),deadline)
         scanned=0
         while self._scan_cursor<=end and scanned<self.limits.scan_items and monotonic()<deadline:
             op=sim.sequencer.operations[self._scan_cursor]
-            data=gate_data(op);data.pop('op_id',None);data.pop('source_op_id',None)
-            signature=content_hash(data)
+            data,signature=semantic_class(op)
             if signature in self._tail:self._tail[signature][1]+=1
             elif len(self._tail)<self.limits.max_groups:
                 # Count semantics exactly; future fusion/Frame/layout are not guessed.
@@ -269,6 +295,35 @@ class RemainingWorkExtractor:
             snap=replace(snap,metadata_bytes=len(canonical(asdict(snap)).encode()))
         self._published=snap
         return snap
+
+    def _advance(self,sim,first,stop,end):
+        """Move the scanned tail and future past work the frontier advance put in the window; False to rescan."""
+        lookahead=sim.policy.lookahead_gates
+        origin=first+lookahead
+        if stop<self._tail_start or origin<self._future_origin or (origin-self._future_origin)%lookahead:return False
+        if self._tail_overflow and stop>self._tail_start:return False
+        ops=sim.sequencer.operations
+        for index in range(self._tail_start,min(stop,self._scan_cursor)):
+            signature=semantic_class(ops[index])[1]
+            entry=self._tail.get(signature)
+            if entry is None:return False
+            entry[1]-=1
+            if not entry[1]:del self._tail[signature]
+        self._tail_start=stop;self._scan_cursor=max(self._scan_cursor,stop)
+        if not self._future_overflow:
+            start=self._future_origin
+            while start<origin and start<self._future_cursor:
+                for group in executor_groups(ops[start:min(end,start+lookahead-1)+1],sim.layout,sim.block_bits,sim.policy):
+                    signature=content_hash(strip_ids(executor_condition(sim,group)))
+                    entry=self._future.get(signature)
+                    if entry is None:return False
+                    entry[1]-=1
+                    if not entry[1]:
+                        self._future_bytes-=len(canonical(entry[0]).encode())+128
+                        del self._future[signature]
+                self._future_epochs-=1;start+=lookahead
+        self._future_origin=origin;self._future_cursor=max(self._future_cursor,origin)
+        return True
 
     def _scan_future(self,sim,end,reasons,deadline):
         """Advance the epoch-aligned executor-shape scan by whole epochs within the scan budget."""

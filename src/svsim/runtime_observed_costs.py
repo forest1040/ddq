@@ -37,6 +37,7 @@ DRIFT_LIMIT = .5
 TOLERANCE = .1
 EXECUTOR_STAGES = ('executor-gate', 'executor-group')
 EPOCH_STAGES = ('epoch-publication', 'epoch-boundary')  # once per epoch; priced like executor classes
+OVERRUN = 'RESIDUAL_OVERRUN'
 CERTIFIED, INSUFFICIENT, LOW_COVERAGE, STALE, DRIFTING = ('CERTIFIED', 'INSUFFICIENT_SAMPLES', 'LOW_HELD_OUT_COVERAGE', 'STALE_POLICY_EPOCH',
                                                      'DRIFTING')
 
@@ -104,6 +105,8 @@ def observed_task_cost(collector, condition, policy_epoch=None, plan_version=Non
     ``decisions`` (if given) receives ``{class_key: reason}`` for the last decision.
     """
     if collector is None or not collector.enabled or not isinstance(condition, dict): return None
+    if condition.get('operation') == 'call-residual':
+        return _residual_cost(collector, condition, policy_epoch, plan_version, diagnostic, decisions)
     stages = EXECUTOR_STAGES if condition.get('operation') in EXECUTOR_STAGES else EPOCH_STAGES
     if condition.get('operation') not in stages: return None
     key = _class(condition)
@@ -118,6 +121,28 @@ def observed_task_cost(collector, condition, policy_epoch=None, plan_version=Non
     if not diagnostic: return None
     return CostSample(f"diagnostic:{condition['operation']}:{reason}:coverage={coverage:.2f}", median(values), lower, upper,
                       measured=False)
+
+
+def _residual_cost(collector, condition, policy_epoch, plan_version, diagnostic, decisions):
+    """Remaining time of a running call of a certified class, given its elapsed seconds.
+
+    The residuals ``d - elapsed`` of the class's fresh durations that exceed the
+    elapsed time; a call already past most of them (fewer than ``MIN_SAMPLES``
+    longer ones) has no calibrated remainder and stays unknown (OVERRUN).
+    """
+    inner, elapsed = condition['class'], condition['elapsed_seconds']
+    stages = EXECUTOR_STAGES if inner.get('operation') in EXECUTOR_STAGES else EPOCH_STAGES
+    if inner.get('operation') not in stages or diagnostic: return None
+    key = _class(inner)
+    reason, values = _assess(_by_class(collector, stages).get((stages is EXECUTOR_STAGES, key), []),
+                             policy_epoch, plan_version, BURN_IN)[:2]
+    if reason != CERTIFIED: return None
+    longer = [v - elapsed for v in values if v > elapsed]
+    if len(longer) < MIN_SAMPLES:
+        _note(decisions, key + ':residual', OVERRUN)
+        return None
+    return CostSample('observed:residual:' + inner['operation'], median(longer), min(longer) * (1 - TOLERANCE),
+                      max(longer) * (1 + TOLERANCE), measured=True)
 
 
 def observed_cache_cost(collector, scope, policy_epoch=None, plan_version=None, *, diagnostic=False, decisions=None):
