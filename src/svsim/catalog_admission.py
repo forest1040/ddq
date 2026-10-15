@@ -48,6 +48,8 @@ class SQLiteGuard:
         self.library = Path(self._directory.name)/('svsim_disk.dylib' if sys.platform=='darwin' else 'svsim_disk.so')
         command = [compiler,'-dynamiclib' if sys.platform=='darwin' else '-shared','-fPIC','-O2',
                    '-I',str(header),str(source),'-o',str(self.library)]
+        # Test-only deterministic xSync/xDelete fault points exist only in a binary built with this flag.
+        if os.environ.get('SVSIM_VFS_TEST_FAULTS')=='1': command[4:4]=['-DSVSIM_TEST_FAULTS']
         inputs = {str(path): sha256(path.read_bytes()).hexdigest()
                   for path in (source,header/'sqlite3ext.h',header/'sqlite3.h')}
         self.source_hash = inputs[str(source)]

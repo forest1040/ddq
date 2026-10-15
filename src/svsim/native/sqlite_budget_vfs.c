@@ -34,6 +34,7 @@ struct BudgetFile {
   sqlite3_int64 sideHigh;
 };
 
+
 static sqlite3_vfs gVfs;
 static sqlite3_vfs *gParent;
 static sqlite3_mutex *gMutex;
@@ -67,6 +68,46 @@ static int suffix(const char *s,const char *tail){
   return a>=b && strcmp(s+a-b,tail)==0;
 }
 static void denied(void){ lockState(); gDenied++; unlockState(); }
+#ifdef SVSIM_TEST_FAULTS
+/* Test-only deterministic fault point, compiled in only with -DSVSIM_TEST_FAULTS
+ * (SQLiteGuard adds the flag when SVSIM_VFS_TEST_FAULTS=1). A production binary
+ * contains none of this code. Kinds: 1 journal xSync, 2 main-db xSync, 3 journal
+ * delete (the commit point of a rollback-journal transaction). Actions: 1 fail the
+ * Nth call with an I/O error, 2 _exit before the real operation, 3 _exit after it. */
+#include <unistd.h>
+static char gFaultFilter[PATH_LIMIT];
+static int gFaultKind, gFaultNth, gFaultAction, gFaultCount;
+static int faultPoint(const char *mainPath,int kind,int after){
+  int hit=0;
+  lockState();
+  if(gFaultKind==kind && gFaultFilter[0] && mainPath && strstr(mainPath,gFaultFilter)){
+    if(!after) gFaultCount++;
+    if(gFaultCount==gFaultNth) hit=gFaultAction;
+  }
+  unlockState();
+  if(!after && hit==1) return 1;
+  if(!after && hit==2) _exit(0);
+  if(after && hit==3) _exit(0);
+  return 0;
+}
+static void faultArmFn(sqlite3_context*ctx,int argc,sqlite3_value**argv){
+  const char *filter,*kind,*action; (void)argc;
+  filter=(const char*)sqlite3_value_text(argv[0]); kind=(const char*)sqlite3_value_text(argv[1]);
+  action=(const char*)sqlite3_value_text(argv[3]);
+  if(!filter||!kind||!action||strlen(filter)>=PATH_LIMIT){sqlite3_result_error(ctx,"bad fault arguments",-1);return;}
+  lockState();
+  strcpy(gFaultFilter,filter);
+  gFaultKind=!strcmp(kind,"journal-sync")?1:!strcmp(kind,"main-sync")?2:!strcmp(kind,"journal-delete")?3:0;
+  gFaultAction=!strcmp(action,"fail")?1:!strcmp(action,"kill-before")?2:!strcmp(action,"kill-after")?3:0;
+  gFaultNth=sqlite3_value_int(argv[2]); gFaultCount=0;
+  unlockState();
+  sqlite3_result_int(ctx,gFaultKind&&gFaultAction?1:0);
+}
+static void faultDisarmFn(sqlite3_context*ctx,int argc,sqlite3_value**argv){
+  (void)argc;(void)argv; lockState(); gFaultKind=0; gFaultFilter[0]=0; unlockState(); sqlite3_result_int(ctx,1);
+}
+#endif
+
 static int guardWrite(BudgetFile *f, sqlite3_int64 end, sqlite3_int64 oldSize){
   sqlite3_int64 increase=0;
   BudgetDb *d=f->db;
@@ -119,7 +160,17 @@ static int bfTruncate(sqlite3_file*p,sqlite3_int64 n){
   if(n>size){ rc=guardWrite(f,n,size); if(rc!=SQLITE_OK) return rc; }
   return f->real->pMethods->xTruncate(f->real,n);
 }
-static int bfSync(sqlite3_file*p,int flags){return ((BudgetFile*)p)->real->pMethods->xSync(((BudgetFile*)p)->real,flags);}
+static int bfSync(sqlite3_file*p,int flags){
+  BudgetFile*f=(BudgetFile*)p; int rc;
+#ifdef SVSIM_TEST_FAULTS
+  if(f->db && faultPoint(f->db->path,f->isMain?2:1,0)) return SQLITE_IOERR_FSYNC;
+#endif
+  rc=f->real->pMethods->xSync(f->real,flags);
+#ifdef SVSIM_TEST_FAULTS
+  if(f->db) faultPoint(f->db->path,f->isMain?2:1,1);
+#endif
+  return rc;
+}
 static int bfSize(sqlite3_file*p,sqlite3_int64*n){return ((BudgetFile*)p)->real->pMethods->xFileSize(((BudgetFile*)p)->real,n);}
 static int bfLock(sqlite3_file*p,int l){return ((BudgetFile*)p)->real->pMethods->xLock(((BudgetFile*)p)->real,l);}
 static int bfUnlock(sqlite3_file*p,int l){return ((BudgetFile*)p)->real->pMethods->xUnlock(((BudgetFile*)p)->real,l);}
@@ -201,6 +252,17 @@ static int vDelete(sqlite3_vfs*v,const char*z,int syncDir){
     sqlite3_free(path);
     if(d && !active){denied();return SQLITE_FULL;}
   }
+#ifdef SVSIM_TEST_FAULTS
+  {
+    char *jp=fullPath(z);
+    if(jp && suffix(jp,"-journal")){
+      jp[strlen(jp)-8]=0;
+      if(faultPoint(jp,3,0)){sqlite3_free(jp);return SQLITE_IOERR_DELETE;}
+      { int rc=gParent->xDelete(gParent,z,syncDir); faultPoint(jp,3,1); sqlite3_free(jp); return rc; }
+    }
+    sqlite3_free(jp);
+  }
+#endif
   return gParent->xDelete(gParent,z,syncDir);
 }
 static int vAccess(sqlite3_vfs*v,const char*z,int f,int*r){return gParent->xAccess(gParent,z,f,r);}
@@ -338,6 +400,10 @@ int sqlite3_svsimdisk_init(sqlite3 *db,char **pzErrMsg,const sqlite3_api_routine
   if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_disk_guard_unprepare",1,SQLITE_UTF8|SQLITE_DIRECTONLY,0,unprepareFn,0,0);
   if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_disk_guard_identity",1,SQLITE_UTF8|SQLITE_DIRECTONLY,0,identityFn,0,0);
   if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_disk_guard_compile_option",1,SQLITE_UTF8|SQLITE_DIRECTONLY,0,compileOptionFn,0,0);
+#ifdef SVSIM_TEST_FAULTS
+  if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_test_fault_arm",4,SQLITE_UTF8|SQLITE_DIRECTONLY,0,faultArmFn,0,0);
+  if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_test_fault_disarm",0,SQLITE_UTF8|SQLITE_DIRECTONLY,0,faultDisarmFn,0,0);
+#endif
   if(rc==SQLITE_OK)rc=sqlite3_set_authorizer(db,guardAuthorizer,0);
   if(rc==SQLITE_OK)sqlite3_db_config(db,SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION,0,0);
 #ifdef SQLITE_OK_LOAD_PERMANENTLY
