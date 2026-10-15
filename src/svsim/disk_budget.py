@@ -47,6 +47,15 @@ _LEDGER_TABLES = {
                         volume_device INTEGER NOT NULL, custom_accounting INTEGER NOT NULL)""",
 }
 
+# Optional and additive: only a newly created store-private ledger (persist_private_policy) gets this
+# table. Existing ledgers are never migrated and recovery treats a missing table as "no policy persisted".
+_PRIVATE_POLICY_TABLE = """CREATE TABLE IF NOT EXISTS private_policy(
+                        singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+                        quota_bytes INTEGER, min_free_bytes INTEGER NOT NULL,
+                        drain_reserve_bytes INTEGER NOT NULL, bootstrap_bytes INTEGER NOT NULL,
+                        max_page_count INTEGER NOT NULL, max_records INTEGER NOT NULL,
+                        volume_device INTEGER NOT NULL, custom_accounting INTEGER NOT NULL)"""
+
 _LABEL_TRIGGERS = {
     'reservation_labels_insert': """CREATE TRIGGER IF NOT EXISTS reservation_labels_insert
                         BEFORE INSERT ON reservations
@@ -188,7 +197,8 @@ class DiskBudget:
     def __init__(self, ledger, roots, *, quota_bytes=None, min_free_bytes=0,
                  drain_reserve_bytes=0, usage=None, free=None,
                  max_page_count=1024, max_records=4096, bootstrap_bytes=8*1024*1024,
-                 shared_policy=False, recovery_only=False, ledger_lease=None, store_private=False):
+                 shared_policy=False, recovery_only=False, ledger_lease=None, store_private=False,
+                 persist_private_policy=False):
         _integer(min_free_bytes, 'minimum free bytes')
         _integer(drain_reserve_bytes, 'drain reserve bytes')
         _integer(quota_bytes, 'disk quota', minimum=1, optional=True)
@@ -203,9 +213,12 @@ class DiskBudget:
             raise ValueError('store_private is a recovery-only layout without shared policy')
         if recovery_only and (not (shared_policy or store_private) or usage is not None or free is not None):
             raise ValueError('Recovery-only requires a bound production shared ledger')
-        if store_private and (quota_bytes is not None or min_free_bytes or drain_reserve_bytes or
-                              max_page_count!=1024 or max_records!=4096 or bootstrap_bytes!=8*1024*1024):
-            raise ValueError('A store-private ledger persists no policy; recovery uses the FileBlockStore defaults only')
+        if type(persist_private_policy) is not bool:raise ValueError('Invalid persist-private-policy flag')
+        if persist_private_policy and (shared_policy or recovery_only or store_private):
+            raise ValueError('persist_private_policy applies to a writable non-shared ledger only')
+        if store_private and max_page_count!=1024:
+            raise ValueError('A store-private ledger derives its page cap from the metadata pool')
+        self.persist_private_policy=persist_private_policy
         self.store_private=store_private
         self.recovery_only=recovery_only
         if ledger_lease is not None and (recovery_only or not isinstance(ledger_lease,DirectoryLease)):
@@ -273,6 +286,7 @@ class DiskBudget:
                                  'observed-with-bounded-ledger-vfs' if self.ledger_vfs_enforced else
                                  'observed-soft')
         self.strict_capacity_guarantee = False
+        self._ledger_preexisting = ledger.exists() and ledger.stat().st_size > 0
         if ledger.exists() and ledger.stat().st_size > self._ledger_main_cap:
             raise DiskAdmissionError('Existing disk ledger exceeds its bounded metadata pool')
         if self._metadata_allocated_bytes()>self.bootstrap_bytes:
@@ -329,7 +343,9 @@ class DiskBudget:
                     self.db.execute(_LEDGER_TABLES['checkpoint_recovery_receipts'])
                     self.db.execute(_LEDGER_TABLES['shared_policy'])
                     for sql in _LABEL_TRIGGERS.values():self.db.execute(sql)
-                    self._check_or_bind_shared_policy(devices.pop())
+                    volume_device = devices.pop()
+                    self._check_or_bind_shared_policy(volume_device)
+                    self._check_or_bind_private_policy(volume_device)
                     existing_roots = [Path(path) for (path,) in self.db.execute('SELECT path FROM roots')]
                     selected_roots = _root_antichain(existing_roots + list(self.roots))
                     if len(selected_roots) > 256:
@@ -428,6 +444,21 @@ class DiskBudget:
             registered=[Path(p) for (p,) in con.execute('SELECT path FROM roots LIMIT 2')]
             if registered!=[self.roots[0]]:
                 raise DiskAdmissionError('A store-private ledger must register exactly its own store')
+            table=con.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='private_policy'").fetchone()
+            if table is None:
+                # Legacy/unpersisted ledger: only the FileBlockStore defaults can be honored.
+                if (self.quota_bytes,self.min_free_bytes,self.drain_reserve_bytes,self.bootstrap_bytes,
+                        self.max_records)!=(None,0,0,8*1024*1024,4096):
+                    raise DiskAdmissionError('Recovery cannot verify a non-default policy: this store-private ledger persisted none')
+                return
+            if _schema_text(table[0])!=_schema_text(_PRIVATE_POLICY_TABLE):
+                raise DiskAdmissionError('Recovery private policy schema changed')
+            expected=(self.quota_bytes,self.min_free_bytes,self.drain_reserve_bytes,self.bootstrap_bytes,
+                      self.max_page_count,self.max_records,self.roots[0].stat().st_dev,0)
+            policy=con.execute('''SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,bootstrap_bytes,
+                max_page_count,max_records,volume_device,custom_accounting FROM private_policy WHERE singleton=1''').fetchone()
+            if policy is None or tuple(policy)!=expected:
+                raise DiskAdmissionError('Recovery requires a matching persisted store-private policy')
             return
         expected=(self.quota_bytes,self.min_free_bytes,self.drain_reserve_bytes,self.bootstrap_bytes,
                   self.max_page_count,self.max_records,self.roots[0].stat().st_dev,0)
@@ -504,6 +535,28 @@ class DiskBudget:
         if active is not None:
             raise DiskAdmissionError('Cannot bind shared policy while legacy reservations are active')
         self.db.execute('''INSERT INTO shared_policy(singleton,quota_bytes,min_free_bytes,
+            drain_reserve_bytes,bootstrap_bytes,max_page_count,max_records,volume_device,
+            custom_accounting) VALUES(1,?,?,?,?,?,?,?,?)''', expected)
+
+    def _check_or_bind_private_policy(self, volume_device):
+        """Persist the policy of a *newly created* store-private ledger and verify it on later opens.
+
+        An existing ledger without the table is not migrated: recovery keeps the documented weaker check
+        (defaults only) for it.
+        """
+        if not self.persist_private_policy or self.shared_policy: return
+        expected = (self.quota_bytes, self.min_free_bytes, self.drain_reserve_bytes, self.bootstrap_bytes,
+                    self.max_page_count, self.max_records, int(volume_device), int(self._custom_accounting))
+        has = self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='private_policy'").fetchone()
+        if has:
+            row = self.db.execute('''SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,bootstrap_bytes,
+                max_page_count,max_records,volume_device,custom_accounting FROM private_policy WHERE singleton=1''').fetchone()
+            if row is not None and tuple(row) != expected:
+                raise DiskAdmissionError('Store-private ledger policy mismatch')
+            return
+        if self._ledger_preexisting: return
+        self.db.execute(_PRIVATE_POLICY_TABLE)
+        self.db.execute('''INSERT INTO private_policy(singleton,quota_bytes,min_free_bytes,
             drain_reserve_bytes,bootstrap_bytes,max_page_count,max_records,volume_device,
             custom_accounting) VALUES(1,?,?,?,?,?,?,?,?)''', expected)
 

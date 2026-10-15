@@ -94,7 +94,7 @@ class FileBlockStore:
         from .catalog_admission import CatalogConnection
         self._owned_disk_budget = None
         if disk_budget is None:
-            self._owned_disk_budget=DiskBudget(self.directory/'metadata/disk-ledger.sqlite3',[self.directory])
+            self._owned_disk_budget=DiskBudget(self.directory/'metadata/disk-ledger.sqlite3',[self.directory],persist_private_policy=True)
             disk_budget=self._owned_disk_budget
         self.disk_budget=disk_budget
         self.db=CatalogConnection(self.directory/'metadata/catalog.sqlite3',

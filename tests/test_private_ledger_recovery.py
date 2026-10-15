@@ -220,8 +220,8 @@ def test_private_ledger_recovery_budget_is_recovery_only_and_rejects_policy_and_
     root, ledger, _ = _kill(tmp_path, 'quiet')
     with pytest.raises(ValueError):
         DiskBudget(ledger, [root], store_private=True)  # not recovery-only
-    with pytest.raises(ValueError):
-        DiskBudget(ledger, [root], recovery_only=True, store_private=True, quota_bytes=1 << 30)  # no persisted policy to honor
+    with pytest.raises(DiskAdmissionError, match='(?i)matching persisted store-private policy'):
+        DiskBudget(ledger, [root], recovery_only=True, store_private=True, quota_bytes=1 << 30)  # persisted policy is the default
     with pytest.raises(DiskAdmissionError):
         DiskBudget(ledger, [root, tmp_path], recovery_only=True, store_private=True)
     lease = DirectoryLease(ledger.parent, exclusive=True)
@@ -270,3 +270,91 @@ def test_private_ledger_dead_branch_gc_keeps_committed_cut(tmp_path):
     assert con.execute('PRAGMA integrity_check').fetchone() == ('ok',)
     con.close()
     assert collect_dead_branches(ledger)['status'] == 'nothing-to-do'
+
+
+def _custom_private_store(tmp_path, *, quota=1 << 30, min_free=1 << 20):
+    """A store whose private ledger was created with a non-default policy, and one live dead-owner token."""
+    from svsim.storage import FileBlockStore
+    root = tmp_path / 'custom'
+    root.mkdir()
+    budget = DiskBudget(root / 'metadata/disk-ledger.sqlite3', [root], quota_bytes=quota, min_free_bytes=min_free,
+                        persist_private_policy=True)
+    store = FileBlockStore(StorageConfig(str(root), 2, backend=BACKEND), 4, disk_budget=budget)
+    store.close()
+    budget.reserve(4096, operation='amplitude-extent', writing=True)
+    budget.close()
+    return root, root / 'metadata/disk-ledger.sqlite3'
+
+
+def _policy_row(ledger):
+    con = sqlite3.connect(ledger)
+    try: return con.execute('SELECT quota_bytes,min_free_bytes FROM private_policy').fetchall()
+    finally: con.close()
+
+
+def test_new_private_ledger_persists_its_policy_and_no_shared_policy(tmp_path):
+    root, ledger, _ = _kill(tmp_path, 'quiet')
+    con = sqlite3.connect(ledger)
+    try:
+        assert con.execute('SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,bootstrap_bytes,max_records FROM private_policy').fetchall() \
+            == [(None, 0, 0, 8 * 1024 ** 2, 4096)]
+        assert con.execute('SELECT count(*) FROM shared_policy').fetchone()[0] == 0
+    finally: con.close()
+
+
+def test_recovery_verifies_a_non_default_private_policy(tmp_path):
+    from svsim.uncommitted_recovery import offline_scope
+    root, ledger = _custom_private_store(tmp_path)
+    assert _policy_row(ledger) == [(1 << 30, 1 << 20)]
+    with offline_scope(ledger) as scope:
+        assert scope['private_ledger'] and scope['policy']['quota_bytes'] == 1 << 30 and scope['policy']['min_free_bytes'] == 1 << 20
+        assert scope['budget'].quota_bytes == 1 << 30 and scope['budget'].min_free_bytes == 1 << 20
+    with pytest.raises(DiskAdmissionError, match='conflicts'):  # a caller policy that differs is refused
+        with offline_scope(ledger, policy={'quota_bytes': 1 << 31}): pass
+    report = recover_uncommitted_reservations(ledger)
+    assert report['status'] == 'dry-run' and report['ledger_layout'] == 'store-private' and len(report['tokens']) == 1
+    applied = recover_uncommitted_reservations(ledger, apply=True, confirm_plan=report['plan_sha256'])
+    assert applied['status'] == 'applied' and applied['pending_bytes_after'] == 0
+
+
+@pytest.mark.parametrize('tamper', ['page-cap', 'device', 'schema'])
+def test_tampered_private_policy_is_refused_and_changes_nothing(tmp_path, tamper):
+    root, ledger = _custom_private_store(tmp_path)
+    con = sqlite3.connect(ledger)
+    try:
+        if tamper == 'page-cap': con.execute('UPDATE private_policy SET max_page_count=max_page_count+1')
+        elif tamper == 'device': con.execute('UPDATE private_policy SET volume_device=volume_device+1')
+        else: con.execute('DROP TABLE private_policy'); con.execute('CREATE TABLE private_policy(singleton INTEGER, quota_bytes INTEGER)')
+        con.commit()
+    finally: con.close()
+    before = _sha(ledger)
+    with pytest.raises(DiskAdmissionError):
+        recover_uncommitted_reservations(ledger)
+    assert _sha(ledger) == before
+
+
+def test_ledger_without_a_private_policy_row_keeps_the_weaker_default_check(tmp_path):
+    root, ledger, _ = _kill(tmp_path, 'quiet')
+    con = sqlite3.connect(ledger)
+    try:
+        con.execute('DROP TABLE private_policy'); con.commit()  # what every pre-existing ledger looks like
+    finally: con.close()
+    with pytest.raises(DiskAdmissionError, match='persisted none'):
+        DiskBudget(ledger, [root], recovery_only=True, store_private=True, quota_bytes=1 << 30)
+    report = recover_uncommitted_reservations(ledger)
+    assert report['status'] == 'dry-run' and not report['refusals']
+    # an existing ledger is never migrated by an ordinary reopen
+    from svsim.storage import FileBlockStore
+    store = FileBlockStore(_cfg(root), 8, create=False)
+    store.close()
+    con = sqlite3.connect(ledger)
+    try: assert con.execute("SELECT count(*) FROM sqlite_master WHERE name='private_policy'").fetchone()[0] == 0
+    finally: con.close()
+
+
+def test_reopening_a_custom_private_ledger_with_defaults_is_refused(tmp_path):
+    from svsim.storage import FileBlockStore
+    root, ledger = _custom_private_store(tmp_path)
+    recover_uncommitted_reservations(ledger)  # recovery itself is fine; only a differing writer policy is refused
+    with pytest.raises(DiskAdmissionError, match='(?i)policy mismatch'):
+        FileBlockStore(StorageConfig(str(root), 2, backend=BACKEND), 4, create=False)

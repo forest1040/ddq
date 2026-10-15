@@ -51,11 +51,12 @@ _PRIVATE_DEFAULTS = {'quota_bytes': None, 'min_free_bytes': 0, 'drain_reserve_by
                      'bootstrap_bytes': 8 * 1024 ** 2, 'max_records': 4096}
 
 
-def _private_layout(ledger, roots):
-    """Store-private ledger: ``<store>/metadata/disk-ledger.sqlite3`` with no bound policy and one root, the store.
+def _private_layout(ledger, roots, persisted=None):
+    """Store-private ledger: ``<store>/metadata/disk-ledger.sqlite3`` with no bound shared policy and one root.
 
-    No policy is persisted for it (FileBlockStore always opens it with defaults), so recovery accepts only the
-    exact layout and the default envelope; anything else is an unbound legacy ledger and is refused.
+    A ledger created with ``persist_private_policy`` carries a ``private_policy`` row and recovery verifies and
+    uses it. An older ledger persisted none (FileBlockStore always opened it with defaults), so recovery accepts
+    only the exact layout and the default envelope; anything else is an unbound legacy ledger and is refused.
     """
     store = ledger.parent.parent
     if (ledger.name != 'disk-ledger.sqlite3' or ledger.parent.name != 'metadata' or ledger.parent.is_symlink()
@@ -63,7 +64,7 @@ def _private_layout(ledger, roots):
         raise DiskAdmissionError('Recovery requires a bound shared-policy ledger or a store-private ledger')
     if [Path(p) for p in roots] != [store]:
         raise DiskAdmissionError('A store-private ledger must register exactly its own store')
-    return dict(_PRIVATE_DEFAULTS, private=True), roots
+    return dict(persisted or _PRIVATE_DEFAULTS, private=True), roots
 
 
 def _persisted(ledger):
@@ -83,12 +84,17 @@ def _persisted(ledger):
         policy = con.execute('''SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,bootstrap_bytes,max_records
                                 FROM shared_policy WHERE singleton=1''').fetchone()
         roots = [p for (p,) in con.execute('SELECT path FROM roots LIMIT 257')]
+        private = None
+        if policy is None and con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='private_policy'").fetchone():
+            private = con.execute('''SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,bootstrap_bytes,max_records
+                                    FROM private_policy WHERE singleton=1''').fetchone()
     except sqlite3.Error as exc:
         raise DiskAdmissionError(f'Recovery cannot read the persisted ledger policy: {exc}') from exc
     finally:
         con.close()
     if policy is None:
-        return _private_layout(ledger, roots)
+        keys = ('quota_bytes', 'min_free_bytes', 'drain_reserve_bytes', 'bootstrap_bytes', 'max_records')
+        return _private_layout(ledger, roots, dict(zip(keys, private)) if private else None)
     if not roots or len(roots) > 256:
         raise DiskAdmissionError('Recovery needs 1..256 registered roots')
     return dict(zip(('quota_bytes', 'min_free_bytes', 'drain_reserve_bytes', 'bootstrap_bytes', 'max_records'), policy)), roots
@@ -150,9 +156,9 @@ def offline_scope(ledger, *, policy=None, writer=False):
                 raise UncommittedRecoveryRefused(f'A live runtime holds dataset lease {directory}; owner death is not proven') from exc
         if private:
             if writer:
-                budget = DiskBudget(ledger, roots, ledger_lease=ledger_lease)
+                budget = DiskBudget(ledger, roots, ledger_lease=ledger_lease, persist_private_policy=True, **persisted)
             else:
-                budget = DiskBudget(ledger, roots, recovery_only=True, store_private=True)
+                budget = DiskBudget(ledger, roots, recovery_only=True, store_private=True, **persisted)
         elif writer:
             budget = DiskBudget(ledger, roots, shared_policy=True, ledger_lease=ledger_lease, **persisted)
         else:
