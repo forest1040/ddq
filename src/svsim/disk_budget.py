@@ -188,7 +188,7 @@ class DiskBudget:
     def __init__(self, ledger, roots, *, quota_bytes=None, min_free_bytes=0,
                  drain_reserve_bytes=0, usage=None, free=None,
                  max_page_count=1024, max_records=4096, bootstrap_bytes=8*1024*1024,
-                 shared_policy=False, recovery_only=False, ledger_lease=None):
+                 shared_policy=False, recovery_only=False, ledger_lease=None, store_private=False):
         _integer(min_free_bytes, 'minimum free bytes')
         _integer(drain_reserve_bytes, 'drain reserve bytes')
         _integer(quota_bytes, 'disk quota', minimum=1, optional=True)
@@ -198,8 +198,15 @@ class DiskBudget:
         if type(shared_policy) is not bool:
             raise ValueError('Invalid shared ledger policy flag')
         if type(recovery_only) is not bool:raise ValueError('Invalid recovery-only flag')
-        if recovery_only and (not shared_policy or usage is not None or free is not None):
+        if type(store_private) is not bool:raise ValueError('Invalid store-private flag')
+        if store_private and (not recovery_only or shared_policy):
+            raise ValueError('store_private is a recovery-only layout without shared policy')
+        if recovery_only and (not (shared_policy or store_private) or usage is not None or free is not None):
             raise ValueError('Recovery-only requires a bound production shared ledger')
+        if store_private and (quota_bytes is not None or min_free_bytes or drain_reserve_bytes or
+                              max_page_count!=1024 or max_records!=4096 or bootstrap_bytes!=8*1024*1024):
+            raise ValueError('A store-private ledger persists no policy; recovery uses the FileBlockStore defaults only')
+        self.store_private=store_private
         self.recovery_only=recovery_only
         if ledger_lease is not None and (recovery_only or not isinstance(ledger_lease,DirectoryLease)):
             raise ValueError('ledger_lease must be a FileLease held by an offline maintenance caller')
@@ -239,6 +246,10 @@ class DiskBudget:
                 raise DiskAdmissionError('Recovery requires an existing exclusively named ledger')
             self._recovery_identity=(info.st_dev,info.st_ino)
         ledger = ledger.resolve()
+        if store_private:
+            only = self.roots[0] if len(self.roots)==1 else None
+            if only is None or ledger != only/'metadata'/'disk-ledger.sqlite3' or not (only/'metadata'/'catalog.sqlite3').is_file():
+                raise DiskAdmissionError('A store-private ledger must be <store>/metadata/disk-ledger.sqlite3 of exactly one store root')
         self._ledger_path = ledger
         if not recovery_only:ledger.parent.mkdir(parents=True, exist_ok=True)
         if ledger.parent.stat().st_dev not in devices:
@@ -409,6 +420,15 @@ class DiskBudget:
         self.max_page_count=self._ledger_main_cap//page_size
         if self.max_page_count<1 or con.execute('PRAGMA page_count').fetchone()[0]>self.max_page_count:
             raise DiskAdmissionError('Recovery ledger exceeds its page envelope')
+        if self.store_private:
+            # No policy row is persisted for the store's own ledger: it must stay unbound, and its only
+            # registered root must be the store that owns it.
+            if con.execute('SELECT count(*) FROM shared_policy').fetchone()[0]!=0:
+                raise DiskAdmissionError('Recovery found a bound shared policy in a store-private ledger')
+            registered=[Path(p) for (p,) in con.execute('SELECT path FROM roots LIMIT 2')]
+            if registered!=[self.roots[0]]:
+                raise DiskAdmissionError('A store-private ledger must register exactly its own store')
+            return
         expected=(self.quota_bytes,self.min_free_bytes,self.drain_reserve_bytes,self.bootstrap_bytes,
                   self.max_page_count,self.max_records,self.roots[0].stat().st_dev,0)
         policy=con.execute('''SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,bootstrap_bytes,
@@ -755,7 +775,7 @@ class DiskBudget:
         with self._path_lock:
             rows = self.db.execute("SELECT state,count(*),COALESCE(sum(bytes),0),COALESCE(sum(materialized),0) FROM reservations GROUP BY state").fetchall()
             return {'reserved_bytes':self.reserved_bytes,'states':{r[0]:{'count':r[1],'bytes':r[2],'materialized_bytes':r[3]} for r in rows},'max_records':self.max_records,
-                    'shared_policy':self.shared_policy,'recovery_only':self.recovery_only,
+                    'shared_policy':self.shared_policy,'store_private':self.store_private,'recovery_only':self.recovery_only,
                     'registered_root_count':self.db.execute('SELECT count(*) FROM roots').fetchone()[0],
                     'lease_reserved_bytes':self.lease_reserved_bytes,'metadata_pool_bytes':self.bootstrap_bytes,'metadata_main_cap_bytes':self._ledger_main_cap,
                     'metadata_side_cap_bytes':self._ledger_side_cap,'ledger_vfs_enforced':self.ledger_vfs_enforced,

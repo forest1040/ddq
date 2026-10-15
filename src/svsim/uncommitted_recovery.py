@@ -47,10 +47,36 @@ def _digest(document):
     return sha256(canonical(document).encode()).hexdigest()
 
 
+_PRIVATE_DEFAULTS = {'quota_bytes': None, 'min_free_bytes': 0, 'drain_reserve_bytes': 0,
+                     'bootstrap_bytes': 8 * 1024 ** 2, 'max_records': 4096}
+
+
+def _private_layout(ledger, roots):
+    """Store-private ledger: ``<store>/metadata/disk-ledger.sqlite3`` with no bound policy and one root, the store.
+
+    No policy is persisted for it (FileBlockStore always opens it with defaults), so recovery accepts only the
+    exact layout and the default envelope; anything else is an unbound legacy ledger and is refused.
+    """
+    store = ledger.parent.parent
+    if (ledger.name != 'disk-ledger.sqlite3' or ledger.parent.name != 'metadata' or ledger.parent.is_symlink()
+            or not (store / 'metadata' / 'catalog.sqlite3').is_file()):
+        raise DiskAdmissionError('Recovery requires a bound shared-policy ledger or a store-private ledger')
+    if [Path(p) for p in roots] != [store]:
+        raise DiskAdmissionError('A store-private ledger must register exactly its own store')
+    return dict(_PRIVATE_DEFAULTS, private=True), roots
+
+
 def _persisted(ledger):
     info = ledger.lstat()
     if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
         raise DiskAdmissionError('Recovery requires an existing exclusively named ledger')
+    for suffix in ('-journal', '-wal', '-shm'):  # refuse before any SQLite open can touch a side file
+        try:
+            side = Path(str(ledger) + suffix).lstat()
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISREG(side.st_mode) or side.st_nlink != 1 or side.st_size:
+            raise DiskAdmissionError('Recovery ledger side file requires separate recovery')
     con = sqlite3.connect(ledger.as_uri() + '?mode=ro', uri=True)
     try:
         con.execute('PRAGMA query_only=ON')
@@ -62,7 +88,7 @@ def _persisted(ledger):
     finally:
         con.close()
     if policy is None:
-        raise DiskAdmissionError('Recovery requires a bound shared-policy ledger')
+        return _private_layout(ledger, roots)
     if not roots or len(roots) > 256:
         raise DiskAdmissionError('Recovery needs 1..256 registered roots')
     return dict(zip(('quota_bytes', 'min_free_bytes', 'drain_reserve_bytes', 'bootstrap_bytes', 'max_records'), policy)), roots
@@ -104,6 +130,7 @@ def offline_scope(ledger, *, policy=None, writer=False):
         except DatasetBusyError as exc:
             raise UncommittedRecoveryRefused('A live process holds the disk ledger; owner death is not proven') from exc
         persisted, roots = _persisted(ledger)
+        private = persisted.pop('private', False)
         if policy is not None and {k: policy.get(k, persisted[k]) for k in persisted} != persisted:
             raise DiskAdmissionError('Recovery policy conflicts with the persisted shared policy')
         roots = [Path(p) for p in roots]
@@ -121,12 +148,17 @@ def offline_scope(ledger, *, policy=None, writer=False):
                 leases.append(DirectoryLease(directory, exclusive=True))
             except DatasetBusyError as exc:
                 raise UncommittedRecoveryRefused(f'A live runtime holds dataset lease {directory}; owner death is not proven') from exc
-        if writer:
+        if private:
+            if writer:
+                budget = DiskBudget(ledger, roots, ledger_lease=ledger_lease)
+            else:
+                budget = DiskBudget(ledger, roots, recovery_only=True, store_private=True)
+        elif writer:
             budget = DiskBudget(ledger, roots, shared_policy=True, ledger_lease=ledger_lease, **persisted)
         else:
             budget = DiskBudget(ledger, roots, shared_policy=True, recovery_only=True, **persisted)
         yield {'ledger': ledger, 'ledger_lease': ledger_lease, 'leases': leases, 'budget': budget, 'roots': roots,
-               'stores': sorted(set(stores), key=str), 'policy': persisted}
+               'stores': sorted(set(stores), key=str), 'policy': persisted, 'private_ledger': private}
     finally:
         if budget is not None:
             budget.close()
@@ -389,6 +421,7 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
         report = {'kind': 'uncommitted-reservation-recovery', 'apply': apply, 'plan_sha256': plan_sha,
                   'owner_death_proof': {'ledger_lease': 'exclusive-flock-on-ledger-directory', 'dataset_leases': sorted(l.path for l in scope['leases']) + [scope['ledger_lease'].path],
                                         'pid_or_timestamp_used': False},
+                  'ledger_layout': 'store-private' if scope['private_ledger'] else 'shared-policy',
                   'stores': stores, 'tokens': [e for e, _, _ in tokens], 'linked_live_tokens_deferred': len(linked),
                   'pending_bytes_before': budget.reserved_bytes, 'observed_usage_bytes': usage_before,
                   'would_release_pending_bytes': sum(e['release_pending_bytes'] for e, _, _ in tokens if not refused),

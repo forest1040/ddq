@@ -22,6 +22,13 @@
 
 [複数rank checkpoint kill](phase4_disk_fault_matrix_implementation.md)で、prepare／global decisionの途中で落ちたrankのintent付きtokenが、checkpoint recoveryにも本操作にも回収されないことが分かった。`recover_uncommitted_reservations`は、global decisionが存在しないsnapshotのprepare／decision stageのintent付きtokenを`checkpoint-uncommitted`として扱う。dataset rootが排他lock済み、device／inode一致、target・temporaryがgeneration付き固定名、directoryの別名化なし、排他的な通常fileであることを検査し、`reconcile_checkpoint`のexact CASとreceiptで精算する。decision-copyはcommit後にだけ存在するため、global decisionのない同tokenは不整合として拒否する。global decisionが存在するsnapshotのtokenは`linked_live_tokens_deferred`として従来どおりcheckpoint recoveryへ任せる。`DiskBudget.checkpoint_link`を追加した。global decisionの探索は、登録root、検出store、intentのdataset root配下に限る。別host・別rank rootに置かれたdecisionは見ないため、単一host構成に限る。
 
+## store-private ledgerの回収（追加）
+
+[設計](phase4_uncommitted_recovery_design.md#store-private-ledgerの回収)のとおり、`<store>/metadata/disk-ledger.sqlite3`のprivate ledgerを同じdry run／plan digest／CAS＋receiptで回収できるようにした。`DiskBudget(..., recovery_only=True, store_private=True)`を追加し、`recover_uncommitted_reservations`、`collect_temporary_artifacts`、`collect_dead_branches`が束縛policyのないledgerを上記レイアウトの場合だけ受け付ける。返却値に`ledger_layout`（`store-private`／`shared-policy`）を追加した。`_persisted`はSQLiteを開く前にledgerのside fileを検査する。
+
+`tests/test_private_ledger_recovery.py`（16件）：`DiskBudget`なしの`StoredSimulator`を実processでkill（extentのwrite直後、trace／journalのtoken、catalog batch中の`os._exit`）した後、dry runがledgerを含めbyte単位で変更しないこと、apply後にartifactが同一で観測使用量が一致すること、receiptがtoken数と一致し`shared_policy`行が作られないこと、二重適用と古い計画の拒否、最後のsnapshotからのresumeがnumpy oracleと一致すること。hot catalog journalは拒否され、admitted reopen後に回収できる。ledger／dataset leaseを保持する生きた子processとlease単独での拒否、SIGKILL後の成功。ledgerの改変（余分なroot、schema変更、trigger削除、`user_version`、非空`-journal`／`-wal`、未知operation、store外へ移動）は全て拒否され、ledger・artifact・tokenが不変であること。recovery-only budgetが通常のreserve／register_rootsを拒否し、非既定policyと複数rootを拒否すること。temporary GCとdead branch GCがprivate layoutで動くこと。`SVSIM_TEST_BACKEND=direct`でも同じ試験を実行できる。
+
 ## 残り
 
-私的ledger（store内`disk-ledger.sqlite3`）の回収、複数rank／MPIでの本操作の一括化（現在は単一processのoffline操作と、collectiveなcheckpoint recoveryを順に実行する）、catalog tokenの精密な帰属（owner hashは計画に使うが、書込みfileごとの帰属は持たない）、cross-host調停、電源断である（O_DIRECTのLinux試験と実ENOSPCは[追加試験](phase4_disk_fault_matrix_implementation.md)で実施した）。
+残りは、別ledger／外部job／複数hostの調停と一括回収、extent公開とsegment fsyncの電源断時の順序（kill試験では検証できない）、SQLite fsync内部への決定的なstage注入、catalog tokenのfile単位の帰属、private ledgerのpolicy非永続による検査の弱さである。
+

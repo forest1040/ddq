@@ -44,6 +44,41 @@ trace／journalは1 byteのopen probeを先に許可するため、拒否時に�
 
 ## 残り（初回時点。ENOSPC、O_DIRECT、prepare／decisionの複数rank killは下の追加セクションで実施済み）
 
+## extent segmentのstage kill（tests/test_segment_stage_kills.py、追加）
+
+同期経路（`FileBlockStore.write_version`）と非同期経路（`AsyncStoreIO.submit_write`の完了callback、cooperative engine）について、旧extentをflush済みにしてから新extentの書込みを開始し、次の6 stageで実子processを`os._exit`した。hookは`StorageFile.write_from`／`flush`と`CatalogConnection.commit`の前後に置く。catalog commit stageは、segmentへの書込みが済んだ後の最初のcommit（extentを公開する更新）だけを対象にする。
+
+| stage | 新extentの公開 | 新slotのbyte | tokenのmaterialize |
+|---|---|---|---|
+| segment write前 | なし | なし（claim済みのhole） | なし |
+| segment write後（materialize前） | なし | あり | なし |
+| catalog commit前（UPDATE済み、未commit） | なし | あり | あり |
+| catalog commit後（token解放前） | あり | あり | あり |
+| segment fsync前／後 | あり | あり | あり（tokenは解放済み） |
+
+各killの後に、(1) 生きたtokenを確認（fsync stageは公開commit直後に解放済みのためextent tokenなし）、(2) offline reconcile（dry run→`plan_sha256`付きapply）で全tokenを1回だけ精算し再適用を拒否、(3) 観測使用量がapply前後で一致し、書込み済みslotのbyteが課金に残り、segmentが切り詰められないこと、(4) reopen後にcatalogの`integrity_check`が通り、旧extentがchecksum検証付きで読め、新extentは公開済みのstageでのみ読めて未公開では`OSError`となること、(5) claim済みslotを再利用せず次のextentが成功することを確認する。release予定のpending bytesは、materialize前はslot全体、materialize後は0であった。同期／非同期でstage別の期待は同一である。
+
+数値の確認として、`StoredSimulator`でsnapshotをcommitした後のgateでcache flushを行い、write前／write後／catalog commit前／catalog commit後にkillし、回収後に最後のsnapshotからresumeした状態が事前に保存したnumpy oracleと一致すること（atol 1e-13）、回収後に新しいsnapshotをcommitできることを確認した。
+
+`SVSIM_TEST_BACKEND=direct`で同じ試験を`direct` backendで実行する（Linuxでは`O_DIRECT`、alignmentは4096、Macでは`F_NOCACHE`）。
+
+### 観察
+
+- 同期・非同期ともextentはsegment fsyncより前にcatalogへ公開される。実processのkillではpage cacheが残るため新extentは読める。電源断で公開行だけが残りsegment bytesが失われる順序は、この試験では検証できない。snapshot commitは`store.flush()`でsegmentをfsyncしてからmanifestをcommitするため、snapshotから到達できるextentは保護される。公開済みだがsnapshot未commitのextentはresume対象外である。
+- 試験が明らかにしたバグはなかった。作業中に、試験側のalignment指定誤り（direct時は4096が必要）と、tokenの寿命の想定誤り（fsync stageでは解放済み）を直した。
+
+## 残り（更新）
+
+残りは、別ledger／外部job／複数hostの調停と一括回収、extent公開とsegment fsyncの電源断時の順序（kill試験では検証できない）、SQLite fsync内部への決定的なstage注入、catalog tokenのfile単位の帰属、private ledgerのpolicy非永続による検査の弱さである。
+
+## 追加分の検証
+
+- Mac：`uv run pytest -m "not slow"`で798 passed、53 skipped、47 deselected。
+- Linux（ent Docker、`ddq-linux:dev-20261014`）：本資料と回収資料の対象（segment stage、private ledger、uncommitted recovery／GC、kill matrix、quota sweep、checkpoint recovery、recovery pool、reservation ledger、catalog batch／admission）187 passedを`SVSIM_TEST_BACKEND=direct`で、同じ集合をbuffered、新規2ファイル（32件）もbufferedで再実行して成功した。
+
+## 以前の残り（記録）
+
+
 unlinked／uncommitted reservationの回収、temporary branch GC、別ledger／外部jobとのhost調停、extent writeのkernel／電源断fault、segment fsync前後のkill、prepare／decision／decision-copyのkill（実process、複数rank）、Linux O_DIRECT下の全matrix、ENOSPC実測は未完了である。SQLite内部のfsync中killはSIGKILL掃引で確率的に確認するだけで、決定的なstage注入ではない。
 
 ## 実ENOSPC、O_DIRECT、複数rank checkpoint kill（2026-10-15追加）

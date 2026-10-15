@@ -20,6 +20,8 @@
 
 [追加のfault試験](../phase4_disk_fault_matrix_implementation.md)で、(1) size制限tmpfs上の実ENOSPC（空き枯渇時の書込み前拒否と、admission後に外部processが空きを消費した場合の安全な失敗、catalog／trace／journal／extent／sidecarの5 writer、offline reconcileでの回復）、(2) O_DIRECT backendでのquota掃引・kill matrix・未commit回収・GC・ENOSPC（ent ext4）、(3) 2 rankの実processをprepare／global decision／decision-copyの各位置で落とした後のcollective回収・resume・数値一致を確認した。この試験で、未commit snapshotのintent付きtokenが既存のどの回収でも精算できない問題を見つけ、`recover_uncommitted_reservations`に`checkpoint-uncommitted`として追加した。store内private ledgerの回収、複数host・別ledger・外部jobの調停、segment fsync前後のkill、extentのkernel／電源断fault、cross-hostは残り、P4-009はIN_PROGRESSのままである。`strict_capacity_guarantee`は立てない。
 
+2026-10-15、[extent segmentのstage kill](../phase4_disk_fault_matrix_implementation.md)（同期／非同期の両経路で、segment write前後、catalog commit前後、segment fsync前後。回収後のdurable cutの完全性、書込み済みbyteの課金維持、token単一精算、snapshotからのresumeのoracle一致。`SVSIM_TEST_BACKEND=direct`対応）と、[store-private ledgerの回収](../phase4_uncommitted_recovery_design.md#store-private-ledgerの回収)（`store_private`のrecovery-only open、同じ排他lease証明・dry run・plan digest・CAS＋receipt・未知状態の拒否）を追加した。Mac全回帰とLinux（ent、buffered／O_DIRECT）で成功し、実装バグは見つからなかった。残りは、別ledger／外部job／複数hostの調停と一括回収、電源断（公開行とsegment fsyncの順序を含む）、SQLite fsync内部への決定的なstage注入、catalog tokenのfile単位の帰属、private ledgerのpolicy検査の弱さである（実ENOSPC、2 rankのprepare／decision kill、未commit snapshotのintent付きtokenは上の追加試験で対応済み）。P4-009はIN_PROGRESSのままである。`strict_capacity_guarantee`は立てない。
+
 ## 設計時点（6aa8581）の現状とwriter棚卸し
 
 上記recovery-only metadata poolはlogical quota/pending/drain超過を越えて既存pool内のcheckpoint CASを許す。物理headroom、min_free、native journal/page capは引き続き強制する。実hardware ENOSPCや電源断時durability、全writer回収は009Cの残件である。

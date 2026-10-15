@@ -39,4 +39,19 @@ tokenはintentを持たないものだけを対象にする（intent付きは件
 
 ## 範囲外
 
-共有policyで束縛されたledgerのみ対象である（recovery-only openの既存条件）。storeごとのprivate ledgerは未対応。cross-host、NFS、別ledger／外部job、電源断、payload checksumの全検証は対象外である。
+共有policyで束縛されたledgerと、次節のstore-private ledgerを対象にする。cross-host、NFS、別ledger／外部job、電源断、payload checksumの全検証は対象外である。
+
+## store-private ledgerの回収
+
+`DiskBudget`を渡さないstore（`FileBlockStore`が自前で開く）は、`<store>/metadata/disk-ledger.sqlite3`をprivate ledgerとして使う。`shared_policy`表は作られるが行は束縛されず、policyは永続化されない（`FileBlockStore`は常に既定値で開く）。このため従来のrecovery-only openはpolicy照合ができず拒否していた。
+
+安全にできる根拠は次のとおりである。
+
+- ledgerの親directory（`<store>/metadata`）とstore directoryはどちらも既存のleaseで保護される。生きているwriterの`DiskBudget`が`metadata`の共有flockを、`FileBlockStore`がstoreの共有flockを保持する。同じ排他flock証明（PID・時刻は不使用）がそのまま成立する。
+- レイアウトを厳密に判定する。ledger名が`disk-ledger.sqlite3`、親が`metadata`、親の親に`metadata/catalog.sqlite3`があり、`shared_policy`表が空で、登録rootが祖先を含まずちょうどそのstore 1件であること。束縛済みpolicyを持つledgerは従来どおり共有policy経路で検査する（置き場所には依存しない）。判定に合わない未束縛のlegacy ledgerは拒否する。
+- recovery-only openは`store_private=True`の別modeとして追加した。`recovery_only`必須、`shared_policy`と併用不可、quota／min_free／drain／bootstrap／page／record上限の非既定値を拒否する。既存のschema全文・trigger・DELETE journal・page envelope・native VFS検査、side file（`-journal`／`-wal`／`-shm`）が非空なら拒否する検査、existing-only open、migration／作成／root登録なしの性質は共有policy modeと同一である。追加で、policy行が存在しないことと、rootがstoreの1件であることを毎transactionで再検査する。
+- 永続policyがないため、論理quotaを回収から除外する意味はない（常に未設定）。min_freeは0として扱う。物理headroom、未割当pool、page／journal capの検査は維持する。非既定policyで作られたprivate ledgerがあっても、policyは確認できず、page envelopeを超える場合に拒否されるだけである。これは共有policy modeより弱い照合であり、制約として明記する。
+- dry run→`plan_sha256`付きapply、ledger内CAS＋receipt（同一transaction）、全か無かの拒否規則、artifactを削除しない原則は変更しない。ledger file自体は観測使用量の走査から除外される（既存の扱い）ため、applyによるledgerの成長は使用量の一致判定に影響しない。
+- temporary GCとdead branch GCも同じscopeを使う。dead branchは、leaseを引き継ぐadmitting budget（quota未設定の既定値）でcatalogを編集する。
+
+SQLiteが非空のsideファイルを読む前に拒否するため、`_persisted`のread-only openより前にside fileを検査する（共有policy modeにも適用）。`wal`が残る場合にread-only openが`-shm`を作る副作用を避けるためである。
