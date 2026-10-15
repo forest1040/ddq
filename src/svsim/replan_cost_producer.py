@@ -11,9 +11,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from .journal import canonical
 from .replan_cost import ReplanCosts
 from .replan_candidates import proposal_context
-from .remaining_work import executor_groups
+from .remaining_work import cost_context, executor_condition, executor_groups, strip_ids
 
 MIGRATION_FREE_SWAP = {'S0', 'S2'}  # S2 reorders and fuses within a window; S1 moves layout bits
 
@@ -28,11 +29,16 @@ def remaining_calls(sim, policy, start, end):
     return calls
 
 
-def costs_for(sim, row, estimate, *, end, planning_seconds, drain_seconds, checkpoint_seconds, qualified=False):
+def costs_for(sim, row, estimate, *, end, planning_seconds, drain_seconds, checkpoint_seconds, qualified=False,
+              resolve=None):
     """ReplanCosts for one proposal row; ``estimate`` and ``qualified`` come from the cost registry."""
     start = sim.frontier + 1
     gates = max(0, end - start + 1)
     updates = dict(tuple(item) for item in row['updates'])
+    if 'layout_swap' in updates:
+        return layout_costs_for(sim, tuple(updates['layout_swap']), estimate, end=end, planning_seconds=planning_seconds,
+                                drain_seconds=drain_seconds, checkpoint_seconds=checkpoint_seconds,
+                                qualified=qualified, resolve=resolve)
     candidate = replace(sim.policy, **updates)
     current_calls = remaining_calls(sim, sim.policy, start, end)
     candidate_calls = remaining_calls(sim, candidate, start, end)
@@ -49,3 +55,62 @@ def costs_for(sim, row, estimate, *, end, planning_seconds, drain_seconds, check
                         checkpoint_seconds=checkpoint_seconds if frontier_change else 0.0, cleanup_seconds=0.0,
                         context_hash=context, qualified=qualified)
     return costs, {'current_calls': current_calls, 'candidate_calls': candidate_calls, 'remaining_gates': gates}
+
+
+def layout_costs_for(sim, bits, estimate, *, end, planning_seconds, drain_seconds, checkpoint_seconds,
+                     qualified=False, resolve=None):
+    """ReplanCosts of migrating the physical layout by one (rank bit, local bit) swap at the current cut.
+
+    Continue: the same lower bound as policy candidates (per-gate service and
+    per-call excess from the degradation evidence). Candidate: every remaining
+    executor class under the swapped layout (exact epoch shape) at the upper of
+    the pre-calibrated ``executor-class-seconds`` profile, plus the evidence's
+    per-call excess on the calls it applies to (only rank-crossing calls when the
+    evidence is attributed to MPI), plus the profiled swap itself. Epoch
+    publications and boundaries occur equally often on both sides and are
+    omitted. Any class or swap the profile lacks leaves the candidate unknown.
+    """
+    from .executor_profile import swap_condition
+    from .replan_candidates import MAX_LAYOUT_SCAN
+    start = sim.frontier + 1
+    gates = max(0, end - start + 1)
+    context = proposal_context(sim)
+    current_calls = remaining_calls(sim, sim.policy, start, end)
+    counts = {'current_calls': current_calls, 'remaining_gates': gates, 'layout_swap': list(bits)}
+    unknown = ReplanCosts(context_hash=context)
+    if estimate is None or resolve is None or gates > MAX_LAYOUT_SCAN:
+        return unknown, {**counts, 'layout_reason': 'NO_EVIDENCE_OR_SCAN_LIMIT'}
+    layout = sim.layout.swapped_physical(*bits)
+    first_rank = sim.num_qubits - sim.ownership.rank_bits
+    ccontext = cost_context(sim)
+    classes, calls, crossing = {}, 0, 0
+    operations, cursor = sim.sequencer.operations, start
+    while cursor <= end:
+        stop = min(end, cursor + sim.policy.lookahead_gates - 1)
+        for group in executor_groups(operations[cursor:stop + 1], layout, sim.block_bits, sim.policy):
+            condition = strip_ids(executor_condition(sim, group, layout))
+            remote = any(layout.logical_to_physical[q] >= first_rank for g in group for q in g.qubits)
+            key = canonical(condition)
+            entry = classes.setdefault(key, [condition, 0, remote])
+            entry[1] += 1; calls += 1; crossing += remote
+        cursor = stop + 1
+    counts.update(candidate_calls=calls, crossing_candidate_calls=crossing, candidate_classes=len(classes))
+    execution, worst = 0.0, 0.0
+    for condition, count, _ in classes.values():
+        sample = resolve('executor-class-seconds', ccontext, condition)
+        if sample is None:
+            return unknown, {**counts, 'layout_reason': 'UNPROFILED_CANDIDATE_CLASS'}
+        execution += count * sample.upper_seconds; worst = max(worst, sample.upper_seconds)
+    swap = resolve('executor-class-seconds', ccontext, swap_condition(sim, *bits))
+    if swap is None:
+        return unknown, {**counts, 'layout_reason': 'UNPROFILED_MIGRATION'}
+    charged = crossing if estimate.get('resource') == 'mpi' else calls
+    execution += charged * estimate['extra_upper_per_call']
+    continue_lower = gates * estimate['service_lower_per_gate'] + current_calls * estimate['extra_lower_per_call']
+    counts.update(charged_excess_calls=charged, verify_service_upper_per_call=worst,
+                  verify_extra_upper_per_call=estimate['extra_upper_per_call'] if charged else 0.0)
+    return ReplanCosts(continue_lower_seconds=continue_lower, execution_upper_seconds=execution,
+                       planning_seconds=planning_seconds, drain_seconds=drain_seconds,
+                       migration_seconds=swap.upper_seconds, calibration_seconds=0.0, validation_seconds=0.0,
+                       checkpoint_seconds=checkpoint_seconds, cleanup_seconds=0.0,
+                       context_hash=context, qualified=qualified), counts

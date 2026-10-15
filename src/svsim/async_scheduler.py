@@ -549,7 +549,13 @@ class AsyncDistributedSimulator(DistributedSimulator):
         return snapshot
 
     def physical_index_bit_swap(self,a,b,*,_pending=False):
+        from .executor_profile import swap_condition
+        if not _pending:self.materialize(binding=self.binding)  # outside the measured swap
+        begin,cpu=perf_counter(),process_time()
         result=super().physical_index_bit_swap(a,b,_pending=_pending)
+        # Measured migration cost; a pre-calibrated profile prices layout candidates from it.
+        if a!=b:self._record_stage('physical-bit-swap',_stage_condition(swap_condition(self,a,b)),
+                                   seconds=perf_counter()-begin,cpu_seconds=process_time()-cpu)
         if not _pending:self.runtime.invalidate_eta('PHYSICAL_LAYOUT_CHANGED')
         return result
 

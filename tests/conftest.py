@@ -15,6 +15,7 @@ SLOW_PATTERNS = (
     r'test_followup_mpi\.py::',                                  # full campaign subprocesses
     r'test_phase1_benchmark\.py::test_phase1_comparison_report',
     r'test_adaptive_replan\.py::test_mpi_slowdown',
+    r'test_layout_migration\.py::test_mpi_slowdown',                # calibration + campaign subprocesses
     r'test_adaptive_replan\.py::test_negative_cases_do_not_switch\[(observe|recommend|missing-baseline)\]',
     r'test_stored_numerics\.py::test_stored_streaming_mixed_local_joint_and_controlled_dense_matches_oracle\[(10|12)\]',
     r'test_stored_numerics\.py::test_structured_exact_stored_execution_matches_native\[4\]',

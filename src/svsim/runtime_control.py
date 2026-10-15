@@ -493,6 +493,23 @@ class RuntimeControl:
         self.invalidate_eta('PROFILE_ATTACHED')
         return self.profile_adapter
 
+    def attach_executor_profile(self, document):
+        """Attach a pre-calibrated executor-class profile (held-out certified, this host/build only).
+
+        It prices executor classes and physical bit swaps that this run has not
+        executed yet, e.g. the classes after a layout migration candidate.
+        """
+        from .executor_profile import ExecutorProfile, runtime_fingerprint
+        sim=self.sim
+        profile=ExecutorProfile(document)
+        error=None if profile.fingerprint==runtime_fingerprint(sim) else \
+            'Executor profile configuration differs from the current runtime allocation/build'
+        sim.transport.vote(error)
+        self.executor_profile=profile
+        self.costs.register('executor-class-seconds','executor-profile:'+profile.profile_id,'measured',
+            lambda context,condition,p=profile:p.cost_sample(context,condition),units='seconds/call')
+        return profile
+
     def attach_time_model(self, model, *, sync_seconds=None, configuration_fingerprint=None):
         """Attach a fitted Phase 5 time model as a separate gates-only ETA view.
 
@@ -688,8 +705,37 @@ class RuntimeControl:
         elif sim.policy.mode == 'observe':
             error = 'observe mode cannot apply candidates'
         sim.transport.vote(error)
-        return self.apply_policy(dict(candidate.updates), classification=candidate.classification,
+        updates = dict(candidate.updates)
+        if 'layout_swap' in updates:
+            return self.apply_layout_migration(tuple(updates['layout_swap']), candidate_id=candidate_id)
+        return self.apply_policy(updates, classification=candidate.classification,
                                  candidate_id=candidate_id)
+
+    def apply_layout_migration(self, bits, *, candidate_id=None):
+        """Swap one rank bit with a local bit at the published cut, then commit the new layout durably."""
+        sim = self.sim
+        sim.transport.agree({'layout_migration': list(bits), 'candidate': candidate_id, 'cut': sim.root})
+        error = 'Layout migration requires a published prefix cut' if getattr(sim, '_private_epoch', False) else None
+        sim.transport.vote(error)
+        sim.drain()
+        # At the published cut (called from an epoch boundary inside materialize): never materialize
+        # the remainder first. Collective; it restores the old root/layout itself on failure.
+        sim.physical_index_bit_swap(*bits, _pending=True)
+        # The executor classes changed with the layout; a failed snapshot below leaves the
+        # migrated in-memory cut valid and the previous durable snapshot authoritative.
+        self.plan_version += 1
+        self.invalidate_eta('LAYOUT_MIGRATED')
+        sim.commit_snapshot()
+        self.last_change = monotonic()
+        transition = {'policy_epoch': self.policy_epoch, 'plan_version': self.plan_version,
+                      'classification': 'FRONTIER_REPLAN', 'updates': {'layout_swap': list(bits)},
+                      'layout': list(sim.layout.logical_to_physical), 'cut': sim.root}
+        self.transitions.append(transition)
+        if len(self.transitions) > 64:
+            del self.transitions[0]
+        sim.trace.record('layout-migration', performance_class='control', plan_version=self.plan_version,
+                         metadata={'path': 'FRONTIER_REPLAN', **transition})
+        return transition
 
     def apply_policy(self, updates, *, classification='LIVE_TUNE', candidate_id=None):
         sim = self.sim
@@ -893,7 +939,9 @@ class RuntimeControl:
             proposal = ReplanProposal(**{**row, 'updates': tuple(tuple(item) for item in row['updates'])})
             costs, counts = costs_for(sim, row, evidence.value, end=end, planning_seconds=planning,
                                       drain_seconds=drain, checkpoint_seconds=checkpoint,
-                                      qualified=evidence.known)
+                                      qualified=evidence.known,
+                                      resolve=lambda kind, context, condition: self.costs.resolve(
+                                          kind, context, condition, purpose=purpose).value)
             result = evaluate(proposal, costs, minimum_gain_fraction=sim.policy.minimum_gain_fraction)
             local.append({'proposal_id': row['proposal_id'], 'updates': row['updates'],
                           'classification': row['classification'], 'gain_lower_seconds': result.gain_lower_seconds,
@@ -938,9 +986,13 @@ class RuntimeControl:
         self.apply_candidate(candidate.candidate_id)
         self.switch_count += 1
         estimate = decision['estimate']
+        layout = 'layout_swap' in dict(updates)
+        # A migrated layout runs profiled classes: verify against their upper, not the old per-gate service.
         self.verifying = {'proposal_id': row['proposal_id'], 'predicted_gain_lower_seconds': row['gain_lower_seconds'],
-                          'service_upper_per_gate': estimate['service_upper_per_gate'],
-                          'extra_upper_per_call': estimate['extra_upper_per_call'],
+                          'service_upper_per_gate': row['verify_service_upper_per_call'] if layout else
+                                                    estimate['service_upper_per_gate'],
+                          'extra_upper_per_call': row['verify_extra_upper_per_call'] if layout else
+                                                  estimate['extra_upper_per_call'],
                           'policy_epoch': self.policy_epoch, 'plan_version': self.plan_version}
         self.health = 'VERIFYING'
         self.replan_decisions.append({'kind': 'apply', **self.verifying})

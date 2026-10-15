@@ -68,8 +68,9 @@ def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='
     start,end=starts[scenario]
     # Per-call compute delay; fusing calls (S2) is the only legal way to pay fewer of them.
     operations={'compute':('executor-group',),'storage':('storage-write',),'mpi':('mpi-transfer',)}[resource]
-    # Work units are the injected operation: a call writes each local Block once.
-    scale=1 if resource!='storage' else max(1,4//size)
+    # Work units are the injected operation: a call writes (storage) or exchanges (mpi, rank-bit gate)
+    # each local Block once, so the window and per-call delay are scaled to calls.
+    scale=1 if resource=='compute' else max(1,4//size)
     spec=InjectionSpec(1,resource,'work',start*scale,end*scale,args.injection_delay/scale,operations,60.0,256,
                        barrier='semantic-prefix') if adaptive else None
     shared_recipe={'recipe':recipe,'injection':asdict(spec) if spec else None}
@@ -109,6 +110,10 @@ def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='
                         sim.config.metadata_reserve_bytes//16)),enabled=MONITOR_LEVELS[variant.axes['monitor']][0])
                     sim.runtime.configure_monitoring(epoch_summary=MONITOR_LEVELS[variant.axes['monitor']][1],
                                                      eta=MONITOR_LEVELS[variant.axes['monitor']][2])
+                if adaptive and getattr(args,'executor_profile',None):
+                    # Pre-calibrated held-out classes price layout migration candidates (P4-004).
+                    sim.runtime.attach_executor_profile(json.loads(
+                        (Path(args.executor_profile)/f'executor-profile-rank{rank}.json').read_text()))
                 for kind,target,angle in recipe:sim.gate(kind,target,**({'angle':angle} if angle is not None else {}))
                 binding=sim.bind()
                 source=content_hash([gate_data(g) for g in sim.sequencer.operations])
@@ -273,6 +278,8 @@ def main():
     parser.add_argument('--repetitions',type=int,default=7);parser.add_argument('--warmup',type=int,default=2)
     parser.add_argument('--backend',choices=('buffered','direct'),default='buffered')
     parser.add_argument('--wall-seconds',type=float,default=300)
+    parser.add_argument('--executor-profile',default=None,
+                        help='directory of executor-profile-rank<r>.json (examples/p4_004_layout_migration.py)')
     parser.add_argument('--resource',choices=('compute','storage','mpi'),default='compute',
                         help='injected resource for the adaptive action')
     parser.add_argument('--injection-delay',type=float,default=.02,

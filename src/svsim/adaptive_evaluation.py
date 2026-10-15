@@ -27,6 +27,7 @@ class AdaptiveEvaluation:
         self.verification=None
         self.rebaseline=None
         self._context=None
+        self.resources=set()
 
     def observe(self,event,*,profile,circuit_hash,num_qubits,block_bits,ranks):
         service=event['actual_service_seconds'];delay=event['injected_delay_seconds']
@@ -36,6 +37,8 @@ class AdaptiveEvaluation:
             self.dropped_events+=1
             return {'health':'INSUFFICIENT_METRICS','reason':'EVALUATION_EVENT_LIMIT'}
         work_class=event.get('work_class')
+        # The injected resource lets layout candidates charge the excess only to calls that use it.
+        self.resources.add(event.get('resource'))
         if self.verify is not None:
             row=self._verify(event,service,delay)
             if row['health']=='STABLE':self._rebaseline(work_class)
@@ -98,7 +101,8 @@ class AdaptiveEvaluation:
         if len(recent)<self.window_size:return None
         extra=[max(0.0,e['actual_service_seconds']+e['injected_delay_seconds']-center) for e in recent]
         return {'scope':'injected','service_lower_per_gate':min(self.prefix),'service_upper_per_gate':max(self.prefix),
-                'extra_lower_per_call':min(extra),'extra_upper_per_call':max(extra),'excess_sample_count':len(extra)}
+                'extra_lower_per_call':min(extra),'extra_upper_per_call':max(extra),'excess_sample_count':len(extra),
+                'resource':next(iter(self.resources)) if len(self.resources)==1 else None}
 
     def begin_verify(self,*,service_upper_per_gate,extra_upper_per_call,required=None,slack=.1):
         """After a switch, check each new call against the predicted per-call upper bound."""
