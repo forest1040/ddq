@@ -1,0 +1,14 @@
+Worktree: /Users/tmori/work3/ddq-p4-linux
+Branch: codex/p4-linux-followup
+Base HEAD before follow-up artifacts: d60f4bd
+Platform: Darwin (local fallback only; not Linux validation)
+
+67a4368ba05be7a4e571d1259911d0d8fe5a435e62dfd5cd107bfdab1bc73242  src/svsim/distributed.py
+bb4e2ad2bd057122ee2cbdd98ad03585ab92da41db3a34cb8149cb620e3c62d5  tests/test_volume_coordination_runtime.py
+1d8a201d763a88629532351bd7fb57361db3ae733122201fb545a94548d71df4  tests/mpi_volume_coordinator_runtime_worker.py
+2346e790d715484b8a591acfd6540b6a0886d67698d935510d870ab80088a0c9  docker/linux/run_p4_coordinator_followup.sh
+
+Existing ent copy comparison:
+a220900da8cc42a62107f70e21742a10edca67619b373a7c4c1bc212284f5177  /tmp/ddq-linux-dev-20261014-bnuv6j/context/src/svsim/distributed.py
+tests/test_volume_coordination_runtime.py: absent
+tests/mpi_volume_coordinator_runtime_worker.py: absent
