@@ -372,6 +372,8 @@ def build_summaries(
                         "path": rel_path,
                         "status": doc.get("status"),
                         "by_suite_medians": by_suite_medians,
+                        "statistical": (doc.get("quality") or {}).get("statistical"),
+                        "envelope_decisions": (doc.get("quality") or {}).get("envelope_decisions") or {},
                     }
                 )
 
@@ -696,8 +698,8 @@ def generate_markdown(manifest: dict[str, Any]) -> str:
     if calibs:
         lines.extend(
             [
-                "| Path | Status | Suite Medians (s) |",
-                "|---|---|---|",
+                "| Path | Status | Suite Medians (s) | Quality | Envelope decisions |",
+                "|---|---|---|---|---|",
             ]
         )
         for cal in calibs:
@@ -708,7 +710,8 @@ def generate_markdown(manifest: dict[str, Any]) -> str:
             ]
             m_cell = ", ".join(m_items) if m_items else "n/a"
             lines.append(
-                f"| `{cal.get('path')}` | {cal.get('status')} | {m_cell} |"
+                f"| `{cal.get('path')}` | {cal.get('status')} | {m_cell} | {cal.get('statistical') or 'n/a'} | "
+                + (", ".join(f"{k}: {v}" for k, v in sorted(cal.get("envelope_decisions", {}).items())) or "n/a") + " |"
             )
     else:
         lines.append("*(No runtime calibrations)*")

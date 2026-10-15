@@ -111,15 +111,15 @@ class RuntimeControl:
         self.configure_eta(max_bytes=max(1024,min(8192,sim.config.metadata_reserve_bytes//32)))
 
     def configure_measurements(self, *, max_bytes, max_conditions=256, per_condition=64,
-                               enabled=True):
+                               enabled=True, raw_max_bytes=None):
         """Reserve bounded observer storage, including indices and snapshot copies."""
         from .runtime_measurement import RuntimeMeasurementCollector
         collector=RuntimeMeasurementCollector(max_bytes=max_bytes,max_conditions=max_conditions,
-            per_condition=per_condition,enabled=enabled)
+            per_condition=per_condition,enabled=enabled,raw_max_bytes=raw_max_bytes)
         if self.measurements is not None and self.measurements._events:
             raise ValueError('Measurement limits must be set before collecting events')
         capacity=min(max_conditions*per_condition,max(1,max_bytes//256))
-        pool=8*max_bytes+256*capacity
+        pool=8*max_bytes+256*capacity+collector.raw_max_bytes-max_bytes
         extra=max(0,pool-self._measurement_budget)
         self.sim.cache.ensure(extra)
         self.sim.budget.reserve(extra)

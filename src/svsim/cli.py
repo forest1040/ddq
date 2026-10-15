@@ -113,7 +113,7 @@ def svbench_main(argv=None):
 
 
 def _runtime_command(args):
-    from .runtime_calibration import RuntimeCalibrationSpec, calibrate_runtime, MAX_REPORT_BYTES
+    from .runtime_calibration import RuntimeCalibrationSpec, calibrate_runtime, MAX_REPORT_BYTES, split_observations
     spec=RuntimeCalibrationSpec(args.scratch,num_qubits=args.num_qubits,block_bits=args.block_bits,
         ranks=(args.ranks,),seed=args.seed,ram_budget_bytes=args.ram_budget,
         disk_budget_bytes=args.disk_budget,walltime_seconds=args.wall_seconds,
@@ -130,6 +130,9 @@ def _runtime_command(args):
     code=0
     if comm.Get_rank()==0:
         try:
+            sidecar=Path(args.output).with_suffix('.observations.jsonl')
+            if sidecar.exists() and not args.overwrite:raise OSError(f'{sidecar} already exists')
+            split_observations(report,sidecar)
             write_document(args.output,report,overwrite=args.overwrite,max_bytes=MAX_REPORT_BYTES)
             print(f'runtime calibration: {args.output} ({report["status"]})')
             code=0 if report['status']=='complete' else 4

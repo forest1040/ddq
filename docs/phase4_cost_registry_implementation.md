@@ -46,9 +46,11 @@
 ### rolling観測の鮮度と品質（2026-10-15追加、sonnetへ委譲して実装・検証）
 
 - **鮮度。** executor groupとstorage completionのcontextに`policy_epoch`と`plan_version`を記録する。現在の値と一致する行だけを使うので、policy切替前の観測で切替後の作業を価格付けしない。各classは新しい32件（`WINDOW`）までに限る。
-- **品質。** 窓内の値を古い半分（学習）と新しい半分（held-out）に分ける。学習の[min, max]にheld-outが入る割合（coverage）を測り、8件以上（`CERTIFY_SAMPLES`）かつcoverage 0.8以上のclassだけを認証する。
+- **品質。** 窓内の値を古い半分（学習）と新しい半分（held-out）に分ける。学習の[min, max]を相対10％（`TOLERANCE`、ETA誤差の目標と同じ）広げた範囲にheld-outが入る割合（coverage）を測り、8件以上（`CERTIFY_SAMPLES`）かつcoverage 0.8以上のclassだけを認証する。数件のmin／maxだけでは、同じ分布からの次の値の一部しか覆わない（5件なら期待値で約67％）ため、幅を持たせた。
 - **registryへの登録。** 認証済みの値だけを、measured source（`runtime-collector`／`runtime-collector-io`）として返す。認証されない値は、derivedの診断source（`*-diagnostic`）が理由とcoverageのlabel付きで返す。productionはmeasuredしか受けないので、未認証の観測でETAのobserved viewやcache evictionを決めることはない。class別の最後の判定理由は`RuntimeControl.cost_decisions`に残す（`CERTIFIED`、`INSUFFICIENT_SAMPLES`、`LOW_HELD_OUT_COVERAGE`、`STALE_POLICY_EPOCH`）。
-- **既知の制約。** 実runではwarmup中にexecutorの時間が単調に変わるため、時間順のheld-outが学習範囲から外れ、classが認証されないことが多い（試験ではcoverage 0.00を観測した）。将来を予測できるかを確かめる保守的な基準なので、そのまま採用した。実運用で使うには、burn-inの除外や十分な観測数が必要である。
+- **burn-in。** executor classごとに、新しい観測のうち最も古い3件（`BURN_IN`）を捨ててから窓を取る。捨てた行は`CERTIFY_SAMPLES`に数えない。policyが変わると鮮度条件でclassが空になるので、burn-inもやり直しになる。storage completionにはburn-inを掛けない。
+- **drift。** burn-in後に、学習とheld-outのmedianの差が学習medianの50％（`DRIFT_LIMIT`）を超えたら`DRIFTING`として認証しない。判定順は`INSUFFICIENT_SAMPLES`→`DRIFTING`→`LOW_HELD_OUT_COVERAGE`→`CERTIFIED`。
+- **実runでの確認。** 以前は、warmup中の単調な変化でcoverageが0.00になり、認証されないことが多かった。sonnetが実runを観測したところ（1件あたり約8.6〜9.7 ms）、最初の数件が遅く、その後3〜6％程度の水準変化が残る。burn-inだけではcoverageが0.13〜1.0とばらつき、原因は幅のないmin／maxだった。10％の幅を加えると、合成行を使わない実executorだけの試験（RX 40個、36行）が、Macでは再試行なしで8回連続で認証された。entのLinuxでは15回中2回、run途中で1件あたり約60 msから約245 msへ水準が変わり、`DRIFTING`と`LOW_HELD_OUT_COVERAGE`で正しく拒否された。そこで試験では、この2つの理由による拒否のときだけ（診断sourceがlabel付きで答えることを確認したうえで）最大3回までrunをやり直す。
 
 ## stage記録（2026-10-15追加）
 
@@ -88,7 +90,7 @@
 
 ## Linux O_DIRECTの実runtime校正（2026-10-15追加）
 
-ent Dockerで、`svbench runtime`（8 qubit、b=4、O_DIRECT、5回、warmup 1）をworker／cooperativeと1／2 rankで実行した（[証跡](internal/phase5_timing_validation/odirect-linux/)）。研究室クラスタ2 nodeの結果は[cross-host記録](internal/phase5_crosshost/README.md)にある。
+ent Dockerで、`svbench runtime`（8 qubit、b=4、O_DIRECT、5回、warmup 1）をworker／cooperativeと1／2 rankで実行した（[証跡](internal/phase5_timing_validation/odirect-linux/)）。この表は初回（5回）の値で、再測定（10回）の結果は次節にある。研究室クラスタ2 nodeの結果は[cross-host記録](internal/phase5_crosshost/README.md)にある。
 
 | engine | rank | kernel-storage | memory-mpi | storage-mpi |
 |---|---|---|---|---|
@@ -98,9 +100,35 @@ ent Dockerで、`svbench runtime`（8 qubit、b=4、O_DIRECT、5回、warmup 1�
 | cooperative | 2 | 1.656 s | 0.612 s | 2.000 s |
 | worker（cluster、2 node） | 2 | 1.109 s | 0.499 s | 1.299 s |
 
-- **engineの差。** O_DIRECTのstorageを含むsuiteでは、ent上でworkerがcooperativeの約2.6〜4倍遅かった。workerのthread間の受け渡しと、durable同期の待ちが重なることが疑われるが、未検証である。
-- **品質。** すべて`partial`で、品質は「finite diagnostics only」だった。held-outからenvelopeを作るには、反復数が足りない。数値検証はすべて合格した。
+- **engineの差。** 初回は、O_DIRECTのstorageを含むsuiteでworkerがcooperativeの約2.6〜4倍遅かった。しかし10回の再測定では再現しなかった（次節）。engineの差とは結論できない。
+- **品質。** 初回はすべて`partial`で、品質は「finite diagnostics only」だった。原因は次節で解消した。数値検証はすべて合格した。
 - **未実施。** 1 rankではMPI系のsuiteは対象外である。
+
+### partialの解消とheld-out envelope（2026-10-15追加）
+
+**partialの原因。** 反復数ではなく、監視の損失判定だった。
+- stage記録を足した結果、RAM summary ring（128 KiB）が溢れた（`dropped_bytes`）。これを損失と数えていた。summary ringはETAなどの要約用で、溢れてもcompletionの証跡は失われない。
+- 本当に失われるのは、epoch境界でdiskへ書く前のraw行である。校正の1回のmaterializeにはepoch境界がほとんど無いため、raw待ち行列（同じ128 KiB上限）も溢れていた。1 rankで1 trialあたり188行を失っていた。
+
+**修正。**
+- 損失判定をraw行の喪失（`dropped_raw`）だけにした。ring溢れは`dropped_bytes`として報告を続ける。
+- collectorにraw待ち行列専用の上限（`raw_max_bytes`）を設けた。校正では、summaryは128 KiBのまま、rawを1 MiB（rank RAM予算の1/16以下）にした。RAM予算の予約にもraw分を加えた。
+- trialごとのobservationsを本文から外し、`<output>.observations.jsonl`へ移した。本文には件数、行範囲、sha256を残す。repetitions 10・2 rankでは本文が文書のノード上限（20万）を超えたためである。
+
+**envelope。** suiteごとに、validatedでwarmupでない`execute_seconds_max`が10件以上あれば、古い半分で[min, max]を作り、相対10％広げる。新しい半分（5件以上）が入る割合が0.8以上なら、`candidate_envelope`（conditional-prediction、held-out検証、件数・coverage・configuration fingerprint付き）を出し、品質を`held-out-envelope`にする。満たさないsuiteは理由を`envelope_decisions`に残す。
+
+**ent O_DIRECTでの再測定（repetitions 10、warmup 1）。** [証跡](internal/phase5_timing_validation/runtime-envelope/)。4条件ともcomplete、raw損失0。1 rankは最終コードで取り直した（1 rankのMPI suiteを`NOT_APPLICABLE_SINGLE_RANK`と表示）。2 rankはその表示変更の前のコードで測ったが、判定に違いは無い。
+
+| engine | rank | kernel-storage | memory-mpi | storage-mpi |
+|---|---|---|---|---|
+| worker | 1 | 1.65–1.92 s、認証 | — | — |
+| cooperative | 1 | 1.60–1.88 s、認証 | — | — |
+| worker | 2 | 1.58–1.65 s、認証 | 0.59–0.65 s、認証 | 1.90–2.07 s、認証 |
+| cooperative | 2 | 1.65／4.7／6.5–6.9 s、認証（幅広） | 2.1–2.3 → 0.61–0.65 s、coverage 0.20で不認証 | 7.9／5.3 → 1.93–1.97 s、認証 |
+
+- **engineの差。** 初回の「workerが2.6〜4倍遅い」は再現しなかった。1 rankではworkerとcooperativeがほぼ同じだった。
+- **二峰性。** cooperativeの2 rankでは、同じ条件で約1.6 sと約6.7 s（kernel-storage）、約2.2 sと約0.6 s（memory-mpi）の2つの水準が出た。Linuxで以前記録した装置状態の切替と同じ現象と考えられる。kernel-storageは両方の水準を含む広い区間（1.49〜7.36 s）で認証された。認証は「held-outが区間に入る」ことの確認であり、区間が狭いことは意味しない。memory-mpiは途中で水準が変わったため、正しく不認証になった。
+- **Mac。** 同じ設定（buffered、worker）で、1 rank・2 rankともcompleteになり、全suiteが認証された。
 
 ## P4-001の完了証跡（2026-10-15）
 
@@ -121,17 +149,17 @@ ent Dockerで、`svbench runtime`（8 qubit、b=4、O_DIRECT、5回、warmup 1�
 - sourceが無ければ全kindがunknownのままで、ETA viewは`unavailable`になること。
 
 既存試験（ETA、remaining work、adaptive replan、段階別fault、gradient、cache）は変更なしで成功した。追加分の試験は次のとおり。
-- rolling観測：同じclassのexecutor呼出し8回でobserved-task-secondsが答え、ETA observed viewが価格付けすること。
+- rolling観測：合成行を使わず、実executorの同じclassの呼出し（RX 40個）でobserved-task-secondsが答え、ETA observed viewが価格付けすること。burn-inで単調なwarmupを除いて認証すること、段差を`DRIFTING`にすること、burn-in行を認証件数に数えないこと。
+- runtime校正（`tests/test_runtime_calibration.py`）：held-out envelopeの認証／件数不足／低coverage、observationsのsidecar分離とsha256。
 - cache：measuredのread／writeからeviction scoreを作り、injectedの観測を数えないこと。
 - stage記録（`tests/test_stage_records.py`）：catalog-commitが子eventとしてgroupの消費集合に入ること、checkpointの3段、collectorのon/off、injected scope。raw行のlease下での書出し、epoch集計、監視自身の記録、総量上限での打切りと計数。
 
-Mac全回帰は869 passed／14 skipped。Linuxの高速版（`-m "not slow"`）は816 passed／14 skipped（9分9秒）。
+Mac全回帰は885 passed／14 skipped（partial解消とburn-inの追加後）。Linuxの高速版（`-m "not slow"`）は816 passed／14 skipped（9分9秒）。
 
-## 残件（P4-001）
+## 引継ぎ事項（P4-001はDONE）
 
-- async runtimeでのpacking経路と、その計測。
-- rolling観測のburn-in除外（warmup中の時間変化で認証されにくい）。
-- 上限付きraw chunkのflushと、epoch境界でのrank summary。
-- 大きなBlockや長いrunでの監視overheadの比率。
-- Linux O_DIRECTとcross-hostの校正。
-- 完了証跡（raw、immutable profile、manifest、比較report）。
+2026-10-15にP4-001をDONEとした。raw chunkのflushとrank summary、Linux O_DIRECTとcross-hostの校正、完了証跡、runtime校正のpartial、rolling観測のburn-inは解消した。次は後続の作業へ引き継ぐ。
+- async runtimeにはpacking経路が無い。mcx-packingは同期経路でだけ記録され、async側では未計測である。
+- cross-hostは研究室クラスタ2 node・小規模の回路だけである。
+- 大きなBlockや長いrunでの監視overheadの比率は測っていない。
+- Linux cooperative 2 rankの二峰性は、envelopeを広げるか不認証にする。原因は未特定である。

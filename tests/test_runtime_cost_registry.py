@@ -11,6 +11,7 @@ from svsim.async_scheduler import AsyncDistributedSimulator, AsyncPolicy
 from svsim.distributed import DistributedConfig
 from svsim.lifecycle import BenchmarkSample
 from svsim.runtime_cost import CostSample
+from svsim import runtime_observed_costs as observed_costs
 
 
 def test_purpose_decides_which_provenance_may_answer():
@@ -125,30 +126,69 @@ def test_unknown_stays_unknown_without_sources(sim):
     assert eta['cost_view_sources'] == {'baseline': 'unavailable', 'observed': 'rolling-observed', 'adapted': 'unavailable'}
 
 
-def test_rolling_observations_answer_production_after_enough_same_class_groups(tmp_path):
+def _real_same_class_run(path):
     policy = AsyncPolicy(io_engine='cooperative', io_workers=1, prefetch_blocks=0, lookahead_gates=1)
-    config = DistributedConfig(str(tmp_path / 'data'), 2, ram_budget_bytes_per_rank=8 * 1024**2,
+    config = DistributedConfig(str(path), 2, ram_budget_bytes_per_rank=8 * 1024**2,
                                storage_scope='node-local', frame_policy='materialize')
     with AsyncDistributedSimulator(4, config, comm=MPI.COMM_SELF, policy=policy) as sim:
         runtime = sim.runtime
-        # Stage records share the RAM summary budget; leave room for eight executor groups.
-        runtime.configure_measurements(max_bytes=256 * 1024)
+        # Stage records share the RAM summary budget; 512 KiB keeps all 36 executor groups and still fits.
+        runtime.configure_measurements(max_bytes=512 * 1024)
         runtime.configure_eta(max_bytes=64 * 1024, scan_items=4096, scan_seconds=1.0)
-        for _ in range(12): sim.gate('RX', (0,), angle=.3)
-        sim.materialize(frontier=7, binding=sim.bind())  # eight same-class executor calls measured
-        # Real wall times drift (warmup), so add stable same-class rows to certify the class deterministically.
-        probe = next(t for t in runtime.remaining_extractor.capture(sim, endpoint_frontier=11).window if t.kind != 'publication')
-        _task_rows(runtime, [.0095] * 12, condition=probe.condition, start=500)
-        eta = runtime.update_eta(endpoint_frontier=11)
-        observed = eta['views']['observed']
-        assert eta['cost_view_sources']['observed'] == 'rolling-observed'
-        assert observed['partial_expected_seconds'] > 0 and observed['coverage'] > 0
-        resolved = runtime.costs.resolve('observed-task-seconds', None,
-                                         next(t for t in runtime.remaining_extractor.capture(sim, endpoint_frontier=11).window
-                                              if t.kind != 'publication').condition)
-        assert resolved.known and resolved.provenance == 'measured' and resolved.value.lower_seconds <= resolved.value.mean_seconds
+        for _ in range(40): sim.gate('RX', (0,), angle=.3)
+        sim.materialize(frontier=35, binding=sim.bind())  # real same-class executor calls only; no synthetic rows
+        probe = next(t for t in runtime.remaining_extractor.capture(sim, endpoint_frontier=39).window if t.kind != 'publication')
+        rows = [r for r in runtime.measurements.cost_observations()
+                if r.stage in observed_costs.EXECUTOR_STAGES and observed_costs._class(r.condition) == observed_costs._class(probe.condition)]
+        assessed = observed_costs._assess(rows, runtime.policy_epoch, runtime.plan_version, observed_costs.BURN_IN)
+        eta = runtime.update_eta(endpoint_frontier=39)
+        resolved = runtime.costs.resolve('observed-task-seconds', None, probe.condition)
+        if not resolved.known:  # an uncertified class still answers the diagnostic purpose, labelled with its reason
+            diagnostic = observed_costs.observed_task_cost(runtime.measurements, probe.condition, runtime.policy_epoch,
+                                                           runtime.plan_version, diagnostic=True)
+            assert diagnostic is not None and assessed[0] in diagnostic.condition and not diagnostic.measured
         injected = [r for r in runtime.measurements.cost_observations() if r.evidence != 'measured']
+        return eta, resolved, injected, (len(rows), assessed[0], assessed[4])
+
+
+def test_rolling_observations_answer_production_after_enough_same_class_groups(tmp_path):
+    # Linux devices can switch state mid-run (per-call time ~60 ms -> ~245 ms); such a run is correctly refused as
+    # DRIFTING or LOW_HELD_OUT_COVERAGE, so only those refusals allow another real run (2 of 15 runs on ent).
+    outcomes = []
+    for attempt in range(3):
+        eta, resolved, injected, outcome = _real_same_class_run(tmp_path / f'data{attempt}')
+        outcomes.append(outcome)
         assert injected == []  # only measured, validated, non-warmup rows feed production costs
+        if resolved.known: break
+        assert outcome[1] in {observed_costs.DRIFTING, observed_costs.LOW_COVERAGE}, outcomes
+    assert resolved.known, outcomes
+    assert resolved.provenance == 'measured' and resolved.value.lower_seconds <= resolved.value.mean_seconds
+    observed = eta['views']['observed']
+    assert eta['cost_view_sources']['observed'] == 'rolling-observed'
+    assert observed['partial_expected_seconds'] > 0 and observed['coverage'] > 0
+
+
+def _assess_values(values):
+    rows = [type('R', (), dict(context={'policy_epoch': 1, 'plan_version': 1}, protocol_seconds=v, service_seconds=None,
+                               quantity=1))() for v in values]
+    return observed_costs._assess(rows, 1, 1, observed_costs.BURN_IN)
+
+
+def test_burn_in_drops_monotone_warmup_prefix_then_certifies():
+    values = [.020, .015, .012] + [.010, .0101, .0099, .0102, .0100, .0098, .0101, .0100, .0099, .0100]
+    reason, kept, *_ = _assess_values(values)
+    assert reason == observed_costs.CERTIFIED and len(kept) == len(values) - observed_costs.BURN_IN
+    assert max(kept) < .0103  # warmup values are excluded from the envelope
+
+
+def test_steady_step_change_is_drifting_not_certified():
+    reason, _, _, _, coverage = _assess_values([.01] * 3 + [.01] * 8 + [.03] * 8)
+    assert reason == observed_costs.DRIFTING and coverage < observed_costs.MIN_COVERAGE
+
+
+def test_burn_in_rows_do_not_count_toward_certify_samples():
+    assert _assess_values([.01] * (observed_costs.CERTIFY_SAMPLES - 1 + observed_costs.BURN_IN))[0] == observed_costs.INSUFFICIENT
+    assert _assess_values([.01] * (observed_costs.CERTIFY_SAMPLES + observed_costs.BURN_IN))[0] == observed_costs.CERTIFIED
 
 
 def test_cache_eviction_uses_measured_storage_completions_from_the_collector(tmp_path):
@@ -179,6 +219,9 @@ def _check_cache_costs(runtime):
     assert cost.value.eviction_score(True) == pytest.approx(.03)  # injected 9 s reads never counted
 
 
+WARMUP = [.02, .015, .012]  # first calls of a class run slower; burn-in drops BURN_IN of them
+
+
 def _task_rows(runtime, seconds, context=None, start=0, condition=None):
     condition = condition or {'operation': 'executor-group', 'kind': 'x'}
     for i, value in enumerate(seconds):
@@ -201,8 +244,8 @@ def _runtime(tmp_path, **kw):
 def test_certified_rolling_cost_answers_production_and_refuses_diagnostic(tmp_path):
     with _runtime(tmp_path) as sim:
         runtime = sim.runtime
-        runtime.configure_measurements(max_bytes=256 * 1024)
-        condition = _task_rows(runtime, [.01, .011, .0105, .0102, .0108, .0104, .0109, .0103])
+        runtime.configure_measurements(max_bytes=512 * 1024)
+        condition = _task_rows(runtime, WARMUP + [.01, .011, .0105, .0102, .0108, .0104, .0109, .0103])
         resolved = _resolve(runtime, condition)
         assert resolved.known and resolved.provenance == 'measured' and resolved.value.measured
         assert resolved.value.lower_seconds <= resolved.value.mean_seconds <= resolved.value.upper_seconds
@@ -213,8 +256,8 @@ def test_certified_rolling_cost_answers_production_and_refuses_diagnostic(tmp_pa
 def test_stale_policy_epoch_refuses_rows_recorded_before_the_change(tmp_path):
     with _runtime(tmp_path) as sim:
         runtime = sim.runtime
-        runtime.configure_measurements(max_bytes=256 * 1024)
-        condition = _task_rows(runtime, [.01] * 10)
+        runtime.configure_measurements(max_bytes=512 * 1024)
+        condition = _task_rows(runtime, WARMUP + [.01] * 10)
         assert _resolve(runtime, condition).known
         runtime.apply_policy({'prefetch_blocks': 1})
         assert not _resolve(runtime, condition).known
@@ -222,15 +265,15 @@ def test_stale_policy_epoch_refuses_rows_recorded_before_the_change(tmp_path):
         _task_rows(runtime, [.01] * 3, start=100)
         assert not _resolve(runtime, condition).known
         assert 'INSUFFICIENT_SAMPLES' in runtime.cost_decisions.values()
-        _task_rows(runtime, [.01] * 5, start=200)
+        _task_rows(runtime, [.01] * 8, start=200)  # 3 burn-in + 8 certify
         assert _resolve(runtime, condition).known
 
 
 def test_low_held_out_coverage_refuses_production_but_diagnostic_is_labelled(tmp_path):
     with _runtime(tmp_path) as sim:
         runtime = sim.runtime
-        runtime.configure_measurements(max_bytes=256 * 1024)
-        condition = _task_rows(runtime, [.01, .011, .0105, .0102, .5, .6, .7, .0104])
+        runtime.configure_measurements(max_bytes=512 * 1024)
+        condition = _task_rows(runtime, WARMUP + [.01, .011, .0105, .0102, .0104, .5, .0103, .6, .0105, .7, .0102, .0104])
         assert not _resolve(runtime, condition).known
         assert 'LOW_HELD_OUT_COVERAGE' in runtime.cost_decisions.values()
         diagnostic = _resolve(runtime, condition, 'diagnostic')

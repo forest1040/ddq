@@ -113,6 +113,30 @@ def _resolved_storage_backends(sim):
     return sorted(identities)
 
 
+ENVELOPE_MIN_HELD_OUT = 5
+ENVELOPE_MIN_COVERAGE = .8
+# Five training trials alone bound only ~67% of i.i.d. repeats; widen by the ETA tolerance.
+ENVELOPE_TOLERANCE = .1
+
+
+def _held_out_envelope(values, fingerprint, ranks):
+    """Train [min, max] (widened by ENVELOPE_TOLERANCE) on the older half of validated trials; certify on the newer half (>=5, coverage >= 0.8)."""
+    half = len(values) // 2
+    train, held = values[:half], values[half:]
+    if len(values) < 2 * ENVELOPE_MIN_HELD_OUT:
+        return None, f'INSUFFICIENT_TRIALS:{len(values)}<{2 * ENVELOPE_MIN_HELD_OUT}'
+    lower, upper = min(train) * (1 - ENVELOPE_TOLERANCE), max(train) * (1 + ENVELOPE_TOLERANCE)
+    inside = sum(lower <= v <= upper for v in held)
+    coverage = inside / len(held)
+    if coverage < ENVELOPE_MIN_COVERAGE:
+        return None, f'LOW_HELD_OUT_COVERAGE:{coverage:.2f}'
+    return {'method': 'train-min-max-widened-held-out', 'relative_widening': ENVELOPE_TOLERANCE, 'interval_kind': 'conditional-prediction',
+            'validation': 'held-out', 'units': 'seconds/suite-execute', 'lower_seconds': lower,
+            'upper_seconds': upper, 'held_out_count': len(held), 'held_out_success_count': inside,
+            'held_out_coverage': coverage, 'training_count': len(train), 'ranks': ranks,
+            'configuration_fingerprint': fingerprint, 'decision': 'CERTIFIED'}, 'CERTIFIED'
+
+
 def calibrate_runtime(spec: RuntimeCalibrationSpec, *, comm=None) -> dict:
     """Run bounded actual-runtime trials. Every rank must call with the same spec."""
     if not isinstance(spec, RuntimeCalibrationSpec):
@@ -227,7 +251,9 @@ def calibrate_runtime(spec: RuntimeCalibrationSpec, *, comm=None) -> dict:
                     constructed = time.perf_counter()
                     sim = AsyncDistributedSimulator(spec.num_qubits, config, comm=comm, policy=policy)
                     startup = time.perf_counter() - constructed
-                    sim.runtime.configure_measurements(max_bytes=min(128*1024,max(1024,per_rank_ram//64)))
+                    # One materialize has few epoch boundaries: give pending raw lines (not the summary) more room.
+                    sim.runtime.configure_measurements(max_bytes=min(128*1024,max(1024,per_rank_ram//64)),
+                                                       raw_max_bytes=min(1024*1024,max(1024,per_rank_ram//16)))
                     sim._measurement_warmup = repetition < 0
                     for kind, targets, kwargs in recipe:
                         sim.gate(kind, targets, **kwargs)
@@ -280,6 +306,7 @@ def calibrate_runtime(spec: RuntimeCalibrationSpec, *, comm=None) -> dict:
                         "failed_observations": [_observation_dict(o) for o in snap["failed_observations"]],
                         "dropped_bytes": snap["dropped_bytes"],
                         "dropped_conditions": snap["dropped_conditions"],
+                        "dropped_raw": snap.get("dropped_raw", 0),
                     }
                 except BaseException as exc:
                     failure = f"{type(exc).__name__}: {exc}"
@@ -296,6 +323,7 @@ def calibrate_runtime(spec: RuntimeCalibrationSpec, *, comm=None) -> dict:
                                     "failed_observations": [_observation_dict(o) for o in snap["failed_observations"]],
                                     "dropped_bytes": snap["dropped_bytes"],
                                     "dropped_conditions": snap["dropped_conditions"],
+                                    "dropped_raw": snap.get("dropped_raw", 0),
                                 }
                             except BaseException:
                                 collector_rows = {"observations": [], "failed_observations": [],
@@ -322,6 +350,7 @@ def calibrate_runtime(spec: RuntimeCalibrationSpec, *, comm=None) -> dict:
                         "failed_observations": [o for r in rank_rows for o in r["failed_observations"]],
                         "dropped_bytes": sum(r["dropped_bytes"] for r in rank_rows),
                         "dropped_conditions": sum(r["dropped_conditions"] for r in rank_rows),
+                        "dropped_raw": sum(r.get("dropped_raw", 0) for r in rank_rows),
                         "scheduler_completion_counts_by_stage": stage_counts,
                     }
                 local_scratch_bytes = (sum(p.stat().st_size for p in trial_dir.rglob("*") if p.is_file())
@@ -359,8 +388,9 @@ def calibrate_runtime(spec: RuntimeCalibrationSpec, *, comm=None) -> dict:
     measured = [t["execute_seconds_max"] for t in trials if t.get("status") == "validated" and not t.get("is_warmup") and t.get("execute_seconds_max") is not None]
     has_trial_failures = any(t.get("status") == "failed" for t in trials)
     has_omissions = any(t.get("status") == "omitted" for t in trials)
-    has_monitor_loss=any(t.get('collector',{}).get('dropped_bytes',0) or
-                         t.get('collector',{}).get('dropped_conditions',0) for t in trials)
+    # Raw completions are spilled to disk at epoch boundaries; only lost raw lines are monitor loss.
+    # RAM summary-ring overflow (dropped_bytes/conditions) stays reported but does not lose evidence.
+    has_monitor_loss=any(t.get('collector',{}).get('dropped_raw',0) for t in trials)
     campaign_status = ("failed" if root_error or not measured else
                        "partial" if has_trial_failures or has_omissions or has_monitor_loss else "complete")
     by_suite = {}
@@ -374,6 +404,13 @@ def calibrate_runtime(spec: RuntimeCalibrationSpec, *, comm=None) -> dict:
                            "max_seconds": max(values) if values else None,
                            "finite": all(math.isfinite(v) for v in values)}
     summary = {"count": len(measured), "by_suite": by_suite}
+    envelopes, reasons = {}, {}
+    for suite in spec.suites:
+        values = [t["execute_seconds_max"] for t in trials if t.get("suite") == suite and
+                  t.get("status") == "validated" and not t.get("is_warmup") and
+                  t.get("execute_seconds_max") is not None]
+        envelopes[suite], reasons[suite] = ((None, 'NOT_APPLICABLE_SINGLE_RANK') if size == 1 and suite in {"memory-mpi", "storage-mpi"}
+                                            else _held_out_envelope(values, profile.configuration_fingerprint, size))
     case_rows = []
     for suite in spec.suites:
         not_applicable = suite in {"memory-mpi", "storage-mpi"} and size == 1
@@ -404,14 +441,42 @@ def calibrate_runtime(spec: RuntimeCalibrationSpec, *, comm=None) -> dict:
             "software":profile.data['software'],
             "cases": case_rows,
             "quality": {"correctness": "validated" if measured else "no-validated-trials",
-                        "statistical": "finite-diagnostics-only", "confidence_interval": None,
-                        "candidate_envelope": None},
+                        "statistical": "held-out-envelope" if any(envelopes.values()) else "finite-diagnostics-only",
+                        "confidence_interval": None,
+                        "candidate_envelope": {suite: e for suite, e in envelopes.items() if e} or None,
+                        "envelope_decisions": {suite: (e['decision'] if e else reasons[suite]) for suite, e in envelopes.items()}},
             "summary": summary, "trials": trials,
             "collector": {"observations": sum(len(t.get("collector", {}).get("observations", ())) for t in trials),
                           "failed_observations": sum(len(t.get("collector", {}).get("failed_observations", ())) for t in trials),
                           "dropped_bytes": sum(t.get("collector", {}).get("dropped_bytes", 0) for t in trials),
                           "dropped_conditions": sum(t.get("collector", {}).get("dropped_conditions", 0) for t in trials)},
             "elapsed_seconds": time.monotonic()-started_campaign}
+
+
+def split_observations(report, path):
+    """Move per-trial collector observations to a JSONL sidecar so the report stays within node limits.
+
+    Each trial keeps counts plus ``observations_line_range`` into the sidecar; the report records its sha256.
+    """
+    from .journal import canonical
+    from .profile_document import wire_encode
+    lines = []
+    for index, trial in enumerate(report.get("trials", ())):
+        collector = trial.get("collector")
+        if not isinstance(collector, dict): continue
+        start = len(lines)
+        for kind in ("observations", "failed_observations"):
+            rows = collector.pop(kind, None) or []
+            collector[kind + "_count"] = len(rows)
+            lines.extend(canonical(wire_encode({"trial": index, "kind": kind, "row": row})) for row in rows)
+        collector["observations_line_range"] = [start, len(lines)]
+    payload = "".join(line + "\n" for line in lines).encode()
+    path = Path(path)
+    with path.open("wb") as stream:
+        stream.write(payload)
+    report["observations_file"] = {"name": path.name, "lines": len(lines),
+                                   "sha256": hashlib.sha256(payload).hexdigest()}
+    return report
 
 
 def _mpi_max(comm):

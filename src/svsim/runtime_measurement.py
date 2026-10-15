@@ -85,12 +85,16 @@ class RuntimeMeasurementCollector:
     """Keeps bounded summaries; only successful validated events enter cost observations."""
 
     def __init__(self, *, max_conditions: int = 256, per_condition: int = 64,
-                 max_bytes: int = 64 * 1024 * 1024, clock=None, enabled: bool = True):
+                 max_bytes: int = 64 * 1024 * 1024, clock=None, enabled: bool = True,
+                 raw_max_bytes: int | None = None):
         if type(enabled) is not bool:
             raise ValueError("enabled must be boolean")
-        if any(type(value) is not int or value<1 for value in (max_conditions,per_condition,max_bytes)):
+        raw_max_bytes = max_bytes if raw_max_bytes is None else raw_max_bytes
+        if any(type(value) is not int or value<1 for value in (max_conditions,per_condition,max_bytes,raw_max_bytes)):
             raise ValueError("collector limits must be positive")
         self.max_conditions, self.per_condition, self.max_bytes = max_conditions, per_condition, max_bytes
+        # Raw lines pending between epoch boundaries; separate from the RAM summary rings.
+        self.raw_max_bytes = raw_max_bytes
         self._enabled = enabled
         self._clock = clock
         self._thread = threading.get_ident()
@@ -118,7 +122,7 @@ class RuntimeMeasurementCollector:
 
     def _queue_raw(self, observation):
         line = (_canonical(asdict(observation)) + '\n').encode()
-        if self._raw_pending_bytes + len(line) > self.max_bytes:
+        if self._raw_pending_bytes + len(line) > self.raw_max_bytes:
             self.dropped_raw += 1
             return
         self._raw_pending.append(line)
@@ -269,6 +273,7 @@ class RuntimeMeasurementCollector:
                 "failed_observations": [item.to_dict() for item in deepcopy(self._failures)],
                 "condition_count": len(self._rings),
                 "bytes": self._bytes, "dropped_conditions": self.dropped_conditions,
+                "dropped_raw": self.dropped_raw,
                 "dropped_bytes": self.dropped_bytes, "dropped_children": self.dropped_children,
                 "duplicate_events": self.duplicate_events,
                 "failures": self.failures}

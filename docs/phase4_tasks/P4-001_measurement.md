@@ -1,6 +1,6 @@
 # P4-001：条件一致の校正とruntime completion計測
 
-状態：IN_PROGRESS（2026-10-14）。[基盤実装](../phase4_foundation_implementation.md)でcompletion／adapter／有限runtime campaignを追加した。全受入条件は維持する。共通契約は[全体設計](../phase4_remaining_design.md)。Phase 5のprofile codec・condition・有限campaignを拡張し、P4-002/003/004/007/008へ実測costを供給する。
+状態：DONE（2026-10-15、利用者の判断）。完了証跡は[evidence bundle](../internal/p4_001_evidence/README.md)、runtime校正のheld-out envelopeと引継ぎ事項は[cost registry資料](../phase4_cost_registry_implementation.md)にある。以下は着手時（2026-10-14）の記録である。[基盤実装](../phase4_foundation_implementation.md)でcompletion／adapter／有限runtime campaignを追加した。全受入条件は維持する。共通契約は[全体設計](../phase4_remaining_design.md)。Phase 5のprofile codec・condition・有限campaignを拡張し、P4-002/003/004/007/008へ実測costを供給する。
 
 [追加実装](../phase4_safety_monitoring_implementation.md)でcollectorのon/offを同じRAM poolで対照し、actual traceからresolved backendを取得する。全monitor費用と全stage registry／自動接続の完了条件は維持する。
 
