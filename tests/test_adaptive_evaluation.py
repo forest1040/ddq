@@ -42,3 +42,13 @@ def test_failed_events_bounds_and_invalid_values():
     assert session.report()['dropped_events']==1
     with pytest.raises(ValueError):observe(AdaptiveEvaluation(),float('nan'))
     with pytest.raises(ValueError):AdaptiveEvaluation(max_events=True)
+
+
+def test_estimate_reports_excess_paid_since_the_baseline():
+    session=AdaptiveEvaluation()
+    for _ in range(4):observe(session)
+    for _ in range(4):row=observe(session,.01)
+    assert row['health']=='DEGRADED'
+    # Four degraded calls of 10 ms each above the 1 ms baseline; the resource is unattributed here.
+    assert row['estimate']['paid_excess_seconds']==pytest.approx(.04)
+    assert row['estimate']['resource'] is None

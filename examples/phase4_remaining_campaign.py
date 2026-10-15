@@ -161,7 +161,7 @@ def run_comparison(comm,folder,args,*,adaptive=False,monitoring=False,scenario='
                     adaptive_report['events_head']=[{k:e.get(k) for k in ('ordinal','health','reason','actual_service_seconds',
                         'injected_delay_seconds')} for e in events[:6]]
                     adaptive_report['replan_decisions']=[{k:v for k,v in d.items() if k!='candidates'} |
-                        {'candidates':[{k:c.get(k) for k in ('updates','gain_lower_seconds','current_calls','candidate_calls',
+                        {'candidates':[{k:c.get(k) for k in ('updates','gain_lower_seconds','current_calls','candidate_calls','one_off_seconds','paid_excess_seconds',
                          'eligible','reason')} for c in d.get('candidates',()) if c.get('classification')!='reference']}
                         for d in sim.runtime.replan_decisions[:6]]
                 if adaptive:

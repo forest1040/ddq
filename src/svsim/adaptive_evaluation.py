@@ -63,7 +63,7 @@ class AdaptiveEvaluation:
         else:
             report=self.guard.observe(BenchmarkSample(self.condition,latency_ms=(service+delay)*1000))
             row={'health':report.health_state,'reason':report.reason,'ratio':report.degradation_ratio}
-            if row['health']=='DEGRADED':row['estimate']=self.estimate()
+            if row['health']=='DEGRADED':row['estimate']=self.estimate(current=service+delay)
         row.update({'ordinal':len(self.events),'source_ids':tuple(event.get('source_ids',())),
             'actual_service_seconds':service,'injected_delay_seconds':delay,'scope':'injected',
             'production_profile':False})
@@ -81,13 +81,15 @@ class AdaptiveEvaluation:
         self.guard=ObservePerformanceGuard(reference,plan,window_size=self.window_size,
             consecutive_windows=self.consecutive_windows)
         self.rebaseline=None
+        # Excess paid since this baseline: the break-even rule compares it with one-off switch costs.
+        self._guard_center,self._guard_index=latency,len(self.events)+1
         return True
 
     def _rebaseline(self,work_class):
         """After a verified switch, re-judge later calls against the new executor class itself."""
         self.guard=None;self.work_class=work_class;self.rebaseline=[]
 
-    def estimate(self):
+    def estimate(self,*,current=None):
         """Per-gate service and per-call excess from this evaluation's own measured events.
 
         The baseline prefix holds single-gate calls without injection; the excess
@@ -100,7 +102,10 @@ class AdaptiveEvaluation:
         recent=recent[-self.window_size*self.consecutive_windows:]
         if len(recent)<self.window_size:return None
         extra=[max(0.0,e['actual_service_seconds']+e['injected_delay_seconds']-center) for e in recent]
+        paid=sum(max(0.0,e['actual_service_seconds']+e['injected_delay_seconds']-self._guard_center)
+                 for e in self.events[self._guard_index:])+(max(0.0,current-self._guard_center) if current is not None else 0.0)
         return {'scope':'injected','service_lower_per_gate':min(self.prefix),'service_upper_per_gate':max(self.prefix),
+                'paid_excess_seconds':paid,
                 'extra_lower_per_call':min(extra),'extra_upper_per_call':max(extra),'excess_sample_count':len(extra),
                 'resource':next(iter(self.resources)) if len(self.resources)==1 else None}
 

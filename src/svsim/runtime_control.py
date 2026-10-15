@@ -921,7 +921,7 @@ class RuntimeControl:
     def _evaluate_candidates(self):
         """Price every generated proposal from runtime evidence; rank-conservative selection."""
         from .replan_candidates import ReplanProposal
-        from .replan_cost import evaluate
+        from .replan_cost import evaluate, one_off_seconds
         from .replan_cost_producer import costs_for
         sim = self.sim
         started = monotonic()
@@ -942,11 +942,15 @@ class RuntimeControl:
                                       qualified=evidence.known,
                                       resolve=lambda kind, context, condition: self.costs.resolve(
                                           kind, context, condition, purpose=purpose).value)
-            result = evaluate(proposal, costs, minimum_gain_fraction=sim.policy.minimum_gain_fraction)
+            # Break-even: automatic switches wait until the paid excess covers their one-off cost.
+            paid = (evidence.value or {}).get('paid_excess_seconds', 0.0)
+            result = evaluate(proposal, costs, minimum_gain_fraction=sim.policy.minimum_gain_fraction,
+                              paid_excess_seconds=paid)
             local.append({'proposal_id': row['proposal_id'], 'updates': row['updates'],
                           'classification': row['classification'], 'gain_lower_seconds': result.gain_lower_seconds,
                           'candidate_upper_seconds': result.total_candidate_upper_seconds,
                           'continue_lower_seconds': costs.continue_lower_seconds,
+                          'one_off_seconds': one_off_seconds(costs), 'paid_excess_seconds': paid,
                           'eligible': result.eligible, 'reason': result.reason, **counts})
         ranks = sim.transport.control.allgather(local)
         merged = []

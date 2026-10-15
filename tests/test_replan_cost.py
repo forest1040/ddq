@@ -87,3 +87,17 @@ def test_overflow_is_unknown_gain_and_invalid_numbers_are_rejected():
         _costs(execution_upper_seconds=float('inf'))
     with pytest.raises(ValueError, match='Invalid gain margin'):
         evaluate(_proposal(), _costs(), minimum_gain_fraction=1)
+
+
+def test_break_even_waits_until_paid_excess_covers_one_off_costs():
+    from svsim.replan_cost import one_off_seconds
+    costs = _costs()
+    assert one_off_seconds(costs) == 35.0  # everything except candidate execution
+    early = evaluate(_proposal(), costs, paid_excess_seconds=34.9)
+    assert not early.eligible and early.reason == 'BREAK_EVEN_NOT_REACHED' and early.gain_lower_seconds == 45.0
+    assert evaluate(_proposal(), costs, paid_excess_seconds=35.0).eligible
+    # Without a gain the reason stays INSUFFICIENT_GAIN; without the argument the rule is off.
+    assert evaluate(_proposal(), _costs(continue_lower_seconds=50.0), paid_excess_seconds=1e9).reason == 'INSUFFICIENT_GAIN'
+    assert evaluate(_proposal(), costs).eligible
+    with pytest.raises(ValueError):
+        evaluate(_proposal(), costs, paid_excess_seconds=-1.0)

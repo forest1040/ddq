@@ -35,7 +35,23 @@ class ReplanEvaluation:
     reason: str
 
 
-def evaluate(proposal,costs,*,minimum_gain_fraction=.1,absolute_margin_seconds=.1):
+def one_off_seconds(costs):
+    """Transition costs paid once whether or not the degradation persists (everything but execution)."""
+    parts=(costs.planning_seconds,costs.drain_seconds,costs.migration_seconds,costs.calibration_seconds,
+           costs.validation_seconds,costs.checkpoint_seconds,costs.cleanup_seconds)
+    return None if any(p is None for p in parts) else sum(parts)
+
+
+def evaluate(proposal,costs,*,minimum_gain_fraction=.1,absolute_margin_seconds=.1,paid_excess_seconds=None):
+    """Price one proposal. ``paid_excess_seconds`` enables the break-even rule.
+
+    The gain lower bound assumes the observed excess persists to the endpoint,
+    which a transient degradation violates. With ``paid_excess_seconds`` (the
+    excess already paid since the baseline) a switch is allowed only once that
+    paid excess reaches its one-off cost, the ski-rental rule: whatever the
+    degradation does next, the total cost stays within about twice the
+    hindsight-optimal choice of switching or not.
+    """
     if isinstance(minimum_gain_fraction,bool) or isinstance(absolute_margin_seconds,bool) or not 0<=minimum_gain_fraction<1 or not math.isfinite(absolute_margin_seconds) or absolute_margin_seconds<0:
         raise ValueError('Invalid gain margin')
     if proposal.capability_reason:return ReplanEvaluation(proposal.proposal_id,None,None,False,proposal.capability_reason)
@@ -50,4 +66,10 @@ def evaluate(proposal,costs,*,minimum_gain_fraction=.1,absolute_margin_seconds=.
     if not costs.qualified or costs.context_hash!=proposal.source_context_hash:
         return ReplanEvaluation(proposal.proposal_id,gain,total,False,'UNQUALIFIED_OR_MISMATCHED_COST')
     eligible=gain>max(absolute_margin_seconds,minimum_gain_fraction*costs.continue_lower_seconds)
-    return ReplanEvaluation(proposal.proposal_id,gain,total,eligible,'MEASURED_POSITIVE_GAIN' if eligible else 'INSUFFICIENT_GAIN')
+    if not eligible:return ReplanEvaluation(proposal.proposal_id,gain,total,False,'INSUFFICIENT_GAIN')
+    if paid_excess_seconds is not None:
+        if isinstance(paid_excess_seconds,bool) or not math.isfinite(paid_excess_seconds) or paid_excess_seconds<0:
+            raise ValueError('Invalid paid excess')
+        if paid_excess_seconds<one_off_seconds(costs):
+            return ReplanEvaluation(proposal.proposal_id,gain,total,False,'BREAK_EVEN_NOT_REACHED')
+    return ReplanEvaluation(proposal.proposal_id,gain,total,True,'MEASURED_POSITIVE_GAIN')
