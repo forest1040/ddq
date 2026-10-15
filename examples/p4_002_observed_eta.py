@@ -21,6 +21,7 @@ import statistics
 import subprocess
 import sys
 from time import perf_counter
+from types import MethodType
 from uuid import uuid4
 
 from mpi4py import MPI
@@ -458,7 +459,7 @@ def run_trial(comm, scratch_dir: Path, wl: dict, frac: float, trial_idx: int,
 
 
 def run_overhead_circuit(comm, scratch_dir: Path, wl: dict, backend: str,
-                         eta_flag: bool, run_tag: str) -> float:
+                         eta_flag: bool, run_tag: str, *, return_metrics: bool = False):
     """Run a full-circuit execution under specified monitoring ETA setting."""
     rank = comm.Get_rank()
     run_dir = scratch_dir / f"overhead_{run_tag}_{uuid4().hex[:8]}"
@@ -476,6 +477,11 @@ def run_overhead_circuit(comm, scratch_dir: Path, wl: dict, backend: str,
     comm.Barrier()
 
     wall_time = None
+    local_metrics = {"capture_count": 0, "capture_wall_seconds": 0.0,
+                     "reported_extraction_seconds": 0.0,
+                     "eta_evaluation_count": 0, "eta_evaluation_seconds": 0.0}
+    restore_eta_class = None
+    restore_eta_evaluate = None
     err = None
     try:
         cfg = DistributedConfig(
@@ -499,18 +505,60 @@ def run_overhead_circuit(comm, scratch_dir: Path, wl: dict, backend: str,
         with AsyncDistributedSimulator(wl["n"], cfg, comm=comm, policy=pol) as sim:
             sim.runtime.configure_measurements(max_bytes=2 * 1024**2)
             sim.runtime.configure_monitoring(eta=eta_flag)
+            if eta_flag and return_metrics:
+                from svsim.runtime_eta import RuntimeETA
+                restore_eta_class = RuntimeETA
+                restore_eta_evaluate = RuntimeETA.evaluate
+
+                extractor = sim.runtime.remaining_extractor
+                capture_original = extractor.capture
+
+                def timed_capture(self, simulator, **kwargs):
+                    started = perf_counter()
+                    try:
+                        snapshot = capture_original(simulator, **kwargs)
+                        local_metrics["reported_extraction_seconds"] += snapshot.extraction_seconds
+                        return snapshot
+                    finally:
+                        local_metrics["capture_wall_seconds"] += perf_counter() - started
+                        local_metrics["capture_count"] += 1
+
+                extractor.capture = MethodType(timed_capture, extractor)
+                def timed_evaluate(instance, *args, **kwargs):
+                    started = perf_counter()
+                    try:
+                        return restore_eta_evaluate(instance, *args, **kwargs)
+                    finally:
+                        local_metrics["eta_evaluation_seconds"] += perf_counter() - started
+                        local_metrics["eta_evaluation_count"] += 1
+
+                RuntimeETA.evaluate = timed_evaluate
             apply_recipe(sim, wl["recipe"], wl["layers"])
             binding = sim.bind()
             sim.runtime.update_eta(endpoint_frontier=len(sim.sequencer.operations) - 1, collective=True)  # arms progress_eta
 
             comm.Barrier()
+            local_metrics = {"capture_count": 0, "capture_wall_seconds": 0.0,
+                             "reported_extraction_seconds": 0.0,
+                             "eta_evaluation_count": 0, "eta_evaluation_seconds": 0.0}
             t0 = perf_counter()
             sim.materialize(binding=binding)
             t1 = perf_counter()
             local_wall = t1 - t0
             wall_time = max(comm.allgather(local_wall))
+            if eta_flag and return_metrics:
+                rank_metrics = comm.allgather(local_metrics)
+                max_metrics = {}
+                for key in ("capture_wall_seconds", "reported_extraction_seconds", "eta_evaluation_seconds"):
+                    max_metrics[key] = max(row[key] for row in rank_metrics)
+                for key in ("capture_count", "eta_evaluation_count"):
+                    max_metrics[key] = max(row[key] for row in rank_metrics)
+                local_metrics = max_metrics
     except Exception as exc:
         err = str(exc)
+    finally:
+        if restore_eta_class is not None:
+            restore_eta_class.evaluate = restore_eta_evaluate
 
     errs = comm.allgather(err)
     if any(e is not None for e in errs):
@@ -525,6 +573,8 @@ def run_overhead_circuit(comm, scratch_dir: Path, wl: dict, backend: str,
         shutil.rmtree(run_dir, ignore_errors=True)
     comm.Barrier()
 
+    if return_metrics:
+        return {"actual_rank_max_seconds": wall_time, **local_metrics}
     return wall_time
 
 
