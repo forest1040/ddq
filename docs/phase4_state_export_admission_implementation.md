@@ -26,3 +26,19 @@ Macで新規export試験は **23 passed**（MPI 2 rankの1件と実SIGKILL 5段�
 - 既存distributed directoryはexport fileだけを持つregularなdirectoryに限る。無関係なfile、symlink、hardlink、nested directoryがある場合は削除せず拒否する。
 - atomic directory交換機能のないplatformでは既存outputの交換を失敗として報告し、旧outputを保持する。
 - admissionは既存のsoft disk accountingであり、filesystemが実割当を強制するquotaではない。directory fsync後の実power-loss durabilityはfilesystem契約に依存し、この試験のSIGKILLとは区別する。
+
+### Export inventory と volume 集計の結合（2026-10-16）
+
+export root を ledger に登録する transaction 内で、既存ファイルを含む
+ledger quota/free 条件を再検査し、volume coordinator にも root を先に登録する。
+通常の `register_roots` による追加 dataset も同様に coordinator へ反映する。
+これにより export の物理化通知で pending が減っても、出力 byte が volume
+集計から落ちない。coordinator commit 後に ledger commit が失敗した場合は
+root が保守的に残り、余分な空きにはならない。再 open 時も export root を再登録する。
+
+ledger の通常 inventory 走査は `scandir` へ変更し、読取り不能な subtree を
+空きとして扱わず admission を拒否する。別 volume の subtree も拒否する。
+関連回帰は Mac で **90 passed**（実 MPI を含む）。追加 oracle は独立した
+2 ledger の export 60,000 byte＋別予約40,000 byteで上限到達、その次の1 byteの
+拒否、再 open 後の課金、登録時 quota 拒否のrollback、追加dataset root、
+観測不能時の変更前拒否を含む。

@@ -92,6 +92,79 @@ def test_materialized_bytes_are_not_double_charged_across_ledgers(tmp_path):
         a.close(), b.close(), coord.close()
 
 
+def test_export_inventory_remains_charged_after_materialization_and_reopen(tmp_path):
+    coord = coordinator(tmp_path)
+    a, b = ledger(tmp_path, 'a', coord), ledger(tmp_path, 'b', coord)
+    output = tmp_path / 'output'
+    output.mkdir()
+    try:
+        a.register_export_root(output)
+        key = a.reserve(60_000)
+        (output / 'state.bin').write_bytes(b'x' * 60_000)
+        a.materialize(key, 60_000)
+        a.release(key)
+        a.close()
+        a = ledger(tmp_path, 'a', coord)
+        assert coord.snapshot()['pending_bytes'] == 0
+        other = b.reserve(40_000)
+        with pytest.raises(DiskAdmissionError, match='Volume coordinator quota'):
+            b.reserve(1)
+        b.release(other)
+    finally:
+        a.close(), b.close(), coord.close()
+
+
+def test_export_inventory_quota_refusal_rolls_back_without_mutation(tmp_path):
+    coord = coordinator(tmp_path)
+    a, b = ledger(tmp_path, 'a', coord), ledger(tmp_path, 'b', coord)
+    output = tmp_path / 'output'
+    output.mkdir()
+    (output / 'old.bin').write_bytes(b'x' * (ROOM + 1))
+    try:
+        with pytest.raises(DiskAdmissionError, match='Volume coordinator quota'):
+            a.register_export_root(output)
+        from svsim.export_admission import export_inventory_roots
+        assert not export_inventory_roots(a.db)
+        assert (output / 'old.bin').stat().st_size == ROOM + 1
+        assert not list(output.glob('*.tmp'))
+        key = b.reserve(ROOM)
+        b.release(key)
+    finally:
+        a.close(), b.close(), coord.close()
+
+
+def test_registered_new_dataset_root_is_charged_by_coordinator(tmp_path):
+    coord = coordinator(tmp_path)
+    a, b = ledger(tmp_path, 'a', coord), ledger(tmp_path, 'b', coord)
+    extra = tmp_path / 'extra'
+    extra.mkdir()
+    (extra / 'data').write_bytes(b'x' * ROOM)
+    try:
+        a.register_roots([extra])
+        with pytest.raises(DiskAdmissionError, match='Volume coordinator quota'):
+            b.reserve(1)
+    finally:
+        a.close(), b.close(), coord.close()
+
+
+def test_unreadable_inventory_fails_closed_before_reservation(tmp_path, monkeypatch):
+    root = tmp_path / 'store'
+    root.mkdir()
+    budget = DiskBudget(root / 'ledger.sqlite3', [root], bootstrap_bytes=LEDGER_POOL)
+    original = os.scandir
+    def denied(path):
+        if Path(path) == root:
+            raise PermissionError('inventory denied')
+        return original(path)
+    try:
+        monkeypatch.setattr(os, 'scandir', denied)
+        with pytest.raises(DiskAdmissionError, match='cannot be observed'):
+            budget.reserve(1)
+        assert count_rows(budget) == 0
+    finally:
+        budget.close()
+
+
 def test_bound_ledger_cannot_be_opened_unbound_or_moved(tmp_path):
     coord = coordinator(tmp_path)
     a = ledger(tmp_path, 'a', coord)

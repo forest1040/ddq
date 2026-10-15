@@ -50,6 +50,11 @@ def register_export_root(budget,path):
         if str(root) not in {r['path'] for r in rows}:
             if len(rows)>=256:raise DiskAdmissionError('Export root limit exceeded')
             budget.db.execute('INSERT INTO export_roots VALUES(?,?,?,?)',(str(root),info.st_dev,info.st_ino,birth))
+        budget._check_shared_root_capacity()
+        # Publish inventory before any export writes or pending-byte decrease.
+        # Coordinator-ahead after a local commit failure is conservative.
+        if budget._coord_ready:
+            budget._register_with_coordinator()
     return root
 
 

@@ -634,6 +634,8 @@ class DiskBudget:
         if self._coord is None: return
         self.db.execute('UPDATE volume_binding SET epoch=epoch+1 WHERE singleton=1')
         roots=[Path(p) for (p,) in self.db.execute('SELECT path FROM roots')]
+        from .export_admission import export_inventory_roots
+        roots.extend(Path(row['path']) for row in export_inventory_roots(self.db))
         self._coord.register_ledger(self._ledger_path,metadata_bytes=self.bootstrap_bytes,roots=roots,
                                     pending=self.reserved_bytes,epoch=self._epoch())
 
@@ -718,12 +720,27 @@ class DiskBudget:
         for root in roots:
             if any(root.is_relative_to(parent) for parent in selected): continue
             selected.append(root)
-            for path in root.rglob('*'):
-                if path in metadata_paths:
-                    continue
-                try: info=path.stat(follow_symlinks=False)
-                except FileNotFoundError: continue
-                if stat.S_ISREG(info.st_mode): total += info.st_size
+            # pathlib's recursive glob can suppress traversal errors. Unreadable
+            # managed files must never become apparently available quota.
+            stack = [root]
+            try:
+                device = self.roots[0].stat().st_dev
+                root_info = root.lstat()
+                if not stat.S_ISDIR(root_info.st_mode) or root_info.st_dev != device:
+                    raise DiskAdmissionError('Disk ledger root identity or volume changed')
+                while stack:
+                    with os.scandir(stack.pop()) as entries:
+                        for entry in entries:
+                            if Path(entry.path) in metadata_paths:
+                                continue
+                            try: info = entry.stat(follow_symlinks=False)
+                            except FileNotFoundError: continue
+                            if info.st_dev != device:
+                                raise DiskAdmissionError('Disk ledger root spans another volume')
+                            if stat.S_ISDIR(info.st_mode): stack.append(Path(entry.path))
+                            elif stat.S_ISREG(info.st_mode): total += info.st_size
+            except OSError as exc:
+                raise DiskAdmissionError(f'Disk ledger root cannot be observed: {exc}') from exc
         return total
 
     def _observed_free(self):
@@ -747,6 +764,8 @@ class DiskBudget:
             self.db.executemany('INSERT INTO roots VALUES(?)', [(str(p),) for p in selected])
             if self.shared_policy:
                 self._check_shared_root_capacity()
+            if self._coord_ready:
+                self._register_with_coordinator()
 
     def register_export_root(self,path):
         from .export_admission import register_export_root
