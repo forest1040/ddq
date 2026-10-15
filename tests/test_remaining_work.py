@@ -414,3 +414,39 @@ def test_distinct_angles_certify_through_the_angle_pooled_class():
     # Pooling never crosses a different gate shape (here: another target).
     other = condition(0.5); other["operations"][0]["targets"] = [2]
     assert observed_task_cost(collector, other, 0, 0) is None
+
+
+def test_future_classes_differing_only_in_angle_are_pooled(tmp_path):
+    import random
+    rng = random.Random(7)
+    config = DistributedConfig(str(tmp_path / "angles"), 2, ram_budget_bytes_per_rank=16 * 1024**2,
+                               metadata_reserve_bytes=4 * 1024**2, amplitude_store="file")
+    policy = AsyncPolicy(io_engine="cooperative", swap_policy="S2", lookahead_gates=2, prefetch_blocks=0)
+    with AsyncDistributedSimulator(4, config, comm=MPI.COMM_SELF, policy=policy) as sim:
+        for _ in range(300):
+            sim.gate("RX", (1,), angle=rng.uniform(-3, 3)); sim.gate("H", (3,))
+        snap = RemainingWorkExtractor(CaptureLimits(scan_items=4096, scan_seconds=1)).capture(sim)
+        # 300 distinct angles would exceed the class limit; one shape class remains.
+        assert snap.future_complete and not snap.future_reasons
+        from svsim.replan_cost_producer import remaining_calls
+        classes = [t for t in snap.future if t.kind == "executor-count"]
+        assert len(classes) <= 4
+        window = sum(1 for t in snap.window if t.kind == "executor")
+        assert window + sum(t.count for t in classes) == remaining_calls(sim, sim.policy, 0, len(sim.sequencer.operations) - 1)
+        assert any(op["angle"] == {"op": "pooled-angle"} for t in classes for op in t.condition["operations"])
+
+
+def test_overflowed_tail_stays_incremental_and_exact(tmp_path):
+    with make_sim(tmp_path / "overflow", swap_policy="S0", lookahead=2) as sim:
+        for index in range(24):
+            sim.gate("RX", (index % 4,), angle=0.01 * index)  # 24 distinct classes
+        sim.materialize(frontier=1)
+        extractor = RemainingWorkExtractor(CaptureLimits(max_groups=5, scan_items=4096, scan_seconds=1))
+        first = extractor.capture(sim)
+        assert first.complete and any(t.task_id == "tail:overflow" for t in first.tail)
+        for frontier in (3, 9):
+            sim.materialize(frontier=frontier)
+            snap = extractor.capture(sim)
+            assert snap.complete  # no rescan needed
+            tail = {t.task_id: t.count for t in snap.tail}
+            assert sum(tail.values()) == snap.scanned_sources == len(sim.sequencer.operations) - frontier - 3

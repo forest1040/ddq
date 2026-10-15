@@ -82,6 +82,21 @@ def semantic_class(op):
     return data,content_hash(data)
 
 
+POOLED_ANGLE={'op':'pooled-angle'}
+
+
+def future_key(condition):
+    """(shape signature with angles removed, exact signature) of a future executor condition."""
+    shape={**condition,'operations':[{k:v for k,v in op.items() if k!='angle'} for op in condition['operations']]}
+    return content_hash(shape),content_hash(condition)
+
+
+def pool_angles(condition):
+    # Members differ only in angle: priced by the angle-pooled measured class.
+    return {**condition,'operations':[{**op,'angle':POOLED_ANGLE} if op.get('angle') is not None else op
+                                      for op in condition['operations']]}
+
+
 def strip_ids(condition):
     return {**condition,'operations':[{k:v for k,v in op.items() if k not in {'op_id','source_op_id'}}
                                       for op in condition['operations']]}
@@ -247,16 +262,18 @@ class RemainingWorkExtractor:
         deadline=monotonic()+self.limits.scan_seconds
         self._scan_future(sim,end,shape+(('EXECUTOR_WINDOW_TRUNCATED',) if truncated else ()),deadline)
         scanned=0
+        # Each class serializes as a task carrying the cost context and key.
+        overhead=len(canonical(ccontext).encode())+256
         while self._scan_cursor<=end and scanned<self.limits.scan_items and monotonic()<deadline:
             op=sim.sequencer.operations[self._scan_cursor]
             data,signature=semantic_class(op)
             if signature in self._tail:self._tail[signature][1]+=1
-            elif len(self._tail)<self.limits.max_groups:
+            elif not self._tail_overflow and len(self._tail)<self.limits.max_groups and (
+                    sum(v[2] for v in self._tail.values())+len(canonical(data).encode())+overhead<=self.limits.max_bytes//2):
                 # Count semantics exactly; future fusion/Frame/layout are not guessed.
-                size=len(canonical(data).encode())+128
-                if sum(v[2] for v in self._tail.values())+size<=self.limits.max_bytes//2:
-                    self._tail[signature]=[data,1,size]
-                else:self._tail_overflow+=1
+                self._tail[signature]=[data,1,len(canonical(data).encode())+overhead]
+            # After the first overflow no class is added until a rescan, so a
+            # source is in its class exactly when its signature has one.
             else:self._tail_overflow+=1
             self._scan_cursor+=1;scanned+=1
         tail=[]
@@ -301,12 +318,14 @@ class RemainingWorkExtractor:
         lookahead=sim.policy.lookahead_gates
         origin=first+lookahead
         if stop<self._tail_start or origin<self._future_origin or (origin-self._future_origin)%lookahead:return False
-        if self._tail_overflow and stop>self._tail_start:return False
         ops=sim.sequencer.operations
         for index in range(self._tail_start,min(stop,self._scan_cursor)):
             signature=semantic_class(ops[index])[1]
             entry=self._tail.get(signature)
-            if entry is None:return False
+            if entry is None:
+                if not self._tail_overflow:return False
+                self._tail_overflow-=1
+                continue
             entry[1]-=1
             if not entry[1]:del self._tail[signature]
         self._tail_start=stop;self._scan_cursor=max(self._scan_cursor,stop)
@@ -314,12 +333,12 @@ class RemainingWorkExtractor:
             start=self._future_origin
             while start<origin and start<self._future_cursor:
                 for group in executor_groups(ops[start:min(end,start+lookahead-1)+1],sim.layout,sim.block_bits,sim.policy):
-                    signature=content_hash(strip_ids(executor_condition(sim,group)))
+                    signature=future_key(strip_ids(executor_condition(sim,group)))[0]
                     entry=self._future.get(signature)
                     if entry is None:return False
                     entry[1]-=1
                     if not entry[1]:
-                        self._future_bytes-=len(canonical(entry[0]).encode())+128
+                        self._future_bytes-=entry[4]
                         del self._future[signature]
                 self._future_epochs-=1;start+=lookahead
         self._future_origin=origin;self._future_cursor=max(self._future_cursor,origin)
@@ -329,17 +348,21 @@ class RemainingWorkExtractor:
         """Advance the epoch-aligned executor-shape scan by whole epochs within the scan budget."""
         if reasons or self._future_overflow:return
         ops,scanned=sim.sequencer.operations,0
+        overhead=len(canonical(cost_context(sim)).encode())+256
         while self._future_cursor<=end and scanned<self.limits.scan_items and monotonic()<deadline:
             stop=min(end,self._future_cursor+sim.policy.lookahead_gates-1)
             for group in executor_groups(ops[self._future_cursor:stop+1],sim.layout,sim.block_bits,sim.policy):
                 condition=strip_ids(executor_condition(sim,group))
-                signature=content_hash(condition)
-                if signature in self._future:self._future[signature][1]+=1
+                signature,exact=future_key(condition)
+                entry=self._future.get(signature)
+                if entry is not None:
+                    entry[1]+=1
+                    if entry[3] not in (None,exact):entry[0]=pool_angles(entry[0]);entry[3]=None
                 else:
-                    size=len(canonical(condition).encode())+128
+                    size=len(canonical(condition).encode())+overhead
                     if len(self._future)>=self.limits.max_groups-2 or self._future_bytes+size>self.limits.max_bytes//4:
                         self._future_overflow=True;return
-                    self._future[signature]=[condition,1,any(g.dependencies for g in group)];self._future_bytes+=size
+                    self._future[signature]=[condition,1,any(g.dependencies for g in group),exact,size];self._future_bytes+=size
             self._future_epochs+=1;scanned+=stop-self._future_cursor+1;self._future_cursor=stop+1
 
     def _future_tasks(self,sim,end,ccontext,previous,current_epoch):
@@ -349,7 +372,7 @@ class RemainingWorkExtractor:
         if sim.binding is None and any(v[2] for v in self._future.values()):reasons+=('UNBOUND_PARAMETERS',)
         if reasons:return (),False,reasons
         tasks=[]
-        for i,(condition,count,_) in enumerate(self._future.values()):
+        for i,(condition,count,*_) in enumerate(self._future.values()):
             tid=f'future:{i}'
             tasks.append(task(tid,condition,ccontext,count=count,dependencies=previous,kind='executor-count'))
             previous=(tid,)
