@@ -14,6 +14,8 @@ import threading
 import weakref
 from uuid import uuid4
 
+from .dataset_lease import DirectoryLease
+
 
 class DiskAdmissionError(OSError):
     pass
@@ -186,7 +188,7 @@ class DiskBudget:
     def __init__(self, ledger, roots, *, quota_bytes=None, min_free_bytes=0,
                  drain_reserve_bytes=0, usage=None, free=None,
                  max_page_count=1024, max_records=4096, bootstrap_bytes=8*1024*1024,
-                 shared_policy=False, recovery_only=False):
+                 shared_policy=False, recovery_only=False, ledger_lease=None):
         _integer(min_free_bytes, 'minimum free bytes')
         _integer(drain_reserve_bytes, 'drain reserve bytes')
         _integer(quota_bytes, 'disk quota', minimum=1, optional=True)
@@ -199,6 +201,9 @@ class DiskBudget:
         if recovery_only and (not shared_policy or usage is not None or free is not None):
             raise ValueError('Recovery-only requires a bound production shared ledger')
         self.recovery_only=recovery_only
+        if ledger_lease is not None and (recovery_only or not isinstance(ledger_lease,DirectoryLease)):
+            raise ValueError('ledger_lease must be a FileLease held by an offline maintenance caller')
+        self._ledger_lease=None;self._ledger_lease_owned=False
         self.roots = tuple(dict.fromkeys(Path(p).resolve() for p in roots))
         if not self.roots:
             raise ValueError('Disk budget needs a local root')
@@ -273,6 +278,18 @@ class DiskBudget:
                 raise DiskAdmissionError('Ledger bootstrap violates minimum free space')
         self.db = self._open_ledger()
         try:
+            # Every live writer budget holds a shared flock on the ledger's
+            # parent directory inode (never the ledger file: BSD flock and
+            # SQLite's fcntl locks conflict) so offline recovery can prove, by
+            # an exclusive flock, that no process has the ledger open. A
+            # caller-held exclusive lease is adopted for offline maintenance.
+            if ledger_lease is not None:
+                ledger_lease.assert_current()
+                if not ledger_lease.exclusive or Path(ledger_lease.path)!=self._ledger_path.parent:
+                    raise ValueError('ledger_lease must be the exclusive lease of this ledger directory')
+                self._ledger_lease=ledger_lease
+            else:
+                self._ledger_lease=DirectoryLease(self._ledger_path.parent);self._ledger_lease_owned=True
             with self._path_lock:
                 self._set_guard_active(True)
                 self.db.execute('PRAGMA synchronous=FULL')
@@ -317,7 +334,9 @@ class DiskBudget:
             except Exception:
                 pass
             try: self.db.close()
-            finally: self._release_registry()
+            finally:
+                self._release_registry()
+                if self._ledger_lease_owned and self._ledger_lease is not None:self._ledger_lease.close()
             raise
         else:
             self._set_guard_active(False)
@@ -793,15 +812,7 @@ class DiskBudget:
         if not isinstance(evidence,str) or not evidence.strip(): raise ValueError('Explicit recovery evidence is required')
         evidence=_bounded_text(evidence,'recovery evidence',256)
         if terminal_state not in ('DURABLE','ROLLED_BACK','RECONCILED'): raise ValueError('Invalid terminal state')
-        proof_json=None
-        if evidence_document is not None:
-            if type(evidence_document) is not dict: raise ValueError('Recovery evidence document must be an object')
-            proof_json=json.dumps(evidence_document,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False)
-            proof_bytes=proof_json.encode('utf-8')
-            if len(proof_bytes)>8192: raise ValueError('Recovery evidence document exceeds 8192 UTF-8 bytes')
-            import hashlib
-            if not evidence.endswith(':'+hashlib.sha256(proof_bytes).hexdigest()):
-                raise ValueError('Recovery evidence digest does not match evidence document')
+        proof_json=None if evidence_document is None else self._proof_document(evidence,evidence_document)
         with self._ledger_transaction():
             current=self.reservation(key)
             linkrow=self.db.execute('SELECT link FROM checkpoint_reservations WHERE id=?',(key,)).fetchone()
@@ -812,6 +823,51 @@ class DiskBudget:
             self._reconcile_row(key,materialized_bytes,evidence,terminal_state)
             if proof_json is not None:
                 self.db.execute('INSERT INTO checkpoint_recovery_receipts(id,proof) VALUES(?,?)',(key,proof_json))
+
+    @staticmethod
+    def _proof_document(evidence,document):
+        if type(document) is not dict: raise ValueError('Recovery evidence document must be an object')
+        proof_json=json.dumps(document,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False)
+        proof_bytes=proof_json.encode('utf-8')
+        if len(proof_bytes)>8192: raise ValueError('Recovery evidence document exceeds 8192 UTF-8 bytes')
+        import hashlib
+        if not evidence.endswith(':'+hashlib.sha256(proof_bytes).hexdigest()):
+            raise ValueError('Recovery evidence digest does not match evidence document')
+        return proof_json
+
+    def live_reservations(self,*,linked,limit=256):
+        """Live RESERVED/WRITING rows with (linked=True) or without a checkpoint intent."""
+        _integer(limit,'live reservation limit',minimum=1)
+        names=('id','bytes','materialized_bytes','operation','owner','generation','state','evidence')
+        with self._path_lock:
+            rows=self.db.execute(f"""SELECT r.id,r.bytes,r.materialized,r.operation,r.owner,r.generation,r.state,r.evidence
+                FROM reservations r LEFT JOIN checkpoint_reservations c ON c.id=r.id
+                WHERE r.state IN ('RESERVED','WRITING') AND c.id IS {'NOT NULL' if linked else 'NULL'} ORDER BY r.id LIMIT ?""",(limit+1,)).fetchall()
+        if len(rows)>limit: raise DiskAdmissionError('Live reservation result exceeds limit')
+        return [dict(zip(names,row)) for row in rows]
+
+    def reconcile_unlinked(self,key,*,expected_reservation,materialized_bytes,evidence,evidence_document,terminal_state='RECONCILED'):
+        """Offline CAS settlement of a live token that has no checkpoint intent.
+
+        Only a recovery-only budget opened under an exclusive ledger lease may
+        call this. The settlement is conditional on the exact inspected row,
+        never lowers materialized bytes, and stores the proof receipt in the
+        same transaction, so a second application is refused.
+        """
+        if not self.recovery_only: raise DiskAdmissionError('Unlinked settlement requires a recovery-only ledger')
+        _integer(materialized_bytes,'materialized bytes')
+        if not isinstance(evidence,str) or not evidence.strip(): raise ValueError('Explicit recovery evidence is required')
+        evidence=_bounded_text(evidence,'recovery evidence',256)
+        if terminal_state not in ('RECONCILED','ROLLED_BACK'): raise ValueError('Invalid terminal state')
+        proof_json=self._proof_document(evidence,evidence_document)
+        with self._ledger_transaction():
+            current=self.reservation(key)
+            if current is None: raise KeyError(key)
+            if self.db.execute('SELECT 1 FROM checkpoint_reservations WHERE id=?',(key,)).fetchone():
+                raise DiskAdmissionError('Reservation has a checkpoint intent; use checkpoint recovery')
+            if current!=expected_reservation: raise DiskAdmissionError('Unlinked reservation CAS mismatch')
+            self._reconcile_row(key,materialized_bytes,evidence,terminal_state)
+            self.db.execute('INSERT INTO checkpoint_recovery_receipts(id,proof) VALUES(?,?)',(key,proof_json))
 
     def recovery_receipt(self,key):
         with self._path_lock:
@@ -859,4 +915,5 @@ class DiskBudget:
                 self.db.close()
             finally:
                 self._release_registry()
+                if self._ledger_lease_owned and self._ledger_lease is not None:self._ledger_lease.close()
                 self._closed=True
