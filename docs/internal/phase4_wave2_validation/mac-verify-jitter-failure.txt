@@ -1,0 +1,46 @@
+..........F............................................................. [  6%]
+..................................s..................................... [ 12%]
+.............................ssssss..................................... [ 19%]
+..........................................sssssssssssssss............... [ 25%]
+........................................................................ [ 32%]
+........................................................................ [ 38%]
+...ssssssssssss......................................................... [ 45%]
+........................................................................ [ 51%]
+........................................................................ [ 58%]
+........................................................................ [ 64%]
+........................................................................ [ 70%]
+........................................................................ [ 77%]
+........................................................................ [ 83%]
+................................................s....s.................. [ 90%]
+........................................................................ [ 96%]
+....................................                                     [100%]
+=================================== FAILURES ===================================
+____ test_sustained_injected_slowdown_switches_to_fused_policy_and_verifies ____
+
+tmp_path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1545/test_sustained_injected_slowdo0')
+
+    def test_sustained_injected_slowdown_switches_to_fused_policy_and_verifies(tmp_path):
+        runtime, session = _run(tmp_path)
+        applies = [d for d in runtime.replan_decisions if d['kind'] == 'apply']
+        assert len(applies) == 1 and runtime.transitions[-1]['updates'] == {'swap_policy': 'S2'}
+        evaluation = next(d for d in runtime.replan_decisions if d['kind'] == 'evaluate')
+        chosen = next(c for c in evaluation['candidates'] if c['proposal_id'] == evaluation['selected'])
+        assert chosen['candidate_calls'] < chosen['current_calls'] and chosen['gain_lower_seconds'] > 0
+        refused = [c for c in evaluation['candidates'] if c['classification'] == 'LIVE_TUNE']
+        assert refused and not any(c['eligible'] for c in refused)  # no call reduction -> no priced gain
+>       assert runtime.plan_version == 2 and session.verification == {'verified': True, 'calls': 2}
+E       AssertionError: assert (2 == 2 and {'verified': ...8798338472843} == {'verified': True, 'calls': 2}
+E        +  where 2 = <svsim.runtime_control.RuntimeControl object at 0x11170f4a0>.plan_version
+E         
+E         Differing items:
+E         {'verified': False} != {'verified': True}
+E         Left contains 2 more items:
+E         {'observed': 0.3309514590073377, 'predicted_upper': 0.2758798338472843}
+E         Right contains 1 more item:
+E         {'calls': 2}
+E         Use -v to get more diff)
+
+tests/test_adaptive_replan.py:76: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_adaptive_replan.py::test_sustained_injected_slowdown_switches_to_fused_policy_and_verifies
+1 failed, 1079 passed, 36 skipped, 83 deselected in 205.90s (0:03:25)

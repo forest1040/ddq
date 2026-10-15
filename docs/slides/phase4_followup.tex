@@ -27,3 +27,21 @@
   \takeaway{P4-001はDONE。\textbf{P4-002・009とPhase 4全体はIN\_PROGRESS}。複数host調停・全writerの故障回収・電源断modelは残る。}
   \note{根拠：docs/phase4\_handoff\_2026-10-15.md、docs/phase4\_exact\_future\_eta\_implementation.md、docs/phase4\_disk\_coordination\_implementation.md。容量調停はnode-localのopt-in。共有filesystemは拒否し、strict\_capacity\_guaranteeは立てない。layout migrationのtransient・Linux VERIFY・O\_DIRECT予測、tile/cache/gradient自動運用と最終比較matrixもbacklogへ残す。}
 \end{frame}
+
+\begin{frame}{Phase 4：回収・移行判断・比較証跡の補強}
+  \small
+  \begin{tabularx}{\textwidth}{@{}p{.18\textwidth}XX@{}}
+    \toprule 対象 & 追加した確認 & 未達として残す条件 \\
+    \midrule
+    Catalog予約 & DBのpath・device・inode・birthtimeへ帰属。DB／journalの観測を回収計画とreceiptに保存。 & 旧token、birthtime不明、作成時のidentity未確定は回収を拒否。 \\
+    \addlinespace
+    移行のbaseline & prefixのcoverage・drift・executor classを確認。現在の証拠が無効なら古いestimateも失効。 & 不安定なbaselineはunknown。評価用の認証をproductionへ転用しない。 \\
+    \addlinespace
+    比較matrix & 8 groupの代表case、2 variant・warmup・paired trialを検証。大状態とcross-hostは別slot。 & 未実行・予算不足・unsupported・数値不良を残す。全axisの受入は別判定。 \\
+    \bottomrule
+  \end{tabularx}
+  \medskip
+  \smallnote{統合高速1081成功・36 skip。Linux buffered／O\_DIRECTは各196成功。実statx birthtimeと別volume拒否も確認。}
+  \takeaway{不確かな証拠を完了扱いせず、\textbf{拒否理由と不足する検証を記録する}。P4-003・004・005・009はIN\_PROGRESS。}
+  \note{根拠：docs/phase4\_uncommitted\_recovery\_implementation.md、docs/phase4\_layout\_migration\_implementation.md、docs/phase4\_comparison\_matrix.md。birthtimeはfilesystemの分解能に依存する。比較matrixはrepresentative coverage onlyで、Phase 4 acceptanceはnot-assessed。損益分岐規則は変更しない。}
+\end{frame}

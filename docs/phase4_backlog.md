@@ -6,6 +6,8 @@
 
 ## 管理方法
 
+2026-10-15の継続wave 2では、専用worktreeの3並列タスクでP4-009の[catalog予約のfile単位帰属](phase4_uncommitted_recovery_implementation.md#catalog予約のfile単位帰属追加)、P4-003／004の[baseline品質による拒否](phase4_layout_migration_implementation.md#baselineの品質による安全な拒否2026-10-15継続wave-2)、P4-005の[比較matrix validator](phase4_comparison_matrix.md)を追加した。catalogはcanonical path・device・inode・birthtimeを確認し、旧token／取得不能／作成前identity未確定は自動回収しない。移行判断ではprefixのcoverage／drift／class一致と現在のestimateを必須にし、古いestimateを失効する。比較matrixは8 groupの代表coverageを判定するが、全axisのPhase 4 acceptanceはnot-assessedである。Mac MPI 2 rankのsustained／missing-baselineは各1組の機能smokeで、統計的な性能改善認定ではない。Linux O_DIRECTのlayout再campaign、production検出、装置変動を含むprofile幅、全性能matrix、全writer回収と電源断modelは継続し、P4-003／004／005／009はIN_PROGRESSを維持する。
+
 2026-10-15の引き継ぎ後、専用worktreeの3並列タスクでP4-009の外部job宣言超過検出、P4-002の短いrunの認証再確認、Linux再検証を進めた。外部jobは専用rootのnet file増分を観測し、超過／観測不能を次のadmission前に拒否する（[契約と制限](phase4_disk_coordination_implementation.md#外部jobの宣言超過の検出2026-10-15追加)）。ETAは角度pooling後も実submit順でburn-in／held-outを分離し、driftの誤認証を修正した（[実測と残件](phase4_exact_future_eta_implementation.md#短いrunの認証再確認2026-10-15追加)）。短いrunの48 checkは30回答、median誤差8.6％、coverage 83.3％。回答率改善の比較実証は行っておらず、coverage不良／driftの原因、Linux／multi-rank overheadは残る。統合版の高速テストは1044 passed／35 skipped／83 deselected。両項目はIN_PROGRESSを維持し、全writer回収・電源断model・複数host調停・最終比較matrixなどは継続する。
 
 [Phase 5設計書](phase5_design.md)で共通profile・校正・静的推定を先行整備し、P4-001／002／003／004／005／007／008へ接続する。容量拡大前にP4-009、必要な転置経路にP4-006を解消する。設計書の作成だけでは本backlogの状態を変更しない。
@@ -23,6 +25,8 @@ P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtim
 2026-10-14に[容量予約・runtime計測の基盤](phase4_foundation_implementation.md)を実装した。catalogとledgerの同SQLite VFS、writerへの予約接続、validated completion、厳密profile adapter、有限actual-runtime campaignを追加した。Macの検証と残る受入条件は[検証資料](internal/phase4_foundation_validation/README.md)へ記録する。両項目はIN_PROGRESSで、全writerのfault／回収証跡、profile registryの全stage・自動接続、監視overhead、Linux／cross-host校正は残る。M1とPhase 4の完了は宣言しない。
 
 ## 一覧
+
+継続wave 2の最終統合版はMac高速1081 passed／36 skipped、Linux buffered／O_DIRECT各196 passed。catalogの実statx birthtime・別volume拒否、checkpointのparent-path互換も確認した。[検証証跡](internal/phase4_wave2_validation/README.md)に初期failure・修正・最終logとsource hashを保存する。P4-009／002をDONEまで進める利用者指示に従い、未予約export、checkpoint payloadのintent付き回収、ETAのwork別coverageなどの実装を継続している。
 
 引き継ぎ後のLinux再検証はbuffered 105 passed、O_DIRECT 112 passed／2 skipped（Mac専用transport試験）だった。通常runtimeと新しい外部job監視、実MPI 1／2 rank、回収を検証した。[証跡・条件・hash](internal/p4_coordinator_followup_validation/README.md)を参照する。実O_DIRECTのaligned write／fsync／readbackを確認した。これはLinuxの機能回帰であり、ETA監視overheadの判定や全writerの電源断耐久性の完了証跡ではない。
 

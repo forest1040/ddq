@@ -1,5 +1,15 @@
 # Phase 4 引き継ぎ書（2026-10-15）
 
+## 継続wave 2（同日）
+
+3つの専用worktreeでcatalog帰属・移行判断・比較matrixを並列実装した。比較matrix担当はLunaへ委譲した。
+
+- **P4-009。** catalog tokenをcanonical path／device／inode／birthtimeへ結び付け、DB／journalのpath・identity・観測byteを回収計画とreceiptへ保存する。旧token、birthtime取得不能、startup identity未確定は自動回収を拒否する。DB自身のsymlinkは拒否し、root外の親pathにあるsymlinkは正規化して既存API互換を維持する。[契約・制限](phase4_uncommitted_recovery_implementation.md#catalog予約のfile単位帰属追加)を参照。
+- **P4-003／004。** baselineのheld-out coverage／drift／class一致を確認し、不安定・不足ならunknown、現在の証拠が無効なら古いestimateも失効する。予定遅延0の注入ticketのbookkeepingを注入時間に数える不具合も修正した。Mac MPI 2 rankのsustainedは切替・VERIFY成功、missing-baselineは切替0だった（各1組のsmoke）。[実装と残件](phase4_layout_migration_implementation.md#baselineの品質による安全な拒否2026-10-15継続wave-2)を参照。Linux O_DIRECT実campaignでの保守性回復は未認定。
+- **P4-005。** 8 groupの比較matrixで不足・失敗・unsupported・予算不足を残す。2 variant、warmup 2回、全planned trial、7組のpaired trialを要求し、大状態MPI/fileとcross-host Linuxは別slotにする。[代表coverage validator](phase4_comparison_matrix.md)であり、全axisの受入判定はnot-assessed。性能比較の全実測は未完了。
+- **状態。** P4-003／004／005／009とPhase 4全体はIN_PROGRESSを維持する。
+- **最終検証。** 高速版1081 passed／36 skipped／83 deselected、Linux buffered／O_DIRECT各196 passed／1 deselected。実statx birthtime、別volumeでの変更前拒否、O_DIRECT実write／fsync／readbackも成功した。[初期failureと最終証跡](internal/phase4_wave2_validation/README.md)を参照。利用者の追加指示により、以後はP4-009とP4-002をDONEにするまで継続する。
+
 ## 引き継ぎ後の追記（同日）
 
 専用worktreeを用いた3並列タスクで、外部jobの宣言超過検出、短いrunのETA認証再確認、Linux coordinator再検証を実施した。Linux担当はLunaへ委譲し、担当停止後は親エージェントが実検証を引き継いだ。以下の本文は再起動前の履歴として残す。

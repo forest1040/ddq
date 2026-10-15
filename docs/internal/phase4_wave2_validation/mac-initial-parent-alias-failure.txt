@@ -1,0 +1,61 @@
+........................................................................ [  6%]
+.................................s............................F......... [ 12%]
+............................ssssss...................................... [ 19%]
+.........................................sssssssssssssss................ [ 25%]
+........................................................................ [ 32%]
+........................................................................ [ 38%]
+..ssssssssssss.......................................................... [ 45%]
+........................................................................ [ 51%]
+........................................................................ [ 58%]
+........................................................................ [ 64%]
+........................................................................ [ 71%]
+........................................................................ [ 77%]
+........................................................................ [ 83%]
+...............................................s....s................... [ 90%]
+........................................................................ [ 96%]
+...................................                                      [100%]
+=================================== FAILURES ===================================
+_ test_checkpoint_writer_and_recovery_accept_root_external_symlink_parent_traversal _
+
+saved = (DistributedConfig(directory='/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1540/tes....        +0.j, 0.        +0.j, 0.        +0.j,
+       0.        +0.j, 0.        +0.j, 0.        +0.j, 0.        +0.j]))
+
+    def test_checkpoint_writer_and_recovery_accept_root_external_symlink_parent_traversal(saved):
+        config,snapshot,expected=saved
+        root=Path(config.directory)
+        child=root.parent/'child';child.mkdir()
+        alias=root.parent/'alias';alias.symlink_to(child,target_is_directory=True)
+        aliased=replace(config,directory=str(alias/'..'/root.name))
+>       with DistributedSimulator.resume(aliased,snapshot,comm=MPI.COMM_SELF) as sim:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_checkpoint_recovery.py:223: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/svsim/distributed.py:997: in resume
+    return cls(header['num_qubits'],config,comm=comm,_create=False,_snapshot=header['snapshot_id'])
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/svsim/distributed.py:84: in __init__
+    self._initialize(num_qubits,config,comm=comm,initial_state=initial_state,
+src/svsim/distributed.py:139: in _initialize
+    try: self.transport.vote(error)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <svsim.mpi_transport.MPITransport object at 0x10e5637d0>
+error = 'Catalog path must not contain symlinks'
+
+    def vote(self, error=None):
+        self._check()
+        message = None if error is None else str(error)[:self.metadata_limit]
+        if message is not None and len(message.encode("utf-8")) > self.metadata_limit:
+            message = message.encode("utf-8")[:self.metadata_limit].decode("utf-8", "ignore")
+        reports = self.control.allgather(message)
+        failures = [(i, text) for i, text in enumerate(reports) if text]
+        if failures:
+>           raise CollectiveError("collective failure: " + "; ".join(f"rank {i}: {s}" for i, s in failures))
+E           svsim.mpi_transport.CollectiveError: collective failure: rank 0: Catalog path must not contain symlinks
+
+src/svsim/mpi_transport.py:75: CollectiveError
+=========================== short test summary info ============================
+FAILED tests/test_checkpoint_recovery.py::test_checkpoint_writer_and_recovery_accept_root_external_symlink_parent_traversal
+1 failed, 1078 passed, 36 skipped, 83 deselected in 209.23s (0:03:29)
