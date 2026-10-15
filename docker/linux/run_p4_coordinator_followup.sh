@@ -25,7 +25,7 @@ SOURCE_FILES=(
   tests/test_transport_buffers.py
   docker/linux/run_p4_coordinator_followup.sh
 )
-(cd "$ROOT_DIR" && find "${SOURCE_FILES[@]}" -type f -print0 | sort -z | xargs -0 sha256sum) \
+(cd "$ROOT_DIR" && find "${SOURCE_FILES[@]}" -type f ! -path '*/__pycache__/*' ! -name '*.pyc' -print0 | sort -z | xargs -0 sha256sum) \
   > "$OUTPUT_DIR/source-hashes.txt"
 docker image inspect "$IMAGE" --format '{{json .}}' > "$OUTPUT_DIR/image.json"
 {
@@ -62,26 +62,37 @@ run_pytest() {
       python --version
       mpirun --version | head -n 1
       if [ "$SVSIM_TEST_BACKEND" = direct ]; then
-        uv run --offline --no-sync python -c "import tempfile; from pathlib import Path; from svsim.transport import StorageFile; p=Path(tempfile.mkdtemp(dir=\"/scratch\"))/\"odirect-probe.bin\"; data=b\"v\"*4096; f=StorageFile(p,\"w+b\",backend=\"direct\"); print(\"requested_backend=direct resolved_backend=\"+f.backend_identity, flush=True); assert f.backend_identity == \"linux-o-direct\", f.backend_identity; assert f.write(0,data)==len(data); f.flush(); assert f.read(0,len(data))==data; f.close(); print(\"O_DIRECT aligned write/fsync/readback passed\", flush=True)"
+        timeout --signal=TERM --kill-after=15s 30 uv run --offline --no-sync python -c "import tempfile; from pathlib import Path; from svsim.transport import StorageFile; p=Path(tempfile.mkdtemp(dir=\"/scratch\"))/\"odirect-probe.bin\"; data=b\"v\"*4096; f=StorageFile(p,\"w+b\",backend=\"direct\"); print(\"requested_backend=direct resolved_backend=\"+f.backend_identity, flush=True); assert f.backend_identity == \"linux-o-direct\", f.backend_identity; assert f.write(0,data)==len(data); f.flush(); assert f.read(0,len(data))==data; f.close(); print(\"O_DIRECT aligned write/fsync/readback passed\", flush=True)"
       fi
-      uv run --offline --no-sync pytest -q -p no:cacheprovider --junitxml="/output/${DDQ_JUNIT_NAME}.xml" "$@"' sh "$@"
+      timeout --signal=TERM --kill-after=15s 870 uv run --offline --no-sync pytest -q -p no:cacheprovider --junitxml="/output/${DDQ_JUNIT_NAME}.xml" "$@"' sh "$@"
 }
 
-run_pytest buffered volume-coordination-buffered \
+BUFFERED_TESTS=(
   tests/test_volume_coordination_runtime.py \
   tests/test_volume_coordinator.py \
   tests/test_disk_coordinator.py \
   tests/test_uncommitted_recovery.py \
   tests/test_checkpoint_recovery.py \
-  > "$OUTPUT_DIR/volume-coordination-buffered.txt" 2>&1
-
-run_pytest direct volume-coordination-direct \
+)
+DIRECT_TESTS=(
   tests/test_volume_coordination_runtime.py \
   tests/test_volume_coordinator.py \
   tests/test_uncommitted_recovery.py \
   tests/test_checkpoint_recovery.py \
   tests/test_transport.py \
   tests/test_transport_buffers.py \
+)
+if [[ -f "$ROOT_DIR/tests/test_volume_external_usage.py" ]]; then
+  SOURCE_FILES+=(tests/test_volume_external_usage.py)
+  BUFFERED_TESTS+=(tests/test_volume_external_usage.py)
+  DIRECT_TESTS+=(tests/test_volume_external_usage.py)
+  (cd "$ROOT_DIR" && sha256sum tests/test_volume_external_usage.py) >> "$OUTPUT_DIR/source-hashes.txt"
+fi
+
+run_pytest buffered volume-coordination-buffered "${BUFFERED_TESTS[@]}" \
+  > "$OUTPUT_DIR/volume-coordination-buffered.txt" 2>&1
+
+run_pytest direct volume-coordination-direct "${DIRECT_TESTS[@]}" \
   > "$OUTPUT_DIR/volume-coordination-direct.txt" 2>&1
 
 printf 'Evidence: %s\n' "$OUTPUT_DIR"
