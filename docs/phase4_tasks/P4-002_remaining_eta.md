@@ -4,6 +4,8 @@
 
 window／counted suffix／in-flight capture、private STAGED delta、strict-profile／diagnostic view、epoch／local completion更新を先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#残workとetap4-002)。現endpointはgates-only、suffix executor／private residualはunknown。細粒度stageとpayload coverage、held-out誤差／overheadの受入は残る。
 
+[残りepochの正確な実行形状と実測費用によるETA](../phase4_exact_future_eta_implementation.md)（2026-10-15）で、S0／S2の残りの実行形状を正確に数えてobserved viewで価格付けし、private epochの実行中の呼出しをresidualで扱い、held-out評価を行った。答えたcheckのmedianは目標内だが、答える割合と、multi-rankのS1、endpoint拡張は残る。
+
 ## 現状・変更箇所
 
 [runtime_cost.py](../../src/svsim/runtime_cost.py)はcallerの有限CostTask DAGを維持する。[execution_tasks.py](../../src/svsim/execution_tasks.py)のEpochLedgerはwindow coverage用。[async_scheduler.py](../../src/svsim/async_scheduler.py)から新規`remaining_work.py`／`runtime_eta.py`へ接続した。実I/O/MPI/computeの細粒度DAGはまだ生成しない。

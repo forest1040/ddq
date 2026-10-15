@@ -59,9 +59,37 @@ MPIのoracle（1／2／4 rank）は、現在のepochのboundary taskを数える
 
 ## held-out評価
 
-（評価中。結果は[内部記録](internal/p4_002_observed_eta/)に置く。）
+`examples/p4_002_observed_eta.py`（Geminiが下書きし、Sonnetが修正・実行）で、epoch境界のcheck（frontier 40／60／80％）からのobserved viewの予測を、そこから完了までの実時間（rank MAX）と比べた。workloadは、同じlayerを繰り返す4種と、layerごとに角度を変える2種で、30〜37 epochある。証跡は[内部記録](internal/p4_002_observed_eta/README.md)にある。
+
+**初回評価（future classの集約とoverflow修正の前）。**
+
+| 環境 | check | answered | median | p95 | worst | coverage |
+|---|---|---|---|---|---|---|
+| Mac 1 rank（6 workload、S0/S2、file/RAM） | 216 | 36% | 5.8% | 21.1% | 82.7% | 82.1% |
+| Mac 2 rank | 216 | 29% | 7.9% | 56.3% | 83.8% | 87.3% |
+| Linux buffered 1 rank RAM | 54 | 30% | 3.7% | 24.7% | 46.6% | 93.8% |
+| Linux buffered 2 rank RAM | 54 | 15% | 8.1% | 14.2% | 14.4% | 100% |
+| Linux O_DIRECT 1 rank file（1 workload） | 9 | 89% | 3.9% | 39.8% | 56.4% | 87.5% |
+| Mac private epoch（呼出しの合間） | 32 | 69% | 4.6% | 9.8% | 13.2% | 100% |
+
+- **未回答の原因。** 答えたcheckでは、全環境でmedianが30％目標内だった。未回答の原因は2つあった。
+  - 角度が変わる回路では、future classが上限を超えた（`FUTURE_CLASS_LIMIT`）。
+  - semantic tailがclass上限で溢れると、epochごとに走査し直していた。そのためepoch boundaryの費用が残量に比例して変わり（12→5 ms）、認証されなかった。
+- **修正。** futureを角度を除いたgate形状で集約した。角度だけが違うclassは、角度poolingの認証済みcostで価格付けする。溢れたtailも前進分を正確に引くようにした。boundaryは4〜5.4 msで一定になった。
+
+**修正後（Mac 1 rank、4 workload×S0/S2×file/RAM×3地点×2 trial）。**
+- **全体。** 96 checkのうち50％が答えた。median 6.6％、p95 19.7％、worst 22.3％、coverage 93.8％。
+- **角度を変える回路。** `rx-ry-var`は0／36から9／24に増えた。
+- **残る未回答。** 30〜40 epochの短いrunで、classがburn-in後8件・held-out coverage 0.8の認証に届かないものである。認証規則は緩めていない。
+
+**worstの原因。** 80％台のworstは、check後に実行が他trialの数倍に停滞した個別trialである（過小予測、原因は未計測）。
+
+**監視overhead。** ETAのon／off比は、Mac 1 rankで+2〜4％だった。2 rankとLinuxでは、pairのばらつきが差より大きく、判定できなかった。
 
 ## 残件
+
+- **答える割合。** 短いrunでは答える割合が約50％に留まる。classの認証には、burn-inの後に8件が必要だからである。長いrunとLinux file store・multi-rankでの再評価も残る。
+- **overhead。** Linuxとmulti-rankの監視overheadは、ばらつきが大きく判定できていない。
 
 - **S1。** multi-rankのS1のfuture（各gateのS1判断とphysical swap費用）は未対応である。
 - **endpoint。** observable／gradient／checkpointを含むendpointは未対応である。
