@@ -73,9 +73,29 @@ Macの高速版は918 passed、slowのMPI 2件は成功した。
 - **O_DIRECT。** 6/7が切り替え、VERIFYは3件成功した。baselineが`INSUFFICIENT_BASELINE`になったtrialでは、予測下限（9.5／8.7秒）が実gain（3.1／5.1秒）を上回り、保守的でなかった。注入前のprefixが揺れると、service下限の推定が崩れる。
 - **fingerprintとcontainer。** probeの`host_id`はhost名のhashなので、`docker run`のたびにhost名が変わると、同じ装置でもprofileが拒否される。ent Dockerでは`--hostname`を固定して実行した（[Linux開発環境](linux_development.md)に追記）。Macで校正したprofileは、Linuxでは構成不一致として拒否された。
 
+## 損益分岐ルール（2026-10-15追加、利用者の判断：案A）
+
+予測gainの下限は、劣化がendpointまで続く前提の条件付きである。そこで自動切替に、「baseline以降に払った超過の累計（判定中の呼出しを含む）が、候補の一回きりの費用（planning、drain、migration、calibration、validation、checkpoint、cleanup）に達していること」を加えた（スキーレンタル規則）。
+- **保証。** 劣化がこの先どうなっても、総費用は「切り替える／切り替えない」を後から見て最善に選んだ場合の約2倍以内に収まる。
+- **実装。** `AdaptiveEvaluation.estimate`が`paid_excess_seconds`を返し、`replan_cost.evaluate`が満たさない候補を`BREAK_EVEN_NOT_REACHED`で拒否する。判断logに`one_off_seconds`と`paid_excess_seconds`を残す。
+
+**Macでの再測定（2 rank、0.1 s、warmup 2・paired 7、現在のrevisionで再校正したprofile）。**
+
+| scenario | fixed | auto | 切替／VERIFY | 差のCI95 | 判定時の払済み超過 | 一回きりの費用 |
+|---|---|---|---|---|---|---|
+| sustained | 6.33 s | 1.72 s | 7/7 | [−4.61, −4.60] | 0.72 s | 0.047 s |
+| transient | 1.07 s | 1.12 s | 7/7 | [+0.03, +0.07] | 0.41 s | 0.047 s |
+| recovery | 2.29 s | 1.71 s | 7/7 | [−0.59, −0.56] | 0.72 s | 0.047 s |
+
+- **このscenarioでの効果。** この移行は一回きりの費用が小さく、判定時には払済みの超過がその9倍以上ある。そのため規則は判断を変えず、transientでも切り替える。
+- **transientの損失。** 損失は約0.04秒で、一回きりの費用以下だった。保証の範囲内である。
+- **規則が判断を変える場合。** 状態が大きく移行やcheckpointが高い場合や、超過が小さい場合に、劣化の持続を待つようになる。単体試験は`tests/test_replan_cost.py`と`tests/test_adaptive_evaluation.py`にある。
+- **profileの再校正。** profileのfingerprintにはcodeのrevisionが含まれるので、code変更後は再校正が必要である（旧profileは構成不一致で拒否された）。
+- **証跡。** [mac-break-even](internal/phase4_layout_migration/mac-break-even/)にある。
+
 ## 残件
 
-- **劣化の持続。** 一回きりの費用がかかる移行で、劣化の持続をどこまで要求するかが未決である。transientでの無益な切替は、この判断次第である。
+- **劣化の持続。** 損益分岐規則（上記）で、損失は約2倍以内に収まる。それでも、検出窓と同じ長さのtransientで、移行費用が小さい場合は切り替える。
 - **profileの幅。** Linuxの装置状態の切替を含む区間になっていない。また、baselineが揺れると予測下限が保守的でなくなる（O_DIRECT）。
 
 - **production。** production（注入なし）で劣化を検出する経路は無い。evaluationの注入下でだけ動く。
