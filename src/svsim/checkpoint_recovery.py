@@ -313,7 +313,7 @@ def recover_checkpoint_reservations(config, *, comm=None, snapshot=None, apply=F
             links=budget.checkpoint_links(root,limit=max_intents)
             targets=set()
             for item in links:
-                if item['link'].get('purpose') == 'state-export':
+                if item['link'].get('purpose') in ('state-export','catalog-startup'):
                     continue  # Explicit export inventory is recovered by recover_uncommitted_reservations.
                 if item['link']['rank']!=rank:continue
                 if item['reservation']['state'] not in ('RESERVED','WRITING'):

@@ -242,10 +242,11 @@ class CatalogLedgerLease:
     def __init__(self):
         self.budget=self.key=None
         self.owner=None
+        self.startup=False
         self.bytes=self.base_size=0
         self.ledger_reservation_count=0
 
-    def cover(self,budget,size,needed,*,drain,owner):
+    def cover(self,budget,size,needed,*,drain,owner,startup_path=None):
         if (self.key is not None and self.budget is budget and not getattr(budget,'_closed',False)
                 and self.owner == owner
                 and self.bytes-max(0,size-self.base_size)>=needed):
@@ -253,12 +254,19 @@ class CatalogLedgerLease:
         self.release()
         amount=needed+CATALOG_LEASE_SLACK_BYTES
         arguments=dict(drain=drain,operation='catalog-transaction',owner=owner,writing=True)
-        try: key=budget.reserve(amount,generation=sha256(os.urandom(16)).hexdigest(),**arguments)
+        generation=sha256(os.urandom(16)).hexdigest()
+        if startup_path is not None:
+            from .catalog_startup import make_intent, owner_for
+            intent=make_intent(budget,startup_path)
+            generation=intent['generation'];owner=owner_for(intent)
+            arguments.update(operation='catalog-startup',owner=owner,checkpoint_link=intent)
+        try: key=budget.reserve(amount,generation=generation,**arguments)
         except DiskAdmissionError:
             amount=needed
-            key=budget.reserve(amount,generation=sha256(os.urandom(16)).hexdigest(),**arguments)
+            key=budget.reserve(amount,generation=generation,**arguments)
         self.budget,self.key,self.bytes,self.base_size=budget,key,amount,size
         self.owner=owner
+        self.startup=startup_path is not None
         self.ledger_reservation_count+=1
         register_lease(budget,self)
         return key
@@ -268,8 +276,16 @@ class CatalogLedgerLease:
         if budget is not None: unregister_lease(budget,self)
         self.budget=self.key=None
         self.owner=None
+        self.startup=False
         self.bytes=self.base_size=0
         if key is not None and not getattr(budget,'_closed',False): budget.release(key)
+
+    def abandon(self):
+        """Retain a failed creation intent and its artifacts for explicit recovery."""
+        if self.budget is not None:unregister_lease(self.budget,self)
+        self.budget=self.key=None
+        self.owner=None;self.startup=False
+        self.bytes=self.base_size=0
 
 
 class CatalogBatch:
@@ -324,6 +340,9 @@ class CatalogConnection:
             except (NotImplementedError,OSError,sqlite3.Error,subprocess.SubprocessError) as exc:
                 self.guard_reason=str(exc)
                 if require_native: raise CatalogAdmissionError(self.guard_reason) from exc
+            if self._lease.startup:
+                from .catalog_startup import materialize
+                materialize(self._lease)
             self._conn = (self._guard.connect(self.path,main_cap_bytes=main,side_cap_bytes=side)
                           if self._guard else sqlite3.connect(self.path,timeout=30))
             info=self.path.lstat()
@@ -339,11 +358,15 @@ class CatalogConnection:
             self._conn.setlimit(sqlite3.SQLITE_LIMIT_LENGTH,16*1024**2)
             self._conn.setlimit(sqlite3.SQLITE_LIMIT_SQL_LENGTH,1024**2)
             self._conn.setlimit(sqlite3.SQLITE_LIMIT_ATTACHED,0)
+            if self._lease.startup:
+                from .catalog_startup import finish_open
+                finish_open(self._lease)
             self._finish()
         except BaseException:
             if '_conn' in self.__dict__: self._conn.close()
             self._release()
-            self._lease.release()
+            if self._lease.startup:self._lease.abandon()
+            else:self._lease.release()
             raise
 
     def _check(self):
@@ -367,7 +390,8 @@ class CatalogConnection:
             if device is not None and hasattr(budget,'roots') and device!=budget.roots[0].stat().st_dev:
                 raise CatalogAdmissionError('Catalog and budget must use the same volume')
             self._token=self._lease.cover(budget,size,main_cap-size+side_cap,
-                                          drain=bool(self._drain_getter()),owner=owner)
+                drain=bool(self._drain_getter()),owner=owner,
+                startup_path=self.path if info is None and self.path.parent.is_dir() and hasattr(budget,'checkpoint_link') else None)
             self._budget=budget
         self._main_cap,self._side_cap=main_cap,side_cap
         self._input_bytes=0

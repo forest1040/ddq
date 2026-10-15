@@ -51,7 +51,7 @@ _PRIVATE_DEFAULTS = {'quota_bytes': None, 'min_free_bytes': 0, 'drain_reserve_by
                      'bootstrap_bytes': 8 * 1024 ** 2, 'max_records': 4096}
 
 
-def _private_layout(ledger, roots, persisted=None):
+def _private_layout(ledger, roots, persisted=None, startup=False):
     """Store-private ledger: ``<store>/metadata/disk-ledger.sqlite3`` with no bound shared policy and one root.
 
     A ledger created with ``persist_private_policy`` carries a ``private_policy`` row and recovery verifies and
@@ -60,7 +60,7 @@ def _private_layout(ledger, roots, persisted=None):
     """
     store = ledger.parent.parent
     if (ledger.name != 'disk-ledger.sqlite3' or ledger.parent.name != 'metadata' or ledger.parent.is_symlink()
-            or not (store / 'metadata' / 'catalog.sqlite3').is_file()):
+            or not (store / 'metadata' / 'catalog.sqlite3').is_file() and not startup):
         raise DiskAdmissionError('Recovery requires a bound shared-policy ledger or a store-private ledger')
     if [Path(p) for p in roots] != [store]:
         raise DiskAdmissionError('A store-private ledger must register exactly its own store')
@@ -85,6 +85,8 @@ def _persisted(ledger):
                                 FROM shared_policy WHERE singleton=1''').fetchone()
         roots = [p for (p,) in con.execute('SELECT path FROM roots LIMIT 257')]
         private = None
+        from .catalog_startup import has_private_intent
+        startup = has_private_intent(con,ledger.parent.parent) if policy is None else False
         if policy is None and con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='private_policy'").fetchone():
             private = con.execute('''SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,bootstrap_bytes,max_records
                                     FROM private_policy WHERE singleton=1''').fetchone()
@@ -94,7 +96,7 @@ def _persisted(ledger):
         con.close()
     if policy is None:
         keys = ('quota_bytes', 'min_free_bytes', 'drain_reserve_bytes', 'bootstrap_bytes', 'max_records')
-        return _private_layout(ledger, roots, dict(zip(keys, private)) if private else None)
+        return _private_layout(ledger, roots, dict(zip(keys, private)) if private else None,startup=startup)
     if not roots or len(roots) > 256:
         raise DiskAdmissionError('Recovery needs 1..256 registered roots')
     return dict(zip(('quota_bytes', 'min_free_bytes', 'drain_reserve_bytes', 'bootstrap_bytes', 'max_records'), policy)), roots
@@ -148,6 +150,8 @@ def offline_scope(ledger, *, policy=None, writer=False):
             stores.extend(found); to_lease.update(directories)
         con = sqlite3.connect(ledger.as_uri() + '?mode=ro', uri=True)
         try:
+            from .catalog_startup import inventory_directories
+            to_lease.update(inventory_directories(con,roots))
             try:
                 from .export_admission import export_inventory_roots
             except ImportError:
@@ -469,7 +473,7 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
         deferred, uncommitted_linked = [], []
         for token in linked:
             link = link_of[token['id']]
-            dedicated = link is not None and (link.get('purpose') == 'state-export' or
+            dedicated = link is not None and (link.get('purpose') in ('state-export','catalog-startup') or
                                               link.get('stage') in ('metadata-payload','metadata-chunk'))
             if not dedicated and link is not None and link.get('snapshot_id') in committed_snapshots:
                 deferred.append(token)       # a committed cut: checkpoint recovery owns it
@@ -478,10 +482,13 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
         linked = deferred
         for token, link in uncommitted_linked:
             attribution = None
-            if link is not None and (link.get('purpose') == 'state-export' or
+            if link is not None and (link.get('purpose') in ('state-export','catalog-startup') or
                                      link.get('stage') in ('metadata-payload','metadata-chunk')):
                 try:
-                    if link.get('purpose') == 'state-export':
+                    if link.get('purpose') == 'catalog-startup':
+                        from .catalog_startup import plan_recovery
+                        dedicated_plan = plan_recovery(token,link,scope)
+                    elif link.get('purpose') == 'state-export':
                         from .export_admission import plan_recovery
                         dedicated_plan = plan_recovery(token,link,scope)
                     else:
@@ -490,7 +497,7 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
                             [l.path for l in scope['leases']] + [scope['ledger_lease'].path])
                     klass, reason = dedicated_plan['class'], None
                     attribution = dedicated_plan['attribution']
-                except (OSError, ValueError, KeyError, TypeError) as exc:
+                except (OSError, ValueError, KeyError, TypeError, sqlite3.Error) as exc:
                     klass, reason = None, str(exc)
             else:
                 klass, reason = _classify_uncommitted_checkpoint(token, link, scope)
@@ -540,7 +547,11 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
             raise UncommittedRecoveryRefused('Plan changed since the dry run; refusing to apply', report)
         _assert_catalog_files(stores)
         for entry, token, link in tokens:
-            if entry['class'] == 'export':
+            if entry['class'] == 'catalog-startup':
+                from .catalog_startup import plan_recovery
+                if plan_recovery(token,link,scope)['attribution'] != entry['attribution']:
+                    raise UncommittedRecoveryRefused('Catalog startup inventory changed after inspection',report)
+            elif entry['class'] == 'export':
                 from .export_admission import plan_recovery, recheck_recovery
                 recheck_recovery(token,link,scope)
                 if plan_recovery(token,link,scope)['attribution'] != entry['attribution']:

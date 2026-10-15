@@ -269,7 +269,7 @@ class DiskBudget:
         ledger = ledger.resolve()
         if store_private:
             only = self.roots[0] if len(self.roots)==1 else None
-            if only is None or ledger != only/'metadata'/'disk-ledger.sqlite3' or not (only/'metadata'/'catalog.sqlite3').is_file():
+            if only is None or ledger != only/'metadata'/'disk-ledger.sqlite3':
                 raise DiskAdmissionError('A store-private ledger must be <store>/metadata/disk-ledger.sqlite3 of exactly one store root')
         self._ledger_path = ledger
         if not recovery_only:ledger.parent.mkdir(parents=True, exist_ok=True)
@@ -448,6 +448,10 @@ class DiskBudget:
         if self.max_page_count<1 or con.execute('PRAGMA page_count').fetchone()[0]>self.max_page_count:
             raise DiskAdmissionError('Recovery ledger exceeds its page envelope')
         if self.store_private:
+            if not (self.roots[0]/'metadata/catalog.sqlite3').is_file():
+                from .catalog_startup import has_private_intent
+                if not has_private_intent(con,self.roots[0]):
+                    raise DiskAdmissionError('A missing private catalog requires a durable startup intent')
             # No policy row is persisted for the store's own ledger: it must stay unbound, and its only
             # registered root must be the store that owns it.
             if con.execute('SELECT count(*) FROM shared_policy').fetchone()[0]!=0:
@@ -792,6 +796,9 @@ class DiskBudget:
         if link.get('purpose') == 'state-export':
             from .export_admission import normalize_intent
             return normalize_intent(self,link,amount)
+        if link.get('purpose') == 'catalog-startup':
+            from .catalog_startup import normalize_intent
+            return normalize_intent(self,link,amount)
         keys = {'dataset_root','dataset_id','snapshot_id','rank','stage','target','temporary','digest'}
         if set(link) != keys:
             raise ValueError('Invalid checkpoint link fields')
@@ -911,6 +918,10 @@ class DiskBudget:
         link_json = None if checkpoint_link is None else self._checkpoint_link(checkpoint_link, amount)
         key = uuid4().hex
         with self._ledger_transaction():
+            if checkpoint_link is not None and checkpoint_link.get('purpose')=='catalog-startup':
+                # Serialize creation ownership with the token insertion, not just
+                # the earlier read-only normalization.
+                link_json=self._checkpoint_link(checkpoint_link,amount)
             count = self.db.execute('SELECT count(*) FROM reservations').fetchone()[0]
             if count >= self.max_records - 2:  # retain terminal slots for release/recovery bookkeeping
                 raise DiskAdmissionError('Disk reservation ledger is full')
@@ -1000,6 +1011,11 @@ class DiskBudget:
         with self._path_lock:
             row=self.db.execute('SELECT link FROM checkpoint_reservations WHERE id=?',(key,)).fetchone()
         return None if row is None else json.loads(row[0])
+
+    def bind_catalog_startup(self,key,*,expected_reservation,expected_link,phase):
+        """CAS-bind an admitted catalog creation to its durable inode generation."""
+        from .catalog_startup import cas_bind
+        return cas_bind(self,key,expected_reservation=expected_reservation,expected_link=expected_link,phase=phase)
 
     def checkpoint_links(self,dataset_root,limit=128):
         _integer(limit,'checkpoint link limit',minimum=1)

@@ -489,7 +489,7 @@ def test_catalog_identity_loss_refuses_all_tokens_without_modification(tmp_path,
     assert (_artifact_digest(tmp_path), _ledger_digest(ledger)) == before
 
 
-def test_new_catalog_startup_token_without_file_identity_is_not_guessed(tmp_path):
+def test_new_catalog_startup_finishes_with_a_bound_recoverable_token(tmp_path):
     child = _run('''
         import os, sys
         from pathlib import Path
@@ -503,8 +503,10 @@ def test_new_catalog_startup_token_without_file_identity_is_not_guessed(tmp_path
     ''' % QUOTA, tmp_path)
     assert child.returncode == 0, child.stderr
     report = recover_uncommitted_reservations(tmp_path / 'ledger/ledger.sqlite3')
-    assert report['status'] == 'refused'
-    assert any('catalog-owner-not-attributable' in r for r in report['refusals'])
+    assert report['status'] == 'dry-run', report['refusals']
+    assert [t['class'] for t in report['tokens']] == ['catalog']
+    recover_uncommitted_reservations(tmp_path / 'ledger/ledger.sqlite3',apply=True,
+                                    confirm_plan=report['plan_sha256'])
 
 
 def test_unavailable_birth_identity_never_releases_catalog_tokens(tmp_path, monkeypatch):
