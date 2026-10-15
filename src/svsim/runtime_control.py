@@ -211,7 +211,8 @@ class RuntimeControl:
             if ticket.state=='pending':sleep(min(.001,max(0,ticket.ready_at-monotonic())))
         ticket.complete(service_seconds=0.0)
         waited=monotonic()-started
-        self.resource_injected_seconds+=waited
+        # Ready no-op tickets still pay bookkeeping time, but are not injected evidence.
+        if ticket.planned_delay>0:self.resource_injected_seconds+=waited
         return waited
 
     def before_executor(self,event_id,source_count):
@@ -844,7 +845,10 @@ class RuntimeControl:
     def observe_evaluation(self, row):
         """Accept one agreed evaluation row (health, and evidence when degraded)."""
         self.health = row['health']
-        if row.get('estimate') is not None:
+        if row['health']!='DEGRADED' or row.get('estimate') is None:
+            self.evaluation_estimate=None
+            self.costs.unregister('replan-per-gate','evaluation-estimate')
+        if row.get('estimate') is not None and row['health']=='DEGRADED':
             self.evaluation_estimate = dict(row['estimate'])
             # Injected evaluation evidence: usable for evaluation, never for production replans.
             self.costs.register('replan-per-gate','evaluation-estimate','injected',

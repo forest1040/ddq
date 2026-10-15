@@ -1,0 +1,12 @@
+{
+  "revision": "bb1dcd4d9501e203c75d24417864ce5e0d268a8d",
+  "dirty": true,
+  "source_sha256": {
+    "src/svsim/adaptive_evaluation.py": "43bbc67981793b212ef06c38142353ab2f800d34b555a5683652fb5931f1735a",
+    "src/svsim/replan_cost_producer.py": "413e5437ce212d3450c5797bc28b2bc23669ccba8adcf1e1c4811418d7d74e4d",
+    "src/svsim/runtime_control.py": "ce60e468e2de5b90dc15d2bbe5b91dccd051e7a50d715ae4aa334f23d7b3f7a6",
+    "examples/phase4_remaining_campaign.py": "1f2cb8352f68443d02329342fdf653e0b9ed4ab554e0382f0917513754f2a88f"
+  },
+  "scope": "Mac same-host MPI 2 rank, buffered; paired 1 warmup 0 smoke only",
+  "background": "Other agents ran unit tests; no concurrent performance campaign was authorized."
+}

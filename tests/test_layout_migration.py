@@ -107,7 +107,13 @@ def test_layout_pricing_uses_only_profiled_classes_and_attributes_mpi_excess(tmp
     policy = AsyncPolicy(io_engine='cooperative', io_workers=1, prefetch_blocks=0, lookahead_gates=4)
     with AsyncDistributedSimulator(4, config, comm=MPI.COMM_SELF, policy=policy) as sim:
         for _ in range(8): sim.gate('RX', (3,), angle=.025)
-        estimate = {'service_lower_per_gate': .5, 'extra_lower_per_call': .2, 'extra_upper_per_call': .3,
+        sim.binding=sim.bind()
+        from svsim.journal import content_hash, gate_data
+        data=gate_data(sim._physical(sim.sequencer.operations[0]));data.pop('op_id',None);data.pop('source_op_id',None)
+        work_class=content_hash({'operations':[data],'layout':sim.layout.logical_to_physical,
+            'n':sim.num_qubits,'b':sim.block_bits,'P':sim.size,'binding':sim.binding.binding_id})
+        quality={'certified':True,'scope':'injected','production_profile':False,'work_class':work_class}
+        estimate = {'baseline_quality':quality,'service_lower_per_gate': .5, 'extra_lower_per_call': .2, 'extra_upper_per_call': .3,
                     'resource': 'mpi'}
         seen = []
         def resolve(kind, context, condition):
@@ -131,6 +137,17 @@ def test_layout_pricing_uses_only_profiled_classes_and_attributes_mpi_excess(tmp
         assert costs.execution_upper_seconds is None and counts['layout_reason'] == 'UNPROFILED_CANDIDATE_CLASS'
         costs, counts = layout_costs_for(sim, (3, 0), None, resolve=resolve, **kwargs)
         assert costs.execution_upper_seconds is None
+        # Even a complete profile cannot rescue missing or unstable baseline evidence.
+        for quality in ({}, {**quality,'certified':False}, {**quality,'work_class':'other-class'}):
+            costs, counts=layout_costs_for(sim,(3,0),{**estimate,'baseline_quality':quality},resolve=resolve,
+                                         qualified=True,**kwargs)
+            assert costs.continue_lower_seconds is None and costs.execution_upper_seconds is None
+            assert counts['baseline_reason'] in {'UNCERTIFIED_BASELINE','BASELINE_EXECUTOR_CLASS_MISMATCH'}
+        # A later source with a different angle cannot inherit the measured prefix service bound.
+        sim.gate('RX',(3,),angle=.5)
+        costs,counts=layout_costs_for(sim,(3,0),estimate,resolve=resolve,**{**kwargs,'end':8})
+        assert costs.continue_lower_seconds is None
+        assert counts['baseline_reason']=='BASELINE_EXECUTOR_CLASS_MISMATCH'
 
 
 def test_layout_migration_apply_is_collective_and_failure_keeps_the_old_layout(tmp_path):

@@ -102,3 +102,16 @@ Macの高速版は918 passed、slowのMPI 2件は成功した。
 - **profile。** profileは、校正runと同じclass（角度、policy、engineまで）にしか答えない。
 - **適用中の故障。** 実processのkillによる段階別fault（swap中、snapshot中）と、cross-hostが残る。
 - **候補の範囲。** 3 rank以上や複数bitの移行、tile候補（P4-006）との組合せは対象外である。
+
+## baselineの品質による安全な拒否（2026-10-15、継続wave 2）
+
+O_DIRECTの既知の失敗を受け、候補価格付けのcontinue側にもbaselineの適格性を要求するようにした。従来は4点のprefix medianでGuardを作り、baselineの状態が不足へ変わっても過去のestimateをcost registryに残していた。
+
+- **評価専用の品質情報。** `AdaptiveEvaluation`は`baseline_quality`に件数、class、認証理由、held-out件数／coverage、上下限、`scope=injected`、`production_profile=false`を記録する。最低4点を時系列で前半train／後半held-out（各2点以上）へ分ける。held-out coverageは0.8以上、trainの包絡に対する許容幅は10％、前後半medianの差とprefix全体の幅はmedianの50％以下を要求する。coverage・許容幅・driftの数値は既存rolling assessorの定数を使い、短いprefixにproductionの8点・burn-in認証を与えたとは扱わない。全体の幅のチェックは、交互の遅い／速いprefixが前後半のmedianだけを通過するのを防ぐ。
+- **未知として拒否。** 件数不足、成功していない測定、class不一致、drift、coverage不足からはestimateを作らない。`costs_for`と`layout_costs_for`は認証情報が無ければ両側の費用をunknownにし、`UNKNOWN_COST_COMPONENT`で拒否する。残りの全呼出しを4096 sourceの範囲で検査し、現在のlayout・binding・物理gate記述のclassがprefixと一致し、各呼出しが単一gateであることも必要とする。別angle、別class、fused current呼出しへ単一gateのservice下限を外挿しない。
+- **区間と失効。** 超過lowerはbaseline upperとの差、超過upperはbaseline lowerとの差へ変更し、medianの揺れを利益へ算入しない。払済み超過もbaseline upperからの超過を数える。損益分岐の比較（払済み超過 ≥ 一回きりの費用）は変更していない。現在のrowが`DEGRADED`かつestimateありの場合だけ登録し、`DEGRADED`でもestimateがunknownなら登録済みの評価estimateを失効させる。
+- **注入との分離。** storage／MPIの注入待ちはservice内に含まれるため、`resource_injected_seconds>0`のrowを非注入prefixへ入れない。有限smokeで、予定遅延0のno-op ticketもbookkeeping時間をこの値へ加算していたことを発見し、予定遅延が正の場合だけ加算するよう修正した。評価estimateのregistry provenanceは引き続き`injected`で、productionのresolveは拒否する。campaignの`events_head`にも品質情報を保存する。
+
+**検証。** 関連回帰は83 passed、MPI campaign名に一致する2件を除外（実MPIは下記の独立smokeで実行）。安定した認証済みprefixのpositive、時系列drift、低coverage、交互の高分散prefix、短いprefix、resource注入を含むprefix、baseline区間からの超過、別angleの残量、不足へ変わった後の古いestimate失効、no-opと正の遅延の計数を決定的な回帰で確認した。Mac MPI 2 rankの有限smoke（buffered、MPI 0.1秒／呼出し、warmup 0、paired 1）では、sustainedはfixed execute 6.084秒、auto 1.479秒、切替1・VERIFY成功1だった。予測下限2.300秒はこの1組の実gain 4.605秒より小さかった。missing-baselineは両armで全32 eventが`INSUFFICIENT_BASELINE`となり、profileがあっても切替0、oracle検証成功だった。これは1組のsmokeであり、CIによる性能改善の認定ではない。
+
+**証跡と限界。** [mac-baseline-quality](internal/phase4_layout_migration/mac-baseline-quality/)に校正profile、source hash、初回no-op計数不具合での拒否、修正後のsustainedとmissing-baselineを保存する。sourceは`bb1dcd4`を基点にしたdirty状態で、校正と修正後campaignは`source-state.json`の同じsource hashで実行した。他agentの単体試験は並行したが、他の性能campaignは同時実行していない。Linux O_DIRECTの再campaignは未実施であり、既知trialの保守性が実機で回復したとはまだ認定しない。Linuxの装置状態を含むexecutor profileの幅、productionでの劣化検出、cross-host・process killの残件は継続する。

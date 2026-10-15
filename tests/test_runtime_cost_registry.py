@@ -292,3 +292,34 @@ def test_cache_cost_requires_fresh_certified_reads_and_writes(tmp_path):
         runtime.apply_policy({'prefetch_blocks': 1})
         assert not runtime.costs.resolve('cache-entry', ('v', None, None)).known
         assert runtime.cost_decisions['storage-read'] == 'STALE_POLICY_EPOCH'
+
+
+@pytest.mark.parametrize('health',['INSUFFICIENT_BASELINE','INSUFFICIENT_METRICS','VERIFY_FAILED','STABLE',
+                                   'HEALTHY','DEGRADED'])
+def test_replan_estimate_is_revoked_when_measurements_stop_qualifying(sim,health):
+    runtime=sim.runtime
+    runtime.observe_evaluation({'health':'DEGRADED','estimate':{'scope':'injected'}})
+    assert runtime.costs.resolve('replan-per-gate',purpose='evaluation').known
+    runtime.observe_evaluation({'health':health})
+    assert runtime.evaluation_estimate is None
+    assert not runtime.costs.resolve('replan-per-gate',purpose='evaluation').known
+    assert not runtime.costs.resolve('replan-per-gate',purpose='production').known
+
+
+@pytest.mark.parametrize('planned,recorded',[(0.0,0.0),(.25,.5)])
+def test_resource_injection_accounting_excludes_noop_ticket_bookkeeping(sim,monkeypatch,planned,recorded):
+    from types import SimpleNamespace
+    import svsim.runtime_control as control
+    runtime=sim.runtime
+    completed=[]
+    ticket=SimpleNamespace(planned_delay=planned,state='pending' if planned else 'ready',
+                           complete=lambda **kw:completed.append(kw))
+    runtime.performance_injection=SimpleNamespace(request=lambda *a,**kw:ticket,
+                                                  progress=lambda:setattr(ticket,'state','ready'))
+    runtime.resource_injected_seconds=0.0
+    clock=iter([10.0,10.5])
+    monkeypatch.setattr(control,'monotonic',lambda:next(clock))
+    assert runtime.inject_resource('mpi-transfer')==.5
+    assert completed==[{'service_seconds':0.0}]
+    assert runtime.resource_injected_seconds==recorded
+    runtime.performance_injection=None

@@ -1,0 +1,1084 @@
+{
+  "adaptive": {
+    "schema_version": 1,
+    "kind": "comparison-report",
+    "case_id": "adaptive-missing-baseline-mpi-p2",
+    "manifest_hash": "aa464ece0e19391aea829127b5f65dd9c06cfdcdb9fdb78cdb29295f6a648031",
+    "seed": 1,
+    "rows": [
+      {
+        "variant_id": "fixed",
+        "axes": {
+          "mode": "observe"
+        },
+        "status": "completed",
+        "statuses": {
+          "completed": 1,
+          "failed": 0,
+          "insufficient-budget": 0,
+          "unmeasured": 0,
+          "unsupported": 0,
+          "validation_failed": 0
+        },
+        "metrics": {
+          "wall_seconds": {
+            "count": 1,
+            "median": 7.238412541919388,
+            "p95": 7.238412541919388,
+            "min": 7.238412541919388,
+            "max": 7.238412541919388,
+            "variation": 0.0
+          },
+          "rank_max_seconds": {
+            "count": 1,
+            "median": 7.238412541919388,
+            "p95": 7.238412541919388,
+            "min": 7.238412541919388,
+            "max": 7.238412541919388,
+            "variation": 0.0
+          },
+          "execute_seconds": {
+            "count": 1,
+            "median": 6.859834292088635,
+            "p95": 6.859834292088635,
+            "min": 6.859834292088635,
+            "max": 6.859834292088635,
+            "variation": 0.0
+          },
+          "managed_peak_bytes_max": {
+            "count": 1,
+            "median": 1533952.0,
+            "p95": 1533952.0,
+            "min": 1533952.0,
+            "max": 1533952.0,
+            "variation": 0.0
+          },
+          "read_bytes_sum": {
+            "count": 1,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "scratch_bytes_max": {
+            "count": 1,
+            "median": 937899.0,
+            "p95": 937899.0,
+            "min": 937899.0,
+            "max": 937899.0,
+            "variation": 0.0
+          },
+          "send_bytes_sum": {
+            "count": 1,
+            "median": 8192.0,
+            "p95": 8192.0,
+            "min": 8192.0,
+            "max": 8192.0,
+            "variation": 0.0
+          },
+          "switch_count": {
+            "count": 1,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "verified": {
+            "count": 1,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "write_bytes_sum": {
+            "count": 1,
+            "median": 524288.0,
+            "p95": 524288.0,
+            "min": 524288.0,
+            "max": 524288.0,
+            "variation": 0.0
+          }
+        },
+        "trials": [
+          {
+            "trial_index": 0,
+            "status": "completed",
+            "wall_seconds": 7.238412541919388,
+            "rank_wall_seconds": [
+              7.238412541919388,
+              7.238405666081235
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "execute_seconds": 6.859834292088635,
+              "managed_peak_bytes_max": 1533952,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 937899,
+              "send_bytes_sum": 8192,
+              "switch_count": 0,
+              "verified": 0,
+              "write_bytes_sum": 524288
+            },
+            "raw": {
+              "adaptive": {
+                "candidate_count": 0,
+                "degraded_observed": false,
+                "dropped_events": 0,
+                "eligible_candidate_count": 0,
+                "event_summary": {
+                  "count": 32,
+                  "first_degraded_ordinal": null,
+                  "first_stable_ordinal": null,
+                  "first_verifying_ordinal": null,
+                  "health_counts": {
+                    "INSUFFICIENT_BASELINE": 32
+                  },
+                  "injection_start_ordinal": 0
+                },
+                "events_head": [
+                  {
+                    "actual_service_seconds": 0.11502395803108811,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 0,
+                    "reason": "NO_NONINJECTED_PREFIX_BASELINE"
+                  },
+                  {
+                    "actual_service_seconds": 0.21662512503098696,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 1,
+                    "reason": "EXECUTOR_CLASS_MISMATCH"
+                  },
+                  {
+                    "actual_service_seconds": 0.21605629101395607,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 2,
+                    "reason": "EXECUTOR_CLASS_MISMATCH"
+                  },
+                  {
+                    "actual_service_seconds": 0.21990566595923156,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 3,
+                    "reason": "EXECUTOR_CLASS_MISMATCH"
+                  },
+                  {
+                    "actual_service_seconds": 0.21121987502556294,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 4,
+                    "reason": "EXECUTOR_CLASS_MISMATCH"
+                  },
+                  {
+                    "actual_service_seconds": 0.2108142920769751,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 5,
+                    "reason": "EXECUTOR_CLASS_MISMATCH"
+                  }
+                ],
+                "kind": "adaptive-evaluation",
+                "positive_gain_note": "set only by a paired fixed-vs-auto comparison whose interval excludes zero",
+                "positive_gain_verified": false,
+                "replan_decisions": [],
+                "schema_version": 1,
+                "scope": "injected",
+                "status": "observation-or-safe-refusal",
+                "switch_count": 0,
+                "verification": null
+              },
+              "background_load": {
+                "after": [
+                  6.44189453125,
+                  5.77978515625,
+                  5.02490234375
+                ],
+                "before": [
+                  6.3935546875,
+                  5.75927734375,
+                  5.013671875
+                ]
+              },
+              "case_manifest_hash": "aa464ece0e19391aea829127b5f65dd9c06cfdcdb9fdb78cdb29295f6a648031",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "execute_seconds": 6.859834292088635,
+                  "managed_peak_bytes_max": 1533952,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 937899,
+                  "send_bytes_sum": 8192,
+                  "switch_count": 0,
+                  "verified": 0,
+                  "write_bytes_sum": 524288
+                },
+                "rank_wall_seconds": [
+                  7.238412541919388,
+                  7.238405666081235
+                ],
+                "validator_passed": true,
+                "wall_seconds": 7.238412541919388
+              },
+              "monitor_level": null,
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "injected-same-host",
+              "source_actual_hash": "654056237a9c95e97081a47449f9f1c8f3ac47b08bda44d07f33b17e5169ed3a",
+              "trial_index": 0,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "fixed"
+            },
+            "raw_sha256": "58716dfaf15f6153aabe2f9e6c0102c85b53067e666d60465c9e2be3eb542bf0",
+            "reason": "",
+            "validation_errors": []
+          }
+        ]
+      },
+      {
+        "variant_id": "auto",
+        "axes": {
+          "mode": "auto"
+        },
+        "status": "completed",
+        "statuses": {
+          "completed": 1,
+          "failed": 0,
+          "insufficient-budget": 0,
+          "unmeasured": 0,
+          "unsupported": 0,
+          "validation_failed": 0
+        },
+        "metrics": {
+          "wall_seconds": {
+            "count": 1,
+            "median": 7.959007999976166,
+            "p95": 7.959007999976166,
+            "min": 7.959007999976166,
+            "max": 7.959007999976166,
+            "variation": 0.0
+          },
+          "rank_max_seconds": {
+            "count": 1,
+            "median": 7.959007999976166,
+            "p95": 7.959007999976166,
+            "min": 7.959007999976166,
+            "max": 7.959007999976166,
+            "variation": 0.0
+          },
+          "execute_seconds": {
+            "count": 1,
+            "median": 6.869046959094703,
+            "p95": 6.869046959094703,
+            "min": 6.869046959094703,
+            "max": 6.869046959094703,
+            "variation": 0.0
+          },
+          "managed_peak_bytes_max": {
+            "count": 1,
+            "median": 1533952.0,
+            "p95": 1533952.0,
+            "min": 1533952.0,
+            "max": 1533952.0,
+            "variation": 0.0
+          },
+          "read_bytes_sum": {
+            "count": 1,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "scratch_bytes_max": {
+            "count": 1,
+            "median": 937841.0,
+            "p95": 937841.0,
+            "min": 937841.0,
+            "max": 937841.0,
+            "variation": 0.0
+          },
+          "send_bytes_sum": {
+            "count": 1,
+            "median": 8192.0,
+            "p95": 8192.0,
+            "min": 8192.0,
+            "max": 8192.0,
+            "variation": 0.0
+          },
+          "switch_count": {
+            "count": 1,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "verified": {
+            "count": 1,
+            "median": 0.0,
+            "p95": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "variation": null
+          },
+          "write_bytes_sum": {
+            "count": 1,
+            "median": 524288.0,
+            "p95": 524288.0,
+            "min": 524288.0,
+            "max": 524288.0,
+            "variation": 0.0
+          }
+        },
+        "trials": [
+          {
+            "trial_index": 0,
+            "status": "completed",
+            "wall_seconds": 7.959007999976166,
+            "rank_wall_seconds": [
+              7.959007999976166,
+              7.959004541975446
+            ],
+            "validator_passed": true,
+            "metrics": {
+              "execute_seconds": 6.869046959094703,
+              "managed_peak_bytes_max": 1533952,
+              "read_bytes_sum": 0,
+              "scratch_bytes_max": 937841,
+              "send_bytes_sum": 8192,
+              "switch_count": 0,
+              "verified": 0,
+              "write_bytes_sum": 524288
+            },
+            "raw": {
+              "adaptive": {
+                "candidate_count": 0,
+                "degraded_observed": false,
+                "dropped_events": 0,
+                "eligible_candidate_count": 0,
+                "event_summary": {
+                  "count": 32,
+                  "first_degraded_ordinal": null,
+                  "first_stable_ordinal": null,
+                  "first_verifying_ordinal": null,
+                  "health_counts": {
+                    "INSUFFICIENT_BASELINE": 32
+                  },
+                  "injection_start_ordinal": 0
+                },
+                "events_head": [
+                  {
+                    "actual_service_seconds": 0.11581799993291497,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 0,
+                    "reason": "NO_NONINJECTED_PREFIX_BASELINE"
+                  },
+                  {
+                    "actual_service_seconds": 0.21830116596538574,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 1,
+                    "reason": "EXECUTOR_CLASS_MISMATCH"
+                  },
+                  {
+                    "actual_service_seconds": 0.21587541594635695,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 2,
+                    "reason": "EXECUTOR_CLASS_MISMATCH"
+                  },
+                  {
+                    "actual_service_seconds": 0.21884004201274365,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 3,
+                    "reason": "EXECUTOR_CLASS_MISMATCH"
+                  },
+                  {
+                    "actual_service_seconds": 0.2106769580859691,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 4,
+                    "reason": "EXECUTOR_CLASS_MISMATCH"
+                  },
+                  {
+                    "actual_service_seconds": 0.21060049999505281,
+                    "baseline_quality": null,
+                    "health": "INSUFFICIENT_BASELINE",
+                    "injected_delay_seconds": 0.0,
+                    "ordinal": 5,
+                    "reason": "EXECUTOR_CLASS_MISMATCH"
+                  }
+                ],
+                "kind": "adaptive-evaluation",
+                "positive_gain_note": "set only by a paired fixed-vs-auto comparison whose interval excludes zero",
+                "positive_gain_verified": false,
+                "replan_decisions": [],
+                "schema_version": 1,
+                "scope": "injected",
+                "status": "observation-or-safe-refusal",
+                "switch_count": 0,
+                "verification": null
+              },
+              "background_load": {
+                "after": [
+                  6.3935546875,
+                  5.75927734375,
+                  5.013671875
+                ],
+                "before": [
+                  6.0078125,
+                  5.666015625,
+                  4.97265625
+                ]
+              },
+              "case_manifest_hash": "aa464ece0e19391aea829127b5f65dd9c06cfdcdb9fdb78cdb29295f6a648031",
+              "completion_collection": true,
+              "gradient": null,
+              "measurement": {
+                "metrics": {
+                  "execute_seconds": 6.869046959094703,
+                  "managed_peak_bytes_max": 1533952,
+                  "read_bytes_sum": 0,
+                  "scratch_bytes_max": 937841,
+                  "send_bytes_sum": 8192,
+                  "switch_count": 0,
+                  "verified": 0,
+                  "write_bytes_sum": 524288
+                },
+                "rank_wall_seconds": [
+                  7.959007999976166,
+                  7.959004541975446
+                ],
+                "validator_passed": true,
+                "wall_seconds": 7.959007999976166
+              },
+              "monitor_level": null,
+              "resolved_backends": [
+                "buffered"
+              ],
+              "scope": "injected-same-host",
+              "source_actual_hash": "654056237a9c95e97081a47449f9f1c8f3ac47b08bda44d07f33b17e5169ed3a",
+              "trial_index": 0,
+              "validator": "eager-state-rtol-atol-1e-10",
+              "variant_id": "auto"
+            },
+            "raw_sha256": "4482ede560ad43ff68f654e1fcd6cc43ee96b19f960cc9bff2ed384abd1f71b5",
+            "reason": "",
+            "validation_errors": []
+          }
+        ]
+      }
+    ],
+    "comparisons": [
+      {
+        "baseline": "fixed",
+        "variant": "auto",
+        "axis": "mode",
+        "matched_pairs": 1,
+        "difference": {
+          "count": 1,
+          "median": 0.7205954580567777,
+          "p95": 0.7205954580567777,
+          "min": 0.7205954580567777,
+          "max": 0.7205954580567777,
+          "variation": 0.0
+        },
+        "ratio": {
+          "count": 1,
+          "median": 1.09955158729675,
+          "p95": 1.09955158729675,
+          "min": 1.09955158729675,
+          "max": 1.09955158729675,
+          "variation": 0.0
+        },
+        "difference_ci95": [
+          0.7205954580567777,
+          0.7205954580567777
+        ],
+        "claim": "unconfirmed",
+        "diagnostics": [
+          "small sample; interval is diagnostic"
+        ],
+        "scope_mismatches": 0,
+        "paired_metrics": {
+          "execute_seconds": {
+            "matched_pairs": 1,
+            "difference": {
+              "count": 1,
+              "median": 0.009212667006067932,
+              "p95": 0.009212667006067932,
+              "min": 0.009212667006067932,
+              "max": 0.009212667006067932,
+              "variation": 0.0
+            },
+            "ratio": {
+              "count": 1,
+              "median": 1.0013429868148116,
+              "p95": 1.0013429868148116,
+              "min": 1.0013429868148116,
+              "max": 1.0013429868148116,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.009212667006067932,
+              0.009212667006067932
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "small sample; interval is diagnostic"
+            ]
+          },
+          "managed_peak_bytes_max": {
+            "matched_pairs": 1,
+            "difference": {
+              "count": 1,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 1,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "small sample; interval is diagnostic",
+              "interval crosses zero"
+            ]
+          },
+          "read_bytes_sum": {
+            "matched_pairs": 1,
+            "difference": {
+              "count": 1,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "small sample; interval is diagnostic",
+              "interval crosses zero"
+            ]
+          },
+          "scratch_bytes_max": {
+            "matched_pairs": 1,
+            "difference": {
+              "count": 1,
+              "median": -58.0,
+              "p95": -58.0,
+              "min": -58.0,
+              "max": -58.0,
+              "variation": -0.0
+            },
+            "ratio": {
+              "count": 1,
+              "median": 0.9999381596525851,
+              "p95": 0.9999381596525851,
+              "min": 0.9999381596525851,
+              "max": 0.9999381596525851,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              -58.0,
+              -58.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "small sample; interval is diagnostic"
+            ]
+          },
+          "send_bytes_sum": {
+            "matched_pairs": 1,
+            "difference": {
+              "count": 1,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 1,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "small sample; interval is diagnostic",
+              "interval crosses zero"
+            ]
+          },
+          "switch_count": {
+            "matched_pairs": 1,
+            "difference": {
+              "count": 1,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "small sample; interval is diagnostic",
+              "interval crosses zero"
+            ]
+          },
+          "verified": {
+            "matched_pairs": 1,
+            "difference": {
+              "count": 1,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": null,
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "small sample; interval is diagnostic",
+              "interval crosses zero"
+            ]
+          },
+          "write_bytes_sum": {
+            "matched_pairs": 1,
+            "difference": {
+              "count": 1,
+              "median": 0.0,
+              "p95": 0.0,
+              "min": 0.0,
+              "max": 0.0,
+              "variation": null
+            },
+            "ratio": {
+              "count": 1,
+              "median": 1.0,
+              "p95": 1.0,
+              "min": 1.0,
+              "max": 1.0,
+              "variation": 0.0
+            },
+            "difference_ci95": [
+              0.0,
+              0.0
+            ],
+            "claim": "unconfirmed",
+            "diagnostics": [
+              "small sample; interval is diagnostic",
+              "interval crosses zero"
+            ]
+          }
+        }
+      }
+    ],
+    "planned_order": [
+      [
+        "auto",
+        0
+      ],
+      [
+        "fixed",
+        0
+      ]
+    ],
+    "extrapolation": "none",
+    "predictive_interval": false,
+    "case": {
+      "source": {
+        "hash": "654056237a9c95e97081a47449f9f1c8f3ac47b08bda44d07f33b17e5169ed3a",
+        "recipe": {
+          "injection": {
+            "barrier": "semantic-prefix",
+            "delay_seconds": 0.05,
+            "end": 66,
+            "max_events": 256,
+            "max_seconds": 60.0,
+            "operations": [
+              "mpi-transfer"
+            ],
+            "per_bytes": null,
+            "resource": "mpi",
+            "scope": "runtime-calibration",
+            "seed": 1,
+            "start": 0,
+            "trigger": "work"
+          },
+          "recipe": [
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ],
+            [
+              "RX",
+              [
+                3
+              ],
+              0.025
+            ]
+          ]
+        }
+      },
+      "initial_state": {
+        "kind": "initial-one"
+      },
+      "binding": {
+        "kind": "empty"
+      },
+      "exact_witness": {
+        "kind": "none"
+      },
+      "observable": {
+        "Z": 0
+      },
+      "endpoint": "construct+forward+state-validation+checkpoint+close+cleanup",
+      "n": 4,
+      "b": 2,
+      "ranks": 2,
+      "resources": {
+        "disk_per_rank_bytes": 67108864,
+        "ram_per_rank_bytes": 8388608,
+        "scope": "injected-same-host",
+        "threads": 1
+      },
+      "backend": "buffered",
+      "build": {
+        "lock": "850aa96ac1d868f27530f00f8ef8c9dcf954c60cdaa881ba2d8c2dabb2f6540b",
+        "machine": "arm64",
+        "mpi": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+        "platform": "macOS-26.7.1-arm64-arm-64bit",
+        "python": "3.12.13 (main, Mar  3 2026, 15:35:03) [Clang 21.1.4 ]",
+        "source": "1e47b5f9949cb52be16785c98d6eba1c079eb8314b042b09a9117872ce099fbf",
+        "thread_environment": {
+          "OMP_NUM_THREADS": "1",
+          "OPENBLAS_NUM_THREADS": null,
+          "VECLIB_MAXIMUM_THREADS": null
+        },
+        "worker": "1f2cb8352f68443d02329342fdf653e0b9ed4ab554e0382f0917513754f2a88f"
+      },
+      "seed": 1,
+      "tolerances": {
+        "atol": 1e-10,
+        "rtol": 1e-10
+      },
+      "warmups": 0,
+      "trials": 1,
+      "budget_seconds": 299.9999970829813
+    },
+    "warmup_rows": [],
+    "scope": "injected-same-host",
+    "injection": {
+      "seed": 1,
+      "resource": "mpi",
+      "trigger": "work",
+      "start": 0,
+      "end": 66,
+      "delay_seconds": 0.05,
+      "operations": [
+        "mpi-transfer"
+      ],
+      "max_seconds": 60.0,
+      "max_events": 256,
+      "barrier": "semantic-prefix",
+      "per_bytes": null,
+      "scope": "runtime-calibration"
+    },
+    "pilot_positive_gain_verified": false,
+    "positive_rule": "all auto trials switch once and verify; paired wall difference CI95 upper < 0"
+  },
+  "schema_version": 1,
+  "kind": "phase4-followup-campaign",
+  "scope": "same-host",
+  "ranks": 2,
+  "backend": "buffered",
+  "build": {
+    "source": "1e47b5f9949cb52be16785c98d6eba1c079eb8314b042b09a9117872ce099fbf",
+    "worker": "1f2cb8352f68443d02329342fdf653e0b9ed4ab554e0382f0917513754f2a88f",
+    "lock": "850aa96ac1d868f27530f00f8ef8c9dcf954c60cdaa881ba2d8c2dabb2f6540b",
+    "python": "3.12.13 (main, Mar  3 2026, 15:35:03) [Clang 21.1.4 ]",
+    "platform": "macOS-26.7.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "mpi": "Open MPI v5.0.11, package: Open MPI brew@Tahoe-arm64.local Distribution, ident: 5.0.11, repo rev: v5.0.11rc1, Sep 16, 2026\u0000",
+    "thread_environment": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": null,
+      "VECLIB_MAXIMUM_THREADS": null
+    }
+  },
+  "cluster_used": false,
+  "unmeasured_groups": [
+    "cross-host",
+    "storage-mpi-positive-adaptation",
+    "full-control-migration",
+    "large-state-paired",
+    "tile-paired",
+    "cache-fairness-paired",
+    "lifecycle-fault-matrix"
+  ]
+}

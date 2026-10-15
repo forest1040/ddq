@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from .journal import canonical
+from .journal import canonical, content_hash, gate_data
 from .replan_cost import ReplanCosts
 from .replan_candidates import proposal_context
 from .remaining_work import cost_context, executor_condition, executor_groups, strip_ids
@@ -29,6 +29,31 @@ def remaining_calls(sim, policy, start, end):
     return calls
 
 
+def baseline_reason(sim, estimate, start, end):
+    """Refuse missing/unstable evidence and extrapolation to an unmeasured executor class."""
+    if estimate is None:return 'NO_BASELINE_EVIDENCE'
+    quality=estimate.get('baseline_quality',{})
+    if quality.get('certified') is not True:return 'UNCERTIFIED_BASELINE'
+    if quality.get('scope')!='injected' or quality.get('production_profile') is not False:
+        return 'INVALID_BASELINE_SCOPE'
+    from .replan_candidates import MAX_LAYOUT_SCAN
+    if end-start+1>MAX_LAYOUT_SCAN:return 'BASELINE_CLASS_SCAN_LIMIT'
+    if sim.binding is None:return 'BASELINE_BINDING_UNKNOWN'
+    operations,cursor=sim.sequencer.operations,start
+    while cursor<=end:
+        stop=min(end,cursor+sim.policy.lookahead_gates-1)
+        for group in executor_groups(operations[cursor:stop+1],sim.layout,sim.block_bits,sim.policy):
+            descriptors=[]
+            for gate in group:
+                data=gate_data(sim._physical(gate));data.pop('op_id',None);data.pop('source_op_id',None)
+                descriptors.append(data)
+            work_class=content_hash({'operations':descriptors,'layout':sim.layout.logical_to_physical,
+                'n':sim.num_qubits,'b':sim.block_bits,'P':sim.size,'binding':sim.binding.binding_id})
+            if len(group)!=1 or work_class!=quality.get('work_class'):return 'BASELINE_EXECUTOR_CLASS_MISMATCH'
+        cursor=stop+1
+    return None
+
+
 def costs_for(sim, row, estimate, *, end, planning_seconds, drain_seconds, checkpoint_seconds, qualified=False,
               resolve=None):
     """ReplanCosts for one proposal row; ``estimate`` and ``qualified`` come from the cost registry."""
@@ -43,8 +68,10 @@ def costs_for(sim, row, estimate, *, end, planning_seconds, drain_seconds, check
     current_calls = remaining_calls(sim, sim.policy, start, end)
     candidate_calls = remaining_calls(sim, candidate, start, end)
     context = proposal_context(sim)
-    if estimate is None:
-        return ReplanCosts(context_hash=context), {'current_calls': current_calls, 'candidate_calls': candidate_calls}
+    reason=baseline_reason(sim,estimate,start,end)
+    if reason is not None:
+        return ReplanCosts(context_hash=context), {'current_calls':current_calls,'candidate_calls':candidate_calls,
+                                                  'baseline_reason':reason}
     continue_lower = gates * estimate['service_lower_per_gate'] + current_calls * estimate['extra_lower_per_call']
     execution_upper = gates * estimate['service_upper_per_gate'] + candidate_calls * estimate['extra_upper_per_call']
     frontier_change = row['classification'] == 'FRONTIER_REPLAN'
@@ -78,7 +105,10 @@ def layout_costs_for(sim, bits, estimate, *, end, planning_seconds, drain_second
     current_calls = remaining_calls(sim, sim.policy, start, end)
     counts = {'current_calls': current_calls, 'remaining_gates': gates, 'layout_swap': list(bits)}
     unknown = ReplanCosts(context_hash=context)
-    if estimate is None or resolve is None or gates > MAX_LAYOUT_SCAN:
+    reason=baseline_reason(sim,estimate,start,end)
+    if reason is not None:
+        return unknown, {**counts,'baseline_reason':reason,'layout_reason':reason}
+    if resolve is None or gates > MAX_LAYOUT_SCAN:
         return unknown, {**counts, 'layout_reason': 'NO_EVIDENCE_OR_SCAN_LIMIT'}
     layout = sim.layout.swapped_physical(*bits)
     first_rank = sim.num_qubits - sim.ownership.rank_bits

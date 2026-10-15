@@ -5,6 +5,7 @@ from statistics import median
 
 from .lifecycle import BenchmarkCondition,BenchmarkSample,StaticCircuitOptimizer
 from .telemetry import ObservePerformanceGuard
+from .runtime_observed_costs import DRIFT_LIMIT, MIN_COVERAGE, TOLERANCE
 
 
 class AdaptiveEvaluation:
@@ -28,6 +29,7 @@ class AdaptiveEvaluation:
         self.rebaseline=None
         self._context=None
         self.resources=set()
+        self.baseline_quality=None
 
     def observe(self,event,*,profile,circuit_hash,num_qubits,block_bits,ranks):
         service=event['actual_service_seconds'];delay=event['injected_delay_seconds']
@@ -50,25 +52,53 @@ class AdaptiveEvaluation:
             row={'health':'INSUFFICIENT_BASELINE','reason':'EXECUTOR_CLASS_MISMATCH'}
         elif event.get('success') is not True:
             row={'health':'INSUFFICIENT_METRICS','reason':'FAILED_EXECUTOR_GROUP'}
-        elif self.guard is None and self.baseline_groups and len(self.prefix)<self.baseline_groups and delay==0:
+        elif self.guard is None and self.baseline_groups and len(self.prefix)<self.baseline_groups and delay==0 and event.get('resource_injected_seconds',0)==0:
             self.work_class=work_class
             self.prefix.append(service)
             row={'health':'OBSERVING','reason':'EVALUATION_BASELINE_PREFIX'}
             if len(self.prefix)==self.baseline_groups:
                 self._context=(profile,circuit_hash,num_qubits,block_bits,ranks)
-                if self._install_guard(median(self.prefix),work_class,'prefix'):
+                self.baseline_quality=self._assess_baseline()
+                if self.baseline_quality['certified'] and self._install_guard(median(self.prefix),work_class,'prefix'):
                     row={'health':'BASELINED','reason':'ACTUAL_PREFIX_EVALUATION_ONLY'}
+                else:
+                    row={'health':'INSUFFICIENT_BASELINE','reason':self.baseline_quality['reason']}
         elif self.guard is None:
             row={'health':'INSUFFICIENT_BASELINE','reason':'NO_NONINJECTED_PREFIX_BASELINE'}
         else:
             report=self.guard.observe(BenchmarkSample(self.condition,latency_ms=(service+delay)*1000))
             row={'health':report.health_state,'reason':report.reason,'ratio':report.degradation_ratio}
             if row['health']=='DEGRADED':row['estimate']=self.estimate(current=service+delay)
+        row['baseline_quality']=self.baseline_quality
         row.update({'ordinal':len(self.events),'source_ids':tuple(event.get('source_ids',())),
             'actual_service_seconds':service,'injected_delay_seconds':delay,'scope':'injected',
             'production_profile':False})
         self.events.append(row)
         return row
+
+    def _assess_baseline(self):
+        """Bounded evaluation-only prefix check; never a production cost certificate.
+
+        Use the rolling assessor's held-out coverage and drift thresholds, with
+        at least two chronological training and two held-out calls. This short
+        prefix has no burn-in and is deliberately labelled evaluation-only.
+        """
+        values=self.prefix
+        quality={'certified':False,'scope':'injected','production_profile':False,
+                 'method':'prefix-held-out','samples':len(values),'work_class':self.work_class}
+        if len(values)<4 or any(v<=0 for v in values):
+            return {**quality,'reason':'INSUFFICIENT_BASELINE_SAMPLES'}
+        half=len(values)//2
+        train,held=values[:half],values[half:]
+        lower,upper=min(train)*(1-TOLERANCE),max(train)*(1+TOLERANCE)
+        coverage=sum(lower<=v<=upper for v in held)/len(held)
+        drifting=(abs(median(held)-median(train))>DRIFT_LIMIT*median(train)
+                  or max(values)-min(values)>DRIFT_LIMIT*median(values))
+        reason=('DRIFTING_BASELINE' if drifting else
+                'LOW_BASELINE_HELD_OUT_COVERAGE' if coverage<MIN_COVERAGE else 'CERTIFIED_EVALUATION_BASELINE')
+        return {**quality,'certified':not drifting and coverage>=MIN_COVERAGE,'reason':reason,
+                'held_out_count':len(held),'held_out_coverage':coverage,
+                'lower_seconds':min(values),'upper_seconds':max(values)}
 
     def _install_guard(self,latency,work_class,origin):
         if latency<=0:return False
@@ -82,31 +112,34 @@ class AdaptiveEvaluation:
             consecutive_windows=self.consecutive_windows)
         self.rebaseline=None
         # Excess paid since this baseline: the break-even rule compares it with one-off switch costs.
-        self._guard_center,self._guard_index=latency,len(self.events)+1
+        self._guard_center,self._guard_index=(max(self.prefix) if origin=='prefix' else latency),len(self.events)+1
         return True
 
     def _rebaseline(self,work_class):
         """After a verified switch, re-judge later calls against the new executor class itself."""
         self.guard=None;self.work_class=work_class;self.rebaseline=[]
+        self.baseline_quality=None
 
     def estimate(self,*,current=None):
         """Per-gate service and per-call excess from this evaluation's own measured events.
 
         The baseline prefix holds single-gate calls without injection; the excess
-        is (service+delay) minus the baseline median over the post-baseline
+        uses the baseline upper/lower envelope over the post-baseline
         events of the same class. Unknown until a full Guard window exists.
         """
-        if self.guard is None or any(len(e['source_ids'])!=1 for e in self.events[:len(self.prefix)]):return None
-        center=median(self.prefix)
+        if (self.guard is None or not self.baseline_quality or not self.baseline_quality['certified']
+                or self.rebaseline is not None or self.baseline_quality['work_class']!=self.work_class
+                or any(len(e['source_ids'])!=1 for e in self.events[:len(self.prefix)])):return None
         recent=[e for e in self.events[len(self.prefix):] if e['health'] not in {'INSUFFICIENT_BASELINE','INSUFFICIENT_METRICS'}]
         recent=recent[-self.window_size*self.consecutive_windows:]
         if len(recent)<self.window_size:return None
-        extra=[max(0.0,e['actual_service_seconds']+e['injected_delay_seconds']-center) for e in recent]
+        extra_lower=[max(0.0,e['actual_service_seconds']+e['injected_delay_seconds']-max(self.prefix)) for e in recent]
+        extra_upper=[max(0.0,e['actual_service_seconds']+e['injected_delay_seconds']-min(self.prefix)) for e in recent]
         paid=sum(max(0.0,e['actual_service_seconds']+e['injected_delay_seconds']-self._guard_center)
                  for e in self.events[self._guard_index:])+(max(0.0,current-self._guard_center) if current is not None else 0.0)
-        return {'scope':'injected','service_lower_per_gate':min(self.prefix),'service_upper_per_gate':max(self.prefix),
+        return {'scope':'injected','baseline_quality':dict(self.baseline_quality),'service_lower_per_gate':min(self.prefix),'service_upper_per_gate':max(self.prefix),
                 'paid_excess_seconds':paid,
-                'extra_lower_per_call':min(extra),'extra_upper_per_call':max(extra),'excess_sample_count':len(extra),
+                'extra_lower_per_call':min(extra_lower),'extra_upper_per_call':max(extra_upper),'excess_sample_count':len(extra_lower),
                 'resource':next(iter(self.resources)) if len(self.resources)==1 else None}
 
     def begin_verify(self,*,service_upper_per_gate,extra_upper_per_call,required=None,slack=.1):
