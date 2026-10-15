@@ -325,7 +325,7 @@ class DiskBudget:
                 self._ledger_lease=DirectoryLease(self._ledger_path.parent);self._ledger_lease_owned=True
             with self._path_lock:
                 self._set_guard_active(True)
-                self.db.execute('PRAGMA synchronous=FULL')
+                self.db.execute('PRAGMA synchronous=EXTRA')
                 self.db.execute('PRAGMA journal_mode=DELETE').fetchone()
                 page_size = self.db.execute('PRAGMA page_size').fetchone()[0]
                 page_cap = self._ledger_main_cap // page_size
@@ -498,7 +498,7 @@ class DiskBudget:
                 self._check_recovery_headroom()
                 self.db=self._open_ledger()
                 self._set_guard_active(False)
-                self.db.execute('PRAGMA synchronous=FULL')
+                self.db.execute('PRAGMA synchronous=EXTRA')
                 if self.db.execute(f'PRAGMA max_page_count={self.max_page_count}').fetchone()[0]!=self.max_page_count:
                     raise DiskAdmissionError('Recovery ledger page cap could not be enforced')
                 self._validate_recovery_ledger(self.db)

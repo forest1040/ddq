@@ -331,7 +331,7 @@ class CatalogConnection:
             if self._guard:
                 state=self._status()
                 if state['sqlite_version']!=sqlite3.sqlite_version: raise CatalogAdmissionError('SQLite library identity mismatch')
-            self._conn.execute('PRAGMA synchronous=FULL')
+            self._conn.execute('PRAGMA synchronous=EXTRA')
             self._conn.execute('PRAGMA journal_mode=DELETE').fetchone()
             self._conn.execute('PRAGMA mmap_size=0')
             # Native VFS rejects unsupported disk temp files; current small TEMP
@@ -440,7 +440,7 @@ class CatalogConnection:
             if name not in allowed: raise CatalogAdmissionError('Unsupported catalog pragma: '+name)
             if '=' in stripped:
                 value=stripped.split('=',1)[1].strip().rstrip(';').upper()
-                fixed={'synchronous':{'FULL','2'},'mmap_size':{'0'},'journal_mode':{'DELETE'},
+                fixed={'synchronous':{'EXTRA','3'},'mmap_size':{'0'},'journal_mode':{'DELETE'},
                        'temp_store':{'FILE','1'}}
                 if name in fixed and value not in fixed[name]:
                     raise CatalogAdmissionError('Unsupported catalog pragma value: '+name)

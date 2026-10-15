@@ -186,7 +186,7 @@ class VolumeCoordinator:
         try:
             with self._lock:
                 self._activate(True)
-                self.db.execute('PRAGMA synchronous=FULL')
+                self.db.execute('PRAGMA synchronous=EXTRA')
                 self.db.execute('PRAGMA journal_mode=DELETE').fetchone()
                 size = self.db.execute('PRAGMA page_size').fetchone()[0]
                 cap = self._main_cap // size

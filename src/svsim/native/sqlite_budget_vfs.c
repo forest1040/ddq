@@ -75,6 +75,73 @@ static void denied(void){ lockState(); gDenied++; unlockState(); }
  * delete (the commit point of a rollback-journal transaction). Actions: 1 fail the
  * Nth call with an I/O error, 2 _exit before the real operation, 3 _exit after it. */
 #include <unistd.h>
+#include <errno.h>
+#include <sys/stat.h>
+/* Test-only durable filesystem images. The parent restores these after a
+ * process death, discarding unsynced writes and directory changes. Images live
+ * outside the budgeted namespace and are never part of a production build. */
+#define POWER_FILES 32
+#define POWER_FILE_LIMIT (16*1024*1024)
+static struct { char path[PATH_LIMIT]; int present; } gPowerFiles[POWER_FILES];
+static char gPowerRoot[PATH_LIMIT], gPowerFilter[PATH_LIMIT];
+static int gPowerCount, gPowerActive;
+static int powerManifest(void){
+  char temp[PATH_LIMIT], target[PATH_LIMIT]; FILE *out; int i;
+  if(snprintf(temp,sizeof(temp),"%s/manifest.tmp",gPowerRoot)>=(int)sizeof(temp) ||
+     snprintf(target,sizeof(target),"%s/manifest.tsv",gPowerRoot)>=(int)sizeof(target))return SQLITE_IOERR;
+  out=fopen(temp,"wb"); if(!out)return SQLITE_IOERR;
+  for(i=0;i<gPowerCount;i++)
+    if(fprintf(out,"%d\t%d\t%s\n",i,gPowerFiles[i].present,gPowerFiles[i].path)<0){fclose(out);return SQLITE_IOERR;}
+  if(fclose(out)!=0 || rename(temp,target)!=0)return SQLITE_IOERR;
+  return SQLITE_OK;
+}
+static int powerImage(const char *path,int deleted){
+  int i; char image[PATH_LIMIT]; char bytes[16384]; FILE *in,*out; long size; size_t n;
+  if(!gPowerActive || !path || !strstr(path,gPowerFilter))return SQLITE_OK;
+  if(strlen(path)>=PATH_LIMIT || strchr(path,'\n') || strchr(path,'\t'))return SQLITE_IOERR;
+  for(i=0;i<gPowerCount;i++)if(!strcmp(gPowerFiles[i].path,path))break;
+  if(i==gPowerCount){
+    if(gPowerCount>=POWER_FILES)return SQLITE_FULL;
+    strcpy(gPowerFiles[i].path,path);gPowerFiles[i].present=0;gPowerCount++;
+  }
+  if(snprintf(image,sizeof(image),"%s/%d.bin",gPowerRoot,i)>=(int)sizeof(image))return SQLITE_IOERR;
+  if(deleted){gPowerFiles[i].present=0;return powerManifest();}
+  in=fopen(path,"rb");
+  if(!in){
+    if(errno==ENOENT){gPowerFiles[i].present=0;return powerManifest();}
+    return SQLITE_IOERR;
+  }
+  if(fseek(in,0,SEEK_END)!=0 || (size=ftell(in))<0 || size>POWER_FILE_LIMIT || fseek(in,0,SEEK_SET)!=0){
+    fclose(in);return SQLITE_FULL;
+  }
+  out=fopen(image,"wb");if(!out){fclose(in);return SQLITE_IOERR;}
+  while((n=fread(bytes,1,sizeof(bytes),in))>0)
+    if(fwrite(bytes,1,n,out)!=n){fclose(in);fclose(out);return SQLITE_IOERR;}
+  if(ferror(in)){fclose(in);fclose(out);return SQLITE_IOERR;}
+  fclose(in);if(fclose(out)!=0)return SQLITE_IOERR;
+  gPowerFiles[i].present=1;return powerManifest();
+}
+static void powerArmFn(sqlite3_context*ctx,int argc,sqlite3_value**argv){
+  const char *filter=(const char*)sqlite3_value_text(argv[0]);
+  const char *root=(const char*)sqlite3_value_text(argv[1]);
+  BudgetDb *d; char journal[PATH_LIMIT]; struct stat info; int rc=SQLITE_OK;(void)argc;
+  if(!filter || !filter[0] || !root || root[0]!='/' || strlen(filter)>=PATH_LIMIT ||
+     strlen(root)>PATH_LIMIT-32 || stat(root,&info)!=0 || !S_ISDIR(info.st_mode)){
+    sqlite3_result_error(ctx,"bad power model arguments",-1);return;
+  }
+  gPowerActive=0;gPowerCount=0;strcpy(gPowerFilter,filter);strcpy(gPowerRoot,root);gPowerActive=1;
+  for(d=gDbs;d && rc==SQLITE_OK;d=d->next){
+    if(!strstr(d->path,filter))continue;
+    rc=powerImage(d->path,0);
+    if(rc==SQLITE_OK && snprintf(journal,sizeof(journal),"%s-journal",d->path)<(int)sizeof(journal))
+      rc=powerImage(journal,0);
+  }
+  if(rc!=SQLITE_OK){gPowerActive=0;sqlite3_result_error(ctx,"cannot seed power model",-1);return;}
+  sqlite3_result_int(ctx,gPowerCount);
+}
+static void powerDisarmFn(sqlite3_context*ctx,int argc,sqlite3_value**argv){
+  (void)argc;(void)argv;gPowerActive=0;sqlite3_result_int(ctx,1);
+}
 static char gFaultFilter[PATH_LIMIT];
 static int gFaultKind, gFaultNth, gFaultAction, gFaultCount;
 static int faultPoint(const char *mainPath,int kind,int after){
@@ -167,7 +234,15 @@ static int bfSync(sqlite3_file*p,int flags){
 #endif
   rc=f->real->pMethods->xSync(f->real,flags);
 #ifdef SVSIM_TEST_FAULTS
-  if(f->db) faultPoint(f->db->path,f->isMain?2:1,1);
+  if(rc==SQLITE_OK && f->db){
+    char journal[PATH_LIMIT];const char *path=f->db->path;
+    if(!f->isMain){
+      if(snprintf(journal,sizeof(journal),"%s-journal",path)>=(int)sizeof(journal))return SQLITE_IOERR_FSYNC;
+      path=journal;
+    }
+    if(powerImage(path,0)!=SQLITE_OK)return SQLITE_IOERR_FSYNC;
+    faultPoint(f->db->path,f->isMain?2:1,1);
+  }
 #endif
   return rc;
 }
@@ -258,7 +333,12 @@ static int vDelete(sqlite3_vfs*v,const char*z,int syncDir){
     if(jp && suffix(jp,"-journal")){
       jp[strlen(jp)-8]=0;
       if(faultPoint(jp,3,0)){sqlite3_free(jp);return SQLITE_IOERR_DELETE;}
-      { int rc=gParent->xDelete(gParent,z,syncDir); faultPoint(jp,3,1); sqlite3_free(jp); return rc; }
+      {
+        int rc=gParent->xDelete(gParent,z,syncDir);
+        if(rc==SQLITE_OK && syncDir && powerImage(z,1)!=SQLITE_OK)rc=SQLITE_IOERR_DELETE;
+        if(rc==SQLITE_OK)faultPoint(jp,3,1);
+        sqlite3_free(jp);return rc;
+      }
     }
     sqlite3_free(jp);
   }
@@ -403,6 +483,8 @@ int sqlite3_svsimdisk_init(sqlite3 *db,char **pzErrMsg,const sqlite3_api_routine
 #ifdef SVSIM_TEST_FAULTS
   if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_test_fault_arm",4,SQLITE_UTF8|SQLITE_DIRECTONLY,0,faultArmFn,0,0);
   if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_test_fault_disarm",0,SQLITE_UTF8|SQLITE_DIRECTONLY,0,faultDisarmFn,0,0);
+  if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_test_power_arm",2,SQLITE_UTF8|SQLITE_DIRECTONLY,0,powerArmFn,0,0);
+  if(rc==SQLITE_OK)rc=sqlite3_create_function(db,"svsim_test_power_disarm",0,SQLITE_UTF8|SQLITE_DIRECTONLY,0,powerDisarmFn,0,0);
 #endif
   if(rc==SQLITE_OK)rc=sqlite3_set_authorizer(db,guardAuthorizer,0);
   if(rc==SQLITE_OK)sqlite3_db_config(db,SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION,0,0);

@@ -126,7 +126,7 @@ class FileBlockStore:
             self._directory_lease = None
 
     def _initialize_catalog(self,config,num_qubits,create):
-        self.db.execute('PRAGMA synchronous=FULL')
+        self.db.execute('PRAGMA synchronous=EXTRA')
         self.db.execute(f'PRAGMA cache_size=-{max(1,min(16,config.metadata_reserve_bytes//4096))}')
         self.db.execute('PRAGMA temp_store=FILE')
         version = self.db.execute('PRAGMA user_version').fetchone()[0]
@@ -276,7 +276,7 @@ class FileBlockStore:
     def _sync_segments(self, segments=None):
         """Make written segment bytes durable before a catalog row may reference them.
 
-        The catalog commits with synchronous=FULL, so a published extent must not be weaker than
+        The catalog commits with synchronous=EXTRA, so a published extent must not be weaker than
         the row: its segment bytes (and the directory entry of a new segment file) are fsynced
         first. Inside a gate batch this runs once per stage, at publication, for every touched
         segment.
