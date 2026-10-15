@@ -27,7 +27,7 @@ tokenはintentを持たないものだけを対象にする（intent付きは件
 - `trace-append`／`journal-append`／`measurement-append`：追記tokenである。書込み済みbyteは観測使用量に含まれる。
 - `amplitude-extent`／`tile-amplitude-extent`：slot予約である。未publishのslotはversion行が`segment IS NULL`か、未参照のholeとして残り、byteは観測される。
 - `matrix-asset`／`snapshot-export`／`sidecar-write`：sidecar予約である。
-- `catalog-transaction`：ownerがstoreのcatalog pathのsha256に一致し、generationが64桁hexであること。登録storeに帰属できなければ拒否する。
+- `catalog-transaction`：ownerが`catalog-v3:<canonical path・device・inode・birth identityのsha256>`に一致し、generationが64桁hexであること。登録storeの実DB identityに帰属できなければ拒否する。path hashだけの旧tokenは同じ名前のDBがあっても置換を識別できないため拒否する。
 - 上記以外（`unspecified`、`allocation`、intentのない`atomic-json`など）は拒否する。
 
 ## temporary GC
@@ -55,3 +55,11 @@ tokenはintentを持たないものだけを対象にする（intent付きは件
 - temporary GCとdead branch GCも同じscopeを使う。dead branchは、leaseを引き継ぐadmitting budget（quota未設定の既定値）でcatalogを編集する。
 
 SQLiteが非空のsideファイルを読む前に拒否するため、`_persisted`のread-only openより前にside fileを検査する（共有policy modeにも適用）。`wal`が残る場合にread-only openが`-shm`を作る副作用を避けるためである。
+
+## catalog予約のfile単位帰属（追加）
+
+catalog leaseのownerはDBのcanonical path、device、inode、birth identityを固定する。別catalogのDBへ交換した場合、同じ内容のDBで置換した場合、別volumeやsymlink／hardlinkへ変更した場合は一致しない。writerはopen中のDB identityを記憶し、各transaction開始時に確認してから予約する。lease再利用にもowner一致を要求する。新規DB作成前のstartup予約は`catalog-unbound-v3:<identity hash>`であり、最初の正常なmutationではidentity付きtokenへ切り替える。作成途中で停止した未帰属startup tokenは推測で回収しない。
+
+rollback journalはDBの固定suffix `-journal`（WAL／SHMも検査対象）のpathへ帰属する。journalのinodeはSQLiteが作成・削除するため、token作成時のinodeをDBと同様に固定することはしない。offline検査は各side pathの存在、device／inode／byteを計画に記録し、非空side fileは常に拒否する。admitted reopenでjournalを消費してから再検査する。DBと全side fileのpath／identity／byteはtokenの`catalog_attribution`とreceiptにも保存する。applyではレビュー済み計画の再計算に加え、tokenを変更する前に全catalog namespaceを再確認する。共有ledgerに複数catalogがある場合もtokenごとに独立した帰属を報告する。schemaの変更や旧tokenの自動移行は行わない。
+
+inode再利用による誤帰属を避けるためbirth identityもownerに含める。macOSは`st_birthtime_ns`があればそれを、なければ`st_birthtime`のfloat値をhexで固定する。Linuxはlibc `statx`の固定256-byte ABIをread-onlyで呼び、`STATX_BTIME|STATX_INO`の返却maskと同時取得したdev/inoの一致を確認してnanosecond birthtimeを使う。API／filesystemがbirthtimeを提供しない場合、writerは未帰属tokenで続行できるがoffline精算は拒否する。接続中のidentity確認もbirth identityを含む。macOS float値の分解能、filesystemのbirthtime分解能を超える再利用衝突は検出できないため、完全なファイル世代識別保証ではない。通常のSQLite DELETE journal transaction/reopenはDB inode/birthtimeを維持し、proxyは`VACUUM`を拒否する。意図的にbirthtimeを保存して複製・偽装する非協調processは対象外である。

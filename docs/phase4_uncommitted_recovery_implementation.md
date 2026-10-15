@@ -30,5 +30,15 @@
 
 ## 残り
 
-残りは、別ledger／外部job／複数hostの調停と一括回収、extent公開とsegment fsyncの電源断時の順序（kill試験では検証できない）、SQLite fsync内部への決定的なstage注入、catalog tokenのfile単位の帰属、private ledgerのpolicy非永続による検査の弱さである。
+残りは、別ledger／外部job／複数hostの調停と一括回収、extent公開とsegment fsyncの電源断時の順序（kill試験では検証できない）、SQLite fsync内部への決定的なstage注入、private ledgerのpolicy非永続による検査の弱さである。
 
+
+## catalog予約のfile単位帰属（追加）
+
+`catalog_admission.catalog_file_owner`がversion付きのcanonical path・device/inode・birth identityのhashを生成し、`CatalogLedgerLease`はowner一致を再利用条件に含める。`CatalogConnection`はsymlink／hardlinkをopen前に拒否し、接続中のDB置換とbudgetとは異なるvolumeをtransaction前に拒否する。新規DB作成前のstartup tokenは未帰属として扱い、次のmutation時に実DBへ帰属する予約へ切り替える。従来のpath hashだけのtoken、未帰属startup tokenはrecoveryでfail-closedとなる。
+
+回収計画と各catalog tokenの`catalog_attribution`にDBおよび固定suffix side fileのpath、device、inode、観測byte（side fileは存在状態も）を記録する。全fileの再検査後に精算し、帰属はreceiptにも残す。非空journalの拒否とadmitted reopen後の回収は維持する。`DiskBudget`の既存owner上限・CAS・receipt APIを利用し、ledger schemaは変更しない。
+
+追加回帰は実processで2個のcatalogを同じledgerへ作成して`os._exit`した後の独立帰属・無変更apply・receipt、同内容の別inode DBへの置換、2個のDB入替、旧owner、identity未確定startup tokenの拒否、writer接続中の置換とsymlink aliasの拒否である。catalog tokenのfile単位帰属は本追補で実装済みである。新規startupの未帰属tokenや既存の旧tokenは手動調査を要し、自動変換しない。
+
+inode再利用対策としてownerを`catalog-v3:<path/device/inode/birth identityのhash>`とした。Linuxはlibc `statx`からbirthtimeを読み、返却maskとdev/inoを照合する（Linux headerの固定256-byte ABIを確認）。macOSは`st_birthtime_ns`または`st_birthtime.hex()`。取得不能は未帰属tokenとなり回収拒否。DBの`birth_identity`を計画とreceiptにも保存する。試験はLinux ABI bufferのoffset/mask/identity不一致、birthtime取得不能の全token据置き、実fileへの追記後identity維持、再作成後の変化、同inodeでもbirth identityが変化した接続の拒否を含む。macOS float／filesystemの時刻分解能の限界と、非協調processによるbirthtime保存・偽装は上記設計の制約に残る。

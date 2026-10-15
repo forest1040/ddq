@@ -14,6 +14,8 @@ import os
 from pathlib import Path
 import shutil
 import sqlite3
+import stat
+import struct
 import subprocess
 import sys
 import tempfile
@@ -165,6 +167,61 @@ class AdmissionCursor:
 CATALOG_LEASE_SLACK_BYTES = 1024 * 1024
 
 
+def catalog_birth_identity(path, info):
+    """Read stable file birth time, or decline recovery attribution.
+
+    Linux statx has a fixed 256-byte ABI, independent of libc's struct stat.
+    Identity fields are cross-checked against the caller's lstat snapshot.
+    """
+    if hasattr(info, 'st_birthtime_ns'):
+        return f'ns:{info.st_birthtime_ns}'
+    if hasattr(info, 'st_birthtime'):
+        return 'seconds:' + info.st_birthtime.hex()
+    if sys.platform != 'linux':
+        return None
+    import ctypes
+    try:
+        statx = ctypes.CDLL(None, use_errno=True).statx
+        statx.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_uint, ctypes.c_void_p]
+        statx.restype = ctypes.c_int
+        buffer = ctypes.create_string_buffer(256)
+        if statx(-100, os.fsencode(path), 0x100, 0xfff, buffer) != 0:
+            return None
+        raw = buffer.raw
+        mask = struct.unpack_from('=I', raw)[0]
+        inode = struct.unpack_from('=Q', raw, 32)[0]
+        major, minor = struct.unpack_from('=II', raw, 136)
+        seconds, nanos = struct.unpack_from('=qI', raw, 80)
+        if (mask & 0x900 != 0x900 or nanos >= 10**9 or
+                (inode, major, minor) != (info.st_ino, os.major(info.st_dev), os.minor(info.st_dev))):
+            return None
+        return f'ns:{seconds * 10**9 + nanos}'
+    except (AttributeError, OSError, ValueError):
+        return None
+
+
+def catalog_file_owner(path, info=None):
+    """Bounded, versioned attribution to one canonical database inode.
+
+    Rollback side files belong to the fixed SQLite suffixes of this path;
+    they remain unsafe to settle until admitted SQLite recovery consumes them.
+    A startup token for an absent database deliberately carries no identity.
+    """
+    path = Path(path).absolute()
+    if path.resolve() != path or path.is_symlink():
+        raise CatalogAdmissionError('Catalog path must not contain symlinks')
+    if info is None:
+        try: info = path.lstat()
+        except FileNotFoundError:
+            return 'catalog-unbound-v3:' + sha256(str(path).encode()).hexdigest()
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+        raise CatalogAdmissionError('Catalog requires an exclusively named regular file')
+    birth = catalog_birth_identity(path, info)
+    identity = json.dumps([str(path), info.st_dev, info.st_ino, birth], separators=(',', ':'))
+    prefix = 'catalog-v3:' if birth is not None else 'catalog-unbound-v3:'
+    return prefix + sha256(identity.encode()).hexdigest()
+
+
 class CatalogLedgerLease:
     """One durable ledger token reused across catalog transactions.
 
@@ -178,11 +235,13 @@ class CatalogLedgerLease:
     """
     def __init__(self):
         self.budget=self.key=None
+        self.owner=None
         self.bytes=self.base_size=0
         self.ledger_reservation_count=0
 
     def cover(self,budget,size,needed,*,drain,owner):
         if (self.key is not None and self.budget is budget and not getattr(budget,'_closed',False)
+                and self.owner == owner
                 and self.bytes-max(0,size-self.base_size)>=needed):
             return self.key
         self.release()
@@ -193,6 +252,7 @@ class CatalogLedgerLease:
             amount=needed
             key=budget.reserve(amount,generation=sha256(os.urandom(16)).hexdigest(),**arguments)
         self.budget,self.key,self.bytes,self.base_size=budget,key,amount,size
+        self.owner=owner
         self.ledger_reservation_count+=1
         register_lease(budget,self)
         return key
@@ -201,6 +261,7 @@ class CatalogLedgerLease:
         budget,key=self.budget,self.key
         if budget is not None: unregister_lease(budget,self)
         self.budget=self.key=None
+        self.owner=None
         self.bytes=self.base_size=0
         if key is not None and not getattr(budget,'_closed',False): budget.release(key)
 
@@ -228,7 +289,9 @@ class CatalogConnection:
                  growth_bytes=256*1024,require_native=False):
         if type(growth_bytes) is not int or growth_bytes<4096:
             raise ValueError('Invalid catalog growth envelope')
-        self.path=Path(path).resolve()
+        self.path=Path(path).absolute()
+        catalog_file_owner(self.path)  # Refuse aliases before SQLite opens anything.
+        self._file_identity=None
         self._budget_getter,self._drain_getter=budget_getter,drain_getter
         self.growth_bytes=growth_bytes
         self._thread=threading.get_ident()
@@ -257,6 +320,8 @@ class CatalogConnection:
                 if require_native: raise CatalogAdmissionError(self.guard_reason) from exc
             self._conn = (self._guard.connect(self.path,main_cap_bytes=main,side_cap_bytes=side)
                           if self._guard else sqlite3.connect(self.path,timeout=30))
+            info=self.path.lstat()
+            self._file_identity=(info.st_dev,info.st_ino,catalog_file_owner(self.path,info))
             if self._guard:
                 state=self._status()
                 if state['sqlite_version']!=sqlite3.sqlite_version: raise CatalogAdmissionError('SQLite library identity mismatch')
@@ -283,13 +348,20 @@ class CatalogConnection:
         owner=_ACTIVE_CATALOGS.get(str(self.path))
         if owner is not None and owner is not self:
             raise CatalogAdmissionError('Another connection owns the active catalog envelope')
-        size=self.path.stat().st_size if self.path.exists() else 0
+        owner=catalog_file_owner(self.path)
+        info=self.path.lstat() if self.path.exists() else None
+        if self._file_identity is not None and (info is None or (info.st_dev,info.st_ino,owner)!=self._file_identity):
+            raise CatalogAdmissionError('Catalog file identity changed while connection was open')
+        size=info.st_size if info else 0
         main_cap=((max(size,minimum_main_bytes)+self.growth_bytes+4095)//4096)*4096
         side_cap=2*max(size,minimum_main_bytes,4096)+self.growth_bytes+65536
         budget=self._budget_getter()
         if budget is not None:
+            device=info.st_dev if info else (self.path.parent.stat().st_dev if self.path.parent.exists() else None)
+            if device is not None and hasattr(budget,'roots') and device!=budget.roots[0].stat().st_dev:
+                raise CatalogAdmissionError('Catalog and budget must use the same volume')
             self._token=self._lease.cover(budget,size,main_cap-size+side_cap,
-                                          drain=bool(self._drain_getter()),owner=sha256(str(self.path).encode()).hexdigest())
+                                          drain=bool(self._drain_getter()),owner=owner)
             self._budget=budget
         self._main_cap,self._side_cap=main_cap,side_cap
         self._input_bytes=0

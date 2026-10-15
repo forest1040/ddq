@@ -409,3 +409,112 @@ def test_apply_with_a_plan_that_changed_after_review_is_refused(tmp_path):
     with pytest.raises(UncommittedRecoveryRefused, match='Plan changed'):
         recover_uncommitted_reservations(ledger, apply=True, confirm_plan=report['plan_sha256'])
     assert len(_live(ledger, tmp_path)[0]) == 2
+
+
+def _killed_catalog_pair(tmp_path):
+    """Two real catalog writers leave independently bound tokens in one ledger."""
+    child = _run('''
+        import os, sys
+        from pathlib import Path
+        from svsim.disk_budget import DiskBudget
+        from svsim.storage import FileBlockStore, StorageConfig
+        root = Path(sys.argv[1]); root.mkdir(exist_ok=True)
+        datasets = root / 'datasets'; datasets.mkdir()
+        budget = DiskBudget(root / 'ledger/ledger.sqlite3', [datasets],
+                            quota_bytes=%d, shared_policy=True)
+        stores = []
+        for name in ('first', 'second'):
+            store = FileBlockStore(StorageConfig(str(datasets / name), 2, backend=%r), 4,
+                                   disk_budget=budget)
+            with store.db:
+                store.db.execute("INSERT INTO settings VALUES('owner', ?)", (name,))
+            stores.append(store)
+        os._exit(0)
+    ''' % (QUOTA, BACKEND), tmp_path)
+    assert child.returncode == 0, child.stderr
+    return tmp_path / 'ledger/ledger.sqlite3'
+
+
+def test_multiple_catalog_tokens_keep_file_attribution_in_plan_and_receipt(tmp_path):
+    ledger = _killed_catalog_pair(tmp_path)
+    before = _artifact_digest(tmp_path)
+    report = recover_uncommitted_reservations(ledger)
+    assert report['status'] == 'dry-run', report['refusals']
+    catalogs = [t for t in report['tokens'] if t['class'] == 'catalog']
+    assert len(catalogs) == 2
+    expected = {str(tmp_path / f'datasets/{name}/metadata/catalog.sqlite3') for name in ('first', 'second')}
+    assert {t['catalog_attribution']['database']['path'] for t in catalogs} == expected
+    for token in catalogs:
+        db = token['catalog_attribution']['database']
+        info = Path(db['path']).stat()
+        assert (db['device'], db['inode'], db['bytes']) == (info.st_dev, info.st_ino, info.st_size)
+        assert {p['path'] for p in token['catalog_attribution']['side_files']} == {
+            db['path'] + suffix for suffix in ('-journal', '-wal', '-shm')}
+    recover_uncommitted_reservations(ledger, apply=True, confirm_plan=report['plan_sha256'])
+    assert _artifact_digest(tmp_path) == before
+    budget = DiskBudget(ledger, [tmp_path / 'datasets'], quota_bytes=QUOTA, shared_policy=True)
+    try:
+        assert budget.reserved_bytes == 0
+        for token in catalogs:
+            assert budget.recovery_receipt(token['id'])['catalog_attribution'] == token['catalog_attribution']
+    finally:
+        budget.close()
+
+
+@pytest.mark.parametrize('mutation', ['replace', 'exchange', 'legacy-owner'])
+def test_catalog_identity_loss_refuses_all_tokens_without_modification(tmp_path, mutation):
+    ledger = _killed_catalog_pair(tmp_path)
+    first = tmp_path / 'datasets/first/metadata/catalog.sqlite3'
+    second = tmp_path / 'datasets/second/metadata/catalog.sqlite3'
+    if mutation == 'replace':
+        # Keep the original inode alive: replacement is a valid SQLite database with identical bytes.
+        saved = first.with_suffix('.saved')
+        first.rename(saved)
+        first.write_bytes(saved.read_bytes())
+    elif mutation == 'exchange':
+        saved = first.with_suffix('.saved')
+        first.rename(saved); second.rename(first); saved.rename(second)
+    else:
+        # A genuine old writer recorded the path hash but could not prove a file identity.
+        con = sqlite3.connect(ledger)
+        con.execute("UPDATE reservations SET owner=? WHERE operation='catalog-transaction'",
+                    (hashlib.sha256(str(first).encode()).hexdigest(),))
+        con.commit(); con.close()
+    before = _artifact_digest(tmp_path), _ledger_digest(ledger)
+    report = recover_uncommitted_reservations(ledger)
+    assert report['status'] == 'refused'
+    assert any('catalog-owner-not-attributable' in r for r in report['refusals'])
+    with pytest.raises(UncommittedRecoveryRefused):
+        recover_uncommitted_reservations(ledger, apply=True, confirm_plan=report['plan_sha256'])
+    assert (_artifact_digest(tmp_path), _ledger_digest(ledger)) == before
+
+
+def test_new_catalog_startup_token_without_file_identity_is_not_guessed(tmp_path):
+    child = _run('''
+        import os, sys
+        from pathlib import Path
+        from svsim.catalog_admission import CatalogConnection
+        from svsim.disk_budget import DiskBudget
+        root = Path(sys.argv[1]); store = root / 'store'; store.mkdir()
+        (store / 'metadata').mkdir()
+        budget = DiskBudget(root / 'ledger/ledger.sqlite3', [store], quota_bytes=%d, shared_policy=True)
+        db = CatalogConnection(store / 'metadata/catalog.sqlite3', budget_getter=lambda: budget)
+        os._exit(0)
+    ''' % QUOTA, tmp_path)
+    assert child.returncode == 0, child.stderr
+    report = recover_uncommitted_reservations(tmp_path / 'ledger/ledger.sqlite3')
+    assert report['status'] == 'refused'
+    assert any('catalog-owner-not-attributable' in r for r in report['refusals'])
+
+
+def test_unavailable_birth_identity_never_releases_catalog_tokens(tmp_path, monkeypatch):
+    ledger = _killed_catalog_pair(tmp_path)
+    import svsim.catalog_admission as catalog_module
+    monkeypatch.setattr(catalog_module, 'catalog_birth_identity', lambda *args: None)
+    before = _ledger_digest(ledger)
+    report = recover_uncommitted_reservations(ledger)
+    assert report['status'] == 'refused'
+    assert any('catalog-owner-not-attributable' in r for r in report['refusals'])
+    with pytest.raises(UncommittedRecoveryRefused):
+        recover_uncommitted_reservations(ledger, apply=True, confirm_plan=report['plan_sha256'])
+    assert _ledger_digest(ledger) == before

@@ -154,3 +154,32 @@ def test_catalog_ledger_token_is_reused_until_cumulative_growth_needs_a_new_one(
     assert live['count']==1  # previous tokens were released when replaced
     db.close()
     assert budget.reserved_bytes==0
+
+
+def test_catalog_replacement_while_open_refuses_mutation(catalog):
+    db, budget = catalog
+    original = db.path.with_suffix('.original')
+    db.path.rename(original)
+    db.path.write_bytes(original.read_bytes())
+    before = db.path.read_bytes()
+    with pytest.raises(CatalogAdmissionError, match='identity changed'):
+        db.execute('INSERT INTO items VALUES(7)')
+    assert db.path.read_bytes() == before
+
+
+def test_catalog_symlink_alias_is_refused_before_open(catalog):
+    db, budget = catalog
+    alias = db.path.with_name('alias.sqlite3')
+    alias.symlink_to(db.path)
+    with pytest.raises(CatalogAdmissionError, match='symlinks'):
+        CatalogConnection(alias, budget_getter=lambda: budget)
+
+
+def test_catalog_birth_identity_change_refuses_even_with_same_inode(catalog, monkeypatch):
+    import svsim.catalog_admission as module
+    db, budget = catalog
+    inode = db.path.stat().st_ino
+    monkeypatch.setattr(module, 'catalog_birth_identity', lambda *args: 'ns:replacement-generation')
+    assert db.path.stat().st_ino == inode
+    with pytest.raises(CatalogAdmissionError, match='identity changed'):
+        db.execute('INSERT INTO items VALUES(7)')

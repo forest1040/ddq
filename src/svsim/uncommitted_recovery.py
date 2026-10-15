@@ -18,7 +18,7 @@ import re
 import sqlite3
 import stat
 
-from .catalog_admission import CatalogConnection
+from .catalog_admission import CatalogConnection, catalog_birth_identity, catalog_file_owner
 from .checkpoint_recovery import _checked_path
 from .dataset_lease import DatasetBusyError, DirectoryLease
 from .disk_budget import DiskAdmissionError, DiskBudget
@@ -255,8 +255,14 @@ def _inspect_store(store, *, max_journal_bytes, entries):
     block = out['blockers']
     relative = 'metadata/catalog.sqlite3'
     path, info = _checked_path(store, relative)
+    artifacts = {'database': {'path': str(path), 'device': info.st_dev, 'inode': info.st_ino,
+                              'birth_identity': catalog_birth_identity(path, info),
+                              'bytes': info.st_size}, 'side_files': []}
     for suffix in ('-journal', '-wal', '-shm'):
-        _, side = _checked_path(store, relative + suffix, missing=True)
+        side_path, side = _checked_path(store, relative + suffix, missing=True)
+        artifacts['side_files'].append({'path': str(side_path), 'present': side is not None,
+                                      **({'device': side.st_dev, 'inode': side.st_ino, 'bytes': side.st_size}
+                                         if side is not None else {})})
         if side is not None and side.st_size:
             block.append(f'catalog{suffix}-present: admitted reopen must replay it first')
     if not block:
@@ -307,15 +313,34 @@ def _inspect_store(store, *, max_journal_bytes, entries):
     out['temporaries'] = sorted(({'path': str(p.relative_to(store)), 'bytes': i.st_size, 'dev': i.st_dev, 'ino': i.st_ino}
                                  for p, i in files if p.name.endswith('.tmp')), key=lambda t: t['path'])
     out['catalog_identity'] = {'device': info.st_dev, 'inode': info.st_ino}
+    out['catalog_attribution'] = artifacts
+    out['catalog_owner'] = catalog_file_owner(path, info)
     return out
 
 
 def _catalog_owner_digests(stores):
-    owners = {}
+    return {store['catalog_owner']: store['catalog_attribution'] for store in stores
+            if store['catalog_owner'].startswith('catalog-v3:')}
+
+
+def _assert_catalog_files(stores):
+    """Recheck the complete catalog namespace before any token is settled."""
     for store in stores:
-        for spelled in {store / 'metadata/catalog.sqlite3', Path(os.path.realpath(store)) / 'metadata/catalog.sqlite3'}:
-            owners[sha256(str(spelled).encode()).hexdigest()] = str(store)
-    return owners
+        attribution = store['catalog_attribution']
+        for expected in [attribution['database'], *attribution['side_files']]:
+            path = Path(expected['path'])
+            _, info = _checked_path(Path(store['path']), path.relative_to(store['path']),
+                                    missing='present' in expected)
+            if info is None:
+                matches = expected.get('present') is False
+            else:
+                matches = (expected.get('present', True) and
+                           (info.st_dev, info.st_ino, info.st_size) ==
+                           (expected['device'], expected['inode'], expected['bytes']))
+                if 'birth_identity' in expected:
+                    matches = matches and catalog_birth_identity(path, info) == expected['birth_identity']
+            if not matches:
+                raise UncommittedRecoveryRefused('Catalog file attribution changed during recovery')
 
 
 def _classify(token, owners):
@@ -326,7 +351,7 @@ def _classify(token, owners):
         return None, 'terminal'
     if operation == 'catalog-transaction':
         if token['owner'] not in owners:
-            return None, 'catalog-owner-not-attributable-to-a-registered-store'
+            return None, 'catalog-owner-not-attributable-to-a-registered-file-identity'
         if re.fullmatch('[0-9a-f]{64}', token['generation'] or '') is None:
             return None, 'catalog-generation-unbound'
         return 'catalog', None
@@ -413,7 +438,7 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
         budget = scope['budget']
         entries = [0]
         stores = [_inspect_store(s, max_journal_bytes=max_journal_bytes, entries=entries) for s in scope['stores']]
-        owners = _catalog_owner_digests(scope['stores'])
+        owners = _catalog_owner_digests(stores)
         live = budget.live_reservations(linked=False, limit=max_tokens)
         linked = budget.live_reservations(linked=True, limit=max_tokens)
         blockers = [f"{s['path']}: {b}" for s in stores for b in s['blockers']]
@@ -446,6 +471,8 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
                      'bytes': token['bytes'], 'materialized_bytes': token['materialized_bytes'],
                      'release_pending_bytes': token['bytes'] - token['materialized_bytes'],
                      'disposition': 'settle' if klass and not blockers else 'refuse', 'reason': reason}
+            if klass == 'catalog':
+                entry['catalog_attribution'] = owners[token['owner']]
             if reason:
                 refused.append(f"{token['id']}: {reason}")
             tokens.append((entry, token, None))
@@ -471,6 +498,7 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
             return report
         if confirm_plan != plan_sha:
             raise UncommittedRecoveryRefused('Plan changed since the dry run; refusing to apply', report)
+        _assert_catalog_files(stores)
         released = 0
         for entry, token, link in tokens:
             _assert_leases(scope)
@@ -479,6 +507,8 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
                      'ledger_lease': 'exclusive-flock-on-ledger-directory', 'dataset_lease_count': len(scope['leases']),
                      'store_inventory_sha256': _digest(stores), 'observed_usage_bytes': usage_before,
                      'released_pending_bytes': entry['release_pending_bytes'], 'artifacts_preserved': True}
+            if entry['class'] == 'catalog':
+                proof['catalog_attribution'] = entry['catalog_attribution']
             if link is None:
                 budget.reconcile_unlinked(token['id'], expected_reservation=token,
                                           materialized_bytes=token['materialized_bytes'],
