@@ -1,9 +1,9 @@
 # P4-001 Reproducible Evidence Bundle Report
 
-- **Bundle SHA256**: `3fc9080717fef63503acb7abaf058d215f4869c9d1571c790bb7f09c44dfafc2`
-- **Git Revision**: `8e92104fd11b12cc4d5fd2130fd5e0ce4d498177` (clean)
-- **Generated At**: `2026-10-14T23:56:55.640708+00:00`
-- **Total Files**: 1317
+- **Bundle SHA256**: `17086977b7c62803c138dffc8ac639075a0f79bee14bfc7137e1afa1dbec57c6`
+- **Git Revision**: `400d4fd017b8bad137a4fe978aa124362c789932` (clean)
+- **Generated At**: `2026-10-15T00:43:43.542176+00:00`
+- **Total Files**: 1330
 - **Unparsed JSON**: 0
 
 ---
@@ -150,56 +150,60 @@ Variation: (max−min)/median of per-run medians across the group's workloads (w
 
 ## 6. Runtime Calibrations (ランタイムキャリブレーション)
 
-| Path | Status | Suite Medians (s) |
-|---|---|---|
-| `phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-buffered-q1.json` | complete | kernel-storage: 0.8461s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-buffered-q2.json` | complete | kernel-storage: 0.8311s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-direct-q1.json` | complete | kernel-storage: 0.8844s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-direct-q2.json` | complete | kernel-storage: 0.8790s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-20261014/p1-worker-buffered-q1.json` | complete | kernel-storage: 0.8826s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-20261014/p1-worker-buffered-q2.json` | complete | kernel-storage: 0.8586s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-20261014/p1-worker-direct-q1.json` | complete | kernel-storage: 0.8531s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-20261014/p1-worker-direct-q2.json` | complete | kernel-storage: 0.8637s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-buffered-q1.json` | complete | kernel-storage: 1.3135s, memory-mpi: 1.4538s, storage-mpi: 1.8698s |
-| `phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-buffered-q2.json` | complete | kernel-storage: 1.3344s, memory-mpi: 1.4653s, storage-mpi: 1.9056s |
-| `phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-direct-q1.json` | complete | kernel-storage: 1.5227s, memory-mpi: 1.4628s, storage-mpi: 2.1742s |
-| `phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-direct-q2.json` | complete | kernel-storage: 1.5179s, memory-mpi: 1.4810s, storage-mpi: 2.1840s |
-| `phase4_foundation_validation/mac-matrix-20261014/p2-worker-buffered-q1.json` | complete | kernel-storage: 1.3141s, memory-mpi: 1.4590s, storage-mpi: 1.9163s |
-| `phase4_foundation_validation/mac-matrix-20261014/p2-worker-buffered-q2.json` | complete | kernel-storage: 1.3427s, memory-mpi: 1.4594s, storage-mpi: 1.8967s |
-| `phase4_foundation_validation/mac-matrix-20261014/p2-worker-direct-q1.json` | complete | kernel-storage: 1.2800s, memory-mpi: 1.4688s, storage-mpi: 1.8575s |
-| `phase4_foundation_validation/mac-matrix-20261014/p2-worker-direct-q2.json` | complete | kernel-storage: 1.3153s, memory-mpi: 1.4640s, storage-mpi: 1.9315s |
-| `phase4_foundation_validation/mac-matrix-20261014/p4-worker-buffered-q1.json` | complete | kernel-storage: 4.3631s, memory-mpi: 5.4195s, storage-mpi: 5.9794s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-buffered-q1.json` | complete | kernel-storage: 0.2627s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-buffered-q2.json` | complete | kernel-storage: 0.2627s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-direct-q1.json` | complete | kernel-storage: 0.2601s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-direct-q2.json` | complete | kernel-storage: 0.2668s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-buffered-q1.json` | complete | kernel-storage: 0.2576s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-buffered-q2.json` | complete | kernel-storage: 0.2574s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-direct-q1.json` | complete | kernel-storage: 0.2544s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-direct-q2.json` | complete | kernel-storage: 0.2587s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-buffered-q1.json` | complete | kernel-storage: 0.4925s, memory-mpi: 0.5521s, storage-mpi: 0.6628s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-buffered-q2.json` | complete | kernel-storage: 0.4778s, memory-mpi: 0.5675s, storage-mpi: 0.6662s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-direct-q1.json` | complete | kernel-storage: 0.5406s, memory-mpi: 0.5557s, storage-mpi: 0.7484s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-direct-q2.json` | complete | kernel-storage: 0.5271s, memory-mpi: 0.5500s, storage-mpi: 0.7368s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-buffered-q1.json` | complete | kernel-storage: 0.4795s, memory-mpi: 0.5573s, storage-mpi: 0.6808s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-buffered-q2.json` | complete | kernel-storage: 0.4937s, memory-mpi: 0.5607s, storage-mpi: 0.6693s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-direct-q1.json` | complete | kernel-storage: 0.4703s, memory-mpi: 0.5712s, storage-mpi: 0.6518s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-direct-q2.json` | complete | kernel-storage: 0.4823s, memory-mpi: 0.5569s, storage-mpi: 0.6870s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-buffered-q1.json` | complete | kernel-storage: 1.6729s, memory-mpi: 2.1762s, storage-mpi: 2.3035s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-buffered-q2.json` | complete | kernel-storage: 1.6759s, memory-mpi: 2.1956s, storage-mpi: 2.2411s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-direct-q1.json` | complete | kernel-storage: 1.7164s, memory-mpi: 2.1988s, storage-mpi: 2.3696s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-direct-q2.json` | complete | kernel-storage: 1.6934s, memory-mpi: 2.2186s, storage-mpi: 2.3312s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-buffered-q1.json` | complete | kernel-storage: 1.6849s, memory-mpi: 2.1844s, storage-mpi: 2.2781s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-buffered-q2.json` | complete | kernel-storage: 1.6931s, memory-mpi: 2.2055s, storage-mpi: 2.2321s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-direct-q1.json` | complete | kernel-storage: 1.6744s, memory-mpi: 2.2123s, storage-mpi: 2.2882s |
-| `phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-direct-q2.json` | complete | kernel-storage: 1.6902s, memory-mpi: 2.1871s, storage-mpi: 2.2971s |
-| `phase4_foundation_validation/p1-cooperative-buffered.json` | complete | kernel-storage: 0.2641s |
-| `phase4_foundation_validation/p1-cooperative-direct.json` | complete | kernel-storage: 0.2654s |
-| `phase4_foundation_validation/p1-worker-buffered.json` | complete | kernel-storage: 0.2633s |
-| `phase4_foundation_validation/p1-worker-direct.json` | complete | kernel-storage: 0.2627s |
-| `phase5_crosshost/run2/runtime-x2.json` | failed | kernel-storage: n/a, memory-mpi: n/a, storage-mpi: n/a |
-| `phase5_crosshost/run3/runtime-x2.json` | partial | kernel-storage: 1.1091s, memory-mpi: 0.4988s, storage-mpi: 1.2988s |
-| `phase5_timing_validation/odirect-linux/runtime-cooperative-p1.json` | partial | kernel-storage: 1.7185s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase5_timing_validation/odirect-linux/runtime-cooperative-p2.json` | partial | kernel-storage: 1.6562s, memory-mpi: 0.6122s, storage-mpi: 2.0005s |
-| `phase5_timing_validation/odirect-linux/runtime-worker-p1.json` | partial | kernel-storage: 7.0836s, memory-mpi: n/a, storage-mpi: n/a |
-| `phase5_timing_validation/odirect-linux/runtime-worker-p2.json` | partial | kernel-storage: 6.5252s, memory-mpi: 0.6224s, storage-mpi: 5.1642s |
+| Path | Status | Suite Medians (s) | Quality | Envelope decisions |
+|---|---|---|---|---|
+| `phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-buffered-q1.json` | complete | kernel-storage: 0.8461s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-buffered-q2.json` | complete | kernel-storage: 0.8311s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-direct-q1.json` | complete | kernel-storage: 0.8844s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-direct-q2.json` | complete | kernel-storage: 0.8790s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p1-worker-buffered-q1.json` | complete | kernel-storage: 0.8826s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p1-worker-buffered-q2.json` | complete | kernel-storage: 0.8586s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p1-worker-direct-q1.json` | complete | kernel-storage: 0.8531s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p1-worker-direct-q2.json` | complete | kernel-storage: 0.8637s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-buffered-q1.json` | complete | kernel-storage: 1.3135s, memory-mpi: 1.4538s, storage-mpi: 1.8698s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-buffered-q2.json` | complete | kernel-storage: 1.3344s, memory-mpi: 1.4653s, storage-mpi: 1.9056s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-direct-q1.json` | complete | kernel-storage: 1.5227s, memory-mpi: 1.4628s, storage-mpi: 2.1742s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-direct-q2.json` | complete | kernel-storage: 1.5179s, memory-mpi: 1.4810s, storage-mpi: 2.1840s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p2-worker-buffered-q1.json` | complete | kernel-storage: 1.3141s, memory-mpi: 1.4590s, storage-mpi: 1.9163s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p2-worker-buffered-q2.json` | complete | kernel-storage: 1.3427s, memory-mpi: 1.4594s, storage-mpi: 1.8967s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p2-worker-direct-q1.json` | complete | kernel-storage: 1.2800s, memory-mpi: 1.4688s, storage-mpi: 1.8575s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p2-worker-direct-q2.json` | complete | kernel-storage: 1.3153s, memory-mpi: 1.4640s, storage-mpi: 1.9315s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-20261014/p4-worker-buffered-q1.json` | complete | kernel-storage: 4.3631s, memory-mpi: 5.4195s, storage-mpi: 5.9794s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-buffered-q1.json` | complete | kernel-storage: 0.2627s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-buffered-q2.json` | complete | kernel-storage: 0.2627s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-direct-q1.json` | complete | kernel-storage: 0.2601s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-direct-q2.json` | complete | kernel-storage: 0.2668s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-buffered-q1.json` | complete | kernel-storage: 0.2576s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-buffered-q2.json` | complete | kernel-storage: 0.2574s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-direct-q1.json` | complete | kernel-storage: 0.2544s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-direct-q2.json` | complete | kernel-storage: 0.2587s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-buffered-q1.json` | complete | kernel-storage: 0.4925s, memory-mpi: 0.5521s, storage-mpi: 0.6628s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-buffered-q2.json` | complete | kernel-storage: 0.4778s, memory-mpi: 0.5675s, storage-mpi: 0.6662s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-direct-q1.json` | complete | kernel-storage: 0.5406s, memory-mpi: 0.5557s, storage-mpi: 0.7484s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-direct-q2.json` | complete | kernel-storage: 0.5271s, memory-mpi: 0.5500s, storage-mpi: 0.7368s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-buffered-q1.json` | complete | kernel-storage: 0.4795s, memory-mpi: 0.5573s, storage-mpi: 0.6808s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-buffered-q2.json` | complete | kernel-storage: 0.4937s, memory-mpi: 0.5607s, storage-mpi: 0.6693s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-direct-q1.json` | complete | kernel-storage: 0.4703s, memory-mpi: 0.5712s, storage-mpi: 0.6518s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-direct-q2.json` | complete | kernel-storage: 0.4823s, memory-mpi: 0.5569s, storage-mpi: 0.6870s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-buffered-q1.json` | complete | kernel-storage: 1.6729s, memory-mpi: 2.1762s, storage-mpi: 2.3035s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-buffered-q2.json` | complete | kernel-storage: 1.6759s, memory-mpi: 2.1956s, storage-mpi: 2.2411s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-direct-q1.json` | complete | kernel-storage: 1.7164s, memory-mpi: 2.1988s, storage-mpi: 2.3696s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-direct-q2.json` | complete | kernel-storage: 1.6934s, memory-mpi: 2.2186s, storage-mpi: 2.3312s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-buffered-q1.json` | complete | kernel-storage: 1.6849s, memory-mpi: 2.1844s, storage-mpi: 2.2781s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-buffered-q2.json` | complete | kernel-storage: 1.6931s, memory-mpi: 2.2055s, storage-mpi: 2.2321s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-direct-q1.json` | complete | kernel-storage: 1.6744s, memory-mpi: 2.2123s, storage-mpi: 2.2882s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-direct-q2.json` | complete | kernel-storage: 1.6902s, memory-mpi: 2.1871s, storage-mpi: 2.2971s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/p1-cooperative-buffered.json` | complete | kernel-storage: 0.2641s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/p1-cooperative-direct.json` | complete | kernel-storage: 0.2654s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/p1-worker-buffered.json` | complete | kernel-storage: 0.2633s | finite-diagnostics-only | n/a |
+| `phase4_foundation_validation/p1-worker-direct.json` | complete | kernel-storage: 0.2627s | finite-diagnostics-only | n/a |
+| `phase5_crosshost/run2/runtime-x2.json` | failed | kernel-storage: n/a, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase5_crosshost/run3/runtime-x2.json` | partial | kernel-storage: 1.1091s, memory-mpi: 0.4988s, storage-mpi: 1.2988s | finite-diagnostics-only | n/a |
+| `phase5_timing_validation/odirect-linux/runtime-cooperative-p1.json` | partial | kernel-storage: 1.7185s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase5_timing_validation/odirect-linux/runtime-cooperative-p2.json` | partial | kernel-storage: 1.6562s, memory-mpi: 0.6122s, storage-mpi: 2.0005s | finite-diagnostics-only | n/a |
+| `phase5_timing_validation/odirect-linux/runtime-worker-p1.json` | partial | kernel-storage: 7.0836s, memory-mpi: n/a, storage-mpi: n/a | finite-diagnostics-only | n/a |
+| `phase5_timing_validation/odirect-linux/runtime-worker-p2.json` | partial | kernel-storage: 6.5252s, memory-mpi: 0.6224s, storage-mpi: 5.1642s | finite-diagnostics-only | n/a |
+| `phase5_timing_validation/runtime-envelope/runtime-cooperative-p1.json` | complete | kernel-storage: 1.7470s, memory-mpi: n/a, storage-mpi: n/a | held-out-envelope | kernel-storage: CERTIFIED, memory-mpi: NOT_APPLICABLE_SINGLE_RANK, storage-mpi: NOT_APPLICABLE_SINGLE_RANK |
+| `phase5_timing_validation/runtime-envelope/runtime-cooperative-p2.json` | complete | kernel-storage: 6.6185s, memory-mpi: 2.1533s, storage-mpi: 1.9435s | held-out-envelope | kernel-storage: CERTIFIED, memory-mpi: LOW_HELD_OUT_COVERAGE:0.20, storage-mpi: CERTIFIED |
+| `phase5_timing_validation/runtime-envelope/runtime-worker-p1.json` | complete | kernel-storage: 1.7751s, memory-mpi: n/a, storage-mpi: n/a | held-out-envelope | kernel-storage: CERTIFIED, memory-mpi: NOT_APPLICABLE_SINGLE_RANK, storage-mpi: NOT_APPLICABLE_SINGLE_RANK |
+| `phase5_timing_validation/runtime-envelope/runtime-worker-p2.json` | complete | kernel-storage: 1.6204s, memory-mpi: 0.6097s, storage-mpi: 1.9545s | held-out-envelope | kernel-storage: CERTIFIED, memory-mpi: CERTIFIED, storage-mpi: CERTIFIED |

@@ -133,7 +133,7 @@ ent Dockerで、`svbench runtime`（8 qubit、b=4、O_DIRECT、5回、warmup 1�
 ## P4-001の完了証跡（2026-10-15）
 
 `examples/p4_001_evidence.py`（Geminiが実装し、Sonnetが検証、私が生のrunと照合）で、内部証跡ディレクトリ群から再現用の一式を生成した。[manifest](internal/p4_001_evidence/manifest.json)と[report](internal/p4_001_evidence/README.md)の内容は次のとおり。
-- **manifest。** 1,317ファイルすべてのSHA256、生成時のgit revision（clean）、bundle SHA256（`3fc90807…`）。
+- **manifest。** 1,330ファイルすべてのSHA256、生成時のgit revision（clean）、bundle SHA256（`17086977…`、生成rev 400d4fd）。
 - **benchmark run。** 条件classごとのmedian、p95、worst、workload間のばらつき、run内の試行間ばらつき。
 - **その他の要約。** time model、runtime ETAの精度、比較report（監視overheadの4段を含む）、不変profileのID／fingerprint、runtime校正。
 

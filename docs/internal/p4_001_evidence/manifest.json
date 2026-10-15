@@ -1,5 +1,5 @@
 {
-  "bundle_sha256": "3fc9080717fef63503acb7abaf058d215f4869c9d1571c790bb7f09c44dfafc2",
+  "bundle_sha256": "17086977b7c62803c138dffc8ac639075a0f79bee14bfc7137e1afa1dbec57c6",
   "files": [
     {
       "kind": "comparison-report",
@@ -7899,14 +7899,92 @@
     },
     {
       "kind": "other",
+      "path": "phase5_timing_validation/runtime-envelope/README.md",
+      "sha256": "7d0ed4c53351e17f9ba9b945b6276962af8f11fd72d5574f091233e932dac710",
+      "size": 738
+    },
+    {
+      "kind": "runtime-calibration",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-cooperative-p1.json",
+      "sha256": "7c2add48c747b1e08135d2ce58141959ffcc29262555d18aef7c9e8ddb2c6119",
+      "size": 83003
+    },
+    {
+      "kind": "other",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-cooperative-p1.log",
+      "sha256": "bce662f23d991cf87d5bdf290a76c55c7c0e2861ab2607e390a5269da61a25ff",
+      "size": 73
+    },
+    {
+      "kind": "other",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-cooperative-p1.observations.jsonl.gz",
+      "sha256": "028bc3ca271322e0e7b0049056deb3558d6ea26856bf2fe24fb3cd99295380ea",
+      "size": 56979
+    },
+    {
+      "kind": "runtime-calibration",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-cooperative-p2.json",
+      "sha256": "2511e378659e2f83ca80aca0a2ecd34188d39b96899c3c6e4cb93cfdad81f3d4",
+      "size": 241942
+    },
+    {
+      "kind": "other",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-cooperative-p2.log",
+      "sha256": "1f2146b045c954674098d0a559aa970165beee58ea189a2332bad6b9beb55138",
+      "size": 73
+    },
+    {
+      "kind": "other",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-cooperative-p2.observations.jsonl.gz",
+      "sha256": "5096a4482dc2265ecb9dde8eb044b36c6e6892f9c22876c154ba929337ff90f7",
+      "size": 335190
+    },
+    {
+      "kind": "runtime-calibration",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-worker-p1.json",
+      "sha256": "1d5368d7b7a83b8f768dd38f387577db2729ee82c0968557c94476f25aa5cd3a",
+      "size": 82954
+    },
+    {
+      "kind": "other",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-worker-p1.log",
+      "sha256": "6370f57dda40402b4233fc3c6712d3da9c687c45cb407f37cbbfb1edeeba7d6c",
+      "size": 68
+    },
+    {
+      "kind": "other",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-worker-p1.observations.jsonl.gz",
+      "sha256": "078ee164d4c20c7b759ff6117648f85f666615f90dd98fb74980f7b02e2a70cd",
+      "size": 57616
+    },
+    {
+      "kind": "runtime-calibration",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-worker-p2.json",
+      "sha256": "dc400f0b505678f9108f2d6e772bb83ddef1f2ccccc6f4933eb045f71b2cf209",
+      "size": 242404
+    },
+    {
+      "kind": "other",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-worker-p2.log",
+      "sha256": "6a388106e2f2a3b84488ed7219d5b728fdbfd68ca45527002390448f301a49ea",
+      "size": 68
+    },
+    {
+      "kind": "other",
+      "path": "phase5_timing_validation/runtime-envelope/runtime-worker-p2.observations.jsonl.gz",
+      "sha256": "bfe0fa090cc1a07399e78de8cb4d7715b14e0bd1356061c0cf1bd18a488c908f",
+      "size": 334783
+    },
+    {
+      "kind": "other",
       "path": "phase5_timing_validation/stall_profile.py",
       "sha256": "c5cb1843194796de8e4fcbcf1b3377d806606c7d0434624af1b1e9f31b21794d",
       "size": 1299
     }
   ],
-  "generated_at": "2026-10-14T23:56:55.640708+00:00",
+  "generated_at": "2026-10-15T00:43:43.542176+00:00",
   "git_dirty": false,
-  "git_revision": "8e92104fd11b12cc4d5fd2130fd5e0ce4d498177",
+  "git_revision": "400d4fd017b8bad137a4fe978aa124362c789932",
   "kind": "p4-001-evidence-manifest",
   "schema_version": 1,
   "summaries": {
@@ -9168,7 +9246,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-buffered-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9177,7 +9257,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-buffered-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9186,7 +9268,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-direct-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9195,7 +9279,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p1-cooperative-direct-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9204,7 +9290,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p1-worker-buffered-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9213,7 +9301,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p1-worker-buffered-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9222,7 +9312,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p1-worker-direct-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9231,7 +9323,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p1-worker-direct-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9240,7 +9334,9 @@
           "memory-mpi": 1.4537629999686033,
           "storage-mpi": 1.86984691710677
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-buffered-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9249,7 +9345,9 @@
           "memory-mpi": 1.4653460839763284,
           "storage-mpi": 1.9055690410314128
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-buffered-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9258,7 +9356,9 @@
           "memory-mpi": 1.462788833072409,
           "storage-mpi": 2.1741826669313014
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-direct-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9267,7 +9367,9 @@
           "memory-mpi": 1.480956832994707,
           "storage-mpi": 2.183968667057343
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p2-cooperative-direct-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9276,7 +9378,9 @@
           "memory-mpi": 1.458981833071448,
           "storage-mpi": 1.9163061250001192
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p2-worker-buffered-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9285,7 +9389,9 @@
           "memory-mpi": 1.4594098340021446,
           "storage-mpi": 1.8967279170174152
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p2-worker-buffered-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9294,7 +9400,9 @@
           "memory-mpi": 1.4688430420355871,
           "storage-mpi": 1.857484458014369
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p2-worker-direct-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9303,7 +9411,9 @@
           "memory-mpi": 1.4640371249988675,
           "storage-mpi": 1.9314799159765244
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p2-worker-direct-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9312,7 +9422,9 @@
           "memory-mpi": 5.419481124961749,
           "storage-mpi": 5.979379374999553
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-20261014/p4-worker-buffered-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9321,7 +9433,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-buffered-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9330,7 +9444,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-buffered-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9339,7 +9455,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-direct-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9348,7 +9466,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p1-cooperative-direct-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9357,7 +9477,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-buffered-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9366,7 +9488,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-buffered-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9375,7 +9499,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-direct-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9384,7 +9510,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p1-worker-direct-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9393,7 +9521,9 @@
           "memory-mpi": 0.5521263339323923,
           "storage-mpi": 0.6628274170216173
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-buffered-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9402,7 +9532,9 @@
           "memory-mpi": 0.5675010411068797,
           "storage-mpi": 0.6662250000517815
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-buffered-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9411,7 +9543,9 @@
           "memory-mpi": 0.555740249925293,
           "storage-mpi": 0.7484333750326186
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-direct-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9420,7 +9554,9 @@
           "memory-mpi": 0.5500226669246331,
           "storage-mpi": 0.7368351250188425
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p2-cooperative-direct-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9429,7 +9565,9 @@
           "memory-mpi": 0.557313458994031,
           "storage-mpi": 0.6807815419742838
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-buffered-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9438,7 +9576,9 @@
           "memory-mpi": 0.5607124579837546,
           "storage-mpi": 0.6693272499833256
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-buffered-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9447,7 +9587,9 @@
           "memory-mpi": 0.5712199159897864,
           "storage-mpi": 0.6518180830171332
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-direct-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9456,7 +9598,9 @@
           "memory-mpi": 0.5569322919473052,
           "storage-mpi": 0.6870314159896225
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p2-worker-direct-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9465,7 +9609,9 @@
           "memory-mpi": 2.176168749923818,
           "storage-mpi": 2.303453749977052
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-buffered-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9474,7 +9620,9 @@
           "memory-mpi": 2.195562541950494,
           "storage-mpi": 2.2410727500682697
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-buffered-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9483,7 +9631,9 @@
           "memory-mpi": 2.1987917920341715,
           "storage-mpi": 2.3696337499422953
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-direct-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9492,7 +9642,9 @@
           "memory-mpi": 2.2185572910821065,
           "storage-mpi": 2.3311908330069855
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p4-cooperative-direct-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9501,7 +9653,9 @@
           "memory-mpi": 2.1843903330154717,
           "storage-mpi": 2.2781273330328986
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-buffered-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9510,7 +9664,9 @@
           "memory-mpi": 2.205518167000264,
           "storage-mpi": 2.2321362498914823
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-buffered-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9519,7 +9675,9 @@
           "memory-mpi": 2.2123129999963567,
           "storage-mpi": 2.288169957930222
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-direct-q1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9528,35 +9686,45 @@
           "memory-mpi": 2.187098457943648,
           "storage-mpi": 2.2971068338956684
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/mac-matrix-final-20261014/p4-worker-direct-q2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
         "by_suite_medians": {
           "kernel-storage": 0.26409899949794635
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/p1-cooperative-buffered.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
         "by_suite_medians": {
           "kernel-storage": 0.2653767289593816
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/p1-cooperative-direct.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
         "by_suite_medians": {
           "kernel-storage": 0.2633390625123866
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/p1-worker-buffered.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
         "by_suite_medians": {
           "kernel-storage": 0.26265862555010244
         },
+        "envelope_decisions": {},
         "path": "phase4_foundation_validation/p1-worker-direct.json",
+        "statistical": "finite-diagnostics-only",
         "status": "complete"
       },
       {
@@ -9565,7 +9733,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase5_crosshost/run2/runtime-x2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "failed"
       },
       {
@@ -9574,7 +9744,9 @@
           "memory-mpi": 0.49884833954274654,
           "storage-mpi": 1.298810058273375
         },
+        "envelope_decisions": {},
         "path": "phase5_crosshost/run3/runtime-x2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "partial"
       },
       {
@@ -9583,7 +9755,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase5_timing_validation/odirect-linux/runtime-cooperative-p1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "partial"
       },
       {
@@ -9592,7 +9766,9 @@
           "memory-mpi": 0.6121988180093467,
           "storage-mpi": 2.000481973402202
         },
+        "envelope_decisions": {},
         "path": "phase5_timing_validation/odirect-linux/runtime-cooperative-p2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "partial"
       },
       {
@@ -9601,7 +9777,9 @@
           "memory-mpi": null,
           "storage-mpi": null
         },
+        "envelope_decisions": {},
         "path": "phase5_timing_validation/odirect-linux/runtime-worker-p1.json",
+        "statistical": "finite-diagnostics-only",
         "status": "partial"
       },
       {
@@ -9610,8 +9788,70 @@
           "memory-mpi": 0.622412770986557,
           "storage-mpi": 5.164167391136289
         },
+        "envelope_decisions": {},
         "path": "phase5_timing_validation/odirect-linux/runtime-worker-p2.json",
+        "statistical": "finite-diagnostics-only",
         "status": "partial"
+      },
+      {
+        "by_suite_medians": {
+          "kernel-storage": 1.746961573138833,
+          "memory-mpi": null,
+          "storage-mpi": null
+        },
+        "envelope_decisions": {
+          "kernel-storage": "CERTIFIED",
+          "memory-mpi": "NOT_APPLICABLE_SINGLE_RANK",
+          "storage-mpi": "NOT_APPLICABLE_SINGLE_RANK"
+        },
+        "path": "phase5_timing_validation/runtime-envelope/runtime-cooperative-p1.json",
+        "statistical": "held-out-envelope",
+        "status": "complete"
+      },
+      {
+        "by_suite_medians": {
+          "kernel-storage": 6.618519881507382,
+          "memory-mpi": 2.153255559038371,
+          "storage-mpi": 1.9435282824561
+        },
+        "envelope_decisions": {
+          "kernel-storage": "CERTIFIED",
+          "memory-mpi": "LOW_HELD_OUT_COVERAGE:0.20",
+          "storage-mpi": "CERTIFIED"
+        },
+        "path": "phase5_timing_validation/runtime-envelope/runtime-cooperative-p2.json",
+        "statistical": "held-out-envelope",
+        "status": "complete"
+      },
+      {
+        "by_suite_medians": {
+          "kernel-storage": 1.7750580850988626,
+          "memory-mpi": null,
+          "storage-mpi": null
+        },
+        "envelope_decisions": {
+          "kernel-storage": "CERTIFIED",
+          "memory-mpi": "NOT_APPLICABLE_SINGLE_RANK",
+          "storage-mpi": "NOT_APPLICABLE_SINGLE_RANK"
+        },
+        "path": "phase5_timing_validation/runtime-envelope/runtime-worker-p1.json",
+        "statistical": "held-out-envelope",
+        "status": "complete"
+      },
+      {
+        "by_suite_medians": {
+          "kernel-storage": 1.6204478137660772,
+          "memory-mpi": 0.6096939744893461,
+          "storage-mpi": 1.954524506116286
+        },
+        "envelope_decisions": {
+          "kernel-storage": "CERTIFIED",
+          "memory-mpi": "CERTIFIED",
+          "storage-mpi": "CERTIFIED"
+        },
+        "path": "phase5_timing_validation/runtime-envelope/runtime-worker-p2.json",
+        "statistical": "held-out-envelope",
+        "status": "complete"
       }
     ],
     "runtime-eta-accuracy": [
