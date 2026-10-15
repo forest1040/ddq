@@ -772,21 +772,22 @@ class StoredSimulator:
     def export_state(self,path,*,order='logical',binding=None):
         import struct
         if order not in {'logical','physical'}: raise ValueError('Invalid export order')
-        self.materialize(binding=binding)
-        with open(path,'w+b') as stream:
-            stream.truncate((1 << self.num_qubits)*16)
+        from .state_export import admitted_export_file, write_exact
+        with admitted_export_file(path,(1 << self.num_qubits)*16,budget=self.store.disk_budget,
+                                  dataset=self.store.directory,owner=self.run_id) as stream:
+            self.materialize(binding=binding)
             for h in range(self.store.num_blocks):
                 with self._logical_buffers(self.root,[h]) as (arrays,_):
                     if order == 'physical':
                         stream.seek(h*self.store.payload_bytes)
                         view = memoryview(arrays[0])
-                        try: stream.write(view)
+                        try: write_exact(stream,view)
                         finally: view.release()
                     else:
                         for offset,amplitude in enumerate(arrays[0]):
                             physical = (h << self.block_bits)|offset
                             logical = sum(((physical >> p)&1) << q for q,p in enumerate(self.layout.logical_to_physical))
-                            stream.seek(logical*16); stream.write(struct.pack('<dd',amplitude.real,amplitude.imag))
+                            stream.seek(logical*16); write_exact(stream,struct.pack('<dd',amplitude.real,amplitude.imag))
         return Path(path)
 
     def collect_garbage(self):

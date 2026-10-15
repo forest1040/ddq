@@ -934,31 +934,8 @@ class DistributedSimulator:
             if self.rank == 0: self.budget.release(needed)
 
     def export_state(self,path,*,binding=None):
-        self.materialize(binding=binding); error=None; f=None
-        try:
-            target=Path(path); target.mkdir(parents=True,exist_ok=True)
-            f=open(target/f'rank-{self.rank:04d}.bin','wb')
-        except Exception as exc: error=str(exc)
-        self.transport.vote(error)
-        try:
-            for h in range(self.ownership.num_blocks):
-                owner=self.ownership.shard_owner(h)
-                with self.fetch(h,owner) as buf:
-                    error=None
-                    if buf:
-                        try: f.write(buf.view[:self.store.payload_bytes])
-                        except Exception as exc: error=str(exc)
-                    self.transport.vote(error)
-        finally:
-            if f: f.close()
-        error=None
-        if self.rank == 0:
-            try:
-                from .distributed_checkpoint import atomic_json
-                atomic_json(Path(path)/'manifest.json',{'n':self.num_qubits,'b':self.block_bits,'ranks':self.size,
-                    'order':'physical-shard','layout':self.layout.logical_to_physical,'root':self.root})
-            except Exception as exc: error=str(exc)
-        self.transport.vote(error); return Path(path)
+        from .state_export import export_distributed
+        return export_distributed(self,path,binding)
 
     def commit_snapshot(self,*,prefix_fingerprint=None):
         from .distributed_checkpoint import commit_snapshot

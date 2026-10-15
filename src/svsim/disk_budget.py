@@ -708,7 +708,10 @@ class DiskBudget:
 
     def _observed_usage(self):
         total = 0
-        registered = (Path(p) for (p,) in self.db.execute('SELECT path FROM roots')) if hasattr(self, 'db') else self.roots
+        registered = list(Path(p) for (p,) in self.db.execute('SELECT path FROM roots')) if hasattr(self, 'db') else list(self.roots)
+        if hasattr(self,'db'):
+            from .export_admission import export_inventory_roots
+            registered.extend(Path(r['path']) for r in export_inventory_roots(self.db))
         roots=sorted(registered,key=lambda p:len(p.parts))
         selected=[]
         metadata_paths = {self._ledger_path, Path(str(self._ledger_path) + '-journal')}
@@ -744,6 +747,10 @@ class DiskBudget:
             self.db.executemany('INSERT INTO roots VALUES(?)', [(str(p),) for p in selected])
             if self.shared_policy:
                 self._check_shared_root_capacity()
+
+    def register_export_root(self,path):
+        from .export_admission import register_export_root
+        return register_export_root(self,path)
 
     @property
     def reserved_bytes(self):
