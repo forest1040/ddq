@@ -60,7 +60,9 @@ class RuntimeETA:
     MAX_TASK_CLASSES = 512
 
     def evaluate(self, snapshot, cost_view=None) -> RuntimeETAReport:
-        tasks = tuple(snapshot.window) + tuple(snapshot.tail)
+        # An exact epoch-aligned executor shape replaces the semantic tail.
+        exact = getattr(snapshot, "future_complete", False) and not getattr(snapshot, "future_reasons", ())
+        tasks = tuple(snapshot.window) + tuple(snapshot.future if exact else snapshot.tail)
         flights = tuple(snapshot.in_flight)
         self._validate_graph(tasks)
         self._validate_flights(flights)
@@ -71,7 +73,7 @@ class RuntimeETA:
             raise ValueError("Invalid snapshot id")
 
         unknown = list(snapshot.unknown_reasons)
-        if not snapshot.complete:
+        if not (exact or snapshot.complete):
             unknown.append("INCOMPLETE_SCAN")
         if snapshot.stale:
             unknown.append("STALE_SNAPSHOT")

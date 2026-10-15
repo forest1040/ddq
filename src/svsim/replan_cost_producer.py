@@ -13,7 +13,7 @@ from dataclasses import replace
 
 from .replan_cost import ReplanCosts
 from .replan_candidates import proposal_context
-from .s2_planner import plan_window
+from .remaining_work import executor_groups
 
 MIGRATION_FREE_SWAP = {'S0', 'S2'}  # S2 reorders and fuses within a window; S1 moves layout bits
 
@@ -23,19 +23,7 @@ def remaining_calls(sim, policy, start, end):
     operations, calls, cursor = sim.sequencer.operations, 0, start
     while cursor <= end:
         stop = min(end, cursor + policy.lookahead_gates - 1)
-        window = operations[cursor:stop + 1]
-        if policy.swap_policy == 'S2':
-            plan = plan_window(window, sim.layout, sim.block_bits, policy.beam_width)
-            order = plan.source_ids
-            groups = {g[0].op_id: g for g in plan.groups if len(g) > 1}
-        else:
-            order, groups = tuple(g.op_id for g in window), {}
-        index = 0
-        while index < len(order):
-            group = groups.get(order[index])
-            fused = group and tuple(g.op_id for g in group) == tuple(order[index:index + len(group)])
-            index += len(group) if fused else 1
-            calls += 1
+        calls += sum(1 for _ in executor_groups(operations[cursor:stop + 1], sim.layout, sim.block_bits, policy))
         cursor = stop + 1
     return calls
 

@@ -108,7 +108,9 @@ class RuntimeControl:
         self._gradient_profile_budget=0
         self.gradient_calibration=None
         self.latest_gradient=None
-        self.configure_eta(max_bytes=max(1024,min(8192,sim.config.metadata_reserve_bytes//32)))
+        # 1/32 of the metadata reserve; reserves above 256 KiB scale it (to 64 KiB) so the
+        # exact future executor shape fits; smaller ones drop it (FUTURE_METADATA_LIMIT).
+        self.configure_eta(max_bytes=max(1024,min(65536,sim.config.metadata_reserve_bytes//32)))
 
     def configure_measurements(self, *, max_bytes, max_conditions=256, per_condition=64,
                                enabled=True, raw_max_bytes=None):
@@ -346,7 +348,7 @@ class RuntimeControl:
             if getattr(sim,'_measurement_injected',False):
                 snapshot=replace(snapshot,unknown_reasons=snapshot.unknown_reasons+('EVALUATION_INJECTION_ACTIVE',))
             if not self._eta_budget:
-                snapshot=replace(snapshot,complete=False,unknown_reasons=snapshot.unknown_reasons+('ETA_MONITOR_BUDGET',))
+                snapshot=replace(snapshot,complete=False,future_complete=False,unknown_reasons=snapshot.unknown_reasons+('ETA_MONITOR_BUDGET',))
             reports={}
             sources={}
             costs=self.costs

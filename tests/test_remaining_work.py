@@ -6,7 +6,7 @@ import pytest
 MPI = pytest.importorskip("mpi4py.MPI")
 
 from svsim import AsyncDistributedSimulator, AsyncPolicy, DistributedConfig
-from svsim.remaining_work import CaptureLimits, RemainingWorkExtractor
+from svsim.remaining_work import CaptureLimits, RemainingWorkExtractor, future_shape_reasons
 from svsim.runtime_cost import CostSample
 from svsim.runtime_eta import CountedTask, RuntimeETA
 from svsim.journal import canonical, content_hash
@@ -136,17 +136,21 @@ def test_empty_endpoint_with_dirty_cache_is_unknown_not_zero_eta(tmp_path):
 
 
 def test_unknown_suffix_and_huge_count_never_claim_unjustified_eta(tmp_path):
+    # Multi-rank S1 decides a layout per gate, so the future shape is unknown.
+    assert future_shape_reasons(SimpleNamespace(policy=AsyncPolicy(swap_policy="S1"), size=2)) == (
+        "FUTURE_S1_LAYOUT_UNKNOWN",)
     with make_sim(tmp_path / "unknown", swap_policy="S1", lookahead=1) as sim:
         append_circuit(sim, 3)
+        # A single rank never moves S1 layout bits: the shape is exact.
         snapshot = RemainingWorkExtractor().capture(sim)
-        assert "FUTURE_S1_LAYOUT_UNKNOWN" in {
-            reason for task in snapshot.window for reason in task.unknown_reasons
-        }
+        assert not any(task.unknown_reasons for task in snapshot.window)
+        assert snapshot.future_complete and not snapshot.future_reasons
         result = sim.runtime.update_eta()
         assert result["snapshot_id"] == sim.runtime.latest_eta["snapshot_id"]
         assert result["eligible_for_control"] is False
-        assert result["views"]["baseline"]["expected_seconds"] is None
-        assert "FUTURE_S1_LAYOUT_UNKNOWN" in result["views"]["baseline"]["unknown_reasons"]
+        # No measured cost exists yet: unknown, never a guessed value.
+        assert result["views"]["observed"]["expected_seconds"] is None
+        assert any(r.startswith("MISSING_COST:") for r in result["views"]["observed"]["unknown_reasons"])
 
     # Counted evaluation accepts arbitrary-size counts without expansion, while
     # retaining the evaluator's explicit unknown boundary for semantic suffixes.
@@ -250,3 +254,79 @@ def test_private_minimal_fallback_hashes_published_frontier(tmp_path):
         assert snapshot.snapshot_id == content_hash(snapshot.context)
         assert snapshot.metadata_bytes == len(canonical(asdict(snapshot)).encode())
         sim._private_epoch = False
+
+
+def _layers(sim, layers):
+    for _ in range(layers):
+        sim.gate("H", (0,)); sim.gate("RX", (1,), angle=0.3); sim.gate("H", (3,)); sim.gate("RX", (2,), angle=0.2)
+
+
+@pytest.mark.parametrize("swap_policy", ["S0", "S2"])
+def test_future_shape_matches_scheduler_calls_and_epochs(tmp_path, swap_policy):
+    from svsim.replan_cost_producer import remaining_calls
+    with make_sim(tmp_path / swap_policy, swap_policy=swap_policy, lookahead=3) as sim:
+        _layers(sim, 6)
+        sim.materialize(frontier=4)
+        end = len(sim.sequencer.operations) - 1
+        snap = RemainingWorkExtractor().capture(sim, endpoint_frontier=end)
+        assert snap.future_complete and not snap.future_reasons
+        executors = [t for t in snap.window + snap.future if t.kind in {"executor", "executor-count"}]
+        assert sum(t.count for t in executors) == remaining_calls(sim, sim.policy, sim.frontier + 1, end)
+        epochs = -(-(end - sim.frontier) // 3)
+        publish = {t.task_id: t.count for t in snap.window + snap.future if t.kind == "publication"}
+        assert publish == {"window:publish": 1, "future:publish": epochs - 1}
+        assert next(t.count for t in snap.future if t.kind == "epoch-boundary") == epochs
+        # Classes aggregate repeated shapes and carry no per-occurrence ids.
+        assert all("op_id" not in op for t in snap.future if t.kind == "executor-count"
+                   for op in t.condition["operations"])
+        assert len(snap.future) < sum(t.count for t in snap.future)
+
+
+def test_future_shape_is_scanned_by_whole_epochs_within_budget(tmp_path):
+    with make_sim(tmp_path / "budget", lookahead=2) as sim:
+        _layers(sim, 4)
+        extractor = RemainingWorkExtractor(CaptureLimits(scan_items=2, scan_seconds=0.5))
+        first = extractor.capture(sim)
+        assert not first.future_complete and not first.future_reasons
+        while not (snap := extractor.capture(sim)).future_complete:
+            pass
+        assert next(t.count for t in snap.future if t.kind == "publication") == 7
+        # Over its class share the future is dropped with a reason; the tail stays.
+        small = RemainingWorkExtractor(CaptureLimits(max_groups=3, scan_seconds=0.5)).capture(sim)
+        assert small.future == () and small.future_reasons == ("FUTURE_CLASS_LIMIT",) and small.tail
+
+
+def test_observed_view_prices_full_remaining_from_measured_epoch_stages(tmp_path):
+    config = DistributedConfig(str(tmp_path / "observed"), 2, ram_budget_bytes_per_rank=64 * 1024**2,
+                               metadata_reserve_bytes=8 * 1024**2, amplitude_store="file")
+    policy = AsyncPolicy(io_engine="cooperative", swap_policy="S2", lookahead_gates=4, prefetch_blocks=0)
+    with AsyncDistributedSimulator(4, config, comm=MPI.COMM_SELF, policy=policy) as sim:
+        sim.runtime.configure_measurements(max_bytes=2 * 1024**2)
+        _layers(sim, 30)
+        end = len(sim.sequencer.operations) - 1
+        sim.materialize(frontier=79)
+        stages = {r.stage for r in sim.runtime.measurements.cost_observations()}
+        assert {"epoch-publication", "epoch-boundary"} <= stages
+        observed = sim.runtime.update_eta(endpoint_frontier=end)["views"]["observed"]
+        reasons = observed["unknown_reasons"]
+        # Only measured, certified classes may answer; otherwise the reason is a missing cost.
+        assert observed["expected_seconds"] is not None or all(r.startswith("MISSING_COST:") for r in reasons)
+        if observed["expected_seconds"] is not None:
+            assert observed["coverage"] == 1.0
+            assert observed["lower_seconds"] <= observed["expected_seconds"] <= observed["upper_seconds"]
+        sim.materialize()
+
+
+def test_cost_rows_cache_follows_collector_revision():
+    from svsim.runtime_measurement import RuntimeMeasurementCollector
+    collector = RuntimeMeasurementCollector(max_bytes=64 * 1024)
+    def add(i):
+        collector.complete(f"e{i}", context={}, condition={"operation": "x"}, stage="x", units="calls",
+                           quantity=1, protocol_seconds=0.1, success=True, validated=True, evidence="measured")
+    add(0)
+    first = collector.cost_rows()
+    assert collector.cost_rows() is first and len(first) == 1
+    copies = collector.cost_observations()
+    assert copies[0] == first[0] and copies[0] is not first[0]
+    add(1)
+    assert len(collector.cost_rows()) == 2

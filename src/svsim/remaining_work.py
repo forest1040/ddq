@@ -46,6 +46,42 @@ class RemainingWork:
     extraction_seconds: float
     metadata_bytes: int
     endpoint: str = 'gates-only'
+    # Exact executor shape of the epochs after the window (one class per
+    # executor condition, plus one publication and one boundary per epoch).
+    future: tuple[CountedTask,...] = ()
+    future_complete: bool = False
+    future_reasons: tuple[str,...] = ()
+
+
+def executor_groups(window,layout,block_bits,policy):
+    """Executor calls (operation tuples, in order) of one epoch window, exactly as the async scheduler runs it."""
+    if policy.swap_policy=='S2':
+        plan=plan_window(window,layout,block_bits,policy.beam_width)
+        order=plan.source_ids;groups={g[0].op_id:g for g in plan.groups if len(g)>1}
+    else:order,groups=tuple(g.op_id for g in window),{}
+    by_id={g.op_id:g for g in window};cursor=0
+    while cursor<len(order):
+        group=groups.get(order[cursor])
+        ops=tuple(group) if group and tuple(g.op_id for g in group)==tuple(order[cursor:cursor+len(group)]) else (by_id[order[cursor]],)
+        yield ops;cursor+=len(ops)
+
+
+def future_shape_reasons(sim):
+    """Why the executor shape after the current epoch is not determined by the current layout and policy."""
+    # Source SWAPs run as data operations and never relabel the layout; only an
+    # S1 decision (multi-rank) or an explicit physical swap/replan moves it, and
+    # the latter two invalidate the snapshot.
+    return ('FUTURE_S1_LAYOUT_UNKNOWN',) if sim.policy.swap_policy=='S1' and sim.size>1 else ()
+
+
+def strip_ids(condition):
+    return {**condition,'operations':[{k:v for k,v in op.items() if k not in {'op_id','source_op_id'}}
+                                      for op in condition['operations']]}
+
+
+def boundary_condition(sim):
+    return {'operation':'epoch-boundary','n':sim.num_qubits,'block_bits':sim.block_bits,'ranks':sim.size,
+        'backend':sim.config.backend,'engine':sim.io_engine.identity,'mode':sim.policy.mode}
 
 
 def executor_condition(sim,operations,layout=None):
@@ -97,6 +133,7 @@ class RemainingWorkExtractor:
         self.limits=limits or CaptureLimits()
         self._scan_key=None;self._scan_cursor=0;self._tail={};self._tail_overflow=0
         self._published=None
+        self._future_cursor=0;self._future={};self._future_epochs=0;self._future_bytes=0;self._future_overflow=False
 
     def invalidate(self):
         self._scan_key=None;self._tail.clear();self._published=None
@@ -159,31 +196,29 @@ class RemainingWorkExtractor:
             snap=self._minimal(sim,end,flights,('CAPTURE_METADATA_LIMIT',),started)
             self._published=snap
             return snap
-        plan=plan_window(source,sim.layout,sim.block_bits,sim.policy.beam_width)
-        order=plan.source_ids if sim.policy.swap_policy=='S2' else tuple(g.op_id for g in source)
-        groups={g[0].op_id:g for g in plan.groups if len(g)>1} if sim.policy.swap_policy=='S2' else {}
-        by_id={g.op_id:g for g in source}
-        window=[];cursor=0;previous=();unknown=[]
+        truncated=width<min(sim.policy.lookahead_gates,end-first+1)
+        shape=future_shape_reasons(sim)
+        window=[];previous=();unknown=[]
         ccontext=cost_context(sim)
-        while cursor<len(order):
-            sid=order[cursor];group=groups.get(sid)
-            ops=tuple(group) if group and tuple(g.op_id for g in group)==tuple(order[cursor:cursor+len(group)]) else (by_id[sid],)
-            reasons=()
-            if width<min(sim.policy.lookahead_gates,end-first+1):reasons+=('EXECUTOR_WINDOW_TRUNCATED',)
-            if sim.policy.swap_policy=='S1':reasons+=('FUTURE_S1_LAYOUT_UNKNOWN',)
-            if any(by_id[k].kind=='SWAP' for k in order[:cursor]):reasons+=('POST_SWAP_LAYOUT_UNKNOWN',)
+        for ops in executor_groups(source,sim.layout,sim.block_bits,sim.policy):
+            reasons=shape
+            if truncated:reasons+=('EXECUTOR_WINDOW_TRUNCATED',)
             if any(g.dependencies for g in ops) and sim.binding is None:reasons+=('UNBOUND_PARAMETERS',)
             tid=f'window:{len(window)}'
             window.append(task(tid,executor_condition(sim,ops),ccontext,dependencies=previous,
                                source_ids=tuple(g.op_id for g in ops),unknown=reasons))
-            previous=(tid,);cursor+=len(ops)
+            previous=(tid,)
         if window:
             window.append(task('window:publish',publication_condition(sim),ccontext,
                                dependencies=previous,resource='main',kind='publication'))
             previous=('window:publish',)
+        window_tail=previous
         if self._scan_key!=key:
             self._scan_key=key;self._scan_cursor=stop;self._tail={};self._tail_overflow=0
+            self._future_cursor=first+sim.policy.lookahead_gates;self._future={};self._future_epochs=0
+            self._future_bytes=0;self._future_overflow=False
         deadline=monotonic()+self.limits.scan_seconds
+        self._scan_future(sim,end,shape+(('EXECUTOR_WINDOW_TRUNCATED',) if truncated else ()),deadline)
         scanned=0
         while self._scan_cursor<=end and scanned<self.limits.scan_items and monotonic()<deadline:
             op=sim.sequencer.operations[self._scan_cursor]
@@ -208,7 +243,6 @@ class RemainingWorkExtractor:
         if self._tail_overflow:
             tail.append(task('tail:overflow',{'operation':'unclassified-suffix'},ccontext,
                 count=self._tail_overflow,dependencies=previous,kind='semantic-count',unknown=('SUMMARY_CLASS_LIMIT',)))
-            unknown.append('SUMMARY_CLASS_LIMIT')
         pending=max(0,end-self._scan_cursor+1)
         complete=not pending
         if not window and not tail:
@@ -218,10 +252,16 @@ class RemainingWorkExtractor:
             if len(entries)>64:unknown.append('CACHE_QUIESCENCE_UNINSPECTED')
             if any(e.dirty for e in islice(entries.values(),64)):unknown.append('DIRTY_WRITEBACK_REMAINS')
             if getattr(sim,'_async_errors',()) or getattr(sim.cache,'errors',()):unknown.append('FAILED_WORK_REMAINS')
-        snap=RemainingWork(content_hash({'context':context,'scan':self._scan_cursor}),context,
+        future,future_complete,future_reasons=self._future_tasks(sim,end,ccontext,window_tail,bool(window))
+        snap=RemainingWork(content_hash({'context':context,'scan':self._scan_cursor,'future':self._future_cursor}),context,
             tuple(window),tuple(tail),flights,complete,False,tuple(unknown),sim.frontier,end,
-            max(0,end-sim.frontier),0,self._scan_cursor-stop,pending,False,perf_counter()-started,0)
+            max(0,end-sim.frontier),0,self._scan_cursor-stop,pending,False,perf_counter()-started,0,
+            future=future,future_complete=future_complete,future_reasons=future_reasons)
         size=len(canonical(asdict(snap)).encode())
+        if size+8>self.limits.max_bytes and future:
+            # The exact future is an optional refinement of the semantic tail.
+            snap=replace(snap,future=(),future_complete=False,future_reasons=('FUTURE_METADATA_LIMIT',))
+            size=len(canonical(asdict(snap)).encode())
         if size+8>self.limits.max_bytes:
             snap=self._minimal(sim,end,flights,('CAPTURE_METADATA_LIMIT',),started)
         else:
@@ -229,6 +269,44 @@ class RemainingWorkExtractor:
             snap=replace(snap,metadata_bytes=len(canonical(asdict(snap)).encode()))
         self._published=snap
         return snap
+
+    def _scan_future(self,sim,end,reasons,deadline):
+        """Advance the epoch-aligned executor-shape scan by whole epochs within the scan budget."""
+        if reasons or self._future_overflow:return
+        ops,scanned=sim.sequencer.operations,0
+        while self._future_cursor<=end and scanned<self.limits.scan_items and monotonic()<deadline:
+            stop=min(end,self._future_cursor+sim.policy.lookahead_gates-1)
+            for group in executor_groups(ops[self._future_cursor:stop+1],sim.layout,sim.block_bits,sim.policy):
+                condition=strip_ids(executor_condition(sim,group))
+                signature=content_hash(condition)
+                if signature in self._future:self._future[signature][1]+=1
+                else:
+                    size=len(canonical(condition).encode())+128
+                    if len(self._future)>=self.limits.max_groups-2 or self._future_bytes+size>self.limits.max_bytes//4:
+                        self._future_overflow=True;return
+                    self._future[signature]=[condition,1,any(g.dependencies for g in group)];self._future_bytes+=size
+            self._future_epochs+=1;scanned+=stop-self._future_cursor+1;self._future_cursor=stop+1
+
+    def _future_tasks(self,sim,end,ccontext,previous,current_epoch):
+        reasons=future_shape_reasons(sim)
+        if self.limits.window<min(sim.policy.lookahead_gates,end-sim.frontier):reasons+=('EXECUTOR_WINDOW_TRUNCATED',)
+        if self._future_overflow:reasons+=('FUTURE_CLASS_LIMIT',)
+        if sim.binding is None and any(v[2] for v in self._future.values()):reasons+=('UNBOUND_PARAMETERS',)
+        if reasons:return (),False,reasons
+        tasks=[]
+        for i,(condition,count,_) in enumerate(self._future.values()):
+            tid=f'future:{i}'
+            tasks.append(task(tid,condition,ccontext,count=count,dependencies=previous,kind='executor-count'))
+            previous=(tid,)
+        if self._future_epochs:
+            tasks.append(task('future:publish',publication_condition(sim),ccontext,count=self._future_epochs,
+                              dependencies=previous,kind='publication'))
+            previous=('future:publish',)
+        epochs=self._future_epochs+current_epoch
+        if epochs:
+            tasks.append(task('future:boundary',boundary_condition(sim),ccontext,count=epochs,
+                              dependencies=previous,kind='epoch-boundary'))
+        return tuple(tasks),self._future_cursor>end,()
 
     def _minimal(self,sim,end,flights,reasons,started,private=False):
         context={'root':getattr(sim,'_rollback_root',sim.root) if private else sim.root,

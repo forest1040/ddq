@@ -11,6 +11,7 @@ from .fused_swap import execute_fused_swap
 from .journal import content_hash, decode_gate, gate_data
 from .mpi_progress import MPIProgressEngine
 from .runtime_control import RuntimeControl
+from .remaining_work import boundary_condition, publication_condition
 from .s2_planner import plan_window
 from .storage import StoredBlockView
 from .streaming_kernels import apply_local
@@ -53,6 +54,10 @@ class AsyncPolicy:
             raise ValueError('Invalid runtime interval')
         if not 0 <= self.minimum_gain_fraction < 1:
             raise ValueError('Invalid gain threshold')
+
+
+def _stage_condition(condition):
+    return {k: v for k, v in condition.items() if k != 'operation'}
 
 
 class AsyncDistributedSimulator(DistributedSimulator):
@@ -467,12 +472,16 @@ class AsyncDistributedSimulator(DistributedSimulator):
                                                     perf_counter()-gate_begin, process_time()-gate_cpu,
                                                     success=gate_success, parent_id=epoch_group)
                 ledger.validate_coverage()
+                publish_begin, publish_cpu = perf_counter(), process_time()
                 with self._catalog_batch():
                     self.drain()
                     published = self._new_root(self.root)
                     self.local.phase2.progress(published, end)
                     self._commit_stage(published, end)
                 ledger.commit()
+                # Priced per epoch by the remaining-work ETA (child of the epoch group).
+                self._record_stage('epoch-publication', _stage_condition(publication_condition(self)),
+                                   seconds=perf_counter()-publish_begin, cpu_seconds=process_time()-publish_cpu)
                 epoch_success = True
                 self.trace.record('async-epoch', performance_class='scheduler',
                                   metadata={'path': 'ASYNC_EPOCH', 'source_range': [start, end],
@@ -503,7 +512,10 @@ class AsyncDistributedSimulator(DistributedSimulator):
                     finally:
                         self._private_epoch = False
                         self._rollback_root = self.root
+            boundary_begin, boundary_cpu = perf_counter(), process_time()
             self.runtime.frontier()
+            self._record_stage('epoch-boundary', _stage_condition(boundary_condition(self)),
+                               seconds=perf_counter()-boundary_begin, cpu_seconds=process_time()-boundary_cpu)
         return self
 
     def drain(self):

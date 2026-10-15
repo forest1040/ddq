@@ -30,7 +30,10 @@ with AsyncDistributedSimulator(6,config,comm=comm,policy=policy) as sim:
     duration=.2+.1*rank
     sim.runtime.set_eta_cost_view('observed',lambda task:CostSample('oracle',duration,duration,duration))
     report=sim.runtime.update_eta(endpoint_frontier=3,collective=True)
-    groups=len(sim.runtime.remaining_extractor._published.window)
+    snap=sim.runtime.remaining_extractor._published
+    # The exact future adds the epoch boundary of the current window.
+    assert snap.future_complete and not snap.future_reasons
+    groups=sum(t.count for t in snap.window+snap.future)
     assert report['remaining_sources']==4
     assert report['rank_max_expected_seconds']['observed']==max(comm.allgather(duration*groups))
     assert not report['eligible_for_control']

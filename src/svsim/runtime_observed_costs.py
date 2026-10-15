@@ -2,7 +2,7 @@
 
 Only collector rows that are successful, validated, measured and outside
 warmup are used (``cost_observations``), and a class answers only after
-``MIN_SAMPLES`` of them. Executor conditions are matched by gate class: the
+``MIN_SAMPLES`` of them. Executor conditions (and the once-per-epoch publication and boundary stages) are matched by gate class: the
 per-occurrence ``op_id``/``source_op_id`` are removed, everything else
 (angles, layout, policy, engine) must be equal. Values are seconds per unit;
 lower/upper are the training envelope widened by the held-out extrema, not a
@@ -36,6 +36,7 @@ BURN_IN = 3
 DRIFT_LIMIT = .5
 TOLERANCE = .1
 EXECUTOR_STAGES = ('executor-gate', 'executor-group')
+EPOCH_STAGES = ('epoch-publication', 'epoch-boundary')  # once per epoch; priced like executor classes
 CERTIFIED, INSUFFICIENT, LOW_COVERAGE, STALE, DRIFTING = ('CERTIFIED', 'INSUFFICIENT_SAMPLES', 'LOW_HELD_OUT_COVERAGE', 'STALE_POLICY_EPOCH',
                                                      'DRIFTING')
 
@@ -46,6 +47,21 @@ def _class(condition):
         condition['operations'] = [{k: v for k, v in op.items() if k not in {'op_id', 'source_op_id'}}
                                    for op in condition['operations']]
     return canonical(condition)
+
+
+def _by_class(collector, stages):
+    """Fresh-revision index {class key: rows (oldest first)} of the collector's cost observations in ``stages``."""
+    cache = getattr(collector, '_class_index', None)
+    revision = getattr(collector, 'revision', None)
+    if cache is None or revision is None or cache[0] != revision:
+        index = {}
+        rows = collector.cost_rows() if hasattr(collector, 'cost_rows') else collector.cost_observations()
+        for row in rows:
+            if row.stage in EXECUTOR_STAGES or row.stage in EPOCH_STAGES:
+                index.setdefault((row.stage in EXECUTOR_STAGES, _class(row.condition)), []).append(row)
+        cache = (revision, index)
+        if revision is not None: collector._class_index = cache
+    return cache[1]
 
 
 def _per_unit(rows):
@@ -88,10 +104,11 @@ def observed_task_cost(collector, condition, policy_epoch=None, plan_version=Non
     ``decisions`` (if given) receives ``{class_key: reason}`` for the last decision.
     """
     if collector is None or not collector.enabled or not isinstance(condition, dict): return None
-    if condition.get('operation') not in EXECUTOR_STAGES: return None
+    stages = EXECUTOR_STAGES if condition.get('operation') in EXECUTOR_STAGES else EPOCH_STAGES
+    if condition.get('operation') not in stages: return None
     key = _class(condition)
     reason, values, lower, upper, coverage = _assess(
-        [row for row in collector.cost_observations() if row.stage in EXECUTOR_STAGES and _class(row.condition) == key],
+        _by_class(collector, stages).get((stages is EXECUTOR_STAGES, key), []),
         policy_epoch, plan_version, BURN_IN)
     _note(decisions, key, reason)
     if not values or len(values) < MIN_SAMPLES: return None

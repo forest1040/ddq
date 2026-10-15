@@ -119,6 +119,10 @@ class RuntimeMeasurementCollector:
         self._raw_pending: deque[bytes] = deque()
         self._raw_pending_bytes = 0
         self.dropped_raw = 0
+        # Bumped by every submit; read-side caches (cost_observations, class
+        # indices) are valid only for the revision they were built at.
+        self.revision = 0
+        self._observation_cache = None
 
     def _queue_raw(self, observation):
         line = (_canonical(asdict(observation)) + '\n').encode()
@@ -148,6 +152,7 @@ class RuntimeMeasurementCollector:
         self._check_thread()
         if not self.enabled:
             return False
+        self.revision += 1
         if event_id in self._events:
             self.duplicate_events += 1
             return False
@@ -280,10 +285,21 @@ class RuntimeMeasurementCollector:
 
     def cost_observations(self):
         """Return only successful, validated, non-warmup observations."""
+        return tuple(deepcopy(item) for item in self.cost_rows())
+
+    def cost_rows(self):
+        """``cost_observations`` without copies, cached until the next submit.
+
+        For in-process consumers that only read (the rolling cost index); the
+        rows are the collector's own objects and must not be mutated.
+        """
         self._check_thread()
+        if self._observation_cache is not None and self._observation_cache[0] == self.revision:
+            return self._observation_cache[1]
         candidates = [item for ring in self._rings.values() for item in ring
                       if not item.warmup and item.success and item.validated and item.evidence == 'measured']
         result = []
+        by_event = {row.event_id: row for row in candidates}
         for item in candidates:
             parent = item.parent_id
             usable = True
@@ -294,10 +310,11 @@ class RuntimeMeasurementCollector:
                     usable = False
                     break
                 parent = self._group_parent.get(
-                    parent, next((row.parent_id for row in candidates if row.event_id == parent), None))
+                    parent, by_event[parent].parent_id if parent in by_event else None)
             if usable:
-                result.append(deepcopy(item))
-        return tuple(result)
+                result.append(item)
+        self._observation_cache = (self.revision, tuple(result))
+        return self._observation_cache[1]
 
     def consumed_children(self, group_id: str) -> frozenset[str]:
         self._check_thread()
