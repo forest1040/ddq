@@ -146,6 +146,23 @@ def offline_scope(ledger, *, policy=None, writer=False):
         for root in roots:
             found, directories = _discover_stores(root)
             stores.extend(found); to_lease.update(directories)
+        con = sqlite3.connect(ledger.as_uri() + '?mode=ro', uri=True)
+        try:
+            try:
+                from .export_admission import export_inventory_roots
+            except ImportError:
+                if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='export_roots'").fetchone():
+                    raise DiskAdmissionError('Export inventory support is unavailable')
+                export_roots = []
+            else:
+                export_roots = export_inventory_roots(con)
+        finally:
+            con.close()
+        for exported in export_roots:
+            path = Path(exported['path'])
+            if path.stat().st_dev != ledger.stat().st_dev:
+                raise DiskAdmissionError('Export inventory changed volume')
+            to_lease.add(path)
         if len(stores) > MAX_STORES:
             raise DiskAdmissionError('Recovery store limit exceeded')
         to_lease.discard(Path(ledger_lease.path))  # one flock per inode: the ledger directory lease already covers it
@@ -170,7 +187,8 @@ def offline_scope(ledger, *, policy=None, writer=False):
         else:
             budget = DiskBudget(ledger, roots, shared_policy=True, recovery_only=True, **persisted)
         yield {'ledger': ledger, 'ledger_lease': ledger_lease, 'leases': leases, 'budget': budget, 'roots': roots,
-               'stores': sorted(set(stores), key=str), 'policy': persisted, 'private_ledger': private, 'coordinator': coordinator}
+               'stores': sorted(set(stores), key=str), 'policy': persisted, 'private_ledger': private,
+               'coordinator': coordinator, 'export_roots': export_roots}
     finally:
         if budget is not None:
             budget.close()
@@ -421,7 +439,9 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
     """Dry-run or apply settlement of live reservations that have no checkpoint intent.
 
     Tokens with a checkpoint intent are settled only when their snapshot never reached a global decision (prepare/decision
-    stage, class ``checkpoint-uncommitted``); intents of a committed cut are reported only (checkpoint recovery owns them).
+    stage, class ``checkpoint-uncommitted``); committed checkpoint sidecars are
+    deferred to checkpoint recovery. Dedicated metadata and export intents are
+    inspected here independently of whether their snapshot committed.
     Every unlinked token must be of a known operation; catalog tokens must be
     attributable to a registered store; every store must pass inspection (no
     non-empty catalog side file, quick_check ok, published extents inside
@@ -449,18 +469,38 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
         deferred, uncommitted_linked = [], []
         for token in linked:
             link = link_of[token['id']]
-            if link is not None and link.get('snapshot_id') in committed_snapshots:
+            dedicated = link is not None and (link.get('purpose') == 'state-export' or
+                                              link.get('stage') in ('metadata-payload','metadata-chunk'))
+            if not dedicated and link is not None and link.get('snapshot_id') in committed_snapshots:
                 deferred.append(token)       # a committed cut: checkpoint recovery owns it
             else:
                 uncommitted_linked.append((token, link))
         linked = deferred
         for token, link in uncommitted_linked:
-            klass, reason = _classify_uncommitted_checkpoint(token, link, scope)
+            attribution = None
+            if link is not None and (link.get('purpose') == 'state-export' or
+                                     link.get('stage') in ('metadata-payload','metadata-chunk')):
+                try:
+                    if link.get('purpose') == 'state-export':
+                        from .export_admission import plan_recovery
+                        dedicated_plan = plan_recovery(token,link,scope)
+                    else:
+                        from .checkpoint_metadata_recovery import plan_recovery
+                        dedicated_plan = plan_recovery(token,link,leased_directories=
+                            [l.path for l in scope['leases']] + [scope['ledger_lease'].path])
+                    klass, reason = dedicated_plan['class'], None
+                    attribution = dedicated_plan['attribution']
+                except (OSError, ValueError, KeyError, TypeError) as exc:
+                    klass, reason = None, str(exc)
+            else:
+                klass, reason = _classify_uncommitted_checkpoint(token, link, scope)
             entry = {'id': token['id'], 'operation': token['operation'], 'class': klass, 'state': token['state'],
                      'bytes': token['bytes'], 'materialized_bytes': token['materialized_bytes'],
                      'release_pending_bytes': token['bytes'] - token['materialized_bytes'],
                      'disposition': 'settle' if klass and not blockers else 'refuse', 'reason': reason}
-            if klass:
+            if attribution is not None:
+                entry['attribution'] = attribution
+            elif klass:
                 entry['checkpoint'] = {k: link[k] for k in ('snapshot_id', 'stage', 'rank', 'dataset_id')}
             if reason:
                 refused.append(f"{token['id']}: {reason}")
@@ -499,6 +539,18 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
         if confirm_plan != plan_sha:
             raise UncommittedRecoveryRefused('Plan changed since the dry run; refusing to apply', report)
         _assert_catalog_files(stores)
+        for entry, token, link in tokens:
+            if entry['class'] == 'export':
+                from .export_admission import plan_recovery, recheck_recovery
+                recheck_recovery(token,link,scope)
+                if plan_recovery(token,link,scope)['attribution'] != entry['attribution']:
+                    raise UncommittedRecoveryRefused('Export inventory changed after inspection',report)
+            elif entry['class'] == 'checkpoint-metadata':
+                from .checkpoint_metadata_recovery import plan_recovery
+                current = plan_recovery(token,link,leased_directories=
+                    [l.path for l in scope['leases']] + [scope['ledger_lease'].path])
+                if current['attribution'] != entry['attribution']:
+                    raise UncommittedRecoveryRefused('Checkpoint metadata changed after inspection',report)
         released = 0
         for entry, token, link in tokens:
             _assert_leases(scope)
@@ -509,6 +561,8 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
                      'released_pending_bytes': entry['release_pending_bytes'], 'artifacts_preserved': True}
             if entry['class'] == 'catalog':
                 proof['catalog_attribution'] = entry['catalog_attribution']
+            if 'attribution' in entry:
+                proof['attribution'] = entry['attribution']
             if link is None:
                 budget.reconcile_unlinked(token['id'], expected_reservation=token,
                                           materialized_bytes=token['materialized_bytes'],

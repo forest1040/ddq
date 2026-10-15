@@ -113,7 +113,7 @@ def read_payload(directory, decision, rank=0):
     return expand_payload(directory,data,rank)
 
 
-def exchange_payload(transport,data,directory,*,disk_budget=None,budget=None,cache=None):
+def exchange_payload(transport,data,directory,*,disk_budget=None,budget=None,cache=None,checkpoint_context=None):
     """Collectively stream JSON; failures drain the stream before the final vote.
 
     Serialization is bounded by the existing in-memory semantic metadata.
@@ -125,12 +125,14 @@ def exchange_payload(transport,data,directory,*,disk_budget=None,budget=None,cac
     # A format-2 payload holds references only and is small; older payloads stream token by token.
     fast=transport.broadcast_json(data.get('payload_format')==2 or any(k.endswith('_chunks') for k in data)
                                   if transport.rank == 0 else None)
-    data,header=_exchange(transport,data,directory,name,fast=fast,disk_budget=disk_budget,budget=budget,cache=cache)
+    data,header=_exchange(transport,data,directory,name,fast=fast,disk_budget=disk_budget,budget=budget,cache=cache,
+                          checkpoint_context=checkpoint_context)
     data['metadata_payload']=header
     return data
 
 
-def _exchange(transport,data,directory,name,*,load=True,fast=False,disk_budget=None,budget=None,cache=None):
+def _exchange(transport,data,directory,name,*,load=True,fast=False,disk_budget=None,budget=None,cache=None,
+              checkpoint_context=None):
     """Stream one JSON value from rank 0 to ``rank-NNNN/manifests/<name>`` on every rank (write-once)."""
     rank=transport.rank
     limit=max(1,min(transport.tile_bytes,transport.metadata_limit//4))
@@ -141,23 +143,38 @@ def _exchange(transport,data,directory,name,*,load=True,fast=False,disk_budget=N
             raw=_encoded(data) if fast else None
             for chunk in ((raw[i:i+limit] for i in range(0,len(raw),limit)) if fast else encoded_chunks(data,limit)):
                 digest.update(chunk); count+=len(chunk)
-            header={'name':name,'bytes':count,'sha256':digest.hexdigest()}
+            context=checkpoint_context or ({key:data[key] for key in ('dataset_id','snapshot_id')}
+                                          if isinstance(data,dict) and 'dataset_id' in data else None)
+            header={'name':name,'bytes':count,'sha256':digest.hexdigest(),'checkpoint_context':context}
         except Exception as exc: error=str(exc)
     transport.vote(error)
     header=transport.broadcast_json(header)
-    directory=Path(directory)/f'rank-{rank:04d}'/'manifests'
-    path=directory/header['name']; temporary=path.with_suffix('.'+uuid4().hex+'.tmp')
+    dataset_root=Path(directory).resolve()
+    directory=dataset_root/f'rank-{rank:04d}'/'manifests'
+    generation=uuid4().hex
+    path=directory/header['name']; temporary=path.with_name('.'+path.name+'.'+generation+'.tmp')
     stream=None; key=None; lease=None; error=None; existing=False
     try:
-        if path.is_file() and path.stat().st_size == header['bytes']:
+        from .checkpoint_recovery import _checked_path
+        _, prior=_checked_path(dataset_root,str(path.relative_to(dataset_root)),missing=True)
+        if prior is not None and prior.st_size == header['bytes']:
             saved=sha256()
             with path.open('rb') as source:
                 while piece:=source.read(limit): saved.update(piece)
             existing=saved.hexdigest() == header['sha256']
         if not existing:
-            if disk_budget is not None: key=disk_budget.reserve(header['bytes'],drain=True)
+            if path.exists() or path.is_symlink():
+                raise OSError('Checkpoint metadata conflicts with its write-once target')
+            if disk_budget is not None:
+                context=header['checkpoint_context']
+                if context is None: raise ValueError('Checkpoint metadata needs dataset and snapshot identity')
+                stage='metadata-payload' if header['name'].startswith('payload-') else 'metadata-chunk'
+                key=disk_budget.reserve(header['bytes'],drain=True,writing=True,
+                    operation='checkpoint-'+stage,owner=uuid4().hex,generation=generation,
+                    checkpoint_link={'dataset_root':str(dataset_root),**context,'rank':rank,'stage':stage,
+                                     'target':str(path),'temporary':str(temporary),'digest':header['sha256']})
             directory.mkdir(parents=True,exist_ok=True)
-            stream=temporary.open('wb')
+            stream=temporary.open('xb')
         if budget is not None:
             if cache is not None: cache.ensure(BufferLease.allocation_cost(limit,4096))
             lease=BufferLease(budget,limit,4096)
@@ -201,7 +218,7 @@ def _exchange(transport,data,directory,name,*,load=True,fast=False,disk_budget=N
                 with path.open() as source: data=json.load(source)
             except Exception as exc: error=str(exc)
         transport.vote(error)
-        return data,header
+        return data,{key:header[key] for key in ('name','bytes','sha256')}
     finally:
         if stream is not None: stream.close()
         if lease is not None: lease.close()
@@ -218,6 +235,8 @@ def distribute_payload(transport,data,directory,*,chunked,expand=True,chunk_cach
     if not chunked:return exchange_payload(transport,data,directory,**kwargs)
     compacted,chunks=compact_payload(data,chunk_cache,sources) if transport.rank == 0 else (None,None)
     refs=[ref for key in CHUNKED_KEYS for ref in compacted[key+'_chunks']] if transport.rank == 0 else None
-    exchange_chunks(transport,refs,chunks,directory,**kwargs)
+    context=transport.broadcast_json({key:data[key] for key in ('dataset_id','snapshot_id')}
+                                     if transport.rank==0 else None)
+    exchange_chunks(transport,refs,chunks,directory,checkpoint_context=context,**kwargs)
     payload=exchange_payload(transport,compacted,directory,**kwargs)
     return expand_payload(directory,payload,transport.rank) if expand else payload

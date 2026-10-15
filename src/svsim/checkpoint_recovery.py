@@ -151,6 +151,13 @@ def _plan_item(root,rank,authority,cut_proof,prepare_raw,item,max_metadata_bytes
             or link['rank']!=rank or link['dataset_id']!=authority['dataset_id']
             or link['snapshot_id']!=authority['decision']['snapshot_id']):
         raise DiskAdmissionError('Recovery intent belongs to a different dataset generation or cut')
+    if link.get('stage') in ('metadata-payload','metadata-chunk'):
+        from .checkpoint_metadata_recovery import plan_recovery
+        planned=plan_recovery(reservation,link,leased_directories=[root],max_bytes=max_metadata_bytes)
+        proof={'version':1,'reservation_id':reservation['id'],'intent_sha256':content_hash(link),
+               'local_cut':cut_proof,**planned,'artifacts_preserved':True}
+        return {'item':item,'proof':proof,'materialized_bytes':reservation['materialized_bytes'],
+                'terminal_state':'RECONCILED'}
     sid=link['snapshot_id'];stage=link['stage']
     targets={'prepare':f'rank-{rank:04d}/manifests/prepare-{sid}.json',
              'decision':f'global/manifests/{sid}.json','decision-copy':f'rank-{rank:04d}/manifests/decision-{sid}.json'}
@@ -194,7 +201,9 @@ def recover_checkpoint_reservations(config, *, comm=None, snapshot=None, apply=F
     Default is a dry run. A current v4 COMMIT, owner prepare, catalog semantic
     metadata, journals and generation inventory must validate on every rank
     before any reservation changes. This does not validate amplitude payloads
-    or reclaim uncommitted, unlinked, payload, catalog, or extent reservations.
+    or reclaim uncommitted, unlinked, catalog, or extent reservations. Payload
+    and chunk intents of the verified current cut use their dedicated inventory
+    and authoritative-content checks.
     """
     from .mpi_transport import MPITransport
     if comm is None:
@@ -304,6 +313,8 @@ def recover_checkpoint_reservations(config, *, comm=None, snapshot=None, apply=F
             links=budget.checkpoint_links(root,limit=max_intents)
             targets=set()
             for item in links:
+                if item['link'].get('purpose') == 'state-export':
+                    continue  # Explicit export inventory is recovered by recover_uncommitted_reservations.
                 if item['link']['rank']!=rank:continue
                 if item['reservation']['state'] not in ('RESERVED','WRITING'):
                     settled+=1;continue

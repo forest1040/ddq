@@ -763,6 +763,9 @@ class DiskBudget:
     def _checkpoint_link(self, link, amount):
         if type(link) is not dict:
             raise ValueError('Invalid checkpoint link')
+        if link.get('purpose') == 'state-export':
+            from .export_admission import normalize_intent
+            return normalize_intent(self,link,amount)
         keys = {'dataset_root','dataset_id','snapshot_id','rank','stage','target','temporary','digest'}
         if set(link) != keys:
             raise ValueError('Invalid checkpoint link fields')
@@ -790,14 +793,17 @@ class DiskBudget:
         rank=link['rank']
         if isinstance(rank,bool) or not isinstance(rank,int) or rank<0 or rank>1024: raise ValueError('Invalid checkpoint rank')
         stage=link['stage']
-        if stage not in ('prepare','decision','decision-copy'): raise ValueError('Invalid checkpoint stage')
+        if stage not in ('prepare','decision','decision-copy','metadata-payload','metadata-chunk'):
+            raise ValueError('Invalid checkpoint stage')
         if not isinstance(link['digest'],str) or re.fullmatch(r'[0-9a-f]{64}',link['digest']) is None:
             raise ValueError('Invalid checkpoint digest')
         if stage=='prepare': rel=Path(f'rank-{rank:04d}/manifests/prepare-{link["snapshot_id"]}.json')
         elif stage=='decision':
             if rank != 0: raise ValueError('Decision checkpoint rank must be zero')
             rel=Path(f'global/manifests/{link["snapshot_id"]}.json')
-        else: rel=Path(f'rank-{rank:04d}/manifests/decision-{link["snapshot_id"]}.json')
+        elif stage=='decision-copy': rel=Path(f'rank-{rank:04d}/manifests/decision-{link["snapshot_id"]}.json')
+        elif stage=='metadata-payload': rel=Path(f'rank-{rank:04d}/manifests/payload-{link["snapshot_id"]}.json')
+        else: rel=Path(f'rank-{rank:04d}/manifests/chunk-{link["digest"]}.json')
         target_input=link['target']; temp_input=link['temporary']
         if not isinstance(target_input,str) or not isinstance(temp_input,str): raise ValueError('Invalid checkpoint paths')
         target=Path(target_input); temp=Path(temp_input)
@@ -860,6 +866,10 @@ class DiskBudget:
                    'rank':rank,'stage':stage,'target':str(expected.relative_to(root)),
                    'temporary':str(temp_abs.relative_to(root)),'digest':link['digest'],
                    'target_existed':target_existed,'expected_bytes':amount}
+        if stage.startswith('metadata-'):
+            if target_existed: raise ValueError('Checkpoint metadata is write-once; target already exists')
+            from .catalog_admission import catalog_birth_identity
+            canonical['dataset_birth_identity']=catalog_birth_identity(root,root_info)
         encoded=json.dumps(canonical,sort_keys=True,separators=(',',':'),ensure_ascii=False)
         if len(encoded.encode('utf-8'))>4096: raise ValueError('Checkpoint link exceeds 4096 UTF-8 bytes')
         return encoded
