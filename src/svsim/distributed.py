@@ -685,19 +685,21 @@ class DistributedSimulator:
         return self
 
     def _execute(self,gate,end,*,physical_swap=False):
+        from .executor_stages import route_kind
+        route = None if physical_swap else route_kind(self,(gate,))
         b = self.block_bits
-        if not physical_swap and gate.kind in {'MCX','SWAP'} and all(q >= b for q in gate.qubits):
+        if route == 'virtual-permutation':
             self._rule({'kind':'permutation','permutation':asdict(PermutationEdge.from_gate(gate,b)),'frontier':end})
             return
         from .planner import group_bits
         bits = group_bits(gate,b)
-        if self.config.frame_policy == 'keep' and not bits and not physical_swap:
+        if route in {'virtual-local-rule','virtual-rotation-rule'}:
             rule = self.local.phase2.make_rule(gate,(gate.op_id,),self.binding)
             if rule is not None:
                 if rule['kind']=='rotation' and self.store.log_bound(self.root) >= self.local.phase2.max_log: self.compact_metadata(flush_logs=True)
                 self._rule({'kind':'local','ops':[rule],'frontier':end})
                 return
-        if not bits and not physical_swap: return self._operation_ship(gate,end)
+        if route == 'operation-shipping': return self._operation_ship(gate,end)
         if gate.kind == 'MCX' and bits:
             from .distributed_plan import choose_mcx
             active=16*(1 << (b-sum(q < b for q in gate.controls)))

@@ -6,6 +6,7 @@ from itertools import islice
 from .journal import canonical,content_hash,gate_data
 from .runtime_eta import CountedTask,InFlightWork
 from .s2_planner import plan_window
+from .executor_stages import executor_route, route_kind, CONTRACT
 
 
 @dataclass(frozen=True)
@@ -191,13 +192,18 @@ def endpoint_tasks(sim,spec,context):
 
 def executor_condition(sim,operations,layout=None):
     layout=layout or sim.layout
+    from .parameters import expression
+    overrides=getattr(sim,'_angle_overrides',{})
+    operations=tuple(replace(g,angle=expression(overrides[g.op_id])) if g.op_id in overrides else g for g in operations)
     physical=[replace(g,targets=tuple(layout.logical_to_physical[q] for q in g.targets),
                       controls=tuple(layout.logical_to_physical[q] for q in g.controls)) for g in operations]
+    route=route_kind(sim,physical)
     return {'operation':'executor-group' if len(operations)>1 else 'executor-gate',
         'executor':'fused-local' if len(operations)>1 else 'single-gate',
         'operations':[gate_data(g) for g in physical], 'n':sim.num_qubits,
         'block_bits':sim.block_bits,'backend':sim.config.backend,'engine':sim.io_engine.identity,
-        'swap_policy':sim.policy.swap_policy,'layout':layout.logical_to_physical}
+        'swap_policy':sim.policy.swap_policy,'layout':layout.logical_to_physical,
+        'stage_contract':CONTRACT,'stage_route':route}
 
 
 def publication_condition(sim):
@@ -229,16 +235,20 @@ def cost_context(sim):
 
 
 def task(task_id,condition,context,*,count=1,dependencies=(),resource='main',kind='executor',source_ids=(),unknown=(),
-         payload_bytes_per_unit=None,kernel_work_per_unit=None):
+         payload_bytes_per_unit=None,kernel_work_per_unit=None,stage_route=None):
+    if condition.get('operation') in {'epoch-publication','epoch-boundary'}:
+        payload_bytes_per_unit=kernel_work_per_unit=0
     # Only explicit route/stage metadata may populate these weights. Gate count,
     # state size, and rank-local shard size are not transfer payload or kernel work.
     if payload_bytes_per_unit is None:
-        payload_bytes_per_unit=condition.get('payload_bytes')
+        payload_bytes_per_unit=stage_route.payload_bytes if stage_route else condition.get('payload_bytes')
     if kernel_work_per_unit is None:
-        kernel_work_per_unit=condition.get('kernel_work_units')
+        kernel_work_per_unit=stage_route.kernel_work if stage_route else condition.get('kernel_work_units')
     return CountedTask(task_id,condition,context,count,dependencies,resource,'groups',kind,
                        source_ids,content_hash({'context':context,'condition':condition}),unknown,
-                       payload_bytes_per_unit,kernel_work_per_unit)
+                       payload_bytes_per_unit,kernel_work_per_unit,stage_route,
+                       0 if (stage_route and not any(n.stage in {'read','write'} for n in stage_route.stages))
+                       or condition.get('operation')=='epoch-boundary' else None)
 
 
 class RemainingWorkExtractor:
@@ -341,7 +351,10 @@ class RemainingWorkExtractor:
             if truncated:reasons+=('EXECUTOR_WINDOW_TRUNCATED',)
             if any(g.dependencies for g in ops) and sim.binding is None:reasons+=('UNBOUND_PARAMETERS',)
             tid=f'window:{len(window)}'
-            window.append(task(tid,executor_condition(sim,ops,call_layout),ccontext,dependencies=previous,
+            from .journal import decode_gate
+            condition=executor_condition(sim,ops,call_layout)
+            route=executor_route(sim,tuple(decode_gate(data) for data in condition['operations']))
+            window.append(task(tid,condition,ccontext,dependencies=previous,stage_route=route,
                                source_ids=tuple(g.op_id for g in ops),unknown=reasons))
             previous=(tid,)
         if window:
@@ -466,10 +479,12 @@ class RemainingWorkExtractor:
                     entry[1]+=1
                     if entry[3] not in (None,exact):entry[0]=pool_angles(entry[0]);entry[3]=None
                 else:
-                    size=len(canonical(condition).encode())+overhead
+                    from .journal import decode_gate
+                    route=executor_route(sim,tuple(decode_gate(data) for data in condition['operations']))
+                    size=len(canonical(condition).encode())+overhead+len(canonical(asdict(route)).encode())
                     if len(self._future)>=self.limits.max_groups-2 or self._future_bytes+size>self.limits.max_bytes//4:
                         self._future_overflow=True;return
-                    self._future[signature]=[condition,1,any(g.dependencies for g in group),exact,size];self._future_bytes+=size
+                    self._future[signature]=[condition,1,any(g.dependencies for g in group),exact,size,route];self._future_bytes+=size
             self._future_epochs+=1;scanned+=stop-self._future_cursor+1;self._future_cursor=stop+1
             self._future_layout=after
 
@@ -480,9 +495,10 @@ class RemainingWorkExtractor:
         if sim.binding is None and any(v[2] for v in self._future.values()):reasons+=('UNBOUND_PARAMETERS',)
         if reasons:return (),False,reasons
         tasks=[]
-        for i,(condition,count,*_) in enumerate(self._future.values()):
+        for i,(condition,count,dependent,exact,size,route) in enumerate(self._future.values()):
             tid=f'future:{i}'
-            tasks.append(task(tid,condition,ccontext,count=count,dependencies=previous,kind='executor-count'))
+            tasks.append(task(tid,condition,ccontext,count=count,dependencies=previous,kind='executor-count',
+                              stage_route=route))
             previous=(tid,)
         if self._future_epochs:
             tasks.append(task('future:publish',publication_condition(sim),ccontext,count=self._future_epochs,

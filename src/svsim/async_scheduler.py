@@ -292,7 +292,8 @@ class AsyncDistributedSimulator(DistributedSimulator):
     def _execute(self, gate, end, *, physical_swap=False):
         from .planner import group_bits
         bits = group_bits(gate, self.block_bits)
-        if not bits or gate.kind in {'MCX', 'SWAP'} or physical_swap:
+        from .executor_stages import route_kind
+        if physical_swap or route_kind(self,(gate,)) != 'joint-async':
             return super()._execute(gate, end, physical_swap=physical_swap)
         from .async_exchange import fetch_partners
         from .pauli_rotation import apply_pauli_pair
@@ -465,13 +466,8 @@ class AsyncDistributedSimulator(DistributedSimulator):
                             source_ids=tuple(g.op_id for g in ops),success=gate_success,work_class=injection_class)
                         self._executor_in_flight = None
                         measurements.end_group(gate_group)
-                        condition = {'operation': 'executor-group' if len(ops) > 1 else 'executor-gate',
-                                     'executor': executor if gate_success else ('fused-local' if is_fused else 'single-gate'),
-                                     'operations': [gate_data(self._physical(g)) for g in ops],
-                                     'n': self.num_qubits, 'block_bits': self.block_bits,
-                                     'backend': self.config.backend, 'engine': self.io_engine.identity,
-                                     'swap_policy': self.policy.swap_policy,
-                                     'layout': self.layout.logical_to_physical}
+                        from .remaining_work import executor_condition
+                        condition = executor_condition(self,ops)
                         self._record_executor_group(gate_event, gate_group, condition, len(ops),
                                                     perf_counter()-gate_begin, process_time()-gate_cpu,
                                                     success=gate_success, parent_id=epoch_group)

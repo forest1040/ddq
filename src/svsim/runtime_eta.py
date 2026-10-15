@@ -12,6 +12,7 @@ import math
 from typing import Mapping
 
 from .runtime_cost import CostSample
+from .executor_stages import ExecutorRoute, CONTRACT
 
 
 @dataclass(frozen=True)
@@ -29,6 +30,8 @@ class CountedTask:
     unknown_reasons: tuple[str, ...] = ()
     payload_bytes_per_unit: int | None = None
     kernel_work_per_unit: int | None = None
+    stage_route: ExecutorRoute | None = None
+    storage_bytes_per_unit: int | None = None
 
 
 @dataclass(frozen=True)
@@ -69,6 +72,8 @@ class RuntimeETAReport:
     payload_byte_coverage: WorkCoverage | None = None
     kernel_work_coverage: WorkCoverage | None = None
     critical_chain_coverage: WorkCoverage | None = None
+    executor_stage_coverage: tuple[dict, ...] = ()
+    storage_byte_coverage: WorkCoverage | None = None
 
 
 class RuntimeETA:
@@ -107,6 +112,12 @@ class RuntimeETA:
                 sample_map[task.task_id] = CostSample("zero", 0, 0, 0)
                 continue
             if task.unknown_reasons:
+                continue
+            route = task.stage_route
+            contract_condition = task.condition.get('class', {}) if task.kind == 'residual' else task.condition
+            if route is not None and (contract_condition.get('stage_contract') != CONTRACT or
+                                      contract_condition.get('stage_route') != route.route):
+                unknown.append("UNAUTHENTICATED_INCLUSIVE_STAGE_CONTRACT:" + task.task_id)
                 continue
             sample = self._lookup(cost_view, task)
             if sample is None:
@@ -158,15 +169,26 @@ class RuntimeETA:
         omitted_work = bool(flights and not covered)
         payload = self._weighted_coverage(
             tasks, samples, "payload_bytes_per_unit", metric="payload-bytes", unit="bytes",
-            scope="explicit transfer payload only", snapshot_reasons=snapshot_reasons,
+            scope="MPI amplitude send payload (each direction once); excludes storage and control traffic", snapshot_reasons=snapshot_reasons,
             omitted_work=omitted_work)
         kernel = self._weighted_coverage(
             tasks, samples, "kernel_work_per_unit", metric="kernel-work", unit="explicit kernel work units",
-            scope="explicit runtime kernel work only", snapshot_reasons=snapshot_reasons,
+            scope="rank-local main kernel amplitude visits; excludes Frame and packing", snapshot_reasons=snapshot_reasons,
             omitted_work=omitted_work)
         chain = self._critical_chain_coverage(tasks, samples, snapshot_reasons,
                                               complete=complete, omitted_work=omitted_work)
-        return payload, kernel, chain
+        stages = tuple({"task_id": task.task_id, "route": task.stage_route.route,
+                        "calls": task.count, "stage_classes": len(task.stage_route.stages),
+                        "included_in_priced_parent": task.task_id in samples,
+                        "independently_calibrated_stages": 0,
+                        "conditional_stage_reasons": tuple(dict.fromkeys(
+                            reason for node in task.stage_route.stages for reason in node.unknown_reasons))}
+                       for task in tasks if task.stage_route is not None)
+        storage = self._weighted_coverage(
+            tasks, samples, "storage_bytes_per_unit", metric="amplitude-storage-bytes", unit="bytes",
+            scope="physical amplitude storage reads plus writes; excludes catalog and journals",
+            snapshot_reasons=snapshot_reasons, omitted_work=omitted_work)
+        return payload, kernel, chain, stages, storage
 
     @classmethod
     def _weighted_coverage(cls, tasks, samples, field, *, metric, unit, scope,
@@ -246,7 +268,23 @@ class RuntimeETA:
                 raise ValueError("Invalid task resource")
             if not isinstance(task.units, str) or not task.units:
                 raise ValueError("Invalid task units")
-            for name in ("payload_bytes_per_unit", "kernel_work_per_unit"):
+            if task.stage_route is not None:
+                route = task.stage_route
+                if not isinstance(route, ExecutorRoute) or route.contract != CONTRACT:
+                    raise ValueError("Invalid executor stage route")
+                if len(route.stages) > 16:
+                    raise ValueError("Too many executor stages")
+                if (task.payload_bytes_per_unit != route.payload_bytes or
+                        task.kernel_work_per_unit != route.kernel_work):
+                    raise ValueError("Executor route coverage weights disagree")
+                seen = set()
+                for node in route.stages:
+                    if (node.stage in seen or any(dep not in seen for dep in node.dependencies)
+                            or type(node.count_lower) is not int or type(node.count_upper) is not int
+                            or not 0 <= node.count_lower <= node.count_upper):
+                        raise ValueError("Invalid executor stage DAG")
+                    seen.add(node.stage)
+            for name in ("payload_bytes_per_unit", "kernel_work_per_unit", "storage_bytes_per_unit"):
                 value = getattr(task, name)
                 if value is not None and (type(value) is not int or value < 0):
                     raise ValueError("Invalid task coverage weight: " + name)

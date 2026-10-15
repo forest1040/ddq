@@ -45,22 +45,21 @@ def test_capture_bounds_window_scan_groups_and_metadata(tmp_path):
         assert snapshot.metadata_bytes <= 65536
 
 
-def test_runtime_snapshot_emits_unestimated_byte_and_kernel_coverage_reasons(tmp_path):
+def test_runtime_snapshot_emits_explicit_route_work_and_unknown_details(tmp_path):
     with make_sim(tmp_path / "coverage-input", lookahead=4) as sim:
         append_circuit(sim, 8)
         snapshot = RemainingWorkExtractor().capture(sim)
-        tasks = snapshot.window + snapshot.tail + snapshot.future
-        assert tasks
-        assert all(task.payload_bytes_per_unit is None for task in tasks)
-        assert all(task.kernel_work_per_unit is None for task in tasks)
+        tasks = snapshot.window + snapshot.future
+        executors = [t for t in tasks if t.stage_route]
+        assert executors and all(t.payload_bytes_per_unit == 0 for t in executors)
+        assert any(t.kernel_work_per_unit is not None for t in executors)
+        assert any(node.unknown_reasons for t in executors for node in t.stage_route.stages)
         report = RuntimeETA().evaluate(snapshot, {})
         assert report.expected_seconds is None
-        assert report.payload_byte_coverage.coverage is None
-        assert report.kernel_work_coverage.coverage is None
-        assert any(reason.startswith("UNESTIMATED_PAYLOAD_BYTES:")
-                   for reason in report.payload_byte_coverage.unknown_reasons)
-        assert any(reason.startswith("UNESTIMATED_KERNEL_WORK:")
-                   for reason in report.kernel_work_coverage.unknown_reasons)
+        assert report.executor_stage_coverage
+        assert not any(row["included_in_priced_parent"] for row in report.executor_stage_coverage)
+        assert all(row["independently_calibrated_stages"] == 0 for row in report.executor_stage_coverage)
+        assert "excludes storage" in report.payload_byte_coverage.scope
         assert report.eligible_for_control is False
 
 
