@@ -20,6 +20,7 @@ from svsim.uncommitted_recovery import UncommittedRecoveryRefused, recover_uncom
 ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, 'OMP_NUM_THREADS': '1'}
 QUOTA = 64 * 1024**2
+BACKEND = os.environ.get('SVSIM_TEST_BACKEND', 'buffered')  # 'direct' runs the file store in O_DIRECT mode (Linux)
 
 PRELUDE = '''
     import os, sys
@@ -29,8 +30,8 @@ PRELUDE = '''
     os.makedirs(os.path.join(root, 'store'), exist_ok=True)
     budget = DiskBudget(os.path.join(root, 'ledger', 'ledger.sqlite3'), [os.path.join(root, 'store')],
                         quota_bytes=%d, shared_policy=True)
-    store = FileBlockStore(StorageConfig(os.path.join(root, 'store'), 2), 4, disk_budget=budget)
-''' % QUOTA
+    store = FileBlockStore(StorageConfig(os.path.join(root, 'store'), 2, backend=%r), 4, disk_budget=budget)
+''' % (QUOTA, BACKEND)
 
 STAGES = {
     # allocator claimed, slot token live, no byte written
@@ -173,7 +174,7 @@ def test_hot_catalog_journal_is_refused_until_admitted_reopen_then_token_is_attr
     assert _live(ledger, tmp_path)[0]  # tokens untouched
     # an admitted reopen replays SQLite's rollback journal and consumes it
     budget = DiskBudget(ledger, [tmp_path / 'store'], quota_bytes=QUOTA, shared_policy=True)
-    store = FileBlockStore(StorageConfig(str(tmp_path / 'store'), 2), 4, create=False, disk_budget=budget)
+    store = FileBlockStore(StorageConfig(str(tmp_path / 'store'), 2, backend=BACKEND), 4, create=False, disk_budget=budget)
     with store.db:
         store.db.execute("INSERT OR REPLACE INTO settings VALUES('probe','1')")
     store.close(); budget.close()
@@ -287,29 +288,82 @@ def test_published_extent_beyond_its_segment_is_refused(tmp_path):
     assert any('published-extent-beyond-segment-file' in r for r in recover_uncommitted_reservations(ledger)['refusals'])
 
 
-def test_checkpoint_linked_tokens_are_deferred_not_settled(tmp_path):
-    from svsim.disk_budget import DiskBudget as B
+def _linked_ledger(tmp_path, stage='prepare', rank=0):
     root = tmp_path / 'store'
     root.mkdir()
     ledger = tmp_path / 'ledger/ledger.sqlite3'
-    budget = B(ledger, [root], quota_bytes=QUOTA, shared_policy=True)
+    budget = DiskBudget(ledger, [root], quota_bytes=QUOTA, shared_policy=True)
     sid = 'a1' * 16
-    target = root / 'rank-0000/manifests' / f'prepare-{sid}.json'
+    name = f'global/manifests/{sid}.json' if stage == 'decision' else f'rank-{rank:04d}/manifests/{stage.split("-")[0]}-{sid}.json'
+    target = root / name
     nonce = 'c' * 32
     linked = budget.reserve(512, writing=True, owner='d' * 32, generation=nonce, operation='atomic-json',
-        checkpoint_link={'dataset_root': str(root), 'dataset_id': 'b2' * 16, 'snapshot_id': sid, 'rank': 0, 'stage': 'prepare',
+        checkpoint_link={'dataset_root': str(root), 'dataset_id': 'b2' * 16, 'snapshot_id': sid, 'rank': rank, 'stage': stage,
                          'target': str(target), 'temporary': str(target.with_name('.' + target.name + '.' + nonce + '.tmp')),
                          'digest': hashlib.sha256(b'x' * 512).hexdigest()})
     plain = budget.reserve(50, operation='journal-append', writing=True)
     budget.close()
+    return root, ledger, sid, linked, plain
+
+
+def test_checkpoint_linked_token_of_a_committed_cut_is_deferred_not_settled(tmp_path):
+    root, ledger, sid, linked, plain = _linked_ledger(tmp_path)
+    (root / 'global/manifests').mkdir(parents=True)
+    (root / f'global/manifests/{sid}.json').write_text('{}')  # a global decision exists: checkpoint recovery owns it
     report = recover_uncommitted_reservations(ledger)
     assert report['linked_live_tokens_deferred'] == 1 and [t['id'] for t in report['tokens']] == [plain]
     recover_uncommitted_reservations(ledger, apply=True, confirm_plan=report['plan_sha256'])
-    budget = B(ledger, [root], quota_bytes=QUOTA, shared_policy=True)
+    budget = DiskBudget(ledger, [root], quota_bytes=QUOTA, shared_policy=True)
     try:
         assert budget.reservation(linked)['state'] == 'WRITING' and budget.reservation(plain)['state'] == 'RECONCILED'
     finally:
         budget.close()
+
+
+def test_checkpoint_linked_token_of_a_never_committed_snapshot_is_settled_with_a_receipt(tmp_path):
+    root, ledger, sid, linked, plain = _linked_ledger(tmp_path)
+    temporary = root / f'rank-0000/manifests/.prepare-{sid}.json.{"c" * 32}.tmp'
+    temporary.parent.mkdir(parents=True)
+    temporary.write_bytes(b'x' * 13)  # partial temporary of the dead writer stays in place
+    before = temporary.read_bytes()
+    report = recover_uncommitted_reservations(ledger)
+    assert report['status'] == 'dry-run' and report['linked_live_tokens_deferred'] == 0
+    kinds = {t['id']: t['class'] for t in report['tokens']}
+    assert kinds == {linked: 'checkpoint-uncommitted', plain: 'append'}
+    recover_uncommitted_reservations(ledger, apply=True, confirm_plan=report['plan_sha256'])
+    assert temporary.read_bytes() == before
+    budget = DiskBudget(ledger, [root], quota_bytes=QUOTA, shared_policy=True)
+    try:
+        assert budget.reservation(linked)['state'] == 'RECONCILED' and budget.recovery_receipt(linked) is not None
+        assert budget.reserved_bytes == 0 and budget.live_reservations(linked=True) == []
+    finally:
+        budget.close()
+    assert recover_uncommitted_reservations(ledger)['status'] == 'nothing-to-do'
+
+
+@pytest.mark.parametrize('mutate,reason', [
+    ('decision-copy', 'checkpoint-stage-without-committed-decision'),
+    ('hardlink', 'checkpoint-temporary-not-an-exclusive-regular-file'),
+    ('symlinked-directory', 'checkpoint-directory-aliased'),
+])
+def test_unsafe_uncommitted_checkpoint_intents_refuse_the_whole_run(tmp_path, mutate, reason):
+    stage = 'decision-copy' if mutate == 'decision-copy' else 'prepare'
+    root, ledger, sid, linked, plain = _linked_ledger(tmp_path, stage)
+    manifests = root / 'rank-0000/manifests'
+    if mutate == 'hardlink':
+        manifests.mkdir(parents=True)
+        (root / 'other').write_bytes(b'x')
+        os.link(root / 'other', manifests / f'.prepare-{sid}.json.{"c" * 32}.tmp')
+    elif mutate == 'symlinked-directory':
+        (root / 'elsewhere').mkdir()
+        (root / 'rank-0000').mkdir()
+        os.symlink(root / 'elsewhere', manifests)
+    before = _ledger_digest(ledger)
+    report = recover_uncommitted_reservations(ledger)
+    assert report['status'] == 'refused' and any(reason in r for r in report['refusals']), report['refusals']
+    with pytest.raises(UncommittedRecoveryRefused):
+        recover_uncommitted_reservations(ledger, apply=True, confirm_plan=report['plan_sha256'])
+    assert _ledger_digest(ledger) == before
 
 
 def test_unlinked_cas_api_is_recovery_only_and_unreplayable(tmp_path):

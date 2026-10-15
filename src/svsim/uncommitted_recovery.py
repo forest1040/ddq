@@ -270,11 +270,66 @@ def _classify(token, owners):
     return 'sidecar', None
 
 
+def _committed_snapshots(scope, links):
+    """Snapshot ids with a regular global decision file under a leased directory (checkpoint recovery owns those cuts)."""
+    found = set()
+    directories = set(scope['roots']) | set(scope['stores']) | {Path(l['dataset_root']) for l in links if l}
+    for base in directories:
+        directory = base / 'global/manifests'
+        if directory.is_dir() and not directory.is_symlink():
+            found.update(p.stem for p in directory.glob('*.json') if p.is_file() and not p.is_symlink())
+    return found
+
+
+def _classify_uncommitted_checkpoint(token, link, scope):
+    """A live checkpoint-sidecar token whose snapshot never reached a global decision (owner proven dead)."""
+    if link is None:
+        return None, 'checkpoint-intent-unreadable'
+    if token['operation'] != 'atomic-json' or token['state'] not in ('RESERVED', 'WRITING'):
+        return None, f"unknown-operation:{token['operation']}"
+    if link.get('stage') not in ('prepare', 'decision'):
+        # a decision-copy token exists only after the global decision committed; without one the state is inconsistent
+        return None, f"checkpoint-stage-without-committed-decision:{link.get('stage')}"
+    root = Path(str(link.get('dataset_root', '')))
+    real_root = Path(os.path.realpath(root))
+    leased = {Path(os.path.realpath(l.path)) for l in scope['leases']} | {Path(os.path.realpath(scope['ledger_lease'].path))}
+    if real_root not in leased:
+        return None, 'checkpoint-dataset-not-under-an-exclusive-lease'
+    try:
+        info = root.stat()
+    except OSError:
+        return None, 'checkpoint-dataset-unavailable'
+    if (link.get('dataset_device'), link.get('dataset_inode')) != (info.st_dev, info.st_ino):
+        return None, 'checkpoint-dataset-identity-mismatch'
+    sid, stage, rank = link.get('snapshot_id'), link['stage'], link.get('rank')
+    if (not isinstance(rank, int) or isinstance(rank, bool) or rank < 0 or (stage == 'decision' and rank != 0)
+            or re.fullmatch('[0-9a-f]{32}', str(sid)) is None):
+        return None, 'checkpoint-intent-malformed'
+    target = f'global/manifests/{sid}.json' if stage == 'decision' else f'rank-{rank:04d}/manifests/prepare-{sid}.json'
+    generation = token['generation'] or ''
+    if re.fullmatch('[0-9a-f]{32}', generation) is None or re.fullmatch('[0-9a-f]{32}', token['owner'] or '') is None:
+        return None, 'checkpoint-writer-generation-unbound'
+    parent, name = target.rsplit('/', 1)
+    if link.get('target') != target or link.get('temporary') != f'{parent}/.{name}.{generation}.tmp' \
+            or link.get('expected_bytes') != token['bytes']:
+        return None, 'checkpoint-intent-path-mismatch'
+    if Path(os.path.realpath(real_root / parent)) != real_root / parent:
+        return None, 'checkpoint-directory-aliased'
+    for key in ('target', 'temporary'):
+        path = real_root / link[key]
+        if path.exists() or path.is_symlink():
+            info = path.lstat()
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > token['bytes']:
+                return None, f'checkpoint-{key}-not-an-exclusive-regular-file'
+    return 'checkpoint-uncommitted', None
+
+
 def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, policy=None,
                                      max_tokens=MAX_TOKENS, max_journal_bytes=64 * 1024 ** 2):
     """Dry-run or apply settlement of live reservations that have no checkpoint intent.
 
-    Tokens with an intent are reported only (checkpoint recovery owns them).
+    Tokens with a checkpoint intent are settled only when their snapshot never reached a global decision (prepare/decision
+    stage, class ``checkpoint-uncommitted``); intents of a committed cut are reported only (checkpoint recovery owns them).
     Every unlinked token must be of a known operation; catalog tokens must be
     attributable to a registered store; every store must pass inspection (no
     non-empty catalog side file, quick_check ok, published extents inside
@@ -297,6 +352,27 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
         blockers = [f"{s['path']}: {b}" for s in stores for b in s['blockers']]
         tokens, refused = [], list(blockers)
         usage_before = budget._observed_usage()
+        link_of = {token['id']: budget.checkpoint_link(token['id']) for token in linked}
+        committed_snapshots = _committed_snapshots(scope, link_of.values())
+        deferred, uncommitted_linked = [], []
+        for token in linked:
+            link = link_of[token['id']]
+            if link is not None and link.get('snapshot_id') in committed_snapshots:
+                deferred.append(token)       # a committed cut: checkpoint recovery owns it
+            else:
+                uncommitted_linked.append((token, link))
+        linked = deferred
+        for token, link in uncommitted_linked:
+            klass, reason = _classify_uncommitted_checkpoint(token, link, scope)
+            entry = {'id': token['id'], 'operation': token['operation'], 'class': klass, 'state': token['state'],
+                     'bytes': token['bytes'], 'materialized_bytes': token['materialized_bytes'],
+                     'release_pending_bytes': token['bytes'] - token['materialized_bytes'],
+                     'disposition': 'settle' if klass and not blockers else 'refuse', 'reason': reason}
+            if klass:
+                entry['checkpoint'] = {k: link[k] for k in ('snapshot_id', 'stage', 'rank', 'dataset_id')}
+            if reason:
+                refused.append(f"{token['id']}: {reason}")
+            tokens.append((entry, token, link))
         for token in live:
             klass, reason = _classify(token, owners)
             entry = {'id': token['id'], 'operation': token['operation'], 'class': klass, 'state': token['state'],
@@ -305,17 +381,17 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
                      'disposition': 'settle' if klass and not blockers else 'refuse', 'reason': reason}
             if reason:
                 refused.append(f"{token['id']}: {reason}")
-            tokens.append((entry, token))
+            tokens.append((entry, token, None))
         plan = {'version': 1, 'ledger': str(scope['ledger']), 'stores': stores,
-                'tokens': [e for e, _ in tokens], 'linked_live_ids': [t['id'] for t in linked],
+                'tokens': [e for e, _, _ in tokens], 'linked_live_ids': [t['id'] for t in linked],
                 'observed_usage_bytes': usage_before}
         plan_sha = _digest(plan)
         report = {'kind': 'uncommitted-reservation-recovery', 'apply': apply, 'plan_sha256': plan_sha,
                   'owner_death_proof': {'ledger_lease': 'exclusive-flock-on-ledger-directory', 'dataset_leases': sorted(l.path for l in scope['leases']) + [scope['ledger_lease'].path],
                                         'pid_or_timestamp_used': False},
-                  'stores': stores, 'tokens': [e for e, _ in tokens], 'linked_live_tokens_deferred': len(linked),
+                  'stores': stores, 'tokens': [e for e, _, _ in tokens], 'linked_live_tokens_deferred': len(linked),
                   'pending_bytes_before': budget.reserved_bytes, 'observed_usage_bytes': usage_before,
-                  'would_release_pending_bytes': sum(e['release_pending_bytes'] for e, _ in tokens if not refused),
+                  'would_release_pending_bytes': sum(e['release_pending_bytes'] for e, _, _ in tokens if not refused),
                   'refusals': refused, 'artifacts_preserved': True, 'strict_capacity_guarantee': False,
                   'status': 'refused' if refused else ('nothing-to-do' if not tokens else 'dry-run')}
         if refused:
@@ -327,17 +403,24 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
         if confirm_plan != plan_sha:
             raise UncommittedRecoveryRefused('Plan changed since the dry run; refusing to apply', report)
         released = 0
-        for entry, token in tokens:
+        for entry, token, link in tokens:
             _assert_leases(scope)
             proof = {'version': 1, 'kind': 'uncommitted-recovery', 'reservation_id': token['id'],
                      'operation': token['operation'], 'class': entry['class'], 'plan_sha256': plan_sha,
                      'ledger_lease': 'exclusive-flock-on-ledger-directory', 'dataset_lease_count': len(scope['leases']),
                      'store_inventory_sha256': _digest(stores), 'observed_usage_bytes': usage_before,
                      'released_pending_bytes': entry['release_pending_bytes'], 'artifacts_preserved': True}
-            budget.reconcile_unlinked(token['id'], expected_reservation=token,
-                                      materialized_bytes=token['materialized_bytes'],
-                                      evidence='uncommitted-recovery-v1:' + content_hash(proof),
-                                      evidence_document=proof)
+            if link is None:
+                budget.reconcile_unlinked(token['id'], expected_reservation=token,
+                                          materialized_bytes=token['materialized_bytes'],
+                                          evidence='uncommitted-recovery-v1:' + content_hash(proof),
+                                          evidence_document=proof)
+            else:
+                proof['checkpoint_intent_sha256'] = _digest(link)
+                budget.reconcile_checkpoint(token['id'], expected_reservation=token, expected_link=link,
+                                            materialized_bytes=token['materialized_bytes'],
+                                            evidence='uncommitted-recovery-v1:' + content_hash(proof),
+                                            evidence_document=proof)
             released += entry['release_pending_bytes']
         usage_after = budget._observed_usage()
         report.update(status='applied', released_pending_bytes=released, observed_usage_after_bytes=usage_after,

@@ -790,6 +790,12 @@ class DiskBudget:
                                 (materialized_bytes,terminal_state,evidence,key)).rowcount
         if changed!=1: raise DiskAdmissionError('Reservation changed during recovery')
 
+    def checkpoint_link(self,key):
+        """The persisted checkpoint intent of one reservation, or None."""
+        with self._path_lock:
+            row=self.db.execute('SELECT link FROM checkpoint_reservations WHERE id=?',(key,)).fetchone()
+        return None if row is None else json.loads(row[0])
+
     def checkpoint_links(self,dataset_root,limit=128):
         _integer(limit,'checkpoint link limit',minimum=1)
         root=str(Path(dataset_root).resolve())

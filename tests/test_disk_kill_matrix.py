@@ -221,7 +221,8 @@ def test_sigkill_during_continuous_catalog_commits_never_loses_an_acknowledged_r
         assert len(got) >= len(acked) and len(got) <= len(acked) + 1  # at most the one in-flight commit
         db.close()
     finally: budget.close()
-    assert _reconcile_all(tmp_path / 'ledger.sqlite', tmp_path) >= 1
+    # A kill that lands before the first commit began (a loaded host) leaves no token to settle.
+    assert _reconcile_all(tmp_path / 'ledger.sqlite', tmp_path) >= (1 if got or acked else 0)
 
 
 GATE_CHILD = '''
@@ -232,7 +233,8 @@ GATE_CHILD = '''
     from svsim.catalog_admission import CatalogConnection
     root, stage = sys.argv[1], sys.argv[2]
     config = DistributedConfig(root, 2, ram_budget_bytes_per_rank=4 * 1024**2, metadata_reserve_bytes=256 * 1024,
-                               amplitude_store='file', frame_policy='materialize')
+                               amplitude_store='file', frame_policy='materialize',
+                               backend=os.environ.get('SVSIM_TEST_BACKEND', 'buffered'))
     sim = DistributedSimulator(4, config, comm=MPI.COMM_SELF)
     sim.gate('H', (0,)); sim.materialize(binding=sim.bind()); sim.commit_snapshot()
     np.save(os.path.join(root, '..', 'expected.npy'), sim.state(allow_gather=True))
@@ -260,7 +262,8 @@ def test_gate_batch_killed_after_its_durable_commit_still_resumes_from_the_snaps
     expected = np.load(tmp_path / 'expected.npy')
     ledger = root / 'metadata' / 'disk-ledger.sqlite3'
     config = DistributedConfig(str(root), 2, ram_budget_bytes_per_rank=4 * 1024**2, metadata_reserve_bytes=256 * 1024,
-                               amplitude_store='file', frame_policy='materialize')
+                               amplitude_store='file', frame_policy='materialize',
+                               backend=os.environ.get('SVSIM_TEST_BACKEND', 'buffered'))
     # Recovery order: owner is gone; settle its tokens, then resume from the last committed snapshot.
     _reconcile_all(ledger, root)
     with DistributedSimulator.resume(config, comm=MPI.COMM_SELF) as sim:

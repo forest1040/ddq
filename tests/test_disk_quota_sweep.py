@@ -15,6 +15,7 @@ from svsim.storage import FileBlockStore, StorageConfig
 from svsim.telemetry import StreamingExecutionTrace
 
 HIGH = 64 * 1024**2
+BACKEND = os.environ.get('SVSIM_TEST_BACKEND', 'buffered')  # 'direct' runs the file store in O_DIRECT mode (Linux)
 WINDOW = 40  # bytes on each side of the boundary, swept one byte at a time
 
 
@@ -86,7 +87,7 @@ class Scenario:
         self.committed = {'v': 2, 'pad': 'x' * 400}
 
     def _setup_extent(self):
-        config = StorageConfig(str(self.root / 'data/store'), 2)
+        config = StorageConfig(str(self.root / 'data/store'), 2, backend=BACKEND)
         self.store = FileBlockStore(config, 4, disk_budget=self.budget)
         self.closers.append(self.store.close)
         self.version = self.store.new_version()
@@ -94,7 +95,7 @@ class Scenario:
         self.committed = None
 
     def _op_extent(self):
-        self.store.write_version(self.version, bytes(self.store.slot_bytes))
+        self.store.write_version(self.version, __import__('mmap').mmap(-1, self.store.slot_bytes))
         self.committed = 'published'
 
     def run(self, quota):
@@ -154,9 +155,11 @@ def test_success_at_the_edge_publishes_exactly_the_new_cut(tmp_path_factory, kin
 
 
 def test_mid_write_extent_failure_keeps_the_old_cut_and_releases_the_token(tmp_path):
+    if BACKEND == 'direct':
+        pytest.skip('O_DIRECT transfers whole aligned pages, so a sub-page short write cannot occur')
     (tmp_path / 'store').mkdir()
     budget = DiskBudget(tmp_path / 'ledger.sqlite', [tmp_path / 'store'], quota_bytes=HIGH)
-    store = FileBlockStore(StorageConfig(str(tmp_path / 'store'), 2), 4, disk_budget=budget)
+    store = FileBlockStore(StorageConfig(str(tmp_path / 'store'), 2, backend=BACKEND), 4, disk_budget=budget)
     try:
         version = store.new_version()
         base = budget.reserved_bytes
@@ -166,12 +169,12 @@ def test_mid_write_extent_failure_keeps_the_old_cut_and_releases_the_token(tmp_p
             real(offset, buffer[:len(buffer) // 2]); return len(buffer) // 2
         handle.write_from = short
         with pytest.raises(OSError, match='Incomplete'):
-            store.write_version(version, bytes(store.slot_bytes))
+            store.write_version(version, __import__('mmap').mmap(-1, store.slot_bytes))
         handle.write_from = real
         assert store.ref(version).segment is None  # never published
         assert budget.reserved_bytes == base  # token released; bytes are charged by inventory, not pending
         assert store.db.execute('PRAGMA integrity_check').fetchone() == ('ok',)
-        store.write_version(version, bytes(store.slot_bytes))  # a hole is left, the next extent still works
+        store.write_version(version, __import__('mmap').mmap(-1, store.slot_bytes))  # a hole is left, the next extent still works
         assert store.ref(version).segment is not None
     finally: store.close(); budget.close()
 

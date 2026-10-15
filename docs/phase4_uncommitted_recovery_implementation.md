@@ -18,6 +18,10 @@
 - `tests/test_uncommitted_gc.py`（10件）：実`FileBlockStore`で作ったcommitted rootとdead branchに対する計画と適用、manifest参照によるroot保持、snapshotなしの拒否、未知rootの拒否、temporaryの選別（intent参照と名前不一致を保持）、レビュー後に変化したtemporaryの拒否、quota満杯でのtemporary GC、回収とGCの合成。
 - 発見した問題：ledgerの排他制御にflockを直接使うとmacOSでSQLiteと衝突した（上記のとおり親directoryへ変更）。
 
+## 追補：未commit snapshotのintent付きtoken
+
+[複数rank checkpoint kill](phase4_disk_fault_matrix_implementation.md)で、prepare／global decisionの途中で落ちたrankのintent付きtokenが、checkpoint recoveryにも本操作にも回収されないことが分かった。`recover_uncommitted_reservations`は、global decisionが存在しないsnapshotのprepare／decision stageのintent付きtokenを`checkpoint-uncommitted`として扱う。dataset rootが排他lock済み、device／inode一致、target・temporaryがgeneration付き固定名、directoryの別名化なし、排他的な通常fileであることを検査し、`reconcile_checkpoint`のexact CASとreceiptで精算する。decision-copyはcommit後にだけ存在するため、global decisionのない同tokenは不整合として拒否する。global decisionが存在するsnapshotのtokenは`linked_live_tokens_deferred`として従来どおりcheckpoint recoveryへ任せる。`DiskBudget.checkpoint_link`を追加した。global decisionの探索は、登録root、検出store、intentのdataset root配下に限る。別host・別rank rootに置かれたdecisionは見ないため、単一host構成に限る。
+
 ## 残り
 
-私的ledger（store内`disk-ledger.sqlite3`）の回収、intent付きだが未commitなcheckpoint tokenの回収、複数rank／MPIでの本操作、catalog tokenの精密な帰属（owner hashは計画に使うが、書込みfileごとの帰属は持たない）、cross-host調停、O_DIRECTを含むLinux全matrix、実ENOSPC、電源断である。
+私的ledger（store内`disk-ledger.sqlite3`）の回収、複数rank／MPIでの本操作の一括化（現在は単一processのoffline操作と、collectiveなcheckpoint recoveryを順に実行する）、catalog tokenの精密な帰属（owner hashは計画に使うが、書込みfileごとの帰属は持たない）、cross-host調停、電源断である（O_DIRECTのLinux試験と実ENOSPCは[追加試験](phase4_disk_fault_matrix_implementation.md)で実施した）。

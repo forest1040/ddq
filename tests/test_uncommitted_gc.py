@@ -19,6 +19,7 @@ from svsim.uncommitted_recovery import (UncommittedRecoveryRefused, collect_dead
 ROOT = Path(__file__).resolve().parents[1]
 ENV = {**os.environ, 'OMP_NUM_THREADS': '1'}
 QUOTA = 64 * 1024**2
+BACKEND = os.environ.get('SVSIM_TEST_BACKEND', 'buffered')  # 'direct': O_DIRECT file store (Linux)
 HEX = 'ab' * 16
 
 # One extent per segment (segment size == slot size) so segments map 1:1 to versions.
@@ -30,12 +31,12 @@ CHILD = '''
     os.makedirs(os.path.join(root, 'store'), exist_ok=True)
     budget = DiskBudget(os.path.join(root, 'ledger', 'ledger.sqlite3'), [os.path.join(root, 'store')],
                         quota_bytes=%d, shared_policy=True)
-    probe = StorageConfig(os.path.join(root, 'store'), 2)
-    config = StorageConfig(os.path.join(root, 'store'), 2, segment_size_bytes=probe.slot_bytes)
+    probe = StorageConfig(os.path.join(root, 'store'), 2, backend=os.environ.get('SVSIM_TEST_BACKEND', 'buffered'))
+    config = StorageConfig(os.path.join(root, 'store'), 2, backend=os.environ.get('SVSIM_TEST_BACKEND', 'buffered'), segment_size_bytes=probe.slot_bytes)
     store = FileBlockStore(config, 4, disk_budget=budget)
     versions = []
     for _ in range(3):
-        v = store.new_version(); store.write_version(v, bytes(store.slot_bytes)); versions.append(v)
+        v = store.new_version(); store.write_version(v, __import__('mmap').mmap(-1, store.slot_bytes)); versions.append(v)
     committed = store.new_root()
     store.publish(committed, [(0, StoredBlockView(versions[0]))]); store.seal(committed)
     with store.db:
@@ -106,10 +107,10 @@ def test_branch_gc_apply_keeps_the_committed_cut_and_is_not_repeatable(tmp_path)
     # the committed cut still reads back through a normal reopen
     budget = DiskBudget(ledger, [tmp_path / 'store'], quota_bytes=QUOTA, shared_policy=True)
     try:
-        store = FileBlockStore(StorageConfig(str(tmp_path / 'store'), 2, segment_size_bytes=4096), 4, create=False, disk_budget=budget)
+        store = FileBlockStore(StorageConfig(str(tmp_path / 'store'), 2, backend=BACKEND, segment_size_bytes=4096), 4, create=False, disk_budget=budget)
         view = store.view(ids['committed'], 0)
         assert view.version_id == ids['versions'][0]
-        buffer = bytearray(store.slot_bytes)
+        buffer = __import__('mmap').mmap(-1, store.slot_bytes)  # aligned read buffer (O_DIRECT)
         store.read_version(view.version_id, buffer)  # checksum-verified read of the surviving extent
         assert bytes(buffer) == bytes(store.slot_bytes)
         # an unreferenced branch is gone, not resurrected by the reopen

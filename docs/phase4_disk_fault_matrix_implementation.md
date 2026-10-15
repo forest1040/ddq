@@ -1,6 +1,6 @@
 # P4-009 disk faultマトリクスの実装（quota境界掃引とprocess kill）
 
-2026-10-15、writer faultの実試験を2ファイル追加した。実装コードの変更はなく、既存の予約・native VFS・回収の挙動を実processと実SQLiteで確認した。P4-009はIN_PROGRESSのままである。
+2026-10-15、writer faultの実試験を2ファイル追加した。この時点では実装コードの変更はなく、既存の予約・native VFS・回収の挙動を実processと実SQLiteで確認した（後続の追加セクションで回収コードを1件修正した）。P4-009はIN_PROGRESSのままである。
 
 ## quota境界掃引（tests/test_disk_quota_sweep.py）
 
@@ -42,6 +42,41 @@ trace／journalは1 byteのopen probeを先に許可するため、拒否時に�
 - Mac：`uv run pytest -m "not slow"`で737 passed、53 skipped（mpi4py欠如のskipを含む）。新規2ファイルは単独で32 passed、2 skipped。
 - Linux（ent Docker、`ddq-linux:dev-20261014`）：新規2ファイルと`test_catalog_batch`／`test_catalog_admission`で55 passed。mpi4pyを要する分散simulatorのkillもここで実行した。
 
-## 残り
+## 残り（初回時点。ENOSPC、O_DIRECT、prepare／decisionの複数rank killは下の追加セクションで実施済み）
 
 unlinked／uncommitted reservationの回収、temporary branch GC、別ledger／外部jobとのhost調停、extent writeのkernel／電源断fault、segment fsync前後のkill、prepare／decision／decision-copyのkill（実process、複数rank）、Linux O_DIRECT下の全matrix、ENOSPC実測は未完了である。SQLite内部のfsync中killはSIGKILL掃引で確率的に確認するだけで、決定的なstage注入ではない。
+
+## 実ENOSPC、O_DIRECT、複数rank checkpoint kill（2026-10-15追加）
+
+残りの3項目を実環境で試験した。P4-009はIN_PROGRESSのままであり、`strict_capacity_guarantee`はfalseのままである。
+
+### 実ENOSPC（tests/test_disk_real_enospc.py）
+
+環境変数`SVSIM_FULL_FS`が指す小さなfilesystemがあるときだけ実行する。Macの通常suiteでは全件skipする。ent Dockerでは特権を足さず、`docker run --tmpfs /full:rw,size=96m,mode=1777`で作ったsize制限のtmpfsを使った（既存のdocker profileのまま。loop mountはprivilegeが要るため使わない）。quotaは実質無制限にし、効くのは物理空きだけである。空きは別processのfillerが実blockを消費して作り、kernelがENOSPCを返す。擬似的なquota errorは使わない。
+
+- 書込み前の拒否（catalog、trace、journal、sidecar、extentの5 writer×`min_free`／空き枯渇の2種、10件）：fillerで空きを使い切った後の書込みは`DiskAdmissionError`で拒否される。拒否前後で管理namespaceのdata byte、durable cut、`reserved_bytes`が同一である。fillerを消して空きを戻すと、同じ書込みが許可され公開される。
+- admission後に外部writerが空きを消費（5件）：子processが予約を取った直後にfillerが空きを0にする。書込みは必ず例外になり、成功を装わない。例外は、catalogが`database or disk is full`（SQLITE_FULL）、trace／journalが短い書込みの検出（`short write`／`Incomplete journal write`）であり、sidecarとextentでは予約のledger更新が先にSQLITE_FULLで失敗した。例外後もtokenは残る（`live`が1または2件）。子processを後始末なしに終了させ、空きを戻してから確認した結果は次のとおり。durable cutは基底のまま（catalogのrowは旧のみでintegrity ok、sidecarは旧JSON、journalは確認済みprefixのみ、traceは先行recordのみ）。offline reconcile（`recover_uncommitted_reservations`）が全tokenを1回で精算し、artifactを削除・書換えせず、`reserved_bytes`が0になり、その後の書込みが成功する。hot rollback journalが残ったcatalogは既存と同じく、admitted reopenでreplayさせた後に回収する。
+- checkpoint sidecar：intentを持たない素の`atomic_json`のtokenはoffline回収が設計どおり拒否するため、呼び出し側が`DiskBudget.reconcile`で精算する。intent付きの実checkpointは下記の複数rank試験でENOSPCを確認した。
+- ledger自身も同じfilesystemにあるため、外部writerが空きを奪うとledgerの`materialize`や`release`もSQLITE_FULLで失敗し得る。これは外部jobによる空き消費が管理対象外であるという既存の限定と一致し、tokenが残ることで安全側に倒れる。metadata poolのbyteを物理的に先取りしているわけではない。
+
+### O_DIRECT（`SVSIM_TEST_BACKEND=direct`）
+
+quota掃引、kill matrix、未commit回収、GC、実ENOSPCの各試験は、環境変数`SVSIM_TEST_BACKEND`で`StorageConfig`／`DistributedConfig`のbackendを選ぶ。entのext4 scratch（Docker bind mount）で、`direct`の全試験を実行して成功した。O_DIRECTは4096 byte整列のaddressと長さを要求するため、試験側のextent書込みと読取りはmmapのpage整列bufferを使うように直した。sub-pageの短い書込みはO_DIRECTでは起こり得ないので、該当の1件（extentの短いwrite）は`direct`ではskipする。実際にrankがdirectで動いたことは、workerが出力するbackend名で確認した。
+
+### 複数rank checkpoint kill（tests/test_checkpoint_stage_kills_mpi.py）
+
+mpiexec -n 2の実processで、snapshot 1をcommit後に1 gateを足し、snapshot 2のcheckpoint中にvictim rankを落とす。落とす位置は`atomic_json`のstage（prepare、global decision、decision-copy）×位置（予約前、予約後file作成前、書込み途中13 byte、rename前、rename後）であり、`os._exit`で実際に死ぬ。別のmpiexecが回収する：offline reconcile、collectiveな`recover_checkpoint_reservations`、resume、数値一致（新規commitが公開されたcutは新、されていないcutは旧）、再度のcommit。global decisionのrename後は新cut、それ以前は旧cutである。代表4件は通常suite、全matrix（slow、30件のうちdecisionのrank 1は存在しないためskip）はslowである。ENOSPC版は、予約後にfillerが空きを消費する5件（rank 0／1、3 stage）で、commitが`database or disk is full`のCollectiveErrorで失敗することを確認した後、同じ回収で成功した。
+
+発見したバグ：prepare／global decisionのstageで落ちると、まだ一度もcommitされていないsnapshotのintent付きtokenが残る。`recover_checkpoint_reservations`は最新committed cutのintentしか受け付けず（`Recovery intent belongs to a different dataset generation or cut`）、`recover_uncommitted_reservations`はintent付きtokenを対象外としていたため、どの手順でも精算できなかった。修正として、`recover_uncommitted_reservations`が、global decisionが存在しないsnapshotのprepare／decisionのintent付きtokenを`checkpoint-uncommitted`として扱うようにした。拒否条件は、intentのdataset rootが排他lock済みdirectoryでない、device／inodeの不一致、stage・target・temporaryがgeneration付き固定名と一致しない、directoryがsymlinkで別名化されている、targetやtemporaryが排他的な通常fileでない、decision-copyのtokenにglobal decisionがない（不整合）、のいずれかである。精算は`reconcile_checkpoint`のexact CAS（予約行とintent行の完全一致）とreceipt保存を同一transactionで行い、partial temporaryは削除しない。global decisionが存在するsnapshotのtokenは従来どおり`linked_live_tokens_deferred`として報告するだけで、checkpoint recoveryが扱う。
+
+その他：既存のSIGKILL連続commit試験が、高負荷のhostで最初のcommit開始前にkillされると「回収するtokenが1件以上」の前提が崩れて失敗した。tokenが存在し得ない場合を許す条件に直した（実装の問題ではない）。
+
+### 検証
+
+- Mac：`uv run pytest -m "not slow"`で770 passed、69 skipped、47 deselected。
+- Linux（ent Docker、`ddq-linux:dev-20261014`、`--tmpfs /full`、`SVSIM_FULL_FS=/full`）：buffered backendで関連11ファイル160 passed、1 skipped（負荷由来のflake 1件は上記修正後に単独で再実行して21 passed）。`SVSIM_TEST_BACKEND=direct`で同じ11ファイル160 passed、2 skipped。slowの全matrixは25 passed、5 skipped。
+- 通常のentの実行は引き続き4 CPU・8 GiB・network noneである。
+
+### 残り
+
+store内private ledgerの回収、複数rank・複数host（各rank別root・別ledger）のoffline回収の一括操作、decision-copy tokenのうち別rank rootにあるglobal decisionを見つけられない構成、異なるledger・外部jobを含むhost調停、extent writeのkernel／電源断fault、segment fsync前後のkill、ledger自身の物理空き先取り、cross-host、電源断は未完了である。O_DIRECT下でのSQLite内部のfsync中killは確率的な確認に留まる。
