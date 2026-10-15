@@ -71,12 +71,43 @@ def executor_groups(window,layout,block_bits,policy):
         yield ops;cursor+=len(ops)
 
 
+S1_LAYOUT_MEMO=4096
+
+
+def s1_moves(sim):
+    """Whether S1 can move layout bits in this run (multi-rank with a matching network profile and storage bandwidth)."""
+    import math
+    profile,bandwidth=getattr(sim,'network_profile',None),getattr(sim,'storage_bandwidth',None)
+    return (sim.policy.swap_policy=='S1' and sim.size>1 and profile is not None
+            and profile.block_bytes==16*(1<<sim.block_bits) and bandwidth is not None
+            and math.isfinite(bandwidth) and bandwidth>0)
+
+
+def epoch_calls(sim,window,layout):
+    """(operations, layout of the call) of one epoch window and the layout after it.
+
+    S1 replays the scheduler's per-gate decision (``choose_s1`` over the rest of
+    the epoch, deterministic for this layout and profile); the swap runs inside
+    the gate's measured call, so it is not a separate task.
+    """
+    if not s1_moves(sim):
+        return [(ops,layout) for ops in executor_groups(window,layout,sim.block_bits,sim.policy)],layout
+    from .distributed_plan import choose_s1
+    calls=[]
+    for index,op in enumerate(window):
+        decision=choose_s1(sim.num_qubits,sim.block_bits,sim.size,layout,window[index:],sim.network_profile,
+                           sim.storage_bandwidth)
+        if decision.bits:layout=layout.swapped_physical(*decision.bits)
+        calls.append(((op,),layout))
+    return calls,layout
+
+
 def future_shape_reasons(sim):
     """Why the executor shape after the current epoch is not determined by the current layout and policy."""
-    # Source SWAPs run as data operations and never relabel the layout; only an
-    # S1 decision (multi-rank) or an explicit physical swap/replan moves it, and
-    # the latter two invalidate the snapshot.
-    return ('FUTURE_S1_LAYOUT_UNKNOWN',) if sim.policy.swap_policy=='S1' and sim.size>1 else ()
+    # Source SWAPs run as data operations and never relabel the layout; S1
+    # decisions are replayed (epoch_calls); an explicit physical swap or replan
+    # invalidates the snapshot.
+    return ()
 
 
 def semantic_class(op):
@@ -209,6 +240,7 @@ class RemainingWorkExtractor:
         self._published=None
         self._tail_start=0;self._future_origin=0
         self._future_cursor=0;self._future={};self._future_epochs=0;self._future_bytes=0;self._future_overflow=False
+        self._future_layout=None;self._layouts={}
 
     def invalidate(self):
         self._scan_key=None;self._tail.clear();self._published=None
@@ -279,7 +311,9 @@ class RemainingWorkExtractor:
             return self._minimal(sim,end,flights,('ENDPOINT_ALREADY_PASSED',),started)
         context['endpoint_frontier']=end
         # Scans survive frontier advances; everything else that shapes the work resets them.
-        key=content_hash({k:v for k,v in context.items() if k not in {'root','frontier'}})
+        # S1 moves the layout during the run; its scans check the replayed layout instead.
+        moving=s1_moves(sim)
+        key=content_hash({k:v for k,v in context.items() if k not in {'root','frontier'}|({'layout','placement_epoch'} if moving else set())})
         first=sim.frontier+1
         width=min(self.limits.window,sim.policy.lookahead_gates)
         stop=min(end+1,first+width)
@@ -293,12 +327,13 @@ class RemainingWorkExtractor:
         shape=future_shape_reasons(sim)
         window=[];previous=();unknown=[]
         ccontext=cost_context(sim)
-        for ops in executor_groups(source,sim.layout,sim.block_bits,sim.policy):
+        calls,window_layout=epoch_calls(sim,source,sim.layout)
+        for ops,call_layout in calls:
             reasons=shape
             if truncated:reasons+=('EXECUTOR_WINDOW_TRUNCATED',)
             if any(g.dependencies for g in ops) and sim.binding is None:reasons+=('UNBOUND_PARAMETERS',)
             tid=f'window:{len(window)}'
-            window.append(task(tid,executor_condition(sim,ops),ccontext,dependencies=previous,
+            window.append(task(tid,executor_condition(sim,ops,call_layout),ccontext,dependencies=previous,
                                source_ids=tuple(g.op_id for g in ops),unknown=reasons))
             previous=(tid,)
         if window:
@@ -310,6 +345,7 @@ class RemainingWorkExtractor:
             self._scan_key=key;self._scan_cursor=self._tail_start=stop;self._tail={};self._tail_overflow=0
             self._future_cursor=self._future_origin=first+sim.policy.lookahead_gates;self._future={};self._future_epochs=0
             self._future_bytes=0;self._future_overflow=False
+            self._future_layout=window_layout;self._layouts={}
         deadline=monotonic()+self.limits.scan_seconds
         self._scan_future(sim,end,shape+(('EXECUTOR_WINDOW_TRUNCATED',) if truncated else ()),deadline)
         scanned=0
@@ -331,8 +367,9 @@ class RemainingWorkExtractor:
         for i,(data,count,_) in enumerate(self._tail.values()):
             condition={'operation':'semantic-suffix','class':data}
             tid=f'tail:{i}'
-            tail.append(task(tid,condition,ccontext,count=count,dependencies=previous,
-                kind='semantic-count',unknown=('FUTURE_EXECUTOR_SHAPE_UNKNOWN',)))
+            tail.append(task(tid,condition,ccontext,count=count,dependencies=previous,kind='semantic-count',
+                # The semantic tail assumes the current layout; S1 moves it (the exact future replays it).
+                unknown=('FUTURE_EXECUTOR_SHAPE_UNKNOWN',)+(('FUTURE_S1_LAYOUT_UNKNOWN',) if moving else ())))
             previous=(tid,)
         if self._tail_overflow:
             tail.append(task('tail:overflow',{'operation':'unclassified-suffix'},ccontext,
@@ -369,6 +406,10 @@ class RemainingWorkExtractor:
         lookahead=sim.policy.lookahead_gates
         origin=first+lookahead
         if stop<self._tail_start or origin<self._future_origin or (origin-self._future_origin)%lookahead:return False
+        moving=s1_moves(sim)
+        # S1: the epoch now in the window must start from the layout the scan replayed for it.
+        if moving and first>=self._future_origin and (self._future_cursor<origin or
+                self._layouts.get(first)!=sim.layout.logical_to_physical):return False
         ops=sim.sequencer.operations
         for index in range(self._tail_start,min(stop,self._scan_cursor)):
             signature=semantic_class(ops[index])[1]
@@ -383,8 +424,10 @@ class RemainingWorkExtractor:
         if not self._future_overflow:
             start=self._future_origin
             while start<origin and start<self._future_cursor:
-                for group in executor_groups(ops[start:min(end,start+lookahead-1)+1],sim.layout,sim.block_bits,sim.policy):
-                    signature=future_key(strip_ids(executor_condition(sim,group)))[0]
+                from .layout import QubitLayout
+                begin=QubitLayout(self._layouts.pop(start)) if moving else sim.layout
+                for group,call_layout in epoch_calls(sim,ops[start:min(end,start+lookahead-1)+1],begin)[0]:
+                    signature=future_key(strip_ids(executor_condition(sim,group,call_layout)))[0]
                     entry=self._future.get(signature)
                     if entry is None:return False
                     entry[1]-=1
@@ -402,8 +445,13 @@ class RemainingWorkExtractor:
         overhead=len(canonical(cost_context(sim)).encode())+256
         while self._future_cursor<=end and scanned<self.limits.scan_items and monotonic()<deadline:
             stop=min(end,self._future_cursor+sim.policy.lookahead_gates-1)
-            for group in executor_groups(ops[self._future_cursor:stop+1],sim.layout,sim.block_bits,sim.policy):
-                condition=strip_ids(executor_condition(sim,group))
+            begin=self._future_layout
+            calls,after=epoch_calls(sim,ops[self._future_cursor:stop+1],begin)
+            if s1_moves(sim):
+                if len(self._layouts)>=S1_LAYOUT_MEMO:self._future_overflow=True;return
+                self._layouts[self._future_cursor]=begin.logical_to_physical
+            for group,call_layout in calls:
+                condition=strip_ids(executor_condition(sim,group,call_layout))
                 signature,exact=future_key(condition)
                 entry=self._future.get(signature)
                 if entry is not None:
@@ -415,6 +463,7 @@ class RemainingWorkExtractor:
                         self._future_overflow=True;return
                     self._future[signature]=[condition,1,any(g.dependencies for g in group),exact,size];self._future_bytes+=size
             self._future_epochs+=1;scanned+=stop-self._future_cursor+1;self._future_cursor=stop+1
+            self._future_layout=after
 
     def _future_tasks(self,sim,end,ccontext,previous,current_epoch):
         reasons=future_shape_reasons(sim)

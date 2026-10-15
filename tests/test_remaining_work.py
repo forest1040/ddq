@@ -153,9 +153,8 @@ def test_empty_endpoint_with_dirty_cache_is_unknown_not_zero_eta(tmp_path):
 
 
 def test_unknown_suffix_and_huge_count_never_claim_unjustified_eta(tmp_path):
-    # Multi-rank S1 decides a layout per gate, so the future shape is unknown.
-    assert future_shape_reasons(SimpleNamespace(policy=AsyncPolicy(swap_policy="S1"), size=2)) == (
-        "FUTURE_S1_LAYOUT_UNKNOWN",)
+    # S1 layout decisions are replayed (tests/mpi_s1_eta_worker.py); nothing is left unknown for them.
+    assert future_shape_reasons(SimpleNamespace(policy=AsyncPolicy(swap_policy="S1"), size=2)) == ()
     with make_sim(tmp_path / "unknown", swap_policy="S1", lookahead=1) as sim:
         append_circuit(sim, 3)
         # A single rank never moves S1 layout bits: the shape is exact.

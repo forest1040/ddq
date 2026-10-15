@@ -104,12 +104,21 @@ MPIのoracle（1／2／4 rank）は、現在のepochのboundary taskを数える
 - **checkpoint。** 11 msから35 msへ、checkpointの回数に比例して増え、`LOW_HELD_OUT_COVERAGE`で認証されなかった。そのため、checkpointを含む合計はunknownである（正しい動作）。
 - **増加の原因。** checkpointのmanifestが、毎回history全体を書き直すことにある（`distributed_checkpoint.py`）。定期的にcheckpointを取ると、run全体でO(N²)になる。これはcheckpoint形式の拡張性の問題であり、P4-009／005の残件として記録する。
 
+## multi-rankのS1（2026-10-15追加）
+
+実行時のS1判断（`choose_s1`）は、そのepoch内の残りgateだけを見て、各gateの直前に決まる。network profileとstorage帯域が無いとき（または1 rankのとき）は、一度もlayoutを動かさない。
+- **判断の再現。** `epoch_calls`は、このS1判断をgateごとに再現し、判断後のlayoutでexecutor classを数える。判断の費用は1 gateあたりO(lookahead)である。
+- **swapの扱い。** swap自体はgateの計測時間の中で行われるので、別のtaskとして足さない（二重計上になるため）。
+- **走査の前進。** layoutが変わるので、S1が動くrunでは、走査のkeyからlayoutとplacement epochを除く。代わりに、走査した各epochの開始layoutを最大4096件記録する。前進時には、新しいwindowの開始layoutが記録と一致する場合だけ増分で進め、一致しなければ走査し直す。
+- **時間model view。** semantic tailは現在のlayoutを仮定するので、S1が動くrunでは`FUTURE_S1_LAYOUT_UNKNOWN`でunknownにする。observed viewは正確なfutureを使う。
+- **試験。** `tests/mpi_s1_eta_worker.py`（2 rank、合成の通信profile）で確認した。rank bitのqubitへの回転が続く回路で、S1が実際にlayoutを動かすとき、予測したclass×回数（判断後のlayoutを含む）が、実際に記録された呼出しと完全に一致する。1 epoch進めた後の増分captureも、最初からの走査と一致する。
+
 ## 残件
 
 - **答える割合。** 短いrunでは答える割合が約50％に留まる。classの認証には、burn-inの後に8件が必要だからである。長いrunとLinux file store・multi-rankでの再評価も残る。
 - **overhead。** Linuxとmulti-rankの監視overheadは、ばらつきが大きく判定できていない。
 
-- **S1。** multi-rankのS1のfuture（各gateのS1判断とphysical swap費用）は未対応である。
+- **S1。** multi-rankのS1は、判断を再現して正確に数える（上記）。swapを含む呼出しと含まない呼出しは同じclassになるので、swapが起きるclassでは認証されにくい。
 - **endpoint。** observable／gradient／checkpointのendpointは実装した。gradientとcheckpointの認証済み価格は、反復回数とcheckpoint形式（history全体の書き直し）に依存する。
 - **coverage。** payloadとcritical chainのcoverageは未対応である。
 - **時間model view。** fused groupのpass数にfutureを使っていない。
