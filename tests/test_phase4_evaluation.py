@@ -281,9 +281,9 @@ def test_matrix_keeps_unsupported_and_budget_rows_and_checks_special_slot_identi
 
     with pytest.raises(ValueError, match="does not exceed"):
         MatrixEntry("execution", "large-state", Campaign(
-            case(ranks=2, backend="MPI", resources={"ram_per_rank_bytes": 4096,
+            case(ranks=2, backend="buffered", resources={"ram_per_rank_bytes": 4096,
                                                      "storage_kind": "file"}), variants()))
-    huge = case(n=10**9, b=1, ranks=2, backend="MPI-file", resources={
+    huge = case(n=10**9, b=1, ranks=2, backend="buffered", resources={
         "ram_per_rank_bytes": 1, "storage_kind": "file"})
     assert MatrixEntry("execution", "large-state", Campaign(huge, variants())).slot == "large-state"
     with pytest.raises(ValueError, match="host_count=1"):
@@ -296,13 +296,13 @@ def test_matrix_keeps_unsupported_and_budget_rows_and_checks_special_slot_identi
             MatrixEntry("transport", "cross-host-linux", Campaign(case(
                 resources={"host_count": host_count}, build={"platform": "Linux"}), variants()))
 
-    large_values = {"n": 8, "b": 4, "ranks": 2, "backend": "MPI-file",
+    large_values = {"n": 8, "b": 4, "ranks": 2, "backend": "buffered",
                     "resources": {"ram_per_rank_bytes": 100, "storage_kind": "file"}}
     assert MatrixEntry("execution", "large-state", Campaign(case(**large_values), variants())).slot == "large-state"
     with pytest.raises(ValueError, match="storage_kind=file"):
         MatrixEntry("execution", "large-state", Campaign(case(**{
             **large_values, "resources": {"ram_per_rank_bytes": 100}}), variants()))
-    with pytest.raises(ValueError, match="MPI backend and at least two ranks"):
+    with pytest.raises(ValueError, match="at least two MPI ranks"):
         MatrixEntry("execution", "large-state", Campaign(case(**{
             **large_values, "ranks": 1}), variants()))
 

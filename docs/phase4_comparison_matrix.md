@@ -13,9 +13,11 @@ and completion of the campaign's entire planned trial set. Unsupported routes,
 resource rejection, missing trials, and numerical validation failures remain
 visible as rows.
 
-Execution has a separate `large-state` slot. It requires an MPI backend with at
-least two ranks, `storage_kind=file`, and the calculated per-rank state shard
+Execution has a separate `large-state` slot. It requires at least two declared
+MPI ranks, `storage_kind=file`, and the calculated per-rank state shard
 (`16 * 2**n / ranks`, rounded up) to exceed the declared `ram_per_rank_bytes`.
+The existing `backend` field continues to identify storage mode (such as
+`buffered` or `direct`); it does not identify the execution runtime.
 Transport has separate `same-host` and `cross-host-linux`
 slots; these require `host_count=1`, or `host_count>=2` plus Linux build platform,
 respectively. A small execution case or same-host run cannot satisfy either
@@ -42,7 +44,8 @@ The unit tests cover missing mandatory groups, duplicate registrations and
 case IDs, mismatched raw identity, missing planned trials, fewer than seven
 matched pairs, one-variant and insufficient-warmup campaigns, failed numeric
 validation, unsupported and budget statuses, large-state MPI/file guards, and
-host-count type validation. A seven-pair campaign is also checked as
+host-count type validation, including buffered file storage with two ranks. A
+seven-pair campaign is also checked as
 representative coverage only. No performance campaign was run for this change.
 
 Remaining P4-005 work includes registering and running all required cases,

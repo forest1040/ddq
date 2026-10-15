@@ -519,8 +519,8 @@ class MatrixEntry:
             budget = resources.get("ram_per_rank_bytes")
             if type(budget) is not int or budget < 1:
                 raise ValueError("large-state slot requires ram_per_rank_bytes")
-            if self.campaign.case.ranks < 2 or "mpi" not in self.campaign.case.backend.lower():
-                raise ValueError("large-state slot requires an MPI backend and at least two ranks")
+            if self.campaign.case.ranks < 2:
+                raise ValueError("large-state slot requires at least two MPI ranks")
             if resources.get("storage_kind") != "file":
                 raise ValueError("large-state slot requires storage_kind=file")
             # ceil(16 * 2**n / ranks) > budget iff 2**(n+4) > budget*ranks.
