@@ -84,6 +84,10 @@ class CompletionObservation:
 class RuntimeMeasurementCollector:
     """Keeps bounded summaries; only successful validated events enter cost observations."""
 
+    # Conservative per-row reserve for the submission-order dict slot and its
+    # integer key/value, charged in addition to the serialized observation.
+    COST_ORDER_ENTRY_BYTES = 320
+
     def __init__(self, *, max_conditions: int = 256, per_condition: int = 64,
                  max_bytes: int = 64 * 1024 * 1024, clock=None, enabled: bool = True,
                  raw_max_bytes: int | None = None):
@@ -99,6 +103,10 @@ class RuntimeMeasurementCollector:
         self._clock = clock
         self._thread = threading.get_ident()
         self._rings: dict[tuple[str, str], deque[CompletionObservation]] = {}
+        # Ring iteration groups conditions, not time. Rolling pooled classes
+        # need submission order for burn-in and disjoint chronological holdout.
+        # Keep only accepted rows; eviction removes their sequence entries too.
+        self._cost_order: dict[int, int] = {}
         self._events: set[str] = set()
         self._event_capacity=min(max_conditions*per_condition,max(1,max_bytes//256))
         self._event_order: deque[str] = deque(maxlen=self._event_capacity)
@@ -202,13 +210,16 @@ class RuntimeMeasurementCollector:
         ring = self._rings.get(key)
         if ring is not None and len(ring) == self.per_condition:
             old = ring.popleft()
-            self._bytes -= len(_canonical(asdict(old)).encode())
-        if self._bytes + self._failure_bytes + self._child_bytes + encoded_size > self.max_bytes:
+            self._cost_order.pop(id(old), None)
+            self._bytes -= len(_canonical(asdict(old)).encode()) + self.COST_ORDER_ENTRY_BYTES
+        accepted_size = encoded_size + self.COST_ORDER_ENTRY_BYTES
+        if self._bytes + self._failure_bytes + self._child_bytes + accepted_size > self.max_bytes:
             self.dropped_bytes += 1
             return False
         ring = self._rings.setdefault(key, deque())
         ring.append(observation)
-        self._bytes += encoded_size
+        self._cost_order[id(observation)] = self.revision
+        self._bytes += accepted_size
         if observation.parent_id:
             self._add_child(observation.parent_id, observation.event_id)
         return True
@@ -291,7 +302,9 @@ class RuntimeMeasurementCollector:
         """``cost_observations`` without copies, cached until the next submit.
 
         For in-process consumers that only read (the rolling cost index); the
-        rows are the collector's own objects and must not be mutated.
+        rows are the collector's own objects and must not be mutated. They are
+        returned in submission order, including across different conditions;
+        event identifiers have no chronological ordering requirement.
         """
         self._check_thread()
         if self._observation_cache is not None and self._observation_cache[0] == self.revision:
@@ -313,6 +326,7 @@ class RuntimeMeasurementCollector:
                     parent, by_event[parent].parent_id if parent in by_event else None)
             if usable:
                 result.append(item)
+        result.sort(key=lambda item: self._cost_order[id(item)])
         self._observation_cache = (self.revision, tuple(result))
         return self._observation_cache[1]
 

@@ -194,6 +194,26 @@ def compute_slice_summary(rows: list[dict]) -> dict:
     }
 
 
+def certification_diagnostic(collector, condition, policy_epoch, plan_version):
+    """Explain the exact/pooled sample threshold without changing certification."""
+    from svsim import runtime_observed_costs as roc
+    stages = roc._stages(condition)
+    index = roc._by_class(collector, stages)
+    executor = stages is roc.EXECUTOR_STAGES
+    keys = {'exact': (executor, roc._class(condition))}
+    pooled = roc._pooled(condition)
+    if pooled is not None:
+        keys['pooled_angle'] = (executor, 'pooled', pooled)
+    result = {'required_post_burn_in_samples': roc.CERTIFY_SAMPLES,
+              'burn_in_samples': roc.BURN_IN, 'minimum_held_out_coverage': roc.MIN_COVERAGE}
+    for name, key in keys.items():
+        reason, values, _, _, coverage = roc._assess(index.get(key, []), policy_epoch, plan_version, roc.BURN_IN)
+        result[name] = {'reason': reason, 'post_burn_in_window_samples': len(values),
+                        'held_out_samples': len(values) - len(values) // 2 if values else 0,
+                        'held_out_coverage': coverage}
+    return result
+
+
 def run_trial(comm, scratch_dir: Path, wl: dict, frac: float, trial_idx: int,
               policy: str, store: str, engine: str, backend: str) -> dict:
     """Execute a single ETA evaluation trial and return row metrics."""
@@ -299,6 +319,7 @@ def run_trial(comm, scratch_dir: Path, wl: dict, frac: float, trial_idx: int,
                 tasks = tuple(snap.window) + tuple(snap.future if (snap.future_complete and not snap.future_reasons) else snap.tail)
                 exact = pooled = 0
                 missing = {}
+                missing_classes = []
                 for t in tasks:
                     if not t.count:
                         continue
@@ -309,11 +330,19 @@ def run_trial(comm, scratch_dir: Path, wl: dict, frac: float, trial_idx: int,
                         else:
                             exact += 1
                     else:
-                        why = sim.runtime.cost_decisions.get(roc._class(t.condition), "NO_DECISION")
+                        detail = certification_diagnostic(sim.runtime.measurements, t.condition,
+                                                          sim.runtime.policy_epoch, sim.runtime.plan_version)
+                        assessment = detail['exact']
+                        if assessment['reason'] == roc.INSUFFICIENT:
+                            assessment = detail.get('pooled_angle', assessment)
+                        why = assessment['reason']
                         key = t.task_id.split(":")[0] + ":" + (t.task_id.split(":")[-1] if t.task_id.endswith("boundary") or t.task_id.endswith("publish") else "") + ":" + str(why)
                         missing[key] = missing.get(key, 0) + 1
+                        missing_classes.append({'task_id': t.task_id, **detail})
                 diag = {"classes": sum(1 for t in tasks if t.count), "exact": exact, "pooled": pooled,
-                        "missing": sum(missing.values()), "missing_detail": missing}
+                        "missing": sum(missing.values()), "missing_detail": missing, "missing_classes": missing_classes,
+                        "collector_dropped_conditions": sim.runtime.measurements.dropped_conditions,
+                        "collector_dropped_bytes": sim.runtime.measurements.dropped_bytes}
             except Exception as exc:
                 diag = {"error": repr(exc)}
 

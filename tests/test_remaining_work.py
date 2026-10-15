@@ -415,6 +415,32 @@ def test_distinct_angles_certify_through_the_angle_pooled_class():
     assert observed_task_cost(collector, other, 0, 0) is None
 
 
+def test_angle_pooling_keeps_chronological_holdout_when_exact_angles_repeat():
+    from svsim.runtime_measurement import RuntimeMeasurementCollector
+    from svsim.runtime_observed_costs import observed_task_cost, DRIFTING, CERTIFIED
+    collector = RuntimeMeasurementCollector(max_bytes=512 * 1024)
+
+    def condition(angle):
+        return {'operation': 'executor-gate', 'executor': 'single-gate', 'n': 4,
+                'operations': [{'kind': 'RX', 'targets': [1], 'controls': [],
+                                'angle': angle, 'clifford': False, 'diagonal': False,
+                                'permutation': False}]}
+
+    # Neither exact class has 8 post-burn-in samples. Condition-ring order
+    # interleaves the two time regimes in both halves and used to certify this
+    # 3x slowdown incorrectly; true chronological holdout must reject it.
+    for i, seconds in enumerate([1.0] * 9 + [3.0] * 6):
+        collector.complete(f'event-{15-i}', context={'policy_epoch': 0, 'plan_version': 0},
+                           condition=condition(0.1 if i % 2 else 0.2), stage='executor-gate',
+                           units='groups', quantity=1, protocol_seconds=seconds,
+                           success=True, validated=True, evidence='measured')
+    decisions = {}
+    assert observed_task_cost(collector, condition(0.3), 0, 0, decisions=decisions) is None
+    pooled = [v for k, v in decisions.items() if k.startswith('pooled-angle:')]
+    assert pooled == [DRIFTING]
+    assert CERTIFIED not in decisions.values()
+
+
 def test_future_classes_differing_only_in_angle_are_pooled(tmp_path):
     import random
     rng = random.Random(7)

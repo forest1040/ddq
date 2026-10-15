@@ -115,7 +115,7 @@ MPIのoracle（1／2／4 rank）は、現在のepochのboundary taskを数える
 
 ## 残件
 
-- **答える割合。** 短いrunでは答える割合が約50％に留まる。classの認証には、burn-inの後に8件が必要だからである。長いrunとLinux file store・multi-rankでの再評価も残る。
+- **答える割合。** 短いrunでは答える割合が低い。burn-inの後に8件が必要なほか、件数を満たしてもheld-out coverage／driftの条件で未回答になる（下の再評価）。長いrunとLinux file store・multi-rankでの再評価も残る。
 - **overhead。** Linuxとmulti-rankの監視overheadは、ばらつきが大きく判定できていない。
 
 - **S1。** multi-rankのS1は、判断を再現して正確に数える（上記）。swapを含む呼出しと含まない呼出しは同じclassになるので、swapが起きるclassでは認証されにくい。
@@ -123,3 +123,17 @@ MPIのoracle（1／2／4 rank）は、現在のepochのboundary taskを数える
 - **coverage。** payloadとcritical chainのcoverageは未対応である。
 - **時間model view。** fused groupのpass数にfutureを使っていない。
 - **gate形状の一致。** 角度以外のgate形状（target、control、fusion group）が繰り返されない回路では、classを認証できず、observed viewはunknownになる。
+
+## 短いrunの認証再確認（2026-10-15追加）
+
+**時系列の修正。** collectorの`cost_rows()`はcondition別ringを順に返していた。角度を繰り返すclassや、同じclassへまとめられる複数conditionでは、pooling後の並びが実行順とは限らず、burn-inと古い半分／新しい半分の分離が不正確だった。accepted rowのsubmit revisionを記録し、cost viewを必ず実submit順にする。event IDの字句順は使わない。sequence管理には1 rowあたり320 byteをcollectorの`max_bytes`に予約し、ring eviction時に解放する。rawの形式は変えない。
+
+**安全条件。** burn-in 3件、認証にはその後8件、held-out coverage 0.8、drift limit 0.5、policy／plan freshnessを維持した。回帰試験では、2つの角度を交互に使う呼出しが途中で3倍遅くなった場合、従来のring順では両半分へ遅い値が混ざって誤認証できた。修正後は`DRIFTING`となりunknownを維持する。ringの置換、byte予算、cache invalidationも試験した。
+
+**診断。** 評価scriptの`class_diag.missing_classes`に、exactと角度pooledそれぞれのburn-in後件数、held-out件数、coverage、判定理由を出す。exactだけが`INSUFFICIENT_SAMPLES`でも、fallbackの本当の失敗理由が`LOW_HELD_OUT_COVERAGE`である場合を区別できる。collectorの条件数／byte上限によるdrop数も記録する。
+
+**実測（Mac、1 rank、buffered、cooperative、30 epoch）。** `rx-ry-low,rx-ry-var` × S0/S2 × file/RAM × 40/60/80％地点 × 2 trialの48 checkで、30件（62.5％）が回答した。回答分のmedian絶対相対誤差8.6％、p95 18.5％、worst 67.5％、区間coverage 83.3％だった。未認証taskは39件（同classのwindow／future重複を含む）で、fallback側を含む判定は`LOW_HELD_OUT_COVERAGE` 37件、`DRIFTING` 2件だった。全てburn-in後9／15／21件があり、単なる8件不足はなかった。exactだけの診断では14件が件数不足に見えていた。
+
+sequence管理のbyte課金を加えた後の60％地点の8 check smokeは、3件（37.5％）回答、median誤差8.7％、coverage 100％、collectorのdropは全件0だった。48 check評価はbyte課金追加前、smokeは追加後で、どちらも時系列修正後である。証跡は[48 check](internal/p4_002_observed_eta/chronological-holdout-20261015/mac-48-checks.json)と[byte課金後smoke](internal/p4_002_observed_eta/chronological-holdout-20261015/mac-budget-smoke.json)に保存した。再現は`PYTHONPATH=src python examples/p4_002_observed_eta.py --workloads rx-ry-low,rx-ry-var --policies S0,S2 --stores file,ram --trials 2 --skip-overhead --output /tmp/p4-eta.json --scratch /tmp/p4-eta`（smokeは`--trials 2`を`--quick`へ変更）。
+
+この変更は認証の正しさと診断を修正したもので、短いrunの回答率改善を実証したものではない。従来の約50％とは異なるworkload集合・試行で、同時に別作業も実行していたため、差の比較はできない。短いrunのcoverage不良／driftの原因調査、長いrun、Linux／multi-rankの再評価は引き続き残件である。対象試験`tests/test_runtime_measurement.py tests/test_runtime_cost_registry.py tests/test_remaining_work.py`は51 passed。

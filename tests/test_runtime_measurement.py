@@ -51,6 +51,21 @@ def test_duplicate_events_and_bounds_are_reported():
     assert snapshot["dropped_conditions"] == 1
 
 
+def test_cost_rows_keep_submission_order_across_rings_and_evictions():
+    collector = RuntimeMeasurementCollector(per_condition=2)
+    for event, case in [('z', 0), ('a', 1), ('y', 0), ('b', 1), ('x', 0)]:
+        assert collector.complete(event, context={}, condition={'case': case},
+                                  service_seconds=1, validated=True)
+    assert [row.event_id for row in collector.cost_rows()] == ['a', 'y', 'b', 'x']
+    assert [row.event_id for row in collector.cost_observations()] == ['a', 'y', 'b', 'x']
+    assert set(collector._cost_order) == {id(row) for row in collector.cost_rows()}
+    cached = collector.cost_rows()
+    assert collector.cost_rows() is cached
+    assert not collector.complete('failed', context={}, condition={}, success=False)
+    assert [row.event_id for row in collector.cost_rows()] == ['a', 'y', 'b', 'x']
+    assert set(collector._cost_order) == {id(row) for row in collector.cost_rows()}
+
+
 def test_profile_adapter_requires_full_identity_scope_and_explicit_envelope():
     condition = kernel_condition("h", 2)
     profile = ProfileDocument.create({}, {}, {}, [_row(condition)])
@@ -200,10 +215,23 @@ def test_rolling_ring_replaces_old_sample_at_its_byte_limit():
     row=CompletionObservation('e0',context={},condition={},validated=True)
     import json
     size=len(json.dumps(row.to_dict(),sort_keys=True,separators=(',',':')).encode())
-    collector=RuntimeMeasurementCollector(max_conditions=1,per_condition=1,max_bytes=size)
+    collector=RuntimeMeasurementCollector(max_conditions=1,per_condition=1,
+                                         max_bytes=size+RuntimeMeasurementCollector.COST_ORDER_ENTRY_BYTES)
     assert collector.submit('e0',context={},condition={},validated=True)
     assert collector.submit('e1',context={},condition={},validated=True)
     assert [item.event_id for item in collector.cost_observations()]==['e1']
+    assert collector.snapshot()['bytes'] == collector.max_bytes
+    assert len(collector._cost_order) == 1
+
+
+def test_submission_order_metadata_must_fit_in_collector_budget():
+    probe = RuntimeMeasurementCollector()
+    assert probe.submit('e0', context={}, condition={}, validated=True)
+    required = probe.snapshot()['bytes']
+    collector = RuntimeMeasurementCollector(max_bytes=required-1)
+    assert not collector.submit('e0', context={}, condition={}, validated=True)
+    assert collector.snapshot()['bytes'] == 0
+    assert not collector._cost_order and not collector._rings
 
 
 def test_long_identifiers_are_rejected_before_dedup_storage():

@@ -12,7 +12,9 @@ confidence interval.
 
 Freshness: only rows whose context ``policy_epoch``/``plan_version`` equal the
 current runtime's count, and at most the newest ``WINDOW`` per class. Quality:
-the older half of the values trains an envelope [min, max] widened by ``TOLERANCE``
+rows follow actual collector submission order, even when different angle classes
+share a pooled class (identifiers and condition-ring iteration are not clocks).
+The older half of the values trains an envelope [min, max] widened by ``TOLERANCE``
 (relative; the ETA error target, since a min/max of a few i.i.d. values alone bounds only a fraction of
 repeats); the newer half is held out and ``coverage`` is the fraction inside it. A class is certified only
 with ``CERTIFY_SAMPLES`` values and ``coverage >= MIN_COVERAGE``; production
