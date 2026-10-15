@@ -53,3 +53,23 @@ def test_linux_statx_absent_is_unbound(monkeypatch, tmp_path):
     path.write_bytes(b'')
     monkeypatch.setattr(module, 'catalog_birth_identity', lambda *args: None)
     assert module.catalog_file_owner(path).startswith('catalog-unbound-v3:')
+
+
+def test_catalog_on_another_real_volume_is_refused_before_open(tmp_path):
+    import sys
+    import tempfile
+    from pathlib import Path
+    from svsim.disk_budget import DiskBudget
+    if sys.platform != 'linux' or not Path('/dev/shm').is_dir():
+        pytest.skip('requires Linux tmpfs on another device')
+    with tempfile.TemporaryDirectory(prefix='svsim-catalog-volume-', dir='/dev/shm') as other:
+        if Path(other).stat().st_dev == tmp_path.stat().st_dev:
+            pytest.skip('tmpfs and test root have the same device')
+        path = Path(other) / 'catalog.sqlite3'
+        budget = DiskBudget(tmp_path / 'ledger.sqlite3', [tmp_path])
+        try:
+            with pytest.raises(module.CatalogAdmissionError, match='same volume'):
+                module.CatalogConnection(path, budget_getter=lambda: budget)
+            assert not path.exists() and budget.reserved_bytes == 0
+        finally:
+            budget.close()
