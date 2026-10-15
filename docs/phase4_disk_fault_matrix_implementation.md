@@ -174,8 +174,74 @@ native budget VFSに、`-DSVSIM_TEST_FAULTS`付きでbuildしたときだけ存�
 
 ## 残り（更新）
 
-extent公開とsegment fsyncの電源断順序、SQLite内部のxSync／xDelete決定的注入、新規private ledgerのpolicy永続化は実装した。残りは、別ledger・外部job・複数hostの調停（下記の設計メモ）、catalog tokenのfile単位の帰属、既存private ledgerのpolicy（移行しないため弱い検査のまま）、O_DIRECTのSQLite journal自体の電源断模型、cross-hostである。
+extent公開とsegment fsyncの電源断順序、SQLite内部のxSync／xDelete決定的注入、新規private ledgerのpolicy永続化は実装した。残りは、別ledger・外部job・複数hostの調停（下記「host調停」節で同一host分を限定的に実装、配線とcross-hostは未実装）、catalog tokenのfile単位の帰属、既存private ledgerのpolicy（移行しないため弱い検査のまま）、O_DIRECTのSQLite journal自体の電源断模型、cross-hostである。
 
-### host調停の設計メモ（未実装）
+## host調停：別ledger・外部job・cross-host（設計と実装、2026-10-15追加）
 
-同一host上の異なるledgerや外部jobは、物理空きの観測（`min_free`）でしか互いを見ない。案は、volume単位の小さなhost coordinator ledger（`/var`相当のvolume rootに1つ、各ledgerのquota総和と各jobの宣言byteを登録）を追加し、dataset ledgerは自分のpolicyに加えてcoordinatorの空きcreditを予約することである。要点は、(1) coordinatorもbounded native VFS上のSQLiteとし、予約はdataset ledgerの予約より先に取り、解放は後にする、(2) job終了の証明は既存のdirectory flock方式を再利用する、(3) 外部jobは宣言制で、宣言を超える消費は検出のみ（strictな保証ではない）、(4) 複数hostは共有filesystemを使わず、各hostのcoordinatorを独立とし、host間の合算はscheduler側の責務にする。未実装であり、受入条件は満たしていない。
+### 問題
+
+同一volume上の独立なdataset／jobが各自のledgerを使うと、各ledgerは自分のquotaと物理空き（`min_free`）しか見ず、互いの未物理化予約を見ない。各ledgerが「空きがある」と判断して予約した合計がvolumeを超え得る。外部processの予約も同様に見えない。共有ledger（上記の同volume共有ledger）は同じledger pathを明示する場合にだけ合算する。
+
+### 設計
+
+**volume coordinator**を1つ追加する。node-localなvolumeに置く小さなSQLite（native bounded VFS、metadata poolは固定）である。各ledgerは自分のtokenを従来どおり自分のledgerに持ち、coordinatorには次だけを持つ。
+
+- policy（quota、min_free、drain、pool、page cap、device、host名、filesystem種別）。初回に束縛し、以後は完全一致を要求する。
+- ledgerごとのclaim（metadata pool byte、未物理化pending byte、単調なepoch）。上限64。
+- 参加者のrootの和集合（祖先が子孫を覆う最小集合、上限256）。観測使用量は和集合を1度だけ数える。
+- 宣言済み外部jobのclaim（byte、owner、lease directory、そのidentity、generation、state、receipt）。上限256。
+
+volume全体の検査は、全ledgerのpending＋有効な外部claim＋和集合の観測使用量＋全metadata pool＋drain余裕がquotaを超えないこと、および実空き−未割当pool−全pending−drain余裕が`min_free`以上であることとする。自ledgerのpolicy検査は従来どおり残し、両方を満たすことを要求する。
+
+**ledgerからの接続**（`DiskBudget(volume_coordinator=...)`）。`reserve`は、自ledgerのBEGIN IMMEDIATEの中で、自ledgerの検査の後・予約行の挿入の前にcoordinatorの`admit_ledger`を呼ぶ。coordinatorの更新はledgerのcommitより先にcommitされる。ledgerのcommitが失敗するとclaimは真の値より大きく残る（過大評価）が、小さくなることはない。減少（release、materialize、reconcile）はledgerのcommit後に公開する。各ledgerは単調なepochを持ち（transactionごとに加算）、公開はepochが新しい場合だけ上書きするので、遅れて届いた古い状態が新しい状態を消さない。書込み可能なopenはledgerの真の値でclaimを権威的に再公開する。bindは永続化する（`volume_binding` table）。bind済みledgerをcoordinatorなしで開く、または別のcoordinatorで開くと拒否し、未観測のまま過剰予約する抜け道を塞ぐ。
+
+**外部job**は宣言制である。外部processが`declare_external(bytes, owner, lease_dir, roots)`でclaimを登録する。processは`lease_dir`にshared flockを保持し続け、claim専用のmarker fileをそこに作る。claimは検査を通った場合だけ入り、生存中は容量を占める。死亡後も、証明と回収までclaimは残る（PID／時刻では解放しない）。回収は次の手順である。
+
+1. `plan_external_recovery`（dry run）：`lease_dir`のexclusive flockが取れること（誰も保持していない）、directory identity（device／inode）とmarker fileが一致することを確認し、claim全体を含む計画とそのSHA-256を返す。何も変更しない。
+2. `apply_external_recovery(plan, expected_plan_sha256)`：digestを照合し、exclusive flockを再取得して再証明し、generation・state・byteの比較交換（CAS）でclaimを`RECOVERED`に更新し、receiptを保存する。計画後にclaimが変わった場合、所有者が生きている場合、directoryが置換された場合（inode番号が再利用されても、markerで別の実体と判定する）、lease directoryが無い場合、stateが未知の場合は拒否する。二重適用も拒否する。
+3. `forget_recovered`で回収済み行を消す。
+
+回収したclaimのbyteはpending creditから外れる。外部jobが書いたbyteは、宣言したrootの観測使用量として残る。宣言を超える消費は検出しない（検出のみの対象でもない）。
+
+**cross-host**は調停しない。coordinatorは1つのhostの、node-localなvolumeだけを対象にする。filesystem種別を`/proc/self/mountinfo`（Linux）または`statfs`（macOS）から取得し、許可リスト（ext4、xfs、btrfs、tmpfs、overlay、zfs、f2fs、apfs、hfsなど）に無いもの（nfs、cifs／smb、lustre、fuse、virtiofs、9p、判定不能など）は、ファイルを作る前に拒否する。DBにhost名を束縛し、別のhost名で開くと拒否する（共有filesystemやコピーされたDBを推測で扱わない）。coordinatorがledgerのroot volumeと異なるdeviceの場合も拒否する。複数hostの合算はscheduler側の責務のままである。
+
+### 既存機構の拡張を選んだ理由
+
+- 別のdaemonやlock fileを作らず、既存のbounded native VFS上のSQLite、`DirectoryLease`のflock、dry-run／plan digest／CAS／receiptの形をそのまま使った。owner死亡の証明は既存と同じくkernelのexclusive leaseである。
+- 同じledgerを明示共有する方式（共有policy）は、独立ledger間の合算をledger自体の統合に頼る。ledgerを統合できない独立job、ledgerを持たない外部jobには使えない。coordinatorはledgerを統合せず、claimの公開と検査だけを足す。
+- 並列の機構を作らず、`DiskBudget`のreserve／transactionに1か所ずつ接続した。
+
+### lock順序
+
+`thread path lock → ledger BEGIN IMMEDIATE → coordinator thread lock → coordinator BEGIN IMMEDIATE`。coordinatorは葉であり、他のledgerを開かず、ロックせず、読まない（他ledgerの状態は公開済みclaimだけを見る）。catalog commitのtoken予約はledger→coordinatorの順で、catalog lockの内側でも逆順にならない。coordinatorを保持したまま別のledger transactionを開く経路は無い。
+
+### 試験（tests/test_volume_coordinator.py、24件）
+
+- 独立2 ledgerがvolume予算を共有する（片方のquotaが無くても合計超過をmutation前に拒否、行数不変、releaseの減少が相手に見える、物理化済みbyteを二重に数えない）。
+- bind済みledgerの未bind open／別coordinatorでのopen、policy不一致、injected accountingとの併用を拒否する。
+- 外部jobは実子processが宣言する。生存中は容量を占め、回収計画は所有者生存で拒否され、SIGKILL後も自動では解放されない。dry run→digest改ざん拒否→apply→receipt→二重適用拒否→解放後の予約成功。CAS不一致、生きた保持者、directory置換（inode再利用を含む）、lease directory欠損、未知stateを拒否する。resize／release／generation。
+- 競合：実process 6個（ledger A×2、B×2、外部×2）が同時に10,000 byteずつ最後まで予約し、許可量（100,000 byte）ちょうどの10個だけが受理される。killされたrace processのtokenは残り、claimの合計と一致する。
+- lock順序：catalog commitを行うledger Aと、予約・精算を繰り返すledger B×2の実processが150ステップを完走する（タイムアウトなし）。終了後に再openするとclaimがledgerの真値に再公開される。
+- 死んだledgerのclaimは過大評価のまま残り（相手が予約を拒否される）、tokenを`reconcile`して書込み可能な再openで再公開されて初めて解放される。pendingが残るledgerの`forget_ledger`は拒否され、全ledgerの共有flockが無いこととpending 0が揃った後にだけ成功する。
+- 不対応layout：allowlist外のfilesystem種別（nfs4、cifs、smbfs、lustre、fuse、virtiofs、9p、nonlocal、空、未知）はファイル作成前に拒否。判定不能も拒否。実probeはこのhostのローカルfilesystemを受理する。別host名のDB、別deviceのledgerを拒否する。
+
+試験が明らかにした不具合：回収の同一性確認を(device, inode)だけにしていると、Linuxではrmdir／mkdirでinode番号が再利用され、置換されたdirectoryを同じものと誤認した（ent上の試験で検出）。claim専用のmarker fileを加え、置換を拒否するようにした。
+
+### 限界（受入条件との関係）
+
+- `DistributedConfig`への配線は未実装である。coordinatorは`DiskBudget(volume_coordinator=...)`のAPIとして利用する。`FileBlockStore`のprivate ledger、recovery-only open、offline recovery（`uncommitted_recovery`）はcoordinatorを扱わない。bind済みledgerの書込み可能openはcoordinatorを要求するため、offline recoveryでtokenを精算したledgerのclaimは、次の書込み可能openまで過大評価のまま残る（安全側）。
+- 参加者がcoordinatorを使わなければ調停されない。bind済みledgerは迂回できないが、coordinatorを使わない独立job・外部jobは従来どおり物理空きでしか見えない。外部jobの宣言超過は検出しない。
+- 外部jobが宣言したrootの外へ書いたbyteは、観測使用量には入らず、物理空きの観測（`min_free`）でしか見えない。
+- crashで残ったclaimは、tokenの回収（既存のexplicit recovery）と書込み可能openを経て減る。coordinatorが自動で解放することはない。ledger数は64、外部claimは256、rootは256に制限する。
+- 複数host、共有filesystem、電源断でのcoordinator DB自体の耐久性（rollback journalのsynchronous=FULLに依存し、O_DIRECT下の電源断模型は未検証）は対象外である。
+- `strict_capacity_guarantee`は立てない（coordinator snapshotもFalse）。
+
+## segment fsyncの費用の再現script（examples/p4_009_segment_sync_benchmark.py）
+
+前節の費用測定を再現するscriptを追加した（14 qubit、block_bits 8、RAM 2 MiB、gateのlayerごとに`materialize`＋cache flush＋store flush）。「fsyncなし」は、このscriptの中で`FileBlockStore._sync_segments`を差し替えるだけで、本体にswitchは無い（fsyncなしはcrash安全ではない）。上の表の数値は別のworkload（3,840 extent）で得たもので、このscriptのlayer数は小さい。arm順を交互にして5〜6回のmedianを出す。Macでは、buffered 3.96 s対3.95 s（+0.4％）、direct（F_NOCACHE）8.03 s対6.87 s（+17％）だった。run間のばらつきが大きい（並行負荷で一度-53％が出たため、静かな環境で再実行した）。
+
+### 検証（host調停の追加分）
+
+- Mac：`uv run pytest -m "not slow"`で861 passed、69 skipped、2 failed（`test_layout_migration`のmpi4py欠如2件、本変更と無関係）。新規`test_volume_coordinator.py`は24件で、5回連続して成功した。
+- ent Docker（`ddq-linux:dev-20261014`、`--hostname ddq-fixed`、同期先`~/ddq-p4009f`）：新規＋disk／recovery／catalog／segment関連20ファイルが、bufferedで312 passed、`SVSIM_TEST_BACKEND=direct`で311 passed、1 skipped。
+- Linuxのfsync費用（上のscript、`--work-dir`はhostのext4）：buffered 30.7 s対29.7 s（+3.3％）。directはrunが38〜113 sとばらつき、判断できる増分を得られなかった（共有hostの負荷による）。

@@ -198,7 +198,7 @@ class DiskBudget:
                  drain_reserve_bytes=0, usage=None, free=None,
                  max_page_count=1024, max_records=4096, bootstrap_bytes=8*1024*1024,
                  shared_policy=False, recovery_only=False, ledger_lease=None, store_private=False,
-                 persist_private_policy=False):
+                 persist_private_policy=False, volume_coordinator=None):
         _integer(min_free_bytes, 'minimum free bytes')
         _integer(drain_reserve_bytes, 'drain reserve bytes')
         _integer(quota_bytes, 'disk quota', minimum=1, optional=True)
@@ -218,6 +218,12 @@ class DiskBudget:
             raise ValueError('persist_private_policy applies to a writable non-shared ledger only')
         if store_private and max_page_count!=1024:
             raise ValueError('A store-private ledger derives its page cap from the metadata pool')
+        if volume_coordinator is not None:
+            if usage is not None or free is not None:
+                raise ValueError('A volume coordinator requires observed accounting, not injected hooks')
+            if recovery_only or store_private:
+                raise ValueError('Recovery-only and store-private ledgers do not take a volume coordinator')
+        self._coord=volume_coordinator;self._coord_ready=False
         self.persist_private_policy=persist_private_policy
         self.store_private=store_private
         self.recovery_only=recovery_only
@@ -346,6 +352,7 @@ class DiskBudget:
                     volume_device = devices.pop()
                     self._check_or_bind_shared_policy(volume_device)
                     self._check_or_bind_private_policy(volume_device)
+                    self._check_or_bind_volume(volume_device)
                     existing_roots = [Path(path) for (path,) in self.db.execute('SELECT path FROM roots')]
                     selected_roots = _root_antichain(existing_roots + list(self.roots))
                     if len(selected_roots) > 256:
@@ -355,6 +362,8 @@ class DiskBudget:
                     if self.shared_policy:
                         self._check_shared_root_capacity()
                     self.db.execute('PRAGMA user_version=3')
+                    self._register_with_coordinator()
+                self._coord_ready=self._coord is not None
         except BaseException:
             try:
                 self._set_guard_active(False)
@@ -560,6 +569,47 @@ class DiskBudget:
             drain_reserve_bytes,bootstrap_bytes,max_page_count,max_records,volume_device,
             custom_accounting) VALUES(1,?,?,?,?,?,?,?,?)''', expected)
 
+    def _check_or_bind_volume(self, volume_device):
+        """Bind a ledger to one volume coordinator, or refuse an unbound open of a bound ledger.
+
+        The binding is persisted so a bound ledger cannot be opened without the coordinator (which would let
+        it over-commit the volume unseen) and cannot be moved to another coordinator.
+        """
+        has=self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='volume_binding'").fetchone()
+        bound=None
+        if has: bound=self.db.execute('SELECT coordinator FROM volume_binding WHERE singleton=1').fetchone()
+        if self._coord is None:
+            if bound is not None: raise DiskAdmissionError('Ledger is bound to a volume coordinator; open it with that coordinator')
+            return
+        if self._coord.volume_device!=int(volume_device):
+            raise DiskAdmissionError('Volume coordinator is on another volume than the budgeted roots')
+        if bound is not None and bound[0]!=str(self._coord.path):
+            raise DiskAdmissionError('Ledger is bound to a different volume coordinator')
+        if not has:
+            self.db.execute('''CREATE TABLE IF NOT EXISTS volume_binding(singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+                coordinator TEXT NOT NULL, epoch INTEGER NOT NULL)''')
+        if bound is None:
+            self.db.execute('INSERT INTO volume_binding VALUES(1,?,0)',(str(self._coord.path),))
+
+    def _register_with_coordinator(self):
+        if self._coord is None: return
+        self.db.execute('UPDATE volume_binding SET epoch=epoch+1 WHERE singleton=1')
+        roots=[Path(p) for (p,) in self.db.execute('SELECT path FROM roots')]
+        self._coord.register_ledger(self._ledger_path,metadata_bytes=self.bootstrap_bytes,roots=roots,
+                                    pending=self.reserved_bytes,epoch=self._epoch())
+
+    def _epoch(self):
+        return self.db.execute('SELECT epoch FROM volume_binding WHERE singleton=1').fetchone()[0]
+
+    def _publish_claim(self):
+        """Publish the committed pending bytes (a decrease) to the coordinator; failure only over-counts."""
+        try:
+            with self._path_lock:
+                epoch,pending=self.db.execute("""SELECT (SELECT epoch FROM volume_binding WHERE singleton=1),
+                    COALESCE(SUM(bytes-materialized),0) FROM reservations WHERE state IN ('RESERVED','WRITING')""").fetchone()
+                self._coord.publish_ledger(self._ledger_path,epoch=epoch,pending=pending)
+        except (sqlite3.Error,OSError): pass
+
     def _check_shared_root_capacity(self):
         """Check the aggregate registered-root envelope before commit."""
         pending = self.db.execute("SELECT COALESCE(SUM(bytes-materialized),0) FROM reservations WHERE state IN ('RESERVED','WRITING')").fetchone()[0]
@@ -588,8 +638,11 @@ class DiskBudget:
                 if self.recovery_only:
                     self._check_recovery_headroom(check_side_files=False)
                     self._validate_recovery_ledger(self.db)
+                if self._coord_ready:
+                    self.db.execute('UPDATE volume_binding SET epoch=epoch+1 WHERE singleton=1')
                 yield
                 self.db.execute('COMMIT')
+                if self._coord_ready: self._publish_claim()
             except BaseException:
                 if self.db.in_transaction:
                     self.db.execute('ROLLBACK')
@@ -794,6 +847,10 @@ class DiskBudget:
                 raise DiskAdmissionError('Host/device disk quota exceeded')
             if self._free()-self._unallocated_metadata_pool()-pending-amount-margin < self.min_free_bytes:
                 raise DiskAdmissionError('Host/device minimum free space violated')
+            if self._coord_ready:
+                # Leaf lock: the joint volume check commits before this ledger's own commit (an over-count on a
+                # later failure, never an under-count).
+                self._coord.admit_ledger(self._ledger_path,epoch=self._epoch(),pending=pending+amount,drain=drain)
             self.db.execute('INSERT INTO reservations(id,bytes,operation,owner,generation,state) VALUES(?,?,?,?,?,?)',
                              (key, amount, operation, owner, generation, 'WRITING' if writing else 'RESERVED'))
             if link_json is not None:

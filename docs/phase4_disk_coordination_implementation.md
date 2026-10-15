@@ -43,3 +43,7 @@ managed RAMのdeclare値を変えない単体試験と、stateがrank RAMを超�
 ## 検証結果
 
 Mac／uvの最終全件回帰は650 passed／2 skipped。関連回帰107件に、実P=1/2/4のbuffered／F_NOCACHE、独立dataset／fork／template parameter-shift、既存大状態とcheckpointを含む。source／worker hash、初期failure、最終log、再現条件を[内部検証資料](internal/phase4_disk_coordination_validation/README.md)へ保存した。
+
+## 異なるledger・外部jobの調停（追記）
+
+独立ledger同士、宣言済み外部job、同一hostの複数ledgerをvolume単位で調停するcoordinatorは[host調停の設計と実装](phase4_disk_fault_matrix_implementation.md#host調停別ledger外部jobcross-host設計と実装2026-10-15追加)にある。上記の明示共通ledgerとは別に、ledgerを統合せずclaimの公開と検査だけを足す。
