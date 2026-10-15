@@ -19,7 +19,10 @@ the ledger's true pending (never lower); the next writable open of the ledger re
 External jobs are *declared*: an outside process registers a claim with a lease directory it keeps
 a shared flock on. After it dies, an exclusive flock on that directory proves no process holds it
 (never a PID or clock). Recovery is dry-run -> plan digest -> compare-and-swap on the claim's
-generation -> stored receipt. A job that uses more than it declared is not detected here.
+generation -> stored receipt. Explicit, disjoint roots enable measurement of net file growth:
+observed growth consumes the claim rather than being charged twice; excess growth or an
+unprovable root refuses subsequent admission. Rootless legacy claims remain declaration-only.
+This is sampled detection, not enforcement of an uncooperative writer.
 
 The coordinator is single-host. It refuses a filesystem it cannot prove node-local and a database
 bound to another hostname; shared filesystems are unsupported rather than guessed.
@@ -61,6 +64,9 @@ _TABLES = {
                     path TEXT PRIMARY KEY, metadata_bytes INTEGER NOT NULL,
                     epoch INTEGER NOT NULL, pending INTEGER NOT NULL)""",
     'roots': 'CREATE TABLE IF NOT EXISTS roots(path TEXT PRIMARY KEY)',
+    'external_roots': '''CREATE TABLE IF NOT EXISTS external_roots(
+                    claim_id TEXT NOT NULL, path TEXT NOT NULL, baseline INTEGER NOT NULL,
+                    device INTEGER NOT NULL, inode INTEGER NOT NULL, PRIMARY KEY(claim_id,path))''',
     'external': """CREATE TABLE IF NOT EXISTS external(
                     id TEXT PRIMARY KEY, owner TEXT NOT NULL, bytes INTEGER NOT NULL,
                     lease_dir TEXT NOT NULL, lease_dev INTEGER NOT NULL, lease_ino INTEGER NOT NULL,
@@ -263,24 +269,95 @@ class VolumeCoordinator:
             if any(root.is_relative_to(parent) for parent in selected):
                 continue
             selected.append(root)
-            if not root.exists():
+            try:
+                root_info = root.lstat()
+            except FileNotFoundError:
                 continue
-            for path in root.rglob('*'):
-                if str(path) in excluded:
-                    continue
-                try:
-                    info = path.stat(follow_symlinks=False)
-                except FileNotFoundError:
-                    continue
-                if stat.S_ISREG(info.st_mode):
-                    total += info.st_size
+            except OSError as exc:
+                raise DiskAdmissionError(f'Volume coordinator root cannot be observed: {exc}') from exc
+            if not stat.S_ISDIR(root_info.st_mode) or root_info.st_dev != self.volume_device:
+                raise DiskAdmissionError('Volume coordinator root identity or volume changed')
+            stack = [root]
+            try:
+                while stack:
+                    with os.scandir(stack.pop()) as entries:
+                        for entry in entries:
+                            if entry.path in excluded:
+                                continue
+                            try:
+                                info = entry.stat(follow_symlinks=False)
+                            except FileNotFoundError:
+                                continue
+                            if info.st_dev != self.volume_device:
+                                raise DiskAdmissionError('Volume coordinator root spans another volume')
+                            if stat.S_ISDIR(info.st_mode):
+                                stack.append(Path(entry.path))
+                            elif stat.S_ISREG(info.st_mode):
+                                total += info.st_size
+            except OSError as exc:
+                raise DiskAdmissionError(f'Volume coordinator root cannot be observed: {exc}') from exc
         return total
 
-    def _volume_check(self, *, ledger=None, ledger_pending=0, add_external=0, drain=False):
+    def _external_root_usage(self, root, identity=None, claim_id=None):
+        """Measure plain files without following links; uncertainty must not create free credit."""
+        root = Path(root)
+        try:
+            info = root.lstat()
+            if (not stat.S_ISDIR(info.st_mode) or info.st_dev != self.volume_device
+                    or (identity is not None and (info.st_dev, info.st_ino) != identity)):
+                raise DiskAdmissionError('External root directory identity or volume changed')
+            if claim_id is not None:
+                marker_info = (root / f'.svsim-volume-root-{claim_id}').lstat()
+                if not stat.S_ISREG(marker_info.st_mode) or marker_info.st_nlink != 1 or marker_info.st_size:
+                    raise DiskAdmissionError('External root incarnation marker changed')
+            total, stack = 0, [root]
+            while stack:
+                with os.scandir(stack.pop()) as entries:
+                    for entry in entries:
+                        item = entry.stat(follow_symlinks=False)
+                        if item.st_dev != self.volume_device or stat.S_ISLNK(item.st_mode):
+                            raise DiskAdmissionError('External root contains a symlink or another volume')
+                        if stat.S_ISDIR(item.st_mode):
+                            stack.append(Path(entry.path))
+                        elif stat.S_ISREG(item.st_mode):
+                            if item.st_nlink != 1:
+                                raise DiskAdmissionError('External root contains a multiply linked file')
+                            total += item.st_size
+                        else:
+                            raise DiskAdmissionError('External root contains an unsupported file')
+            after = root.lstat()
+            if (after.st_dev, after.st_ino) != (info.st_dev, info.st_ino):
+                raise DiskAdmissionError('External root directory identity changed during observation')
+            return total, info
+        except OSError as exc:
+            raise DiskAdmissionError(f'External root cannot be observed: {exc}') from exc
+
+    def _external_accounting(self, *, replacement=None):
+        result = {}
+        for claim_id, amount in self.db.execute("SELECT id,bytes FROM external WHERE state='ACTIVE'"):
+            if replacement is not None and replacement[0] == claim_id:
+                amount = replacement[1]
+            roots = self.db.execute('SELECT path,baseline,device,inode FROM external_roots WHERE claim_id=?',
+                                    (claim_id,)).fetchall()
+            observed = sum(max(0, self._external_root_usage(path, (dev, ino), claim_id)[0] - baseline)
+                           for path, baseline, dev, ino in roots)
+            if observed > amount:
+                raise DiskAdmissionError(f'External job exceeded declared bytes: {claim_id} '
+                                         f'({observed} > {amount})')
+            result[claim_id] = {'observed_growth_bytes': observed, 'pending_bytes': amount - observed,
+                                'usage_monitoring': 'net-file-growth' if roots else 'declaration-only'}
+        return result
+
+    def check_external_usage(self):
+        """Sample active monitored claims, refusing excess or unprovable usage; no state is released."""
+        with self._txn():
+            return self._external_accounting()
+
+    def _volume_check(self, *, ledger=None, ledger_pending=0, add_external=0, drain=False, external_replacement=None):
         """Check the whole volume with one participant's pending replaced (inside a transaction)."""
         rows = self.db.execute('SELECT path,metadata_bytes,pending FROM ledgers').fetchall()
-        pending = add_external + self.db.execute(
-            "SELECT COALESCE(SUM(bytes),0) FROM external WHERE state='ACTIVE'").fetchone()[0]
+        pending = add_external + sum(v['pending_bytes'] for v in
+                                     self._external_accounting(replacement=external_replacement).values())
         metadata = self.bootstrap_bytes
         unallocated = max(0, self.bootstrap_bytes - self._allocated(self.path))
         excluded = {str(self.path), str(self.path) + '-journal'}
@@ -311,10 +388,16 @@ class VolumeCoordinator:
     def register_ledger(self, ledger_path, *, metadata_bytes, roots, pending, epoch):
         """Authoritatively (re)publish a ledger's claim; the caller holds the ledger's write lock."""
         ledger_path = str(ledger_path)
+        roots = tuple(roots)
         with self._txn():
             known = self.db.execute('SELECT 1 FROM ledgers WHERE path=?', (ledger_path,)).fetchone()
             if known is None and self.db.execute('SELECT count(*) FROM ledgers').fetchone()[0] >= MAX_LEDGERS:
                 raise DiskAdmissionError('Volume coordinator ledger limit exceeded')
+            for (external_root,) in self.db.execute('SELECT path FROM external_roots'):
+                if (Path(ledger_path).resolve().is_relative_to(external_root)
+                        or any(Path(r).resolve().is_relative_to(external_root)
+                               or Path(external_root).is_relative_to(Path(r).resolve()) for r in roots)):
+                    raise DiskAdmissionError('Ledger root overlaps a monitored external root')
             self._merge_roots(roots)
             self.db.execute('''INSERT INTO ledgers(path,metadata_bytes,epoch,pending) VALUES(?,?,?,?)
                 ON CONFLICT(path) DO UPDATE SET metadata_bytes=excluded.metadata_bytes,
@@ -396,6 +479,7 @@ class VolumeCoordinator:
         _integer(amount, 'external bytes')
         owner = _bounded_text(owner, 'owner', 256)
         lease = DirectoryLease(lease_dir)
+        root_markers = []
         try:
             info = os.stat(lease.path)
             claim_id = uuid4().hex
@@ -404,12 +488,36 @@ class VolumeCoordinator:
             with self._txn():
                 if self.db.execute('SELECT count(*) FROM external').fetchone()[0] >= MAX_EXTERNALS:
                     raise DiskAdmissionError('Volume coordinator external claim limit exceeded')
-                if roots:
-                    self._merge_roots([Path(r).resolve() for r in roots])
+                roots = tuple(roots)
+                if len(roots) > MAX_ROOTS:
+                    raise DiskAdmissionError('Volume coordinator root limit exceeded')
+                if any(Path(r).is_symlink() for r in roots):
+                    raise DiskAdmissionError('External root must not be a symlink')
+                monitored = _root_antichain(roots)
+                if len(monitored) > MAX_ROOTS:
+                    raise DiskAdmissionError('Volume coordinator root limit exceeded')
+                existing = [Path(p) for (p,) in self.db.execute('SELECT path FROM roots')]
+                metadata_paths = [self.path] + [Path(p) for (p,) in self.db.execute('SELECT path FROM ledgers')]
+                for root in monitored:
+                    if any(path.is_relative_to(root) for path in metadata_paths):
+                        raise DiskAdmissionError('External root overlaps coordinator or ledger metadata')
+                    if any(root.is_relative_to(p) or p.is_relative_to(root) for p in existing):
+                        raise DiskAdmissionError('External root overlaps an already registered root')
+                    baseline, root_info = self._external_root_usage(root)
+                    marker_path = root / f'.svsim-volume-root-{claim_id}'
+                    os.close(os.open(marker_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW, 0o600))
+                    root_markers.append(marker_path)
+                    self.db.execute('INSERT INTO external_roots VALUES(?,?,?,?,?)',
+                                    (claim_id, str(root), baseline, root_info.st_dev, root_info.st_ino))
+                if monitored:
+                    self._merge_roots(monitored)
                 self._volume_check(add_external=amount, drain=drain)
                 self.db.execute('INSERT INTO external VALUES(?,?,?,?,?,?,?,?,NULL)',
                                 (claim_id, owner, amount, lease.path, info.st_dev, info.st_ino, 1, 'ACTIVE'))
         except BaseException:
+            for marker_path in root_markers:
+                try: marker_path.unlink()
+                except OSError: pass
             try: os.unlink(_marker(lease.path, claim_id))
             except (OSError, UnboundLocalError): pass
             lease.close()
@@ -429,8 +537,9 @@ class VolumeCoordinator:
             row = self._external_row(claim_id)
             if row['state'] != 'ACTIVE' or row['generation'] != generation:
                 raise DiskAdmissionError('External claim generation changed or claim is no longer active')
+            self._external_accounting(replacement=(claim_id, amount))
             if amount > row['bytes']:
-                self._volume_check(add_external=amount - row['bytes'], drain=drain)
+                self._volume_check(external_replacement=(claim_id, amount), drain=drain)
             self.db.execute('UPDATE external SET bytes=?,generation=generation+1 WHERE id=?', (amount, claim_id))
         return generation + 1
 
@@ -439,7 +548,14 @@ class VolumeCoordinator:
             row = self._external_row(claim_id)
             if row['state'] != 'ACTIVE' or row['generation'] != generation:
                 raise DiskAdmissionError('External claim generation changed or claim is no longer active')
+            self._external_accounting()
+            root_paths = [p for (p,) in self.db.execute(
+                'SELECT path FROM external_roots WHERE claim_id=?', (claim_id,))]
+            self.db.execute('DELETE FROM external_roots WHERE claim_id=?', (claim_id,))
             self.db.execute('DELETE FROM external WHERE id=?', (claim_id,))
+        for path in root_paths:
+            try: (Path(path) / f'.svsim-volume-root-{claim_id}').unlink()
+            except OSError: pass
         try: os.unlink(_marker(row['lease_dir'], claim_id))
         except OSError: pass
 
@@ -507,8 +623,14 @@ class VolumeCoordinator:
 
     def forget_recovered(self, claim_id):
         with self._txn():
+            root_paths = [p for (p,) in self.db.execute(
+                'SELECT path FROM external_roots WHERE claim_id=?', (claim_id,))]
             if self.db.execute("DELETE FROM external WHERE id=? AND state='RECOVERED'", (claim_id,)).rowcount != 1:
                 raise DiskAdmissionError('Only a recovered claim can be forgotten')
+            self.db.execute('DELETE FROM external_roots WHERE claim_id=?', (claim_id,))
+        for path in root_paths:
+            try: (Path(path) / f'.svsim-volume-root-{claim_id}').unlink()
+            except OSError: pass
 
     def external_receipt(self, claim_id):
         row = self.db.execute('SELECT proof FROM external WHERE id=? AND state=?', (claim_id, 'RECOVERED')).fetchone()
@@ -520,7 +642,10 @@ class VolumeCoordinator:
                        for p, m, e, q in self.db.execute('SELECT path,metadata_bytes,epoch,pending FROM ledgers')}
             external = {i: {'bytes': b, 'state': s, 'generation': g, 'owner': o}
                         for i, b, s, g, o in self.db.execute('SELECT id,bytes,state,generation,owner FROM external')}
+            accounting = self._external_accounting()
+            for claim_id, details in accounting.items():
+                external[claim_id].update(details)
             return {'ledgers': ledgers, 'external': external, 'roots': [p for (p,) in self.db.execute('SELECT path FROM roots')],
                     'pending_bytes': sum(v['pending'] for v in ledgers.values())
-                    + sum(v['bytes'] for v in external.values() if v['state'] == 'ACTIVE'),
+                    + sum(v['pending_bytes'] for v in accounting.values()),
                     'host': self.host, 'filesystem': self.filesystem, 'strict_capacity_guarantee': False}

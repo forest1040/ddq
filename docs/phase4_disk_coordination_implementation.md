@@ -84,3 +84,23 @@ config = DistributedConfig(
 - 実`mpiexec`の1／2 rank：独立dataset、fork、parameter-shift（内部fork）、joint refusal、ledger分離。pathが食い違うrank、1 rankだけ非対応filesystemはcollectiveに拒否。
 - offline回復：実processがkillしたwriterのclaimが、`recover_uncommitted_reservations`のapplyで真の値へ下がり、二重適用でも不変、別ledgerが再び予約でき、bind済みledgerが再openできる。1／2 rankのcheckpoint recoveryでも同様に再公開（dry runは公開しない、再適用は`changed: false`）、回復後のresumeは数値が一致する。coordinatorを移動すると回復は拒否される。維持scopeは同じcoordinatorを採用する。
 
+
+## 外部jobの宣言超過の検出（2026-10-15追加）
+
+`VolumeCoordinator.declare_external(..., roots=[専用directory, ...])`は、rootごとの初期通常file byte数、device／inode、zero-byteのincarnation markerを保存する。登録するrootは実在する同volumeのdirectoryで、既登録root（ledger、別の外部job、過去に保持したroot）と祖先／子孫関係を持ってはいけない。同じ呼出し内の重複と包含rootは最小集合へ圧縮する。coordinator／ledgerのmetadata pathを含む外部rootと、ledgerを後から外部rootへ重ねることも拒否する。これにより、他のwriterの物理化を外部jobの書込みと誤認してpendingから控除しない。
+
+監視する量は各rootの`max(0, 現在の通常file byte数 - 登録時のbyte数)`の和（net growth）で、累積write量や実block allocationではない。初期fileの削除／置換はnet量へ反映される。観測growthは外部claimの未物理化分から控除し、全rootの実file量と二重計上しない。quotaとmin-freeの両方に、この未物理化分を使う。例：宣言60 kBのjobが60 kBを書き終えたら、物理60 kB＋pending 0で、60 kB＋宣言60 kBとは数えない。
+
+次のledger admission、外部claim登録／増額、`check_external_usage()`、`snapshot()`で観測し、growthが宣言を超えたら`DiskAdmissionError`にclaim IDと観測値／宣言値を付けて拒否する。拒否したledgerには予約行を挿入しない。超過状態のreleaseや観測量を下回るresizeも拒否し、claimを黙って消さない。**明示的な増額resize**は、新しい宣言が観測量以上でvolume全体のquota／min-freeも満たす場合に限り、超過を解消できる。超過を永続違反履歴として記録する機構は含まない。ledgerのreleaseなど、安全な減少の公開は妨げない。
+
+root削除／directory置換、incarnation marker欠落、root内のsymlink、別device、hardlink、特殊file、走査／stat失敗は観測不能としてfail-closedにする。markerはinode再利用だけでは同じrootと認めないために使う。全rootのquota走査も、`Path.rglob`がpermission errorを黙って飛ばす経路をやめ、`scandir`の観測失敗を拒否するため、回復後に保持した外部rootでも読めないdirectoryを空きと数えない。
+
+root省略の既存APIと旧coordinator DBは互換で、従来どおり宣言全量をpendingに保持する。snapshotのactive外部claimは`usage_monitoring`（`net-file-growth`または`declaration-only`）、`observed_growth_bytes`、`pending_bytes`を返す。観測不能や超過時は、snapshotも推測値を返さず拒否する。新しい帰属tableは既存DBへ`CREATE TABLE IF NOT EXISTS`で追加し、旧claimを監視済みと誤表示しない。
+
+正常releaseでは帰属とroot markerを消し、owner死亡後の明示recoveryではpendingだけを解除する。回復済みclaimの帰属とmarkerは`forget_recovered`で消す。宣言に失敗した場合も作成済みmarkerを掃除する。いずれも全体のroot表は残すため、書かれたfileはquotaに残り、同じrootの再宣言は保守的に拒否する。rootを再利用可能にする帰属GCは今回の対象外である。
+
+これは次の観測時点での検出であり、非協力的writerを停止させる機構ではない。観測と実writeの競合、root外へのwrite、初期fileの削除と新規writeによるnet相殺、観測間の一時的超過、故意のmarker複製、実block allocationは保証しない。明示rootなしのjob、複数host、電源断model、全writerのfault／回収などの残件は継続し、`strict_capacity_guarantee`はfalseのままである。
+
+試験は`tests/test_volume_external_usage.py`。別processによる実file write、境界での二重計上防止、超過のmutation前拒否と明示resize、baseline／重複root、削除／置換／marker／link／PermissionError、root重複拒否、失敗時rollbackとmarker清掃、旧DB互換、reopen、死ownerの回復、保持fileとmarkerのlifecycleを確認する。
+
+検証結果：Macで上記新規14件＋既存coordinator 24件＋runtime 16件＝54 passed。`PYTHONPATH=src /Users/tmori/work3/ddq/.venv/bin/python -m pytest tests/test_volume_external_usage.py tests/test_volume_coordinator.py tests/test_volume_coordination_runtime.py -q`で確認した。runtimeの実MPIはsandbox内のsocket bind拒否を受け、許可済みのsandbox外実行で成功した。Linux／O_DIRECTの再検証は今回実施していない。
