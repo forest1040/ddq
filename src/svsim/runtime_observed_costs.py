@@ -39,6 +39,8 @@ DRIFT_LIMIT = .5
 TOLERANCE = .1
 EXECUTOR_STAGES = ('executor-gate', 'executor-group')
 EPOCH_STAGES = ('epoch-publication', 'epoch-boundary')  # once per epoch; priced like executor classes
+# ETA endpoint stages (expectation, gradient, durable checkpoint): repeated across iterations of one run.
+ENDPOINT_STAGES = ('expectation', 'gradient', 'checkpoint-commit')
 OVERRUN = 'RESIDUAL_OVERRUN'
 CERTIFIED, INSUFFICIENT, LOW_COVERAGE, STALE, DRIFTING = ('CERTIFIED', 'INSUFFICIENT_SAMPLES', 'LOW_HELD_OUT_COVERAGE', 'STALE_POLICY_EPOCH',
                                                      'DRIFTING')
@@ -60,6 +62,12 @@ def _pooled(condition):
                                                   for op in ops]})
 
 
+def _stages(condition):
+    operation = condition.get('operation')
+    return (EXECUTOR_STAGES if operation in EXECUTOR_STAGES else ENDPOINT_STAGES if operation in ENDPOINT_STAGES
+            else EPOCH_STAGES)
+
+
 def _by_class(collector, stages):
     """Fresh-revision index {class key: rows (oldest first)} of the collector's cost observations in ``stages``."""
     cache = getattr(collector, '_class_index', None)
@@ -68,7 +76,7 @@ def _by_class(collector, stages):
         index = {}
         rows = collector.cost_rows() if hasattr(collector, 'cost_rows') else collector.cost_observations()
         for row in rows:
-            if row.stage in EXECUTOR_STAGES or row.stage in EPOCH_STAGES:
+            if row.stage in EXECUTOR_STAGES or row.stage in EPOCH_STAGES or row.stage in ENDPOINT_STAGES:
                 index.setdefault((row.stage in EXECUTOR_STAGES, _class(row.condition)), []).append(row)
                 pooled = _pooled(row.condition)
                 if pooled is not None: index.setdefault((row.stage in EXECUTOR_STAGES, 'pooled', pooled), []).append(row)
@@ -137,7 +145,7 @@ def observed_task_cost(collector, condition, policy_epoch=None, plan_version=Non
     if collector is None or not collector.enabled or not isinstance(condition, dict): return None
     if condition.get('operation') == 'call-residual':
         return _residual_cost(collector, condition, policy_epoch, plan_version, diagnostic, decisions)
-    stages = EXECUTOR_STAGES if condition.get('operation') in EXECUTOR_STAGES else EPOCH_STAGES
+    stages = _stages(condition)
     if condition.get('operation') not in stages: return None
     label, reason, values, lower, upper, coverage = _select(collector, condition, stages, policy_epoch, plan_version,
                                                             decisions)
@@ -158,7 +166,7 @@ def _residual_cost(collector, condition, policy_epoch, plan_version, diagnostic,
     longer ones) has no calibrated remainder and stays unknown (OVERRUN).
     """
     inner, elapsed = condition['class'], condition['elapsed_seconds']
-    stages = EXECUTOR_STAGES if inner.get('operation') in EXECUTOR_STAGES else EPOCH_STAGES
+    stages = _stages(inner)
     if inner.get('operation') not in stages or diagnostic: return None
     label, reason, values = _select(collector, inner, stages, policy_epoch, plan_version, None)[:3]
     if reason != CERTIFIED: return None

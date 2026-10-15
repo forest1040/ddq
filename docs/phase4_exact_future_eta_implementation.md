@@ -86,13 +86,31 @@ MPIのoracle（1／2／4 rank）は、現在のepochのboundary taskを数える
 
 **監視overhead。** ETAのon／off比は、Mac 1 rankで+2〜4％だった。2 rankとLinuxでは、pairのばらつきが差より大きく、判定できなかった。
 
+## end-to-end endpoint（2026-10-15追加）
+
+`RuntimeControl.set_eta_endpoint(expectation=…, gradient={'observable':…, 'parameters':…, 'method':…}, checkpoint=True)`で、ETAの終点をgateの後まで延ばせる。引数なしで呼ぶとgates-onlyに戻る。
+- **endpoint task。** snapshotの`endpoint_tasks`に1件ずつ足す。resourceはmainで、gateと直列になる。`endpoint`のlabelは`gates+expectation+checkpoint`のようになる。
+- **計測。** 価格の元は、同じ条件の実測stageである。
+  - async simulatorは、`expectation`（Pauli maskの組。係数は含めない）、`gradient`（method、observable、parameter集合、circuit hash）、`checkpoint-commit`を、それぞれmeasured stageとして記録する。
+  - 直前のmaterializeはgateの仕事なので、これらのstageには含めない。
+- **価格付け。** executor classと同じ認証（burn-in 3、8件、drift、held-out coverage）を掛ける。observed viewは次の順に探す。
+  1. 不変profile
+  2. runのrolling実測
+  3. 事前校正のexecutor class profile（endpoint stageも書き出す）
+- **unknown。** 認証されないstageがあれば、合計はunknownになる。
+
+**確認（Mac、file store、Trotter型の反復：1 layerを足す→実行→期待値→checkpointを14回）。**
+- **expectation。** 約2 msで安定し、認証された。
+- **checkpoint。** 11 msから35 msへ、checkpointの回数に比例して増え、`LOW_HELD_OUT_COVERAGE`で認証されなかった。そのため、checkpointを含む合計はunknownである（正しい動作）。
+- **増加の原因。** checkpointのmanifestが、毎回history全体を書き直すことにある（`distributed_checkpoint.py`）。定期的にcheckpointを取ると、run全体でO(N²)になる。これはcheckpoint形式の拡張性の問題であり、P4-009／005の残件として記録する。
+
 ## 残件
 
 - **答える割合。** 短いrunでは答える割合が約50％に留まる。classの認証には、burn-inの後に8件が必要だからである。長いrunとLinux file store・multi-rankでの再評価も残る。
 - **overhead。** Linuxとmulti-rankの監視overheadは、ばらつきが大きく判定できていない。
 
 - **S1。** multi-rankのS1のfuture（各gateのS1判断とphysical swap費用）は未対応である。
-- **endpoint。** observable／gradient／checkpointを含むendpointは未対応である。
+- **endpoint。** observable／gradient／checkpointのendpointは実装した。gradientとcheckpointの認証済み価格は、反復回数とcheckpoint形式（history全体の書き直し）に依存する。
 - **coverage。** payloadとcritical chainのcoverageは未対応である。
 - **時間model view。** fused groupのpass数にfutureを使っていない。
 - **gate形状の一致。** 角度以外のgate形状（target、control、fusion group）が繰り返されない回路では、classを認証できず、observed viewはunknownになる。

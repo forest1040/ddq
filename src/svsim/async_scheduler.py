@@ -541,10 +541,13 @@ class AsyncDistributedSimulator(DistributedSimulator):
         if self._private_epoch:
             raise ValueError('Cannot checkpoint an unpublished epoch')
         self.drain()
-        started=perf_counter()
+        started,cpu=perf_counter(),process_time()
         snapshot=super().commit_snapshot(**kwargs)
         # Measured durable-cut cost prices FRONTIER_REPLAN candidates later in the run.
         self.runtime.record_checkpoint_wall(self.transport.max_value(perf_counter()-started))
+        from .remaining_work import checkpoint_condition
+        self._record_stage('checkpoint-commit',_stage_condition(checkpoint_condition(self)),
+                           seconds=perf_counter()-started,cpu_seconds=process_time()-cpu)
         self.runtime.invalidate_eta('CHECKPOINT_COMMITTED')
         return snapshot
 
@@ -599,10 +602,14 @@ class AsyncDistributedSimulator(DistributedSimulator):
         self.trace.record('gradient-schedule', metadata={'path': 'GRADIENT_SCHEDULE', **asdict(schedule),
             'cost_origin':cost_origin,'context_hash':content_hash(context)})
         self.runtime.invalidate_eta('GRADIENT_JOB_STARTED')
-        started=perf_counter();success=False;result=None
+        started=perf_counter();cpu=process_time();success=False;result=None
         try:
             result=execute_gradient(self, observable, requested, schedule)
             success=True
+            # Priced as an ETA endpoint stage (the materialize above is gate work, excluded here).
+            from .remaining_work import gradient_condition
+            self._record_stage('gradient',_stage_condition(gradient_condition(self,observable,requested,method)),
+                               seconds=perf_counter()-started,cpu_seconds=process_time()-cpu)
             return result
         finally:
             self.runtime.latest_gradient={'method':schedule.method,'cost_origin':cost_origin,
@@ -611,6 +618,17 @@ class AsyncDistributedSimulator(DistributedSimulator):
                 'resource_baseline':'execution-admission-only',
                 'evidence':'injected' if getattr(self,'_measurement_injected',False) else 'measured'}
             self.runtime.invalidate_eta('GRADIENT_JOB_FINISHED')
+
+    def expectation(self, observables, *, binding=None):
+        from .distributed_observables import expectation
+        from .remaining_work import expectation_condition
+        self.materialize(binding=binding)
+        started,cpu=perf_counter(),process_time()
+        result=expectation(self,observables)
+        # Priced as an ETA endpoint stage; the materialize above is gate work.
+        self._record_stage('expectation',_stage_condition(expectation_condition(self,observables)),
+                           seconds=perf_counter()-started,cpu_seconds=process_time()-cpu)
+        return result
 
     def close(self):
         if self.closed:

@@ -54,6 +54,8 @@ class RemainingWork:
     # Private epoch: the running call is a measured residual task that covers
     # the outstanding requests, so they do not each leave the total unknown.
     in_flight_covered: bool = False
+    # Explicit end-to-end endpoint work after the gates (expectation, gradient, durable checkpoint).
+    endpoint_tasks: tuple[CountedTask,...] = ()
 
 
 def executor_groups(window,layout,block_bits,policy):
@@ -105,6 +107,55 @@ def strip_ids(condition):
 def boundary_condition(sim):
     return {'operation':'epoch-boundary','n':sim.num_qubits,'block_bits':sim.block_bits,'ranks':sim.size,
         'backend':sim.config.backend,'engine':sim.io_engine.identity,'mode':sim.policy.mode}
+
+
+ENDPOINT_STAGES=('expectation','gradient','checkpoint-commit')
+
+
+def _endpoint_base(sim):
+    return {'n':sim.num_qubits,'block_bits':sim.block_bits,'ranks':sim.size,'backend':sim.config.backend,
+            'engine':sim.io_engine.identity,'store':sim.config.amplitude_store}
+
+
+def observable_id(observables):
+    """Cost identity of one ObservableIR / term sequence or a sequence of them: Pauli masks, not coefficients."""
+    from .observables import ObservableIR
+    if isinstance(observables,ObservableIR) or not isinstance(observables,(list,tuple)) or not observables or \
+            not isinstance(observables[0],ObservableIR):
+        observables=(observables if isinstance(observables,ObservableIR) else ObservableIR(tuple(observables)),)
+    return content_hash([[[t.x_mask,t.z_mask] for t in o.terms] for o in observables])
+
+
+def expectation_condition(sim,observables):
+    return {'operation':'expectation','observable':observable_id(observables),**_endpoint_base(sim)}
+
+
+def gradient_condition(sim,observable,parameters,method):
+    return {'operation':'gradient','method':method,'observable':observable_id(observable),
+            'parameters':content_hash(sorted(str(p) for p in parameters)),'circuit':sim.circuit_hash,**_endpoint_base(sim)}
+
+
+def checkpoint_condition(sim):
+    return {'operation':'checkpoint-commit',**_endpoint_base(sim)}
+
+
+def endpoint_tasks(sim,spec,context):
+    """Counted endpoint tasks for an ``RuntimeControl.set_eta_endpoint`` spec, and the endpoint label."""
+    tasks=[];labels=['gates']
+    if spec.get('expectation') is not None:
+        tasks.append(task('endpoint:expectation',expectation_condition(sim,spec['expectation']),context,kind='endpoint'))
+        labels.append('expectation')
+    if spec.get('gradient') is not None:
+        g=spec['gradient']
+        parameters=g.get('parameters')
+        if parameters is None:parameters=sorted(set().union(*(op.dependencies for op in sim.sequencer.operations)))
+        tasks.append(task('endpoint:gradient',gradient_condition(sim,g['observable'],parameters,g.get('method','auto')),
+                          context,kind='endpoint'))
+        labels.append('gradient')
+    if spec.get('checkpoint'):
+        tasks.append(task('endpoint:checkpoint',checkpoint_condition(sim),context,kind='endpoint'))
+        labels.append('checkpoint')
+    return tuple(tasks),'+'.join(labels) if tasks else 'gates-only'
 
 
 def executor_condition(sim,operations,layout=None):

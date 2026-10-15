@@ -62,7 +62,8 @@ class RuntimeETA:
     def evaluate(self, snapshot, cost_view=None) -> RuntimeETAReport:
         # An exact epoch-aligned executor shape replaces the semantic tail.
         exact = getattr(snapshot, "future_complete", False) and not getattr(snapshot, "future_reasons", ())
-        tasks = tuple(snapshot.window) + tuple(snapshot.future if exact else snapshot.tail)
+        tasks = (tuple(snapshot.window) + tuple(snapshot.future if exact else snapshot.tail)
+                 + tuple(getattr(snapshot, "endpoint_tasks", ())))
         flights = tuple(snapshot.in_flight)
         self._validate_graph(tasks)
         self._validate_flights(flights)

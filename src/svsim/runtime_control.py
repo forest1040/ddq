@@ -110,6 +110,7 @@ class RuntimeControl:
         self.latest_gradient=None
         # 1/32 of the metadata reserve; reserves above 256 KiB scale it (to 64 KiB) so the
         # exact future executor shape fits; smaller ones drop it (FUTURE_METADATA_LIMIT).
+        self._eta_endpoint_spec={}
         self.configure_eta(max_bytes=max(1024,min(65536,sim.config.metadata_reserve_bytes//32)))
 
     def configure_measurements(self, *, max_bytes, max_conditions=256, per_condition=64,
@@ -349,6 +350,11 @@ class RuntimeControl:
                 snapshot=replace(snapshot,unknown_reasons=snapshot.unknown_reasons+('EVALUATION_INJECTION_ACTIVE',))
             if not self._eta_budget:
                 snapshot=replace(snapshot,complete=False,future_complete=False,unknown_reasons=snapshot.unknown_reasons+('ETA_MONITOR_BUDGET',))
+            if self._eta_endpoint_spec:
+                from .remaining_work import cost_context, endpoint_tasks
+                tasks,label=endpoint_tasks(sim,self._eta_endpoint_spec,cost_context(sim))
+                snapshot=replace(snapshot,endpoint_tasks=tasks,endpoint=label,snapshot_id=content_hash(
+                    {'gates':snapshot.snapshot_id,'endpoint':[t.cost_key for t in tasks]}))
             reports={}
             sources={}
             costs=self.costs
@@ -365,12 +371,15 @@ class RuntimeControl:
                         purpose='production',select='first').value
                     label='conditional-envelope'
                 elif name=='observed':
-                    # Observed: newest profile cell, else this run's rolling measured completions.
+                    # Observed: newest profile cell, else this run's rolling measured completions, else a
+                    # pre-calibrated executor-class profile (classes and endpoint stages not yet certified here).
+                    executor_profiled='executor-class-seconds' in costs.kinds()
                     def resolver(task):
-                        cell=costs.resolve('task-seconds',task.context,task.condition,purpose='production').value
-                        return cell if cell is not None else costs.resolve('observed-task-seconds',task.context,
-                            task.condition,purpose='production').value
-                    label='conditional-envelope+rolling-observed' if profiled else 'rolling-observed'
+                        for kind in ('task-seconds','observed-task-seconds')+(('executor-class-seconds',) if executor_profiled else ()):
+                            value=costs.resolve(kind,task.context,task.condition,purpose='production').value
+                            if value is not None:return value
+                        return None
+                    label=('conditional-envelope+' if profiled else '')+'rolling-observed'+('+executor-profile' if executor_profiled else '')
                 sources[name]=label
                 reports[name]=asdict(RuntimeETA().evaluate(snapshot,resolver))
             if 'eta-remaining' in costs.kinds():
@@ -402,6 +411,21 @@ class RuntimeControl:
         self.latest_eta=result
         self.remaining_seconds=(result.get('rank_max_expected_seconds',{}).get('observed') if collective else reports['observed']['expected_seconds'])
         return result
+
+    def set_eta_endpoint(self,*,expectation=None,gradient=None,checkpoint=False):
+        """Extend the ETA endpoint past the gates: an expectation of ``expectation``, a gradient
+        (dict with ``observable`` and optional ``parameters``/``method``) and/or a durable checkpoint.
+
+        Each is priced from measured endpoint stages (rolling or a pre-calibrated profile);
+        an unpriced one leaves the total unknown. No arguments restores gates-only.
+        """
+        if gradient is not None and (not isinstance(gradient,dict) or 'observable' not in gradient):
+            raise ValueError('gradient endpoint needs an observable')
+        if type(checkpoint) is not bool:raise TypeError('checkpoint endpoint is boolean')
+        spec={k:v for k,v in (('expectation',expectation),('gradient',gradient),('checkpoint',checkpoint)) if v}
+        self.sim.transport.agree({'eta_endpoint':sorted(spec)})
+        self._eta_endpoint_spec=spec
+        self.invalidate_eta('ETA_ENDPOINT_CHANGED')
 
     def configure_monitoring(self,*,eta=True,epoch_summary=True):
         """Switch monitor components for overhead comparison; agreed by every rank.

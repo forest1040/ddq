@@ -450,3 +450,42 @@ def test_overflowed_tail_stays_incremental_and_exact(tmp_path):
             assert snap.complete  # no rescan needed
             tail = {t.task_id: t.count for t in snap.tail}
             assert sum(tail.values()) == snap.scanned_sources == len(sim.sequencer.operations) - frontier - 3
+
+
+def test_endpoint_stages_price_an_explicit_end_to_end_eta(tmp_path):
+    from svsim.observables import ObservableIR, PauliTerm
+    from svsim.parameters import ParameterSymbol
+    from svsim.remaining_work import expectation_condition, gradient_condition, checkpoint_condition
+    from svsim.runtime_observed_costs import _class
+    config = DistributedConfig(str(tmp_path / "endpoint"), 2, ram_budget_bytes_per_rank=64 * 1024**2,
+                               metadata_reserve_bytes=8 * 1024**2, amplitude_store="file")
+    policy = AsyncPolicy(io_engine="cooperative", swap_policy="S2", lookahead_gates=4, prefetch_blocks=0)
+    with AsyncDistributedSimulator(4, config, comm=MPI.COMM_SELF, policy=policy) as sim:
+        sim.runtime.configure_measurements(max_bytes=2 * 1024**2)
+        obs = ObservableIR((PauliTerm(0, 1), PauliTerm(0, 2)))
+        sim.runtime.set_eta_endpoint(expectation=obs, checkpoint=True)
+        for _ in range(14):  # Trotter-like steps: append a layer, run, measure, checkpoint
+            _layers(sim, 1)
+            sim.expectation(obs)
+            sim.commit_snapshot()
+        _layers(sim, 1)
+        eta = sim.runtime.update_eta(endpoint_frontier=len(sim.sequencer.operations) - 1)
+        assert eta["endpoint"] == "gates+expectation+checkpoint"
+        observed = eta["views"]["observed"]
+        rows = sim.runtime.measurements.cost_observations()
+        # The endpoint task conditions are exactly the recorded stage classes.
+        assert {_class(r.condition) for r in rows if r.stage == "expectation"} == {
+            _class(expectation_condition(sim, obs))}
+        assert {_class(r.condition) for r in rows if r.stage == "checkpoint-commit"} == {_class(checkpoint_condition(sim))}
+        # A stage that is not certified (here: checkpoint cost grows with the history) leaves the total unknown.
+        if observed["expected_seconds"] is None:
+            assert any(r.startswith("MISSING_COST:") for r in observed["unknown_reasons"])
+        sim.runtime.set_eta_endpoint()
+        assert sim.runtime.update_eta()["endpoint"] == "gates-only"
+        # Gradient: the recorded stage class equals the endpoint condition for the same request.
+        theta = ParameterSymbol("endpoint-theta", parameter_id="endpoint-theta")
+        sim.gate("RY", (0,), angle=theta)
+        sim.gradient(obs, binding=sim.bind({theta: 0.3}), method="adjoint")
+        recorded = [r for r in sim.runtime.measurements.cost_observations() if r.stage == "gradient"]
+        assert recorded and _class(recorded[-1].condition) == _class(
+            gradient_condition(sim, obs, ["endpoint-theta"], "adjoint"))

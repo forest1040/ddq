@@ -16,7 +16,7 @@ from statistics import median
 
 from .journal import canonical, content_hash
 from .runtime_cost import CostSample
-from .runtime_observed_costs import BURN_IN, CERTIFIED, EXECUTOR_STAGES, _assess, _class
+from .runtime_observed_costs import BURN_IN, CERTIFIED, ENDPOINT_STAGES, EXECUTOR_STAGES, _assess, _class
 
 KIND = 'executor-class-profile'
 SWAP_STAGE = 'physical-bit-swap'
@@ -64,8 +64,9 @@ def export_profile(sim, *, fingerprint=None):
     runtime = sim.runtime
     groups = {}
     for row in runtime.measurements.cost_rows():
-        if row.stage in EXECUTOR_STAGES or row.stage == SWAP_STAGE:
-            groups.setdefault((row.stage in EXECUTOR_STAGES, _class(row.condition), canonical(physical_context(row.context))),
+        if row.stage in EXECUTOR_STAGES or row.stage in ENDPOINT_STAGES or row.stage == SWAP_STAGE:
+            # Executor and endpoint classes repeat with warm-up; a swap sequence has none.
+            groups.setdefault((row.stage != SWAP_STAGE, _class(row.condition), canonical(physical_context(row.context))),
                               []).append(row)
     rows = []
     for (executor, key, _), members in sorted(groups.items(), key=lambda item: item[0][1:]):
