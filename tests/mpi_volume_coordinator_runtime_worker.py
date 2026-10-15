@@ -25,11 +25,17 @@ parser = argparse.ArgumentParser()
 parser.add_argument('scratch')
 parser.add_argument('mode')
 parser.add_argument('--backend', default='buffered')
+parser.add_argument('--require-cross-host', action='store_true')
 args = parser.parse_args()
 comm = MPI.COMM_WORLD
 rank, size = comm.Get_rank(), comm.Get_size()
-if len(set(comm.allgather(platform.node()))) != 1:
-    raise ValueError('This validation requires a same-host communicator')
+hosts = comm.allgather(platform.node())
+host_count = len(set(hosts))
+if args.require_cross_host and host_count < 2:
+    raise ValueError('Cross-host validation requires at least two actual hosts')
+if not args.require_cross_host and host_count != 1:
+    raise ValueError('Use --require-cross-host to validate distinct node-local coordinators')
+host_leader = min(r for r, host in enumerate(hosts) if host == hosts[rank])
 base = Path(args.scratch).resolve()
 MIB = 1024 ** 2
 QUOTA = 96 * MIB
@@ -54,6 +60,8 @@ def refused(action, text):
 
 
 if args.mode == 'mismatch':
+    if not any(hosts.count(host) > 1 for host in hosts):
+        raise ValueError('Mismatch validation needs at least two ranks on a host')
     refused(lambda: AsyncDistributedSimulator(4, config('m', base / 'vol' / f'coordinator-{rank}.sqlite3'),
                                               comm=comm, policy=policy), 'same volume coordinator')
     assert not list((base / 'vol').glob('coordinator-*.sqlite3'))
@@ -104,7 +112,7 @@ elif args.mode == 'run':
                 child.drain(); a.drain(); b.drain(); comm.Barrier()
                 # Joint refusal before mutation, through the normal API of two independent datasets.
                 outcome = None
-                if rank == 0:
+                if rank == host_leader:
                     before = b.disk_budget.db.execute('SELECT count(*) FROM reservations').fetchone()[0]
                     snap = coord.snapshot()
                     used = sum(1 for _ in snap['ledgers'])
@@ -144,20 +152,26 @@ elif args.mode == 'recover':
     temporary.write_bytes(raw[:13]); budget.materialize(key, 13); budget.close()
     comm.Barrier()
     claim = coord.claim(ledger)['pending']
-    assert claim == sum(comm.allgather(len(raw) - 13)), claim
+    pending_by_rank = comm.allgather(len(raw) - 13)
+    assert claim == sum(value for r, value in enumerate(pending_by_rank) if hosts[r] == hosts[rank]), claim
     dry = recover_checkpoint_reservations(cfg, comm=comm)
     published = [r['volume_claim'] for r in dry['ranks'] if r['volume_claim']]
-    assert len(published) == 1 and published[0]['status'] == 'dry-run'
+    assert len(published) == host_count and all(p['status'] == 'dry-run' for p in published)
     assert coord.claim(ledger)['pending'] == claim  # a dry run publishes nothing
     report = recover_checkpoint_reservations(cfg, comm=comm, apply=True)
     published = [r['volume_claim'] for r in report['ranks'] if r['volume_claim']]
-    assert len(published) == 1 and published[0]['status'] == 'republished'
-    assert published[0]['previous_claim_bytes'] == claim and published[0]['published_pending_bytes'] == 0
+    assert len(published) == host_count and all(p['status'] == 'republished' for p in published)
+    local_published = [p for p in published if p['ledger'] == str(ledger)]
+    # Host-local absolute paths may coincide on separate machines; every host
+    # has the same local rank count in the registered cross-host placement.
+    assert local_published and all(p['previous_claim_bytes'] == claim and p['published_pending_bytes'] == 0
+                                   for p in local_published)
     assert coord.claim(ledger)['pending'] == 0 and coord.snapshot()['pending_bytes'] == 0
     comm.Barrier()
     again = recover_checkpoint_reservations(cfg, comm=comm, apply=True)  # idempotent
     published = [r['volume_claim'] for r in again['ranks'] if r['volume_claim']]
-    assert len(published) == 1 and published[0]['changed'] is False and coord.claim(ledger)['pending'] == 0
+    assert len(published) == host_count and all(p['changed'] is False for p in published)
+    assert coord.claim(ledger)['pending'] == 0
     coord.close()
     with DistributedSimulator.resume(cfg, snapshot, comm=comm) as restored:
         observed = restored.state(allow_gather=True)
@@ -168,4 +182,4 @@ else:
 
 comm.Barrier()
 if rank == 0:
-    print(f'volume coordinator runtime {args.mode} passed', flush=True)
+    print(f'volume coordinator runtime {args.mode} passed (hosts={host_count}, ranks={size})', flush=True)
