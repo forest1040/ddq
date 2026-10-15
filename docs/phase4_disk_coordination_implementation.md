@@ -47,3 +47,40 @@ Mac／uvの最終全件回帰は650 passed／2 skipped。関連回帰107件に�
 ## 異なるledger・外部jobの調停（追記）
 
 独立ledger同士、宣言済み外部job、同一hostの複数ledgerをvolume単位で調停するcoordinatorは[host調停の設計と実装](phase4_disk_fault_matrix_implementation.md#host調停別ledger外部jobcross-host設計と実装2026-10-15追加)にある。上記の明示共通ledgerとは別に、ledgerを統合せずclaimの公開と検査だけを足す。
+
+## volume coordinatorの通常runtime接続（2026-10-15追加）
+
+`DiskBudget`のAPIだけだったvolume coordinatorを、`DistributedConfig.volume_coordinator`（node-localの絶対path、省略時はopt-out）から使えるようにした。`AsyncDistributedSimulator`など`DistributedSimulator`上のsimulatorは同じ経路を通る。pathはhost固有なので、rank間のconfig合意には含めず、「使うか否か」だけを合意する。検証は`disk_admission_ledger`と同じ規則（node-local、絶対path、4096 byte以下）に加え、ledgerと同じpathを拒否する。coordinatorのpolicy（quota、min_free、drain）はconfigの`disk_quota_bytes`／`min_free_bytes`／`drain_reserve_bytes`と同じ値を使い、最初の束縛者が決め、以後は完全一致を要求する（異なる値の別datasetは拒否される）。
+
+```python
+config = DistributedConfig(
+    directory="/private/tmp/ddq-job/dataset-a",
+    block_bits=2,
+    storage_scope="node-local",
+    disk_quota_bytes=64 * 1024**2,
+    volume_coordinator="/private/tmp/ddq-job/volume/coordinator.sqlite3",
+)
+```
+
+**bootstrap順序（collective）**。ledgerを選ぶ前に、同じhost／volumeのrankが同じcoordinator pathを選んでいることを全rank投票で確認する。次にcoordinatorを全rankで開き（filesystem種別、host名、policyの検査）、いずれかのrankが拒否すれば、ledgerを作る前に全rankが同じ誤りで失敗する。その後に`DiskBudget(volume_coordinator=...)`を作る。coordinatorはledgerが所有し、ledgerを閉じるときに閉じる。ledgerごとに別のcoordinator接続を持つため、2つのsimulatorが同じcoordinatorを開いてもprocess内のthread lockが共有される。
+
+**束縛の永続化と再開**。`distributed_settings`に`volume_coordinator`（解決済みpath、無ければnull）を保存し、ledgerにも既存の`volume_binding`を持つ。`resume`は、ledgerやcatalogを開く前にrankごとの設定を読み、(1) coordinatorを指定せずに再開、(2) 別のcoordinatorで再開、(3) coordinatorなしで作ったdatasetに新たに束縛、のいずれかを拒否する。拒否はcollectiveで、ledger、coordinatorのbyteは変わらない。ledger側の既存の拒否（bind済みledgerを無束縛で開く）が二重の防御になる。
+
+**fork／prefix fork／parameter-shift**。forkのchild configは`replace(sim.config, ...)`で作られるため、`volume_coordinator`をそのまま継承し、親のledgerと同じcoordinatorをbootstrap前に開く。parameter-batch／parameter-shiftの内部forkも同じ経路である。childのconfigからcoordinatorを落とすと、bind済みledgerの無束縛openとして拒否されるため、coordinatorなしで黙って走ることはない（試験で確認）。
+
+**複数rank**。同じhost／volumeのrankは、そのhostのcoordinator（同じpath）を使う。pathが食い違えば`same volume coordinator`でcollective拒否する。hostごとのpathは異なってよい。`volume_coordinator`のfilesystemが許可されないrankが1つでもあれば、全rankが拒否する。
+
+**offline回復後のclaim再公開**。bind済みledgerのtokenを回収しても、coordinatorのclaimは次の書込み可能openまで過大のまま残っていた。`recover_uncommitted_reservations`と`recover_checkpoint_reservations`は、ledgerのexclusive lease（ledger directoryのflock）の下で、ledgerの真のpending（RESERVED／WRITING行の未物理化byteの和）をcoordinatorへ再公開する。`VolumeCoordinator.reset_claim`は、claimを真の値へ無条件に置き換える（減少が目的）。epochは戻さず、ledgerを読むだけでledgerは書かない。何度適用しても同じ結果になる（`changed: false`）。報告には`volume_claim`（coordinator path、ledger path、`previous_claim_bytes`、`published_pending_bytes`、`changed`、`status`）を受領記録として含める。dry runは公開せず、現在のclaimと真のpendingを表示する。coordinatorはledgerのbindから読み、persistedなpolicyで開く（`VolumeCoordinator.open_bound`）。coordinatorが無い、読めない、別のledgerを指す場合は、tokenを変更する前に拒否する。`checkpoint_recovery`ではhost／volumeごとの最小rankが、全rankのapply完了のcollective投票の後に再公開する。他にledger directoryを開くprocessがあれば（排他leaseが取れなければ）settle前に拒否する。書込み権限を持つmaintenance scope（dead branch GC）は、bind済みledgerを同じcoordinatorで開き、claimを開く時に再公開する。
+
+**限界**。`FileBlockStore`のstore-private ledgerとrecovery-onlyのledger自体はcoordinatorを持たない（recovery-onlyのbudgetは新しい予約を出さないため、claimの減少だけを上の再公開が担う）。coordinatorを使わない独立job、宣言を超える外部jobは従来どおり調停されない。複数host、共有filesystemは対象外である。`strict_capacity_guarantee`は立てない。
+
+### 試験（tests/test_volume_coordination_runtime.py、16件）
+
+- config検証：opt-in、絶対path、長さ、shared scope、非文字列、ledgerとの同一path。
+- 独立な2 simulatorが別ledgerで同じcoordinatorを共有し、片方のquota内でも合計超過をmutation前に拒否する（行数不変）。精算で他方に見える。
+- coordinatorなしのsimulatorがbind済みledgerを使うことを拒否する。resumeは、coordinator欠落、別path、coordinatorなしのdatasetへの新束縛をledger／coordinatorのbyte不変のまま拒否し、同じ設定では数値が一致する。
+- coordinatorのfilesystemが非対応なら、ledgerやdatasetを作る前に拒否する。
+- forkとparameter-shiftのchildが親と同じcoordinator・ledgerを継承する。
+- 実`mpiexec`の1／2 rank：独立dataset、fork、parameter-shift（内部fork）、joint refusal、ledger分離。pathが食い違うrank、1 rankだけ非対応filesystemはcollectiveに拒否。
+- offline回復：実processがkillしたwriterのclaimが、`recover_uncommitted_reservations`のapplyで真の値へ下がり、二重適用でも不変、別ledgerが再び予約でき、bind済みledgerが再openできる。1／2 rankのcheckpoint recoveryでも同様に再公開（dry runは公開しない、再適用は`changed: false`）、回復後のresumeは数値が一致する。coordinatorを移動すると回復は拒否される。維持scopeは同じcoordinatorを採用する。
+

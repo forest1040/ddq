@@ -201,7 +201,7 @@ def recover_checkpoint_reservations(config, *, comm=None, snapshot=None, apply=F
         from mpi4py import MPI
         comm=MPI.COMM_WORLD
     transport=MPITransport(comm,tile_bytes=config.tile_bytes,metadata_limit=config.metadata_reserve_bytes//2)
-    rank=transport.rank;leases={};budget=None
+    rank=transport.rank;leases={};budget=None;coordinator=None
     try:
         error=None
         try:
@@ -252,6 +252,21 @@ def recover_checkpoint_reservations(config, *, comm=None, snapshot=None, apply=F
                     if locators[record['rank']]!=str(ledger):
                         raise DiskAdmissionError('Recovery ranks on one volume require the same ledger')
             local_roots=sorted({r['root'] for r in records if r['host']==environment[rank]['host'] and r['device']==info.st_dev})
+            binding=DiskBudget.read_volume_binding(ledger)
+            if binding is not None:
+                bound_ranks=[r['rank'] for r in records if r['host']==environment[rank]['host'] and r['device']==info.st_dev]
+                declared=getattr(config,'volume_coordinator',None)
+                if declared is not None and str(Path(declared).resolve())!=binding:
+                    raise DiskAdmissionError('Recovery coordinator conflicts with the ledger binding')
+                if rank==min(bound_ranks):
+                    # One rank per ledger republishes the settled claim; it must hold the exclusive ledger-directory
+                    # lease (no live writer) and a readable coordinator before any reservation changes.
+                    from .volume_coordinator import VolumeCoordinator
+                    key=str(ledger.parent)
+                    if key not in leases:
+                        try:leases[key]=DirectoryLease(ledger.parent,exclusive=True)
+                        except Exception as exc:raise DiskAdmissionError(f'A live process holds the disk ledger: {exc}') from exc
+                    coordinator=VolumeCoordinator.open_bound(binding)
             budget=DiskBudget(ledger,local_roots,quota_bytes=config.disk_quota_bytes,
                               min_free_bytes=config.min_free_bytes,drain_reserve_bytes=config.drain_reserve_bytes,
                               shared_policy=True,recovery_only=True)
@@ -315,11 +330,26 @@ def recover_checkpoint_reservations(config, *, comm=None, snapshot=None, apply=F
                                  'terminal_state':plan['terminal_state'],'proof':proof})
         except Exception as exc:error=str(exc)
         transport.vote(error)
-        reports=transport.control.allgather({'rank':rank,'receipts':receipts,'already_terminal':settled})
+        # Every rank has finished applying (the vote above is collective) before the settled claim is published.
+        claim=None;error=None
+        try:
+            if coordinator is not None:
+                if apply:
+                    claim=budget.republish_volume_claim(coordinator,leases[str(ledger.parent)])
+                    claim['status']='republished'
+                else:
+                    published=coordinator.claim(ledger)
+                    claim={'coordinator':str(coordinator.path),'ledger':str(ledger),'status':'dry-run',
+                           'previous_claim_bytes':None if published is None else published['pending'],
+                           'published_pending_bytes':budget.reserved_bytes}
+        except Exception as exc:error=str(exc)
+        transport.vote(error)
+        reports=transport.control.allgather({'rank':rank,'receipts':receipts,'already_terminal':settled,'volume_claim':claim})
         return {'kind':'checkpoint-reservation-recovery','apply':apply,'snapshot_id':authority['decision']['snapshot_id'],
                 'metadata_only':True,'artifacts_preserved':True,'ranks':reports,'strict_capacity_guarantee':False,
                 'ledger_open_mode':'recovery-only','metadata_pool_bytes':budget.bootstrap_bytes}
     finally:
         if budget is not None:budget.close()
+        if coordinator is not None:coordinator.close()
         for lease in leases.values():lease.close()
         transport.close()

@@ -198,7 +198,8 @@ class DiskBudget:
                  drain_reserve_bytes=0, usage=None, free=None,
                  max_page_count=1024, max_records=4096, bootstrap_bytes=8*1024*1024,
                  shared_policy=False, recovery_only=False, ledger_lease=None, store_private=False,
-                 persist_private_policy=False, volume_coordinator=None):
+                 persist_private_policy=False, volume_coordinator=None,
+                 own_volume_coordinator=False):
         _integer(min_free_bytes, 'minimum free bytes')
         _integer(drain_reserve_bytes, 'drain reserve bytes')
         _integer(quota_bytes, 'disk quota', minimum=1, optional=True)
@@ -224,6 +225,7 @@ class DiskBudget:
             if recovery_only or store_private:
                 raise ValueError('Recovery-only and store-private ledgers do not take a volume coordinator')
         self._coord=volume_coordinator;self._coord_ready=False
+        self._coord_owned=bool(own_volume_coordinator) and volume_coordinator is not None
         self.persist_private_policy=persist_private_policy
         self.store_private=store_private
         self.recovery_only=recovery_only
@@ -590,6 +592,43 @@ class DiskBudget:
                 coordinator TEXT NOT NULL, epoch INTEGER NOT NULL)''')
         if bound is None:
             self.db.execute('INSERT INTO volume_binding VALUES(1,?,0)',(str(self._coord.path),))
+
+    @staticmethod
+    def read_volume_binding(ledger):
+        """The coordinator path a ledger is bound to, or ``None`` (read-only; works on a quiescent ledger)."""
+        con = sqlite3.connect(Path(ledger).as_uri() + '?mode=ro', uri=True)
+        try:
+            con.execute('PRAGMA query_only=ON')
+            if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='volume_binding'").fetchone():
+                return None
+            row = con.execute('SELECT coordinator FROM volume_binding WHERE singleton=1').fetchone()
+            return None if row is None else row[0]
+        except sqlite3.Error as exc:
+            raise DiskAdmissionError(f'Cannot read the ledger volume binding: {exc}') from exc
+        finally:
+            con.close()
+
+    def republish_volume_claim(self, coordinator, lease):
+        """Offline: publish this ledger's true pending to its bound coordinator (idempotent, with a receipt).
+
+        ``lease`` must be the live exclusive lease of the ledger directory, which proves no process holds the
+        ledger, so no concurrent publisher can race the reset. The ledger itself is only read.
+        """
+        lease.assert_current()
+        if not lease.exclusive or Path(lease.path) != self._ledger_path.parent:
+            raise ValueError('republish needs the exclusive lease of this ledger directory')
+        with self._path_lock:
+            row = self.db.execute('SELECT coordinator,epoch FROM volume_binding WHERE singleton=1').fetchone() \
+                if self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='volume_binding'").fetchone() else None
+            if row is None:
+                return None
+            if row[0] != str(coordinator.path):
+                raise DiskAdmissionError('Ledger is bound to a different volume coordinator')
+            pending = self.db.execute("""SELECT COALESCE(SUM(bytes-materialized),0) FROM reservations
+                WHERE state IN ('RESERVED','WRITING')""").fetchone()[0]
+        before = coordinator.reset_claim(self._ledger_path, pending=pending, epoch_floor=row[1])
+        return {'coordinator': str(coordinator.path), 'ledger': str(self._ledger_path), 'previous_claim_bytes': before['pending'],
+                'published_pending_bytes': pending, 'changed': before['pending'] != pending}
 
     def _register_with_coordinator(self):
         if self._coord is None: return
@@ -1053,3 +1092,4 @@ class DiskBudget:
                 self._release_registry()
                 if self._ledger_lease_owned and self._ledger_lease is not None:self._ledger_lease.close()
                 self._closed=True
+                if self._coord_owned:self._coord.close()

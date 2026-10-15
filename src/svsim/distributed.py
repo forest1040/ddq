@@ -49,6 +49,7 @@ class DistributedConfig:
     min_free_bytes: int = 0
     drain_reserve_bytes: int = 0
     disk_admission_ledger: str | None = None
+    volume_coordinator: str | None = None
 
     def __post_init__(self):
         StorageConfig(self.directory,self.block_bits,self.ram_budget_bytes_per_rank,self.backend,self.alignment,
@@ -59,6 +60,13 @@ class DistributedConfig:
                     not self.disk_admission_ledger or len(self.disk_admission_ledger.encode())>4096 or
                     not Path(self.disk_admission_ledger).is_absolute()):
                 raise ValueError('disk_admission_ledger requires an absolute node-local path')
+        if self.volume_coordinator is not None:
+            if (self.storage_scope!='node-local' or not isinstance(self.volume_coordinator,str) or
+                    not self.volume_coordinator or len(self.volume_coordinator.encode())>4096 or
+                    not Path(self.volume_coordinator).is_absolute()):
+                raise ValueError('volume_coordinator requires an absolute node-local path')
+            if self.disk_admission_ledger is not None and Path(self.volume_coordinator)==Path(self.disk_admission_ledger):
+                raise ValueError('volume_coordinator must not be the disk admission ledger')
         if self.disk_quota_bytes is not None and self.disk_quota_bytes <= 0: raise ValueError('Invalid disk quota')
         if self.min_free_bytes < 0 or self.drain_reserve_bytes < 0: raise ValueError('Invalid disk reserve')
         if self.tile_bytes < 16 or self.tile_bytes%16: raise ValueError('tile_bytes must be a positive multiple of 16')
@@ -104,13 +112,17 @@ class DistributedSimulator:
             if config.storage_scope == 'node-local':
                 common_config.pop('directory')
                 common_config.pop('disk_admission_ledger')
+                # The path is per host; only the opt-in itself must agree across ranks.
+                common_config['volume_coordinator']=common_config['volume_coordinator'] is not None
             self.transport.agree({'num_qubits':num_qubits,'config':common_config,'schema':3})
             self.environment = self.transport.handshake()
             self.block_bits = config.block_bits
             self.directory = Path(config.directory)
             self.directory.mkdir(parents=True,exist_ok=True)
             self._lease_dataset_roots([self.directory])
-            if config.storage_scope=='node-local':self._bootstrap_disk_budget()
+            if config.storage_scope=='node-local':
+                if not _create:self._check_persisted_coordinator()
+                self._bootstrap_disk_budget()
             storage = StorageConfig(str(self.directory/f'rank-{self.rank:04d}'),config.block_bits,
                 config.ram_budget_bytes_per_rank,config.backend,config.alignment,metadata_reserve_bytes=config.metadata_reserve_bytes)
             self.local = StoredSimulator(num_qubits,storage,_create=_create,frame_policy=config.frame_policy,
@@ -214,6 +226,27 @@ class DistributedSimulator:
         self.transport.agree(content_hash(self.registry))
         self._save_settings()
 
+    def _coordinator_locator(self):
+        return None if self.config.volume_coordinator is None else str(Path(self.config.volume_coordinator).resolve())
+
+    def _check_persisted_coordinator(self):
+        """Resume must use the coordinator the dataset was created with, before any ledger or catalog is touched."""
+        import sqlite3
+        path=self.directory/f'rank-{self.rank:04d}'/'metadata'/'catalog.sqlite3'
+        persisted=None
+        if path.is_file():
+            con=sqlite3.connect(path.as_uri()+'?mode=ro',uri=True)
+            try:
+                row=con.execute("SELECT data FROM distributed_settings WHERE key='volume_coordinator'").fetchone()
+                persisted=None if row is None else json.loads(row[0])
+            except sqlite3.Error:pass
+            finally:con.close()
+        if persisted is not None and self._coordinator_locator()!=persisted:
+            raise ValueError('Dataset is bound to volume coordinator '+('(missing in the configuration)' if self.config.volume_coordinator is None
+                else 'a different one')+'; reopen it with the coordinator it was created with')
+        if persisted is None and self.config.volume_coordinator is not None:
+            raise ValueError('Dataset was created without a volume coordinator; a new binding is refused')
+
     def _bootstrap_disk_budget(self):
         """Admit catalogs and metadata before StoredSimulator's first SQL write."""
         from .disk_budget import DiskBudget
@@ -225,7 +258,8 @@ class DistributedSimulator:
             record={'host':self.environment[self.rank]['host'],'volume':os.stat(self.directory).st_dev,
                     'root':str(self.directory.resolve()),
                     'ledger':str(Path(self.config.disk_admission_ledger).resolve())
-                        if self.config.disk_admission_ledger is not None else None}
+                        if self.config.disk_admission_ledger is not None else None,
+                    'coordinator':self._coordinator_locator()}
         except Exception as exc:error=str(exc)
         self.transport.vote(error)
         gathered=self.transport.control.allgather(record)
@@ -236,14 +270,33 @@ class DistributedSimulator:
         choices={r['ledger'] for r in local}
         if len(choices)!=1:error='Same-host/volume ranks must select the same disk admission ledger'
         self.transport.vote(error)
+        error=None
+        if len({r['coordinator'] for r in local})!=1:error='Same-host/volume ranks must select the same volume coordinator'
+        self.transport.vote(error)
         selected=next(iter(choices))
         ledger=Path(selected) if selected is not None else Path(roots[0])/'.disk-admission'/f'{key}.sqlite3'
+        error=None
+        # Coordinator first and collectively: an unsupported filesystem or policy mismatch on any rank refuses
+        # every rank before a ledger exists.
+        coordinator=None
+        try:
+            if self.config.volume_coordinator is not None:
+                from .volume_coordinator import VolumeCoordinator
+                coordinator=VolumeCoordinator(self.config.volume_coordinator,quota_bytes=self.config.disk_quota_bytes,
+                    min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes)
+        except Exception as exc:error=str(exc)
+        try:self.transport.vote(error)
+        except Exception:
+            if coordinator is not None:coordinator.close()
+            raise
         error=None
         try:
             self.disk_budget=DiskBudget(ledger,roots,quota_bytes=self.config.disk_quota_bytes,
                 min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes,
-                shared_policy=True)
-        except Exception as exc:error=str(exc)
+                shared_policy=True,volume_coordinator=coordinator,own_volume_coordinator=True)
+        except Exception as exc:
+            error=str(exc)
+            if coordinator is not None:coordinator.close()
         self.transport.vote(error)
 
     def _attach_disk_budget(self):
@@ -311,6 +364,7 @@ class DistributedSimulator:
         with self.store.db:
             settings={'dataset_id':self.dataset_id,'store_id':self.store_id,'registry':self.registry}
             if self.disk_budget is not None:settings['disk_admission_ledger']=str(self.disk_budget._ledger_path)
+            if self.config.storage_scope=='node-local':settings['volume_coordinator']=self._coordinator_locator()
             for k,v in settings.items():
                 self.store.db.execute('INSERT OR REPLACE INTO distributed_settings VALUES(?,?)',(k,canonical(v)))
 

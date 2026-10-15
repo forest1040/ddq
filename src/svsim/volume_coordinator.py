@@ -336,6 +336,49 @@ class VolumeCoordinator:
             self.db.execute('UPDATE ledgers SET epoch=?,pending=? WHERE path=? AND epoch<=?',
                             (epoch, pending, str(ledger_path), epoch))
 
+    def reset_claim(self, ledger_path, *, pending, epoch_floor=0):
+        """Offline republish of a ledger's true pending; the caller holds the ledger directory's exclusive lease.
+
+        Unconditional (a decrease is the point) and idempotent: the claim is set to ``pending`` and the epoch
+        never moves backwards. Returns the previous claim. No volume check is made, because publishing the
+        settled state can only lower the volume's commitment. A ledger the coordinator does not know is refused.
+        """
+        ledger_path = str(ledger_path)
+        with self._txn():
+            row = self.db.execute('SELECT epoch,pending FROM ledgers WHERE path=?', (ledger_path,)).fetchone()
+            if row is None:
+                raise DiskAdmissionError('Ledger is not registered with the volume coordinator; open it writable once')
+            epoch = max(int(epoch_floor), row[0])
+            self.db.execute('UPDATE ledgers SET epoch=?,pending=? WHERE path=?', (epoch, int(pending), ledger_path))
+            return {'epoch': row[0], 'pending': row[1]}
+
+    def claim(self, ledger_path):
+        """The published claim of one ledger, or ``None``."""
+        with self._lock:
+            row = self.db.execute('SELECT metadata_bytes,epoch,pending FROM ledgers WHERE path=?',
+                                  (str(ledger_path),)).fetchone()
+        return None if row is None else {'metadata_bytes': row[0], 'epoch': row[1], 'pending': row[2]}
+
+    @classmethod
+    def open_bound(cls, path, **overrides):
+        """Open an existing coordinator with the policy it persisted (offline tools do not know the policy)."""
+        path = Path(path)
+        if not path.is_absolute() or path.is_symlink() or not path.is_file():
+            raise DiskAdmissionError('Volume coordinator database is missing or not a plain absolute path')
+        try:
+            con = sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)
+            try:
+                row = con.execute('SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,bootstrap_bytes '
+                                  'FROM policy WHERE singleton=1').fetchone()
+            finally:
+                con.close()
+        except sqlite3.Error as exc:
+            raise DiskAdmissionError(f'Cannot read the volume coordinator policy: {exc}') from exc
+        if row is None:
+            raise DiskAdmissionError('Volume coordinator has no persisted policy')
+        return cls(path, quota_bytes=row[0], min_free_bytes=row[1], drain_reserve_bytes=row[2],
+                   bootstrap_bytes=row[3], **overrides)
+
     def forget_ledger(self, ledger_path):
         """Drop an idle ledger's claim once no process holds the ledger directory (exclusive flock)."""
         ledger_path = Path(ledger_path).resolve()

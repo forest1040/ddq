@@ -229,7 +229,7 @@ volume全体の検査は、全ledgerのpending＋有効な外部claim＋和集�
 
 ### 限界（受入条件との関係）
 
-- `DistributedConfig`への配線は未実装である。coordinatorは`DiskBudget(volume_coordinator=...)`のAPIとして利用する。`FileBlockStore`のprivate ledger、recovery-only open、offline recovery（`uncommitted_recovery`）はcoordinatorを扱わない。bind済みledgerの書込み可能openはcoordinatorを要求するため、offline recoveryでtokenを精算したledgerのclaimは、次の書込み可能openまで過大評価のまま残る（安全側）。
+- 追記（2026-10-15）：`DistributedConfig.volume_coordinator`への配線、forkの継承、resume時の束縛照合、複数rank、offline回復後のclaim再公開は[通常runtime接続](phase4_disk_coordination_implementation.md#volume-coordinatorの通常runtime接続2026-10-15追加)で実装した。`FileBlockStore`のstore-private ledgerとrecovery-onlyのledger自体はcoordinatorを持たない（再公開は回復operationが行う）。
 - 参加者がcoordinatorを使わなければ調停されない。bind済みledgerは迂回できないが、coordinatorを使わない独立job・外部jobは従来どおり物理空きでしか見えない。外部jobの宣言超過は検出しない。
 - 外部jobが宣言したrootの外へ書いたbyteは、観測使用量には入らず、物理空きの観測（`min_free`）でしか見えない。
 - crashで残ったclaimは、tokenの回収（既存のexplicit recovery）と書込み可能openを経て減る。coordinatorが自動で解放することはない。ledger数は64、外部claimは256、rootは256に制限する。

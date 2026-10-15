@@ -129,7 +129,7 @@ def offline_scope(ledger, *, policy=None, writer=False):
     if not ledger.is_absolute() or ledger.is_symlink():
         raise DiskAdmissionError('Recovery needs an absolute, non-symlink ledger path')
     ledger = ledger.resolve(strict=True)
-    leases, budget, ledger_lease = [], None, None
+    leases, budget, ledger_lease, coordinator = [], None, None, None
     try:
         try:
             ledger_lease = DirectoryLease(ledger.parent, exclusive=True)
@@ -154,24 +154,53 @@ def offline_scope(ledger, *, policy=None, writer=False):
                 leases.append(DirectoryLease(directory, exclusive=True))
             except DatasetBusyError as exc:
                 raise UncommittedRecoveryRefused(f'A live runtime holds dataset lease {directory}; owner death is not proven') from exc
+        binding = None if private else DiskBudget.read_volume_binding(ledger)
+        if binding is not None:
+            # A bound ledger needs its coordinator: opened before any mutation (a missing or foreign one refuses).
+            from .volume_coordinator import VolumeCoordinator
+            coordinator = VolumeCoordinator.open_bound(binding)
         if private:
             if writer:
                 budget = DiskBudget(ledger, roots, ledger_lease=ledger_lease, persist_private_policy=True, **persisted)
             else:
                 budget = DiskBudget(ledger, roots, recovery_only=True, store_private=True, **persisted)
         elif writer:
-            budget = DiskBudget(ledger, roots, shared_policy=True, ledger_lease=ledger_lease, **persisted)
+            budget = DiskBudget(ledger, roots, shared_policy=True, ledger_lease=ledger_lease,
+                                volume_coordinator=coordinator, **persisted)
         else:
             budget = DiskBudget(ledger, roots, shared_policy=True, recovery_only=True, **persisted)
         yield {'ledger': ledger, 'ledger_lease': ledger_lease, 'leases': leases, 'budget': budget, 'roots': roots,
-               'stores': sorted(set(stores), key=str), 'policy': persisted, 'private_ledger': private}
+               'stores': sorted(set(stores), key=str), 'policy': persisted, 'private_ledger': private, 'coordinator': coordinator}
     finally:
         if budget is not None:
             budget.close()
+        if coordinator is not None:
+            coordinator.close()
         for lease in leases:
             lease.close()
         if ledger_lease is not None:
             ledger_lease.close()
+
+
+def volume_claim_report(scope, *, apply):
+    """Republish (apply) or preview (dry run) a bound ledger's true pending in the volume coordinator.
+
+    Runs under the scope's exclusive ledger lease, so nothing can publish concurrently; it is idempotent and
+    returns the receipt that the recovery report embeds (``None`` for an unbound ledger).
+    """
+    coordinator = scope['coordinator']
+    if coordinator is None:
+        return None
+    budget = scope['budget']
+    if apply:
+        _assert_leases(scope)
+        receipt = budget.republish_volume_claim(coordinator, scope['ledger_lease'])
+        receipt['status'] = 'republished'
+        return receipt
+    claim = coordinator.claim(scope['ledger'])
+    return {'coordinator': str(coordinator.path), 'ledger': str(scope['ledger']), 'status': 'dry-run',
+            'previous_claim_bytes': None if claim is None else claim['pending'],
+            'published_pending_bytes': budget.reserved_bytes}
 
 
 def _assert_leases(scope):
@@ -433,6 +462,7 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
                   'would_release_pending_bytes': sum(e['release_pending_bytes'] for e, _, _ in tokens if not refused),
                   'refusals': refused, 'artifacts_preserved': True, 'strict_capacity_guarantee': False,
                   'status': 'refused' if refused else ('nothing-to-do' if not tokens else 'dry-run')}
+        report['volume_claim'] = volume_claim_report(scope, apply=False)
         if refused:
             if apply:
                 raise UncommittedRecoveryRefused('Refusing: ' + '; '.join(refused[:5]), report)
@@ -464,6 +494,7 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
         usage_after = budget._observed_usage()
         report.update(status='applied', released_pending_bytes=released, observed_usage_after_bytes=usage_after,
                       artifacts_preserved=usage_after == usage_before, pending_bytes_after=budget.reserved_bytes)
+        report['volume_claim'] = volume_claim_report(scope, apply=True)
         if usage_after != usage_before:
             raise UncommittedRecoveryRefused('Observed artifact bytes changed during recovery', report)
         return report
