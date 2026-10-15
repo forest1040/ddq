@@ -1,0 +1,8 @@
+uid=1000(ddq) gid=1000(ddq) groups=1000(ddq)
+Python 3.12.15
+mpirun (Open MPI) 4.1.4
+resolved_backend=linux-o-direct
+O_DIRECT aligned write/fsync/readback passed
+........................................................................ [ 63%]
+.....................s.s..................                               [100%]
+112 passed, 2 skipped in 83.83s (0:01:23)

@@ -1,5 +1,16 @@
 # Phase 4 引き継ぎ書（2026-10-15）
 
+## 引き継ぎ後の追記（同日）
+
+専用worktreeを用いた3並列タスクで、外部jobの宣言超過検出、短いrunのETA認証再確認、Linux coordinator再検証を実施した。Linux担当はLunaへ委譲し、担当停止後は親エージェントが実検証を引き継いだ。以下の本文は再起動前の履歴として残す。
+
+- **P4-009。** 専用rootのnet file増分を観測し、宣言超過と観測不能を次のadmission前に拒否する。観測済み増分をpendingから控除し、二重計上を避ける。rootなし、root外write、観測間の一時超過は保証しない。`strict_capacity_guarantee`はfalse。[実装資料](phase4_disk_coordination_implementation.md#外部jobの宣言超過の検出2026-10-15追加)に契約と残件を記録した。
+- **P4-002。** 角度pooling後のサンプルを実submit順へ修正し、途中のslowdownを誤認証する不具合を直した。burn-in／held-outの条件は維持。48 checkは30回答、median誤差8.6％、coverage 83.3％。短いrunの未回答は今回、件数不足だけではなくcoverage不良／driftだった。回答率改善の比較実証とLinux／multi-rank overheadは残る。[再評価](phase4_exact_future_eta_implementation.md#短いrunの認証再確認2026-10-15追加)を参照。
+- **高速テスト。** 統合版の`uv run pytest -m "not slow" -q`は1044 passed、35 skipped、83 deselected（204.33秒）。[ログ](internal/p4_coordinator_followup_validation/integrated-fast.txt)を保存した。
+- **TeX。** Phase 4の進捗と制限を追記し、LuaLaTeXで38ページのPDFへビルドした。
+- **Linux再検証。** 通常runtime、外部job監視、実MPI 1／2 rank、回収はbuffered 105 passed、O_DIRECT 112 passed／2 skipped（Mac専用transport試験）だった。実O_DIRECTのwrite／fsync／readbackも成功。244 mounted sourceのhashは統合版と一致した。本文にある通常runtime接続のLinux未確認は、この範囲で解消した。
+- **完了状態。** P4-002／009はIN_PROGRESSを維持。layout migration、全writer fault／回収、file単位のcatalog予約帰属、電源断model、複数host調停、最終比較matrixと自動運用の残件は継続する。本文の「未確認」のLinux結果は[今回の検証記録](internal/p4_coordinator_followup_validation/README.md)を参照する。
+
 サーバ再起動前の時点で、mainの状態と進行中の作業、次の作業をまとめる。backlogの状態の正は[phase4_backlog.md](phase4_backlog.md)にある。
 
 ## mainの状態

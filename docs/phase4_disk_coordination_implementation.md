@@ -103,4 +103,4 @@ root省略の既存APIと旧coordinator DBは互換で、従来どおり宣言�
 
 試験は`tests/test_volume_external_usage.py`。別processによる実file write、境界での二重計上防止、超過のmutation前拒否と明示resize、baseline／重複root、削除／置換／marker／link／PermissionError、root重複拒否、失敗時rollbackとmarker清掃、旧DB互換、reopen、死ownerの回復、保持fileとmarkerのlifecycleを確認する。
 
-検証結果：Macで上記新規14件＋既存coordinator 24件＋runtime 16件＝54 passed。`PYTHONPATH=src /Users/tmori/work3/ddq/.venv/bin/python -m pytest tests/test_volume_external_usage.py tests/test_volume_coordinator.py tests/test_volume_coordination_runtime.py -q`で確認した。runtimeの実MPIはsandbox内のsocket bind拒否を受け、許可済みのsandbox外実行で成功した。Linux／O_DIRECTの再検証は今回実施していない。
+検証結果：Macで上記新規14件＋既存coordinator 24件＋runtime 16件＝54 passed。`PYTHONPATH=src /Users/tmori/work3/ddq/.venv/bin/python -m pytest tests/test_volume_external_usage.py tests/test_volume_coordinator.py tests/test_volume_coordination_runtime.py -q`で確認した。runtimeの実MPIはsandbox内のsocket bind拒否を受け、許可済みのsandbox外実行で成功した。続いて統合版をLinux buffered／O_DIRECTで検証し、各105 passed／112 passed・2 skipped（Mac専用transport試験）だった。両backendで新規外部job試験と通常runtime（実MPI 1／2 rankを含む）、回収が成功した。[証跡](internal/p4_coordinator_followup_validation/README.md)に実O_DIRECT probe、source hash、条件とscopeを保存した。

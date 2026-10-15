@@ -1,10 +1,12 @@
 # Phase 4 backlog
 
-更新日：2026-10-14。**Phase 4は未完了**。主要APIとMac／Linux・実2ノードのcorrectness検証は実装・実施済みだが、適応制御と性能評価を含む設計の完了条件には残件がある。
+更新日：2026-10-15。**Phase 4は未完了**。主要APIとMac／Linux・実2ノードのcorrectness検証は実装・実施済みだが、適応制御と性能評価を含む設計の完了条件には残件がある。
 
 基準は[開発計画](../plan/distributed_quantum_circuit_simulator_development.md#phase-4非同期階層スケジューラ)と[設計書 §15](phase4_design.md#15-実装順と完了条件)。現在の挙動・制限は[実装資料](phase4_implementation.md)、既存の性能測定は[Mac比較](phase4_benchmark.md)に記載する。site固有の情報はこのbacklogに書かず、`docs/internal/`で管理する。
 
 ## 管理方法
+
+2026-10-15の引き継ぎ後、専用worktreeの3並列タスクでP4-009の外部job宣言超過検出、P4-002の短いrunの認証再確認、Linux再検証を進めた。外部jobは専用rootのnet file増分を観測し、超過／観測不能を次のadmission前に拒否する（[契約と制限](phase4_disk_coordination_implementation.md#外部jobの宣言超過の検出2026-10-15追加)）。ETAは角度pooling後も実submit順でburn-in／held-outを分離し、driftの誤認証を修正した（[実測と残件](phase4_exact_future_eta_implementation.md#短いrunの認証再確認2026-10-15追加)）。短いrunの48 checkは30回答、median誤差8.6％、coverage 83.3％。回答率改善の比較実証は行っておらず、coverage不良／driftの原因、Linux／multi-rank overheadは残る。統合版の高速テストは1044 passed／35 skipped／83 deselected。両項目はIN_PROGRESSを維持し、全writer回収・電源断model・複数host調停・最終比較matrixなどは継続する。
 
 [Phase 5設計書](phase5_design.md)で共通profile・校正・静的推定を先行整備し、P4-001／002／003／004／005／007／008へ接続する。容量拡大前にP4-009、必要な転置経路にP4-006を解消する。設計書の作成だけでは本backlogの状態を変更しない。
 
@@ -21,6 +23,8 @@ P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtim
 2026-10-14に[容量予約・runtime計測の基盤](phase4_foundation_implementation.md)を実装した。catalogとledgerの同SQLite VFS、writerへの予約接続、validated completion、厳密profile adapter、有限actual-runtime campaignを追加した。Macの検証と残る受入条件は[検証資料](internal/phase4_foundation_validation/README.md)へ記録する。両項目はIN_PROGRESSで、全writerのfault／回収証跡、profile registryの全stage・自動接続、監視overhead、Linux／cross-host校正は残る。M1とPhase 4の完了は宣言しない。
 
 ## 一覧
+
+引き継ぎ後のLinux再検証はbuffered 105 passed、O_DIRECT 112 passed／2 skipped（Mac専用transport試験）だった。通常runtimeと新しい外部job監視、実MPI 1／2 rank、回収を検証した。[証跡・条件・hash](internal/p4_coordinator_followup_validation/README.md)を参照する。実O_DIRECTのaligned write／fsync／readbackを確認した。これはLinuxの機能回帰であり、ETA監視overheadの判定や全writerの電源断耐久性の完了証跡ではない。
 
 2026-10-14に[writer予約・永続化境界](phase4_writer_durability_implementation.md)を補強した。checkpoint JSON、traceのmkdir／open、asset／snapshot sidecarを変更前にadmitし、atomic writerのdirectory fsync／cleanupまで予約を保持する。flush後の物理化、cleanup不明時のtoken保持、trace巻戻し失敗後の追記拒否を追加した。SQLite build／dispatch capabilityを保存し、識別不一致のsoft fallbackを拒否する。sidecarの実process crashと関連Mac／Linux回帰を検証した。全writerのcut結合／fault、temporary branch GC、host調停は残り、P4-009はIN_PROGRESSを維持する。予約・物理化・精算を含む監視／metadata費用はP4-001／005へ接続する。
 

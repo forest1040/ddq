@@ -1,0 +1,6 @@
+2026-10-15T08:41:52Z
+entt
+Linux entt 6.8.0-138-generic #138-Ubuntu SMP PREEMPT_DYNAMIC Fri Jul 31 22:41:49 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+uid=1000(tmori) gid=1000(tmori) groups=1000(tmori),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),100(users),105(lpadmin),124(sambashare),986(docker)
+client=29.7.2 server=29.7.2
+image_id=sha256:3bee5df0c2960ab030ea1e9cb5528638929ab3cb6e45ee2ee073102f1d8cce14 user=ddq:ddq

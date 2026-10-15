@@ -1,0 +1,29 @@
+% Current implementation status; evidence lives in docs/phase4_* and docs/internal/.
+\begin{frame}{Phase 4：残時間推定と容量調停の進捗（2026-10-15）}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{残りの実行形状を実測で価格付け}\par
+      \small
+      \begin{itemize}
+        \item 残りepochのexecutor呼出しと公開処理を数える。
+        \item 実行中の呼出しは経過時間に応じた残量で推定。
+        \item 角度poolingも実submit順でheld-out認証。
+        \item 未認証classがあればETAはunknownを返す。
+      \end{itemize}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{同じvolumeの独立ledgerを調停}\par
+      \small
+      \begin{itemize}
+        \item 通常runtimeからcoordinatorを明示指定。
+        \item fork・勾配の子も束縛を継承。
+        \item 再開時の設定不一致を全rankで拒否。
+        \item 専用rootの増分で外部jobの宣言超過を検出。
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \smallnote{短いrunの48地点中30地点で回答、中央値誤差8.6\%、区間coverage 83.3\%。回答率改善の比較実証は残る。}
+  \smallnote{Linux回帰：buffered 105成功、O\_DIRECT 112成功・2 skip（Mac専用）。実MPI 1/2 rankと回収を含む。}
+  \takeaway{P4-001はDONE。\textbf{P4-002・009とPhase 4全体はIN\_PROGRESS}。複数host調停・全writerの故障回収・電源断modelは残る。}
+  \note{根拠：docs/phase4\_handoff\_2026-10-15.md、docs/phase4\_exact\_future\_eta\_implementation.md、docs/phase4\_disk\_coordination\_implementation.md。容量調停はnode-localのopt-in。共有filesystemは拒否し、strict\_capacity\_guaranteeは立てない。layout migrationのtransient・Linux VERIFY・O\_DIRECT予測、tile/cache/gradient自動運用と最終比較matrixもbacklogへ残す。}
+\end{frame}

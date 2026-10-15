@@ -1,6 +1,14 @@
 # P4 volume coordinator Linux follow-up
 
-Date: 2026-10-15. This follow-up checks the normal `DistributedConfig.volume_coordinator` runtime added in `6dc37b5` on the existing `ent` Docker image. The requested Linux run is **blocked**: auto-review rejected exporting this worktree's source to the isolated `ent` context. The pre-existing context `/tmp/ddq-linux-dev-20261014-bnuv6j/context` predates the runtime test and does not contain `tests/test_volume_coordination_runtime.py` or its MPI worker. No source was copied to `ent` and no Linux result is claimed.
+Date: 2026-10-15. This follow-up validates the normal `DistributedConfig.volume_coordinator` runtime added in `6dc37b5`, external-job growth monitoring, and the integrated sources on the existing `ent` Docker image. Linux **buffered: 105 passed in 82.51s**; **direct: 112 passed, 2 skipped in 83.83s**. The direct preflight asserted `linux-o-direct` and passed a real aligned write, fsync, and readback. Runtime cases include real MPI at 1/2 ranks. Phase 4 and P4-009 remain IN_PROGRESS.
+
+The user explicitly approved transfer of `src/`, `tests/`, and `examples/` to the dedicated ent context. Auto-review initially refused transfer, then refused a wider payload containing Docker definitions and project metadata. Only the three approved source directories were transferred; image-provided project metadata and dependencies were used. Luna completed the runner/local evidence and began the buffered run; after Luna stopped due to exhausted credits, the parent completed direct validation and collected evidence. Logs, JUnit, environment details and hashes are in [linux/](linux/). All 244 files in the mounted source manifest match local integrated sources. No cluster jobs or image rebuilds were performed.
+
+## Actual execution and evidence
+
+Remote context: `/tmp/ddq-p4-linux-followup-20261015-tmori/context`; separate sibling `scratch/` and `output/`. Source mounts were only `src:/workspace/src:ro`, `tests:/workspace/tests:ro`, and `examples:/workspace/examples:ro`. Project configuration, README and lockfile were **not transferred or mounted**. Other limits, fixed hostname, non-root user, environment and pytest selections follow the runner below. Both backend runs included `tests/test_volume_external_usage.py`. Direct also included transport and transport-buffer tests; buffered included disk-coordinator tests. The direct skips are macOS-only transport cases; no coordinator runtime case was skipped.
+
+The host was Linux x86_64 kernel 6.8.0-138-generic; Python 3.12.15, Open MPI 4.1.4, image `sha256:3bee5df0c2960ab030ea1e9cb5528638929ab3cb6e45ee2ee073102f1d8cce14`, image user `ddq:ddq`. See `linux/host-and-image.txt`, `linux/source-hashes.txt`, and the two `volume-coordination-*.txt`/`.xml` pairs. The integrated Mac fast suite is `integrated-fast.txt`: 1044 passed, 35 skipped, 83 deselected in 204.33s.
 
 ## Reproduction on ent
 
@@ -18,10 +26,10 @@ Each run records toolchain/container metadata, a SHA-256 manifest for the mounte
 
 ## Local fallback evidence
 
-The requested Linux execution did not occur, and local macOS results do not substitute for it. From this worktree, the related local suite passed under the available Mac MPI runtime with both `SVSIM_TEST_BACKEND=buffered` (**94 passed, 54.94 seconds**) and `SVSIM_TEST_BACKEND=direct` (**94 passed, 46.52 seconds**). Full logs are `mac-buffered.txt` and `mac-direct.txt`. A first sandboxed attempt failed only where OpenMPI could not bind its loopback sockets (`Operation not permitted`); the same suite passed with the authorized elevated local run. On macOS `direct` means `F_NOCACHE`, not Linux O_DIRECT.
+Before the Linux run, the related local suite passed under the available Mac MPI runtime with both `SVSIM_TEST_BACKEND=buffered` (**94 passed, 54.94 seconds**) and `SVSIM_TEST_BACKEND=direct` (**94 passed, 46.52 seconds**). Full logs are `mac-buffered.txt` and `mac-direct.txt`. These pre-integration local results do not substitute for Linux. A first sandboxed attempt failed only where OpenMPI could not bind its loopback sockets (`Operation not permitted`); the same suite passed with the authorized elevated local run. On macOS `direct` means `F_NOCACHE`, not Linux O_DIRECT.
 
 Local source hashes for the runtime integration are recorded in `source-hashes.txt`. The Linux run must regenerate hashes from the exact source mounted into the container before its result can be accepted. `docker/linux/run_p4_coordinator_followup.sh` passes `bash -n`.
 
 ## Transfer constraint
 
-The attempted `rsync` from this private repository worktree to `ent:/tmp/ddq-p4-linux-followup-20261015-tmori/context/` was rejected by auto-review as unauthorized source egress. Do not infer approval from the available SSH connection. Approval for that exact source/destination pair is needed before transfer; no alternate transfer path was used.
+Initial transfer was rejected as unauthorized source egress. After explicit user approval, a proposal including additional project metadata was also rejected. The final transfer contained only the explicitly approved `src/`, `tests/`, and `examples/`, and succeeded. No rejected payload was transferred through an alternate path. SSH connectivity alone was not treated as export permission.
