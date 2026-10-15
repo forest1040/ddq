@@ -115,3 +115,67 @@ mpiexec -n 2の実processで、snapshot 1をcommit後に1 gateを足し、snapsh
 ### 残り
 
 store内private ledgerの回収、複数rank・複数host（各rank別root・別ledger）のoffline回収の一括操作、decision-copy tokenのうち別rank rootにあるglobal decisionを見つけられない構成、異なるledger・外部jobを含むhost調停、extent writeのkernel／電源断fault、segment fsync前後のkill、ledger自身の物理空き先取り、cross-host、電源断は未完了である。O_DIRECT下でのSQLite内部のfsync中killは確率的な確認に留まる。
+
+## extent公開前のsegment fsync（電源断順序、2026-10-15追加）
+
+### 順序の決定
+
+catalogは`synchronous=FULL`でdurableにcommitされる。一方、extentのcatalog行（segment／offset／checksum）は、segmentのfsyncより前に公開されていた（同期の`write_version`と非同期の`AsyncStoreIO`の両方）。電源断では、公開行だけが残りsegment byteが失われ得た。`FileBlockStore`は、行が公開される前に、書込み済みsegmentをfsyncする順序へ変更した。
+
+- 同期経路は`_catalog_extent`、非同期の完了callbackも`_catalog_extent`を呼ぶ。private slotの`seal_extent`（`TileExtentWriter`）も同じ関数で保護した。
+- gate batchの内側では公開が`after_batch`で行われる。fsyncはそのhookの先頭で、batchが触れたsegmentごとに1回だけ行う（stageあたり1回、extent数には比例しない）。batch外では公開ごとに1回である。
+- 新しいsegment fileの初回fsyncでは、`state`ディレクトリもfsyncする（file自体の存在をdurableにする）。
+- fsyncは`transport_factory`で開いたhandleの`flush()`を通す。direct backendでもsize／extent割当てのfsyncが必要なため、全backendで行う。fsync失敗時は行を公開せず例外にし、tokenは回収手順で扱う。
+- 約束するdurabilityは「公開された行が参照するbyteは、catalogと同じ水準でdurable」である。非公開のslotは電源断で失われてよい（resume対象外、holeとして残る）。
+
+### 試験（tests/test_segment_power_loss.py）
+
+試験専用のtransport層`LossyFile`が、書込みごとに旧byteを記録し、そのfileへのfsync（`flush`）で記録を捨てる。模擬電源断は、fsyncされていない書込みを全て巻戻す（短いfileは切詰める）。catalogは実SQLiteでdurableである。同期／非同期×単発／gate batchの4構成、batch内で例外を出した後の公開済み接頭辞、`TileExtentWriter.seal`で、公開された全extentがchecksum付きで読めることを確認した。負例として、公開前のfsyncを外すと公開行のbyteが失われることを確認し、模型の感度を示した。さらに、gate batchでsegment fsyncが1回、batch外で書込みごとに1回であることを数えた。
+
+既存の`test_segment_stage_kills`は、fsync stageが公開より前になったことに合わせて期待を直した（fsync前後のkillでは新extentは未公開、tokenはmaterialize済みで残る）。
+
+### 費用
+
+同一のworkload（14 qubit、block_bits 8、RAM 2 MiB、3,840 extent、`materialize`＋cache flush＋store flush、5回のmedian）で、fsyncを無効にした場合（before）と有効（after）を比較した。
+
+| 環境 | backend | before | after | 増分 |
+|---|---|---|---|---|
+| Mac | buffered | 11.57 s | 11.75 s | +1.6％ |
+| Mac | direct（F_NOCACHE） | 11.76 s | 14.03 s | +19％（run間のばらつきが大きい） |
+| ent Docker（ext4） | buffered | 168 s | 179 s | +6％ |
+| ent Docker（ext4） | O_DIRECT | 182 s | 200 s | +10％ |
+
+entの各runは142〜213 sの範囲でばらつき、before／afterの範囲は重なる。増分は数％〜20％程度の上限と読む。macOSの`fsync`はdevice cacheをflushしないため、Macの値はLinuxより電源断保護の費用を小さく見積もる。batch集約（stageあたり1回）があるため、extent数に比例する費用にはなっていない。batchの外（`write_version`の単発）では公開ごとに1回のfsyncが加わる。
+
+## SQLite内部のxSync／xDeleteへの決定的fault注入（tests/test_vfs_fault_points.py）
+
+native budget VFSに、`-DSVSIM_TEST_FAULTS`付きでbuildしたときだけ存在するfault pointを追加した。`SVSIM_VFS_TEST_FAULTS=1`のとき`SQLiteGuard`がflagを足し、binaryのbuild flagに記録される。通常のbuildにはこのcodeも`svsim_test_fault_arm`関数もない（試験で確認）。armは`(path部分文字列, kind, N, action)`で、kindはjournal-sync／main-sync／journal-delete（rollback journal方式のcommit point）、actionはfail（I/O error）／kill-before／kill-after（`_exit`）である。
+
+子processでgate batchのcatalog commitにarmし、親が再openして確認する。
+
+- killはjournal sync 1／2回目、main db sync、journal deleteの前後の8点。journal deleteの直後だけ新cut全体で、それ以前は（main dbがsync済みでも）hot journalのrollbackで旧cut全体になる。いずれもintegrity okで、新規durable書込みが成功する。
+- failは4点（journal sync 1／2回目、main sync、journal delete）。commitは`OperationalError`となり成功を装わない。旧cutが残り、fault解除後の書込みが成功する。
+- 観察：journal deleteの失敗後はhot journalが残る。guardが非活性の読取り（admission外のSELECT）はjournalをreplayできず（VFSがdeleteを拒否する）`database or disk is full`になる。最初のアクセスはadmit済みの書込みでなければならず、これは既存の回収手順（admitted reopenでreplay後に回収）と一致する。
+- VFSが使えない環境（C compiler／`sqlite3ext.h`なし）では、理由を示してskipする。
+
+## store-private ledgerのpolicy永続化
+
+新規に作るstore-private ledgerに、追加tableの`private_policy`（shared_policyと同じ列）を作り、policyを保存する。FileBlockStoreが所有するledgerは`persist_private_policy=True`で開く。
+
+- 新規作成時のみ保存する。既存ledgerは移行せず、tableがなければ従来どおり「既定値のみ受理する弱い検査」のままである（新tableは回収時のschema検査の対象外で、無くても拒否されない）。
+- 通常open（FileBlockStore）は、保存済みrowと引数のpolicyが異なると`policy mismatch`で拒否する。
+- recovery-only open（`store_private=True`）は、rowがあればschemaとrow（quota／min_free／drain／bootstrap／page cap／max_records／volume）を照合し、非既定値の回収を可能にする。rowがなければ非既定値のpolicyを`persisted none`で拒否する。呼出し側の`policy`が保存値と衝突すると拒否する。`shared_policy`は作らず、shared policyのlayout判定は変わらない。
+- 試験：既定policyの保存、非既定のquota／min_freeでの回収（dry run→apply）、page cap／volume／schema改ざんの拒否とledger byte不変、row無し（既存ledger相当）の弱い検査と非移行、既定値での再openの拒否。既存の試験は、非既定quotaの拒否が`ValueError`から`DiskAdmissionError`（保存policyとの不一致）へ変わったため1件直した。
+
+## 検証（この追加分）
+
+- Mac：`uv run pytest -m "not slow"`で837 passed、69 skipped、2 failed（`test_layout_migration`の2件。このworktreeのvenvにmpi4pyがなく`ModuleNotFoundError`。本変更と無関係）。
+- ent Docker（`ddq-linux:dev-20261014`、`--hostname ddq-fixed`）：disk／recovery 24ファイル（segment power loss／stage kill、VFS fault、private ledger、uncommitted recovery／GC、kill matrix、quota sweep、recovery pool、reservation ledger、catalog batch／admission／capability、checkpoint recovery、checkpoint stage kill（MPI）、stored budget／numerics／recovery、storage、async io）を、bufferedで359 passed／11 skipped、`SVSIM_TEST_BACKEND=direct`で358 passed／12 skipped。
+
+## 残り（更新）
+
+extent公開とsegment fsyncの電源断順序、SQLite内部のxSync／xDelete決定的注入、新規private ledgerのpolicy永続化は実装した。残りは、別ledger・外部job・複数hostの調停（下記の設計メモ）、catalog tokenのfile単位の帰属、既存private ledgerのpolicy（移行しないため弱い検査のまま）、O_DIRECTのSQLite journal自体の電源断模型、cross-hostである。
+
+### host調停の設計メモ（未実装）
+
+同一host上の異なるledgerや外部jobは、物理空きの観測（`min_free`）でしか互いを見ない。案は、volume単位の小さなhost coordinator ledger（`/var`相当のvolume rootに1つ、各ledgerのquota総和と各jobの宣言byteを登録）を追加し、dataset ledgerは自分のpolicyに加えてcoordinatorの空きcreditを予約することである。要点は、(1) coordinatorもbounded native VFS上のSQLiteとし、予約はdataset ledgerの予約より先に取り、解放は後にする、(2) job終了の証明は既存のdirectory flock方式を再利用する、(3) 外部jobは宣言制で、宣言を超える消費は検出のみ（strictな保証ではない）、(4) 複数hostは共有filesystemを使わず、各hostのcoordinatorを独立とし、host間の合算はscheduler側の責務にする。未実装であり、受入条件は満たしていない。

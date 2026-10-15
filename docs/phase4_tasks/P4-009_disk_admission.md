@@ -70,3 +70,5 @@ ledger自身のbootstrap/成長/rollback journalは予約の再帰を起こす�
 | 009D 接続 | async completion、RAM flush_to_file、prefix/gradient/replan/tile/offline copy、全writer audit |
 
 faultはfake byte backend→Mac実SQLite/worker I/O→許可されたLinux/O_DIRECT環境の順。Linuxの一部機能検証は済んでいる。Linuxを含む全recovery／writer fault-durability matrixとquota境界を1 byte/page単位で掃引し、書込み前の拒否と書込み途中の安全な失敗を区別する証跡は未完了である。全writerのenforced reservationとrecovery証跡が揃ってDONE。自由SQL、未証明temp growth、native guard不在で厳密保証を出す実装は受け入れない。
+
+2026-10-15追加：[fault matrix実装](../phase4_disk_fault_matrix_implementation.md#extent公開前のsegment-fsync電源断順序2026-10-15追加)で、extent公開前のsegment fsync（電源断時に公開行がbyteを失わない順序、試験専用の電源断模型で検証、費用Mac +1.6％／ent buffered +6％／O_DIRECT +10％）、SQLite内部xSync／xDeleteへの決定的fault注入（test flag付きbuildのみ）、新規store-private ledgerのpolicy永続化を追加した。受入条件は全writerのfault／recovery、別ledger・外部job・cross-host調停、catalog tokenのfile単位の帰属が未達のため、IN_PROGRESSを維持する。
