@@ -48,3 +48,23 @@ checkpoint_linksはbounded cursor scanでterminal行を含む一致rootのintent
 volume内rankはpersisted catalog locatorまたは明示locatorを同一にし、同じpersistent ledgerを共有する。DiskBudgetの既存metadata poolとrecord/page boundsを使うが、すべてのwriterがhard guardで覆われるわけではない。statusはstrict_capacity_guarantee=falseを維持する。全writer fault/recoveryと容量保証が揃うまではP4-009およびPhase 4を完了扱いにしない。
 
 recovery-only openはprecharged metadata pool内でcheckpoint CAS/receiptだけを許す。logical quota/pending/drain margin超過は回収を止めないが、min_freeと未割当pool、page/journal capは維持する。schema migration、root/policy変更や通常のadmission mutationは行わない。実hardware ENOSPC、電源断耐久性、全writer recoveryは未受入である。
+
+## gate列とhistoryの塊（chunk）保存（2026-10-15追加、利用者の判断：案1）
+
+v4 checkpointのmetadata payloadは、checkpointのたびに全gate列（`gates`）とhistory全体を書き直していた。そのため、定期的にcheckpointを取るrunでは、総費用がO(N²)になっていた。payload形式2では、この2つの列を固定長（512件）の塊に分ける。
+- **塊の保存。** 各塊を正準JSONのsha256で名付けたwrite-onceのfile（`rank-NNNN/manifests/chunk-<sha256>.json`）として保存する。payloadには、塊の参照（sha256、byte数、件数）だけを持たせる。
+- **書込み（`distribute_payload`）。** rank 0が塊の参照を配る。各rankは、自分に無い塊を申告する。和集合の塊だけを、既存の流し込み（予約・fsync・atomic rename）で配る。参照だけのpayloadは、その後で同じ経路で配る。
+- **cache。** 公開済みcutより前の要素はその場で書き換えられない（rollbackは公開cutで止まる）。そこで、前回のcommitまでの満杯の塊の参照を、列の同一性（list identity）と組でcacheし、再encodeしない。再開・fork・読込みで列が置き換わると、cacheは使わない。
+- **読込み（`read_payload`→`expand_payload`）。** 各塊のbyte数・sha256・件数を検証し、列を展開する。不一致は`Checkpoint metadata chunk checksum mismatch`で拒否する。
+- **再開とfork。** 読み込んだ形式のまま配り直す（形式1は従来どおり全体を流す）。形式1の既存checkpointも読め、再開後の新しいcheckpointは形式2になる。
+- **一時file。** 塊の一時fileは`chunk-<sha>.<hex>.tmp`で、既存のtemporary GCの対象になる。塊fileは削除しない。合計はO(N)である。
+
+**効果（Mac、1 rank、file store、64 gateごとにcheckpointを40回、2560 gate）。**
+
+| | 1回目 | 40回目 |
+|---|---|---|
+| 変更前 | 31 ms | 742 ms |
+| 変更後 | 20 ms | 113 ms |
+
+- **残りのO(N)。** CPUだけである：全gateの`gate_data`変換と全体hashによる全rank合意（約0.1秒）、`validate_root`、`circuit_hash`。diskとMPIへの書込みは、変わった末尾の塊（gateとhistoryで各1〜2個）とpayloadだけになった。
+- **試験。** `tests/test_checkpoint_chunks.py`は次を確認する。新しい塊だけが書かれること、再開が厳密に一致すること、改ざんした塊を拒否すること、形式1のcheckpointを読み込んで再開できること。既存のcheckpoint・回収・multi-rank試験も成功した（Macの高速版987件、MPIのcheckpoint系82件）。

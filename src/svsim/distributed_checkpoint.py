@@ -114,11 +114,19 @@ def commit_snapshot(sim,prefix_fingerprint=None):
         data['commit_decision']='COMMIT'
         data['phase4_runtime']=getattr(sim,'_checkpoint_state',lambda: {'execution':'synchronous-S0'})()
     sim.transport.agree(content_hash(data)); error=None
-    from .checkpoint_payload import exchange_payload,decision_record
+    from .checkpoint_payload import distribute_payload,decision_record
     if version == 4:
-        data=exchange_payload(sim.transport,data if sim.rank == 0 else None,sim.directory,
+        # Gates and history go out as write-once content-addressed chunks; the payload holds
+        # only their references, so a checkpoint writes the changed tail, not the whole lists.
+        if not hasattr(sim,'_payload_chunk_cache'):sim._payload_chunk_cache={}
+        payload=distribute_payload(sim.transport,data if sim.rank == 0 else None,sim.directory,chunked=True,
+            expand=False,chunk_cache=sim._payload_chunk_cache,
+            sources={'gates':id(sim.sequencer.operations),'history':id(sim.history)},
             disk_budget=getattr(sim,'disk_budget',None),budget=sim.budget,cache=sim.cache)
-    decision=decision_record(data) if version == 4 else data
+        # Every rank agreed on this data above: return it in the loaded (expanded) form without a read-back.
+        data={**data,'payload_format':2,'metadata_payload':payload['metadata_payload']}
+        decision=decision_record(payload)
+    else: decision=data
     if version == 4: sim.transport.agree(decision)
     if sim.rank == 0:
         try: atomic_json(sim.directory/'global/manifests'/f'{snapshot_id}.json',{'manifest':decision,'checksum':content_hash(decision)},**_disk_kwargs(sim,snapshot_id,'decision'))
@@ -222,8 +230,9 @@ def restore(sim,snapshot,*,validate=True):
     if validate:
         version=sim.transport.broadcast_json(data['schema_version'] if sim.rank == 0 else None)
         if version == 4:
-            from .checkpoint_payload import exchange_payload
-            data=exchange_payload(sim.transport,data if sim.rank == 0 else None,sim.directory,
+            from .checkpoint_payload import distribute_payload
+            chunked=sim.transport.broadcast_json(data.get('payload_format')==2 if sim.rank == 0 else None)
+            data=distribute_payload(sim.transport,data if sim.rank == 0 else None,sim.directory,chunked=chunked,
                 disk_budget=getattr(sim,'disk_budget',None),budget=sim.budget,cache=sim.cache)
         else: data=sim.transport.broadcast_json(data if sim.rank == 0 else None)
     sim.transport.agree(content_hash(data)); error=None
@@ -283,8 +292,9 @@ def fork(sim,snapshot,binding,directory=None):
     sim.transport.vote(error)
     version=sim.transport.broadcast_json(data['schema_version'] if sim.rank == 0 else None)
     if version == 4:
-        from .checkpoint_payload import exchange_payload
-        data=exchange_payload(sim.transport,data if sim.rank == 0 else None,sim.directory,
+        from .checkpoint_payload import distribute_payload
+        chunked=sim.transport.broadcast_json(data.get('payload_format')==2 if sim.rank == 0 else None)
+        data=distribute_payload(sim.transport,data if sim.rank == 0 else None,sim.directory,chunked=chunked,
             disk_budget=getattr(sim,'disk_budget',None),budget=sim.budget,cache=sim.cache)
     else: data=sim.transport.broadcast_json(data if sim.rank == 0 else None)
     error=None

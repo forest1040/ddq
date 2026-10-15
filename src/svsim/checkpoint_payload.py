@@ -16,6 +16,78 @@ def encoded_chunks(data, chunk_bytes):
             yield raw[start:start+chunk_bytes]
 
 
+CHUNK_ENTRIES=512
+CHUNKED_KEYS=('gates','history')
+
+
+def _encoded(data):
+    # Same bytes as encoded_chunks, through the C encoder (chunks and format-2 payloads are bounded).
+    return json.dumps(data,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False).encode('utf-8')
+
+
+def compact_payload(data,cache=None,sources=None):
+    """Payload with ``gates``/``history`` replaced by content-addressed chunk references, and the chunks.
+
+    Chunks are fixed index ranges of CHUNK_ENTRIES entries named by the sha256
+    of their canonical JSON, so a checkpoint only writes chunks that changed
+    (the tail) instead of the whole growing lists. ``cache`` (caller-owned dict)
+    keeps the references of full chunks below the previous commit, valid while
+    ``sources[key]`` (the identity of the live list) is unchanged: entries before
+    a published cut are never rewritten in place (rollbacks stop at the cut).
+    """
+    data={k:v for k,v in data.items() if k not in {'metadata_payload','payload_format'}};chunks={}
+    for key in CHUNKED_KEYS:
+        items=data.pop(key);refs=[]
+        identity=(sources or {}).get(key)
+        cached=cache.get(key) if cache is not None and identity is not None else None
+        reuse=cached[1] if cached and cached[0]==identity else []
+        for index,start in enumerate(range(0,len(items),CHUNK_ENTRIES)):
+            if index<len(reuse):refs.append(reuse[index]);continue
+            raw=_encoded(items[start:start+CHUNK_ENTRIES]);digest=sha256(raw).hexdigest()
+            refs.append({'sha256':digest,'bytes':len(raw),'entries':len(items[start:start+CHUNK_ENTRIES])})
+            chunks[digest]=items[start:start+CHUNK_ENTRIES]
+        if cache is not None and identity is not None:
+            cache[key]=(identity,[r for r in refs if r['entries']==CHUNK_ENTRIES])
+        data[key+'_chunks']=refs
+    data['payload_format']=2
+    return data,chunks
+
+
+def chunk_name(digest):
+    return f'chunk-{digest}.json'
+
+
+def expand_payload(directory,data,rank=0):
+    """Inline the chunked lists of a format-2 payload, verifying every chunk's size and sha256."""
+    if data.get('payload_format')!=2:return data
+    data=dict(data)
+    for key in CHUNKED_KEYS:
+        items=[]
+        for ref in data.pop(key+'_chunks'):
+            raw=(Path(directory)/f'rank-{rank:04d}'/'manifests'/chunk_name(ref['sha256'])).read_bytes()
+            if len(raw)!=ref['bytes'] or sha256(raw).hexdigest()!=ref['sha256']:
+                raise OSError('Checkpoint metadata chunk checksum mismatch')
+            chunk=json.loads(raw)
+            if len(chunk)!=ref['entries']:raise OSError('Checkpoint metadata chunk length mismatch')
+            items.extend(chunk)
+        data[key]=items
+    return data
+
+
+def exchange_chunks(transport,refs,chunks,directory,**kwargs):
+    """Stream to every rank only the chunks some rank does not hold yet (content-addressed, write-once)."""
+    refs=transport.broadcast_json(refs if transport.rank==0 else None)
+    folder=Path(directory)/f'rank-{transport.rank:04d}'/'manifests'
+    local=[r['sha256'] for r in refs if not ((folder/chunk_name(r['sha256'])).is_file() and
+                                             (folder/chunk_name(r['sha256'])).stat().st_size==r['bytes'])]
+    missing=set().union(*transport.control.allgather(local))
+    for ref in refs:
+        if ref['sha256'] in missing:
+            _exchange(transport,chunks[ref['sha256']] if transport.rank==0 else None,directory,
+                      chunk_name(ref['sha256']),load=False,fast=True,**kwargs)
+            missing.discard(ref['sha256'])
+
+
 def payload_reference(data):
     return data['metadata_payload']
 
@@ -38,7 +110,7 @@ def read_payload(directory, decision, rank=0):
     with path.open() as stream: data=json.load(stream)
     data['metadata_payload']=ref
     if decision_record(data) != decision: raise OSError('Checkpoint payload/decision mismatch')
-    return data
+    return expand_payload(directory,data,rank)
 
 
 def exchange_payload(transport,data,directory,*,disk_budget=None,budget=None,cache=None):
@@ -48,15 +120,28 @@ def exchange_payload(transport,data,directory,*,disk_budget=None,budget=None,cac
     The transfer buffer is a managed lease, never a whole serialized manifest.
     Each owner fsyncs its copy before the coordinator publishes COMMIT.
     """
+    if transport.rank == 0: data={key:value for key,value in data.items() if key != 'metadata_payload'}
+    name=transport.broadcast_json(f"payload-{data['snapshot_id']}.json" if transport.rank == 0 else None)
+    # A format-2 payload holds references only and is small; older payloads stream token by token.
+    fast=transport.broadcast_json(data.get('payload_format')==2 or any(k.endswith('_chunks') for k in data)
+                                  if transport.rank == 0 else None)
+    data,header=_exchange(transport,data,directory,name,fast=fast,disk_budget=disk_budget,budget=budget,cache=cache)
+    data['metadata_payload']=header
+    return data
+
+
+def _exchange(transport,data,directory,name,*,load=True,fast=False,disk_budget=None,budget=None,cache=None):
+    """Stream one JSON value from rank 0 to ``rank-NNNN/manifests/<name>`` on every rank (write-once)."""
     rank=transport.rank
     limit=max(1,min(transport.tile_bytes,transport.metadata_limit//4))
     header=None; error=None
     if rank == 0:
         try:
-            data={key:value for key,value in data.items() if key != 'metadata_payload'}
             digest=sha256(); count=0
-            for chunk in encoded_chunks(data,limit): digest.update(chunk); count+=len(chunk)
-            header={'name':f"payload-{data['snapshot_id']}.json",'bytes':count,'sha256':digest.hexdigest()}
+            raw=_encoded(data) if fast else None
+            for chunk in ((raw[i:i+limit] for i in range(0,len(raw),limit)) if fast else encoded_chunks(data,limit)):
+                digest.update(chunk); count+=len(chunk)
+            header={'name':name,'bytes':count,'sha256':digest.hexdigest()}
         except Exception as exc: error=str(exc)
     transport.vote(error)
     header=transport.broadcast_json(header)
@@ -81,7 +166,8 @@ def exchange_payload(transport,data,directory,*,disk_budget=None,budget=None,cac
     except Exception as exc: error=str(exc)
     try:
         transport.vote(error)
-        iterator=iter(encoded_chunks(data,limit)) if rank == 0 else None
+        iterator=(iter([raw[i:i+limit] for i in range(0,len(raw),limit)]) if fast else iter(encoded_chunks(data,limit))) \
+            if rank == 0 else None
         digest=sha256(); count=0
         while True:
             chunk=next(iterator,None) if rank == 0 else None
@@ -110,15 +196,28 @@ def exchange_payload(transport,data,directory,*,disk_budget=None,budget=None,cac
             except Exception as exc: error=str(exc)
         transport.vote(error)
         error=None
-        if rank != 0:
+        if rank != 0 and load:
             try:
                 with path.open() as source: data=json.load(source)
             except Exception as exc: error=str(exc)
         transport.vote(error)
-        data['metadata_payload']=header
-        return data
+        return data,header
     finally:
         if stream is not None: stream.close()
         if lease is not None: lease.close()
         temporary.unlink(missing_ok=True)
         if disk_budget is not None and key is not None: disk_budget.release(key)
+
+
+def distribute_payload(transport,data,directory,*,chunked,expand=True,chunk_cache=None,sources=None,**kwargs):
+    """Rank 0's checkpoint data to every rank's payload file, returned expanded on every rank.
+
+    ``chunked`` (format 2) sends only missing write-once chunks plus a payload of
+    references; otherwise (format 1, older checkpoints) the whole payload is streamed.
+    """
+    if not chunked:return exchange_payload(transport,data,directory,**kwargs)
+    compacted,chunks=compact_payload(data,chunk_cache,sources) if transport.rank == 0 else (None,None)
+    refs=[ref for key in CHUNKED_KEYS for ref in compacted[key+'_chunks']] if transport.rank == 0 else None
+    exchange_chunks(transport,refs,chunks,directory,**kwargs)
+    payload=exchange_payload(transport,compacted,directory,**kwargs)
+    return expand_payload(directory,payload,transport.rank) if expand else payload
