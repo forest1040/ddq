@@ -3,7 +3,7 @@
 A catalog row that publishes an extent must never reference segment bytes that a power loss could still
 drop. The test-only ``LossyFile`` layer wraps the real transport, remembers the previous bytes of every write
 and restores them at a simulated power loss unless a ``flush`` (fsync) on that file followed the write. The
-SQLite catalog itself is real and durable (synchronous=FULL). A negative control disables the pre-publication
+SQLite catalog itself is real and durable (synchronous=EXTRA). A negative control disables the pre-publication
 segment fsync and must lose published bytes, so the layer is shown to be sensitive.
 """
 import mmap

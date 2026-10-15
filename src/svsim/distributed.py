@@ -601,7 +601,7 @@ class DistributedSimulator:
         with batch(): yield
         last=getattr(db,'last_batch',None)
         if last is not None:
-            self._record_stage('catalog-commit',{'durability':'synchronous-full','journal':'delete',
+            self._record_stage('catalog-commit',{'durability':'synchronous-extra','journal':'delete',
                 'absorbed_commit_class':min(last['absorbed'],64).bit_length(),
                 'catalog_scale_class':max(0,last['main_bytes']).bit_length()},seconds=last['commit_seconds'])
 

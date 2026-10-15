@@ -39,7 +39,7 @@ def test_catalog_commit_frame_resolve_and_checkpoint_stages_are_recorded_as_chil
         commits = by_stage['catalog-commit']
         assert all(r['parent_id'] and r['parent_id'].endswith(':children') for r in commits)  # inside a gate/epoch group
         assert all(r['validated'] and r['evidence'] == 'measured' and r['protocol_seconds'] >= 0 for r in commits)
-        assert all(r['condition']['durability'] == 'synchronous-full' for r in commits)
+        assert all(r['condition']['durability'] == 'synchronous-extra' for r in commits)
         if 'frame-resolve' in by_stage:
             assert all(r['condition']['frame'] in {'clifford', 'phase-only'} for r in by_stage['frame-resolve'])
         groups = {r['event_id'] for r in rows if r['stage'] in {'executor-gate', 'executor-group', 'executor-epoch'}}
