@@ -4,7 +4,8 @@ import json
 import pytest
 
 from svsim.journal import canonical
-from svsim.phase4_evaluation import Campaign, CaseManifest, Trial, Variant, paired_order
+from svsim.phase4_evaluation import (Campaign, CaseManifest, ComparisonMatrix, MatrixEntry,
+                                     Trial, Variant, paired_order)
 
 
 def case(**overrides):
@@ -224,3 +225,74 @@ def test_small_sample_and_zero_crossing_are_unconfirmed():
     assert comparison["claim"] == "unconfirmed"
     assert "small sample; interval is diagnostic" in comparison["diagnostics"]
     assert "interval crosses zero" in comparison["diagnostics"]
+
+
+def test_matrix_lists_all_unregistered_mandatory_groups_and_large_transport_slots():
+    report = ComparisonMatrix().compare(bootstrap_samples=100)
+    assert not report["complete"]
+    assert report["required_groups"] == ["layout/compiler", "physical swap", "execution", "control",
+                                         "batch/cache", "gradient", "lifecycle", "transport"]
+    assert {(row["group"], row["slot"]) for row in report["remaining"]} >= {
+        ("execution", "large-state"), ("transport", "cross-host-linux")}
+    assert all(row["status"] == "unmeasured" for row in report["remaining"])
+
+
+def test_matrix_rejects_duplicate_slots_and_case_identity():
+    campaign = Campaign(case(), variants())
+    entry = MatrixEntry("layout/compiler", "representative", campaign)
+    with pytest.raises(ValueError, match="duplicate mandatory matrix slot"):
+        ComparisonMatrix((entry, entry))
+    other_group = MatrixEntry("physical swap", "representative", campaign)
+    with pytest.raises(ValueError, match="duplicate matrix case identity"):
+        ComparisonMatrix((entry, other_group))
+
+
+def test_matrix_does_not_promote_small_samples_or_failed_numerics():
+    manifest = case(trials=2)
+    campaign = Campaign(manifest, variants(), (
+        measured("base", 0, 1, manifest=manifest), measured("candidate", 0, .9, manifest=manifest)))
+    result = ComparisonMatrix((MatrixEntry("layout/compiler", "representative", campaign),)).compare(
+        bootstrap_samples=100)
+    slot = result["groups"][0]["slots"][0]
+    assert slot["status"] == "insufficient-sample" and not slot["qualifies"]
+    assert {row["status"] for row in slot["variant_statuses"]} == {"insufficient-sample"}
+
+    manifest = case(trials=7)
+    bad = measured("base", 0, 1, valid=False, manifest=manifest)
+    failed = Campaign(manifest, variants(), (bad,))
+    result = ComparisonMatrix((MatrixEntry("layout/compiler", "representative", failed),)).compare(
+        bootstrap_samples=100)
+    slot = result["groups"][0]["slots"][0]
+    assert slot["status"] == "failed" and not slot["qualifies"]
+    assert slot["variant_statuses"][0]["trials"][0]["validation_errors"] == ["validator-failed"]
+
+
+def test_matrix_keeps_unsupported_and_budget_rows_and_checks_special_slot_identity():
+    manifest = case(trials=7)
+    unsupported = Campaign(manifest, variants(), (
+        Trial("base", 0, "unsupported", reason="no route"),
+        Trial("candidate", 0, "insufficient-budget", reason="preflight")))
+    result = ComparisonMatrix((MatrixEntry("control", "representative", unsupported),)).compare(
+        bootstrap_samples=100)
+    statuses = {row["variant_id"]: row["status"] for row in result["groups"][3]["slots"][0]["variant_statuses"]}
+    assert statuses == {"base": "unsupported", "candidate": "insufficient-budget"}
+
+    with pytest.raises(ValueError, match="does not exceed"):
+        MatrixEntry("execution", "large-state", Campaign(
+            case(resources={"ram_per_rank_bytes": 4096}), variants()))
+    huge = case(n=10**9, b=1, ranks=1, resources={"ram_per_rank_bytes": 1})
+    assert MatrixEntry("execution", "large-state", Campaign(huge, variants())).slot == "large-state"
+    with pytest.raises(ValueError, match="host_count=1"):
+        MatrixEntry("transport", "same-host", Campaign(case(), variants()))
+    with pytest.raises(ValueError, match="multiple hosts and Linux"):
+        MatrixEntry("transport", "cross-host-linux", Campaign(case(
+            resources={"host_count": 2}, build={"platform": "Darwin"}), variants()))
+
+
+def test_campaign_rejects_raw_case_identity_mismatch_before_matrix_scoring():
+    manifest = case()
+    raw = {"case_manifest_hash": "f" * 64, "variant_id": "base", "trial_index": 0,
+           "scope": "primary-e2e"}
+    trial = Trial.completed("base", 0, 1, raw, rank_wall_seconds=(1, 1))
+    with pytest.raises(ValueError, match="identity"):
+        Campaign(manifest, variants(), (trial,))

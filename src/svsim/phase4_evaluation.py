@@ -20,6 +20,17 @@ MAX_TRIALS = 100
 MAX_REPORT_BYTES = 4 * 1024 * 1024
 MAX_TREE_BYTES = 256 * 1024
 MAX_RAW_BYTES = 16 * 1024
+MAX_MATRIX_ENTRIES = 32
+MANDATORY_MATRIX_SLOTS = {
+    "layout/compiler": ("representative",),
+    "physical swap": ("representative",),
+    "execution": ("representative", "large-state"),
+    "control": ("representative",),
+    "batch/cache": ("representative",),
+    "gradient": ("representative",),
+    "lifecycle": ("representative",),
+    "transport": ("same-host", "cross-host-linux"),
+}
 _IDENTITY_FIELDS = ("source", "initial_state", "binding", "exact_witness", "observable",
                     "endpoint", "n", "b", "ranks", "resources", "backend", "build",
                     "seed", "tolerances", "warmups", "trials", "budget_seconds")
@@ -483,3 +494,128 @@ class ComparisonReport:
         if len(data.encode()) > MAX_REPORT_BYTES:
             raise ValueError("comparison report exceeds size limit")
         return data
+
+
+@dataclass(frozen=True)
+class MatrixEntry:
+    """One preregistered, bounded case in the final Phase 4 matrix."""
+    group: str
+    slot: str
+    campaign: Campaign
+
+    def __post_init__(self):
+        if self.group not in MANDATORY_MATRIX_SLOTS:
+            raise ValueError("unknown mandatory matrix group")
+        if self.slot not in MANDATORY_MATRIX_SLOTS[self.group]:
+            raise ValueError("unknown matrix slot for group")
+        if not isinstance(self.campaign, Campaign):
+            raise TypeError("campaign must be Campaign")
+        resources = self.campaign.case.resources
+        if self.slot == "large-state":
+            budget = resources.get("ram_per_rank_bytes")
+            if type(budget) is not int or budget < 1:
+                raise ValueError("large-state slot requires ram_per_rank_bytes")
+            # ceil(16 * 2**n / ranks) > budget iff 2**(n+4) > budget*ranks.
+            # Compare bit lengths so a hostile manifest cannot trigger a giant shift.
+            if self.campaign.case.n + 4 < (budget * self.campaign.case.ranks).bit_length():
+                raise ValueError("large-state slot does not exceed the declared per-rank managed budget")
+        elif self.slot == "same-host":
+            if resources.get("host_count") != 1:
+                raise ValueError("same-host slot requires host_count=1")
+        elif self.slot == "cross-host-linux":
+            platform_name = str(self.campaign.case.build.get("platform", "")).lower()
+            if resources.get("host_count", 0) < 2 or "linux" not in platform_name:
+                raise ValueError("cross-host-linux slot requires multiple hosts and Linux build platform")
+
+
+@dataclass(frozen=True)
+class ComparisonMatrix:
+    """Cross-group completion report; no extrapolation between matrix slots."""
+    entries: tuple[MatrixEntry, ...] = ()
+
+    def __post_init__(self):
+        entries = tuple(self.entries)
+        if len(entries) > MAX_MATRIX_ENTRIES:
+            raise ValueError("matrix exceeds 32 registered cases")
+        seen_slots = set()
+        seen_cases = set()
+        for entry in entries:
+            if not isinstance(entry, MatrixEntry):
+                raise TypeError("matrix entries must be MatrixEntry")
+            key = (entry.group, entry.slot)
+            if key in seen_slots:
+                raise ValueError("duplicate mandatory matrix slot")
+            seen_slots.add(key)
+            case_id = entry.campaign.case.case_id
+            if case_id in seen_cases:
+                raise ValueError("duplicate matrix case identity")
+            seen_cases.add(case_id)
+        object.__setattr__(self, "entries", entries)
+
+    @staticmethod
+    def _entry_summary(entry: MatrixEntry, *, bootstrap_samples: int) -> dict:
+        report = entry.campaign.compare(bootstrap_samples=bootstrap_samples).to_dict()
+        rows = report["rows"]
+        for row in rows:
+            # Campaign's compatible row status describes the recorded trial
+            # statuses; the matrix also makes an omitted planned trial visible.
+            if row["status"] == "completed" and row["statuses"].get("unmeasured", 0):
+                row["status"] = "insufficient-sample"
+        all_rows_complete = all(row["status"] == "completed" for row in rows)
+        counts = [row["statuses"]["completed"] - row["statuses"]["validation_failed"] for row in rows]
+        qualifies = all_rows_complete and min(counts, default=0) >= 7 and entry.campaign.case.trials >= 7
+        statuses = {status: sum(row["statuses"].get(status, 0) for row in rows) for status in sorted(STATUSES)}
+        statuses["validation_failed"] = sum(row["statuses"].get("validation_failed", 0) for row in rows)
+        if qualifies:
+            status = "completed"
+        elif statuses["failed"] or statuses["validation_failed"]:
+            status = "failed"
+        elif statuses["insufficient-budget"]:
+            status = "insufficient-budget"
+        elif statuses["unsupported"]:
+            status = "unsupported"
+        elif statuses["completed"]:
+            status = "insufficient-sample"
+        else:
+            status = "unmeasured"
+        return {"group": entry.group, "slot": entry.slot, "case_id": report["case_id"],
+                "manifest_hash": report["manifest_hash"], "status": status,
+                "qualifies": qualifies, "variant_statuses": rows,
+                "comparisons": report["comparisons"], "statuses": statuses}
+
+    def compare(self, *, bootstrap_samples: int = 2000) -> dict:
+        if type(bootstrap_samples) is not int or not 100 <= bootstrap_samples <= 10000:
+            raise ValueError("bootstrap_samples must be between 100 and 10000")
+        evaluated = {(entry.group, entry.slot): self._entry_summary(entry, bootstrap_samples=bootstrap_samples)
+                     for entry in self.entries}
+        groups = []
+        for group, slots in MANDATORY_MATRIX_SLOTS.items():
+            slot_rows = []
+            for slot in slots:
+                row = evaluated.get((group, slot))
+                if row is None:
+                    row = {"group": group, "slot": slot, "case_id": None,
+                           "status": "unmeasured", "qualifies": False}
+                slot_rows.append(row)
+            complete = all(row["qualifies"] for row in slot_rows)
+            status = "completed" if complete else next(
+                (row["status"] for row in slot_rows if row["status"] == "failed"),
+                next((row["status"] for row in slot_rows if not row["qualifies"]), "completed"))
+            groups.append({"group": group, "status": status, "complete": complete, "slots": slot_rows})
+        missing = [{"group": row["group"], "slot": slot["slot"], "status": slot["status"]}
+                   for row in groups for slot in row["slots"] if not slot["qualifies"]]
+        result = {"schema_version": 1, "kind": "phase4-comparison-matrix",
+                  "required_groups": list(MANDATORY_MATRIX_SLOTS),
+                  "required_slots": {key: list(value) for key, value in MANDATORY_MATRIX_SLOTS.items()},
+                  "complete": not missing, "groups": groups, "remaining": missing,
+                  "registered_cases": len(self.entries), "extrapolation": "none",
+                  "predictive_interval": False}
+        if len(canonical(result).encode("utf-8")) > MAX_REPORT_BYTES:
+            raise ValueError("comparison matrix report exceeds size limit")
+        return result
+
+    def to_json(self, *, bootstrap_samples: int = 2000) -> str:
+        result = canonical(self.compare(bootstrap_samples=bootstrap_samples))
+        if len(result.encode("utf-8")) > MAX_REPORT_BYTES:
+            raise ValueError("comparison matrix report exceeds size limit")
+        return result
