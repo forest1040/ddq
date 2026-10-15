@@ -16,11 +16,17 @@ class Snapshot:
     tail: tuple = ()
     in_flight: tuple = ()
     context: dict | None = None
+    endpoint_tasks: tuple = ()
+    in_flight_covered: bool = False
+    future: tuple = ()
+    future_complete: bool = False
+    future_reasons: tuple = ()
 
 
-def task(name, count=1, deps=(), resource="cpu", key=None):
+def task(name, count=1, deps=(), resource="cpu", key=None, *, payload=None, kernel=None):
     return CountedTask(name, {"op": name}, {}, count, tuple(deps), resource,
-                       cost_key=key or name)
+                       cost_key=key or name, payload_bytes_per_unit=payload,
+                       kernel_work_per_unit=kernel)
 
 
 def sample(mean, lower=None, upper=None):
@@ -50,6 +56,8 @@ def test_dag_lower_bound_and_serial_expected_upper_match_oracle():
     assert report.upper_seconds == 16
     assert report.coverage == 1
     assert report.eligible_for_control is False
+    assert report.critical_chain_coverage.coverage == 1
+    assert report.critical_chain_coverage.total_work == 6
 
 
 def test_large_count_is_weighted_without_expansion():
@@ -163,3 +171,90 @@ def test_huge_count_coverage_is_finite():
                                    {"a": sample(0)})
     assert report.coverage == 1
     assert report.total_work_count == huge
+
+
+def test_metric_coverage_uses_count_weights_and_never_converts_count_to_bytes():
+    snapshot = Snapshot(window=(
+        task("known", 2, payload=100, kernel=10),
+        task("missing-cost", 3, payload=50, kernel=5),
+        task("zero", 9, payload=0, kernel=0),
+    ))
+    report = RuntimeETA().evaluate(snapshot, {"known": sample(1), "zero": sample(0)})
+    assert report.expected_seconds is None
+    assert report.coverage == 11 / 14
+    assert report.payload_byte_coverage.unit == "bytes"
+    assert report.payload_byte_coverage.known_work == 200
+    assert report.payload_byte_coverage.total_work == 350
+    assert report.payload_byte_coverage.coverage == pytest.approx(200 / 350)
+    assert report.kernel_work_coverage.known_work == 20
+    assert report.kernel_work_coverage.total_work == 35
+    assert report.kernel_work_coverage.coverage == pytest.approx(20 / 35)
+    assert report.critical_chain_coverage.coverage is None
+    assert "UNKNOWN_DURATION_CANDIDATE:missing-cost" in report.critical_chain_coverage.unknown_reasons
+    assert report.eligible_for_control is False
+
+
+def test_unestimated_and_zero_byte_work_are_distinct():
+    known_zero = task("known-zero", payload=0, kernel=0)
+    priced = RuntimeETA().evaluate(Snapshot(window=(known_zero,)), {"known-zero": sample(1)})
+    assert priced.payload_byte_coverage.known_work == 0
+    assert priced.payload_byte_coverage.total_work == 0
+    assert priced.payload_byte_coverage.coverage == 1.0
+    assert priced.payload_byte_coverage.unknown_reasons == ()
+
+    unknown = task("unknown-payload", kernel=0)
+    report = RuntimeETA().evaluate(Snapshot(window=(known_zero, unknown)),
+                                   {"known-zero": sample(1), "unknown-payload": sample(1)})
+    assert report.payload_byte_coverage.known_work == 0
+    assert report.payload_byte_coverage.total_work is None
+    assert report.payload_byte_coverage.coverage is None
+    assert "UNESTIMATED_PAYLOAD_BYTES:unknown-payload" in report.payload_byte_coverage.unknown_reasons
+    assert report.kernel_work_coverage.coverage == 1.0
+
+
+def test_critical_chain_coverage_uses_dependency_and_resource_bound_oracle():
+    tasks = (
+        task("root", payload=1, kernel=1, resource="main"),
+        task("io", deps=("root",), payload=1, kernel=1, resource="io"),
+        task("compute", count=2, deps=("io",), payload=1, kernel=1, resource="compute"),
+        task("side", deps=("root",), payload=1, kernel=1, resource="main"),
+    )
+    report = RuntimeETA().evaluate(Snapshot(window=tasks), {
+        "root": sample(1, 1, 1), "io": sample(2, 2, 2),
+        "compute": sample(3, 3, 3), "side": sample(1, 1, 1),
+    })
+    # root->io->two compute units is 9s; shared main resource is only 2s.
+    assert report.lower_seconds == 9
+    chain = report.critical_chain_coverage
+    assert chain.unit == "seconds" and chain.total_work == 9
+    assert chain.coverage == 1.0
+
+
+def test_covered_and_uncovered_inflight_work_do_not_inflate_metric_coverage():
+    residual = task("residual", payload=100, kernel=20)
+    covered = Snapshot(window=(residual,), in_flight=(InFlightWork("r", "mpi"),),
+                       in_flight_covered=True)
+    priced = RuntimeETA().evaluate(covered, {"residual": sample(1)})
+    assert priced.total_work_count == 1
+    assert priced.payload_byte_coverage.total_work == 100
+    assert priced.payload_byte_coverage.coverage == 1.0
+
+    uncovered = RuntimeETA().evaluate(Snapshot(window=(task("known", payload=100, kernel=20),),
+        in_flight=(InFlightWork("r", "mpi"),)), {"known": sample(1)})
+    assert uncovered.coverage == .5
+    assert uncovered.payload_byte_coverage.coverage is None
+    assert "UNMEASURED_INFLIGHT_WORK" in uncovered.payload_byte_coverage.unknown_reasons
+    assert "UNKNOWN_DURATION_CANDIDATE:in-flight" in uncovered.critical_chain_coverage.unknown_reasons
+
+
+def test_counted_future_weight_is_multiplied_and_endpoint_unknown_is_preserved():
+    endpoint = CountedTask("endpoint", {"operation": "checkpoint-commit"}, {}, 1,
+                           payload_bytes_per_unit=None, kernel_work_per_unit=None)
+    snapshot = Snapshot(window=(task("future", 7, payload=25, kernel=4),),
+                       endpoint_tasks=(endpoint,))
+    # The lightweight snapshot used by the oracle exposes the same endpoint tuple
+    # that RemainingWorkExtractor places on real runtime snapshots.
+    priced = RuntimeETA().evaluate(snapshot, {"future": sample(1), "endpoint": sample(1)})
+    assert priced.payload_byte_coverage.known_work == 175
+    assert priced.payload_byte_coverage.total_work is None
+    assert "UNESTIMATED_PAYLOAD_BYTES:endpoint" in priced.payload_byte_coverage.unknown_reasons

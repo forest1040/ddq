@@ -27,6 +27,20 @@ class CountedTask:
     source_ids: tuple[int, ...] = ()
     cost_key: str = ""
     unknown_reasons: tuple[str, ...] = ()
+    payload_bytes_per_unit: int | None = None
+    kernel_work_per_unit: int | None = None
+
+
+@dataclass(frozen=True)
+class WorkCoverage:
+    """Coverage of priced work in a named unit; unknown denominators stay null."""
+    metric: str
+    unit: str
+    scope: str
+    known_work: int | float | None
+    total_work: int | float | None
+    coverage: float | None
+    unknown_reasons: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -52,6 +66,9 @@ class RuntimeETAReport:
     partial_lower_seconds: float | None = None
     partial_expected_seconds: float | None = None
     partial_upper_seconds: float | None = None
+    payload_byte_coverage: WorkCoverage | None = None
+    kernel_work_coverage: WorkCoverage | None = None
+    critical_chain_coverage: WorkCoverage | None = None
 
 
 class RuntimeETA:
@@ -109,20 +126,92 @@ class RuntimeETA:
         if total == 0:
             # Empty, complete snapshots are an exact quiescent state.
             if not unknown:
+                coverage_rows = self._coverage_reports(snapshot, tasks, sample_map, complete=True)
                 return RuntimeETAReport(0, 0, 0, 1.0, "complete", snapshot.snapshot_id,
-                                        0, 0, (), False, 0, 0, 0)
+                                        0, 0, (), False, 0, 0, 0, *coverage_rows)
 
         partial = self._bounds(tasks, sample_map)
         if partial[0] is None:
             unknown.append("ARITHMETIC_OVERFLOW")
         coverage = self._coverage(known_count, total) if total else (1.0 if not unknown else 0.0)
         reasons = tuple(dict.fromkeys(unknown))
+        coverage_rows = self._coverage_reports(snapshot, tasks, sample_map,
+                                               complete=not reasons and (exact or snapshot.complete))
         if reasons:
             return RuntimeETAReport(None, None, None, coverage,
                                     reasons[0], snapshot.snapshot_id,
-                                    known_count, total, reasons, False, *partial)
+                                    known_count, total, reasons, False, *partial, *coverage_rows)
         return RuntimeETAReport(*partial, coverage, "serial-upper-bound-unverified-overlap",
-                                snapshot.snapshot_id, known_count, total, (), False, *partial)
+                                snapshot.snapshot_id, known_count, total, (), False, *partial,
+                                *coverage_rows)
+
+    def _coverage_reports(self, snapshot, tasks, samples, *, complete):
+        flights = tuple(work for work in getattr(snapshot, "in_flight", ()) if not work.completed)
+        covered = bool(getattr(snapshot, "in_flight_covered", False))
+        snapshot_reasons = list(getattr(snapshot, "unknown_reasons", ()))
+        exact_future = getattr(snapshot, "future_complete", False) and not getattr(snapshot, "future_reasons", ())
+        if not (exact_future or getattr(snapshot, "complete", False)):
+            snapshot_reasons.append("INCOMPLETE_SCAN")
+        if getattr(snapshot, "stale", False):
+            snapshot_reasons.append("STALE_SNAPSHOT")
+        snapshot_reasons.extend(getattr(snapshot, "future_reasons", ()))
+        omitted_work = bool(flights and not covered)
+        payload = self._weighted_coverage(
+            tasks, samples, "payload_bytes_per_unit", metric="payload-bytes", unit="bytes",
+            scope="explicit transfer payload only", snapshot_reasons=snapshot_reasons,
+            omitted_work=omitted_work)
+        kernel = self._weighted_coverage(
+            tasks, samples, "kernel_work_per_unit", metric="kernel-work", unit="explicit kernel work units",
+            scope="explicit runtime kernel work only", snapshot_reasons=snapshot_reasons,
+            omitted_work=omitted_work)
+        chain = self._critical_chain_coverage(tasks, samples, snapshot_reasons,
+                                              complete=complete, omitted_work=omitted_work)
+        return payload, kernel, chain
+
+    @classmethod
+    def _weighted_coverage(cls, tasks, samples, field, *, metric, unit, scope,
+                           snapshot_reasons=(), omitted_work=False):
+        known_work = 0
+        total_work = 0
+        reasons = list(snapshot_reasons)
+        for task in tasks:
+            if task.count == 0:
+                continue
+            weight = getattr(task, field)
+            if weight is None:
+                reasons.append(f"UNESTIMATED_{metric.upper().replace('-', '_')}:{task.task_id}")
+                continue
+            weighted = weight * task.count
+            total_work += weighted
+            if task.task_id in samples:
+                known_work += weighted
+        if omitted_work:
+            reasons.append("UNMEASURED_INFLIGHT_WORK")
+        reasons = tuple(dict.fromkeys(reasons))
+        if reasons:
+            return WorkCoverage(metric, unit, scope, known_work, None, None, reasons)
+        ratio = cls._coverage(known_work, total_work) if total_work else 1.0
+        return WorkCoverage(metric, unit, scope, known_work, total_work, ratio, ())
+
+    @classmethod
+    def _critical_chain_coverage(cls, tasks, samples, snapshot_reasons, *, complete, omitted_work):
+        known_lower_bound = cls._bounds(tasks, samples)[0]
+        reasons = list(snapshot_reasons)
+        reasons.extend("UNKNOWN_DURATION_CANDIDATE:" + task.task_id for task in tasks
+                        if task.count and task.task_id not in samples)
+        if omitted_work:
+            reasons.append("UNKNOWN_DURATION_CANDIDATE:in-flight")
+        if not complete:
+            reasons.append("CRITICAL_CHAIN_INCOMPLETE_SNAPSHOT")
+        if known_lower_bound is None:
+            reasons.append("CRITICAL_CHAIN_ARITHMETIC_OVERFLOW")
+        reasons = tuple(dict.fromkeys(reasons))
+        if reasons:
+            return WorkCoverage("critical-chain", "seconds",
+                                "dependency/resource lower-bound DAG", known_lower_bound,
+                                None, None, reasons)
+        return WorkCoverage("critical-chain", "seconds", "dependency/resource lower-bound DAG",
+                            known_lower_bound, known_lower_bound, 1.0, ())
 
     @staticmethod
     def _lookup(cost_view, task):
@@ -157,6 +246,10 @@ class RuntimeETA:
                 raise ValueError("Invalid task resource")
             if not isinstance(task.units, str) or not task.units:
                 raise ValueError("Invalid task units")
+            for name in ("payload_bytes_per_unit", "kernel_work_per_unit"):
+                value = getattr(task, name)
+                if value is not None and (type(value) is not int or value < 0):
+                    raise ValueError("Invalid task coverage weight: " + name)
         for task in tasks:
             if any(dep not in ids for dep in task.dependencies):
                 raise ValueError("Missing dependency")

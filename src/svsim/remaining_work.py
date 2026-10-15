@@ -228,9 +228,17 @@ def cost_context(sim):
     return context
 
 
-def task(task_id,condition,context,*,count=1,dependencies=(),resource='main',kind='executor',source_ids=(),unknown=()):
+def task(task_id,condition,context,*,count=1,dependencies=(),resource='main',kind='executor',source_ids=(),unknown=(),
+         payload_bytes_per_unit=None,kernel_work_per_unit=None):
+    # Only explicit route/stage metadata may populate these weights. Gate count,
+    # state size, and rank-local shard size are not transfer payload or kernel work.
+    if payload_bytes_per_unit is None:
+        payload_bytes_per_unit=condition.get('payload_bytes')
+    if kernel_work_per_unit is None:
+        kernel_work_per_unit=condition.get('kernel_work_units')
     return CountedTask(task_id,condition,context,count,dependencies,resource,'groups',kind,
-                       source_ids,content_hash({'context':context,'condition':condition}),unknown)
+                       source_ids,content_hash({'context':context,'condition':condition}),unknown,
+                       payload_bytes_per_unit,kernel_work_per_unit)
 
 
 class RemainingWorkExtractor:

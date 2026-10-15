@@ -7,7 +7,7 @@ import pytest
 MPI = pytest.importorskip("mpi4py.MPI")
 
 from svsim import AsyncDistributedSimulator, AsyncPolicy, DistributedConfig
-from svsim.remaining_work import CaptureLimits, RemainingWorkExtractor, future_shape_reasons
+from svsim.remaining_work import CaptureLimits, RemainingWorkExtractor, future_shape_reasons, task as make_task
 from svsim.runtime_cost import CostSample
 from svsim.runtime_eta import CountedTask, RuntimeETA
 from svsim.journal import canonical, content_hash
@@ -43,6 +43,38 @@ def test_capture_bounds_window_scan_groups_and_metadata(tmp_path):
         assert not snapshot.complete
         assert len(snapshot.tail) <= 2  # one class plus an overflow summary
         assert snapshot.metadata_bytes <= 65536
+
+
+def test_runtime_snapshot_emits_unestimated_byte_and_kernel_coverage_reasons(tmp_path):
+    with make_sim(tmp_path / "coverage-input", lookahead=4) as sim:
+        append_circuit(sim, 8)
+        snapshot = RemainingWorkExtractor().capture(sim)
+        tasks = snapshot.window + snapshot.tail + snapshot.future
+        assert tasks
+        assert all(task.payload_bytes_per_unit is None for task in tasks)
+        assert all(task.kernel_work_per_unit is None for task in tasks)
+        report = RuntimeETA().evaluate(snapshot, {})
+        assert report.expected_seconds is None
+        assert report.payload_byte_coverage.coverage is None
+        assert report.kernel_work_coverage.coverage is None
+        assert any(reason.startswith("UNESTIMATED_PAYLOAD_BYTES:")
+                   for reason in report.payload_byte_coverage.unknown_reasons)
+        assert any(reason.startswith("UNESTIMATED_KERNEL_WORK:")
+                   for reason in report.kernel_work_coverage.unknown_reasons)
+        assert report.eligible_for_control is False
+
+
+def test_runtime_task_accepts_only_explicit_exact_work_metadata():
+    condition = {"operation": "mpi-transfer", "payload_bytes": 4096,
+                 "kernel_work_units": 12}
+    entry = make_task("transfer", condition, {}, count=3)
+    assert entry.payload_bytes_per_unit == 4096
+    assert entry.kernel_work_per_unit == 12
+    assert entry.payload_bytes_per_unit * entry.count == 12288
+
+    coarse = make_task("coarse", {"n": 40, "ranks": 8, "gate_count": 100}, {})
+    assert coarse.payload_bytes_per_unit is None
+    assert coarse.kernel_work_per_unit is None
 
 
 def test_s2_group_preserves_each_source_id_once(tmp_path):
