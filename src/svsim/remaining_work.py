@@ -188,48 +188,135 @@ def checkpoint_condition(sim):
     return {'operation':'checkpoint-commit','payload_format':2,**shape,**_endpoint_base(sim)}
 
 
-def materialize_prepare_condition(sim, *, pending_sources=None):
-    """Bounded identity for the API prelude, excluding all gate/epoch work.
+# Same default source scan ceiling as the bounded capture. Oversized endpoint
+# identities are unproved tasks, never a shared learnable estimate.
+ENDPOINT_ITEMS=CaptureLimits().scan_items
+ENDPOINT_IDENTITY_BUDGET='ENDPOINT_IDENTITY_BUDGET'
 
-    Explicit endpoints run after the requested gates, so their task requests
-    pending_sources=0. Entry samples with actual pending gates stay separate.
-    Hash the endpoint conditions: update_eta inside this prelude depends on
-    that spec, including the checkpoint payload shape, not just its label.
-    """
-    spec=getattr(sim.runtime,'_eta_endpoint_spec',{})
-    signature={}
-    if spec.get('expectation') is not None:
-        signature['expectation']=expectation_condition(sim,spec['expectation'])
-    if spec.get('gradient') is not None:
-        g=spec['gradient'];parameters=g.get('parameters')
-        if parameters is None:parameters=sorted(set().union(*(op.dependencies for op in sim.sequencer.operations)))
-        signature['gradient']=gradient_condition(sim,g['observable'],parameters,g.get('method','auto'))
-    if spec.get('checkpoint'):
-        signature['checkpoint']=checkpoint_condition(sim)
-    return {'operation':'materialize-prepare','source_entries':len(sim.sequencer.operations),
+
+class _EndpointBudget(Exception):pass
+
+
+def _bounded_sequence(value,limit=ENDPOINT_ITEMS):
+    if type(value) not in (list,tuple) or len(value)>limit:raise _EndpointBudget()
+    return value
+
+
+def _bounded_text(value):
+    if type(value) is not str or len(value)>128:raise _EndpointBudget()
+    return value
+
+
+def _bounded_observable(value):
+    from .observables import ObservableIR,PauliTerm
+    if isinstance(value,ObservableIR):groups=(value.terms,)
+    else:
+        items=_bounded_sequence(value)
+        if items and isinstance(items[0],ObservableIR):
+            groups=tuple(o.terms for o in items if isinstance(o,ObservableIR))
+            if len(groups)!=len(items):raise _EndpointBudget()
+        else:groups=(items,)
+    count=0
+    for terms in groups:
+        count+=len(_bounded_sequence(terms))
+        if count>ENDPOINT_ITEMS:raise _EndpointBudget()
+        for term in terms:
+            if not isinstance(term,PauliTerm):raise _EndpointBudget()
+            if any(type(mask) is not int or mask.bit_length()>256 for mask in (term.x_mask,term.z_mask)):
+                raise _EndpointBudget()
+    return value
+
+
+def _bounded_source_parameters(sim):
+    # Check length before iteration or circuit_hash, including explicit params.
+    operations=sim.sequencer.operations
+    if len(operations)>ENDPOINT_ITEMS:raise _EndpointBudget()
+    operations=_bounded_sequence(operations)
+    from .ir import GateOp
+    from .parameters import Expr,ParameterSymbol,ExactPi
+    dependencies=set();nodes=0;fields=0
+    for op in operations:
+        if not isinstance(op,GateOp):raise _EndpointBudget()
+        _bounded_text(op.kind)
+        if op.matrix_asset_ref is not None:_bounded_text(op.matrix_asset_ref)
+        for name in ('targets','controls','control_values','paulis'):
+            values=_bounded_sequence(getattr(op,name));fields+=len(values)
+            if fields>4096:raise _EndpointBudget()
+            for value in values:
+                if type(value) is str:_bounded_text(value)
+                elif type(value) is not int or value.bit_length()>128:raise _EndpointBudget()
+        pending=[] if op.angle is None else [(op.angle,0)]
+        while pending:
+            expr,depth=pending.pop();nodes+=1
+            if nodes>1024 or depth>32 or not isinstance(expr,Expr):raise _EndpointBudget()
+            args=_bounded_sequence(expr.args)
+            if expr.op=='symbol':
+                if len(args)!=1 or not isinstance(args[0],ParameterSymbol):raise _EndpointBudget()
+                _bounded_text(args[0].name);dependencies.add(_bounded_text(args[0].parameter_id))
+                if len(dependencies)>ENDPOINT_ITEMS:raise _EndpointBudget()
+            elif expr.op in ('const','pi'):
+                for value in args:
+                    if type(value) is int and value.bit_length()<=128:continue
+                    if type(value) is float:continue
+                    if isinstance(value,ExactPi) and max(value.numerator.bit_length(),value.denominator.bit_length())<=128:continue
+                    raise _EndpointBudget()
+            else:
+                _bounded_text(expr.op)
+                if len(pending)+len(args)>1024:raise _EndpointBudget()
+                pending.extend((child,depth+1) for child in args)
+    return sorted(dependencies)
+
+
+def _endpoint_conditions(sim,spec):
+    conditions={};reasons={}
+    for key in ('expectation','gradient'):
+        value=spec.get(key)
+        if value is None:continue
+        try:
+            if key=='expectation':condition=expectation_condition(sim,_bounded_observable(value))
+            else:
+                if type(value) is not dict:raise _EndpointBudget()
+                parameters=_bounded_source_parameters(sim)
+                supplied=value.get('parameters')
+                if supplied is not None:parameters=[_bounded_text(p) for p in _bounded_sequence(supplied)]
+                method=_bounded_text(value.get('method','auto'))
+                condition=gradient_condition(sim,_bounded_observable(value['observable']),parameters,method)
+            conditions[key]=condition
+        except _EndpointBudget:
+            reason=ENDPOINT_IDENTITY_BUDGET+':'+key
+            conditions[key]={'operation':key,'identity_status':'unproven','eta_unknown_reasons':(reason,)}
+            reasons[key]=(reason,)
+    if spec.get('checkpoint'):conditions['checkpoint']=checkpoint_condition(sim)
+    return conditions,tuple(reason for values in reasons.values() for reason in values)
+
+
+def _prepare_condition(sim,signature,reasons,*,pending_sources):
+    condition={'operation':'materialize-prepare','source_entries':len(sim.sequencer.operations),
             'pending_sources':max(0,len(sim.sequencer.operations)-1-sim.frontier) if pending_sources is None else pending_sources,
             'endpoint_spec':content_hash(signature),
             'gradient_origin_ready':getattr(sim,'_gradient_origin',None) is not None,**_endpoint_base(sim)}
+    if reasons:condition['eta_unknown_reasons']=reasons
+    return condition
+
+
+def materialize_prepare_condition(sim, *, pending_sources=None):
+    """Bounded API prelude identity; oversized specs cannot be certified."""
+    signature,reasons=_endpoint_conditions(sim,getattr(sim.runtime,'_eta_endpoint_spec',{}))
+    return _prepare_condition(sim,signature,reasons,pending_sources=pending_sources)
 
 
 def endpoint_tasks(sim,spec,context):
-    """Counted endpoint tasks for an ``RuntimeControl.set_eta_endpoint`` spec, and the endpoint label."""
-    tasks=[];labels=['gates']
-    if spec.get('expectation') is not None:
-        tasks.append(task('endpoint:expectation:prepare',materialize_prepare_condition(sim,pending_sources=0),context,kind='endpoint'))
-        tasks.append(task('endpoint:expectation',expectation_condition(sim,spec['expectation']),context,kind='endpoint'))
-        labels.append('expectation')
-    if spec.get('gradient') is not None:
-        g=spec['gradient']
-        parameters=g.get('parameters')
-        if parameters is None:parameters=sorted(set().union(*(op.dependencies for op in sim.sequencer.operations)))
-        tasks.append(task('endpoint:gradient:prepare',materialize_prepare_condition(sim,pending_sources=0),context,kind='endpoint'))
-        tasks.append(task('endpoint:gradient',gradient_condition(sim,g['observable'],parameters,g.get('method','auto')),
-                          context,kind='endpoint'))
-        labels.append('gradient')
-    if spec.get('checkpoint'):
-        tasks.append(task('endpoint:checkpoint',checkpoint_condition(sim),context,kind='endpoint'))
-        labels.append('checkpoint')
+    """Count endpoints once; unproved bounded identities keep total ETA unknown."""
+    tasks=[];labels=['gates'];conditions,reasons=_endpoint_conditions(sim,spec)
+    prepare=_prepare_condition(sim,conditions,reasons,pending_sources=0)
+    for key in ('expectation','gradient','checkpoint'):
+        if key not in conditions:continue
+        if key!='checkpoint':
+            tasks.append(task('endpoint:'+key+':prepare',prepare,context,kind='endpoint',unknown=reasons))
+        condition=conditions[key]
+        tasks.append(task('endpoint:'+key,condition,context,kind='endpoint',
+                          unknown=condition.get('eta_unknown_reasons',())))
+        labels.append(key)
     return tuple(tasks),'+'.join(labels) if tasks else 'gates-only'
 
 
