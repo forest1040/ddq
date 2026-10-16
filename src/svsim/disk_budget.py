@@ -272,8 +272,9 @@ class DiskBudget:
             if only is None or ledger != only/'metadata'/'disk-ledger.sqlite3':
                 raise DiskAdmissionError('A store-private ledger must be <store>/metadata/disk-ledger.sqlite3 of exactly one store root')
         self._ledger_path = ledger
-        if not recovery_only:ledger.parent.mkdir(parents=True, exist_ok=True)
-        if ledger.parent.stat().st_dev not in devices:
+        from .bootstrap_preflight import ancestor
+        ledger_ancestor=ancestor(ledger.parent)
+        if ledger_ancestor.stat().st_dev not in devices:
             raise ValueError('Disk ledger must be on the budgeted volume')
         self._path_lock = _path_lock(ledger)
         self._registry_key = str(ledger)
@@ -309,6 +310,8 @@ class DiskBudget:
                 raise DiskAdmissionError('Ledger bootstrap exceeds host/device disk quota')
             if self._free() - self._unallocated_metadata_pool() - drain_reserve_bytes < min_free_bytes:
                 raise DiskAdmissionError('Ledger bootstrap violates minimum free space')
+        # Namespace creation follows capability, volume and complete pool admission.
+        ledger.parent.mkdir(parents=True,exist_ok=True)
         self.db = self._open_ledger()
         try:
             # Every live writer budget holds a shared flock on the ledger's

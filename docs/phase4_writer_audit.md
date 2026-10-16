@@ -6,8 +6,8 @@
 
 | writer / 主なcallsite | admissionと公開境界 | owner停止後の回収と証跡 |
 |---|---|---|
-| `DiskBudget` ledger / metadata pool | 本番では有限metadata bootstrap poolとVFS main/side-file capを使う。quota/min-free/drain、root inventory、pendingを同transactionで検査。SQLiteはDELETE/EXTRA、WAL/disk-temp等を拒否。 | exclusive ledger lease、policy/schema/identity検証、exact CASとbounded receipt。pool preflight前のparent mkdirは下記bootstrap監査の修正対象。 |
-| `VolumeCoordinator` ledger / claims / external markers | 独立ledger・明示external claimを集約、有限metadata poolとVFS、DELETE/EXTRA。external growth超過はfail closed。 | claim generation・directory leaseとinventoryで回収。export inventoryのcoordinatorへの伝播は親担当の別修正。coordinator parent mkdirの順序はbootstrap対象。 |
+| `DiskBudget` ledger / metadata pool | 本番では有限metadata bootstrap poolとVFS main/side-file capを使う。quota/min-free/drain、root inventory、pendingを同transactionで検査。SQLiteはDELETE/EXTRA、WAL/disk-temp等を拒否。 | exclusive ledger lease、policy/schema/identity検証、exact CASとbounded receipt。ancestor/volume/capability/pool preflightの後にparent mkdirする。 |
+| `VolumeCoordinator` ledger / claims / external markers | 独立ledger・明示external claimを集約、有限metadata poolとVFS、DELETE/EXTRA。external growth超過はfail closed。 | claim generation・directory leaseとinventoryで回収。export inventoryのcoordinatorへの伝播は親担当の別修正。新規coordinatorのpool/FS preflightはparent mkdir/SQLite openより先に行う。 |
 | `CatalogConnection` / Phase2 catalog / resident metadata | SQL open・transaction・backupの前に`catalog-transaction`、allocatorやversion公開も同envelope。main/journal VFS、byte/page bound、DELETE/EXTRA。 | inode/birth付きcatalog owner、full-store inspection、rollback後のattribution証明。catalog初回create intentはstartup担当の別修正。実SQL/VFS/kill試験は[関連資料](phase4_writer_durability_implementation.md)とtestsを参照。 |
 | 同期 `FileBlockStore.write_version` | allocator SQL・segment create/writeの前に`amplitude-extent` slot全体を予約。fileと新segment directoryをfsyncしてからcatalog versionを公開。 | orphanもobserved usageに残す。停止後の全store inventory・published extent closureを検査しpendingを一度だけ精算。segment自体はVFS外で、software slot bound。 |
 | `AsyncStoreIO` / `TileExtentWriter` / RAM spill | enqueue・allocatorより前にslot予約。tileは重複/全被覆/checksumを検証。buffer pinは完了まで保持。RAM spillは同期writerへ委譲。 | partial extent、completion前kill、version公開前後の既存kill matrix。resident amplitudeが残りsourceを証明できない場合は回収拒否。 |
@@ -37,7 +37,7 @@
 | benchmark/campaign/calibration scratch、pretrial sync probe | storage測定そのもののwrite。runtimeのcost認証やexplicit benchmark budgetとは区別する。未管理のscratchを管理済みと主張しない。 |
 | development runner / PBS scriptとmetadata | local job/log/report出力。job wall/output制限はdisk ledgerの代用ではない。 |
 | native VFS extension build | compilerが一時directoryへlibraryを生成する。runtime catalogに対するVFS admissionとは別のhost build artifactである。 |
-| `FileBlockStore` / `DistributedSimulator` / `DiskBudget` / `VolumeCoordinator`の最初のroot/subdir mkdir | ledgerが存在しない最初のnamespaceについて、祖先volume上でquota/min-free/drain/metadata poolをmkdirより前にpreflightし、generation付きstagingとbind/publicationを組み合わせる別修正を継続する。namespace probeだけで鶏卵問題を隠さない。 |
+| `FileBlockStore` / `DistributedSimulator` / `DiskBudget` / `VolumeCoordinator`の最初のroot/subdir mkdir | [bootstrap preflight](phase4_bootstrap_namespace_implementation.md)で祖先volume上のquota/min-free/drain/metadata pool/FS capabilityをmkdir前に検査する。既存外部budgetがあるstoreはstore-open tokenも使う。private coordinator/policy統合と最初のledger以前のkill証跡を続けて確認する。namespace probeだけで鶏卵問題を隠さない。 |
 
 ## 検証
 

@@ -1,0 +1,13 @@
+# P4-009：最初のnamespaceより前のbootstrap preflight
+
+2026-10-16。通常のtokenを永続化するledger自体がまだ存在しない時点は、有限metadata poolのread-only preflightから始める。これはfree spaceの観測であり、filesystem metadata全体や非協調writerを強制するphysical予約ではない。通常ledgerが成立した後は、永続token/VFSと既存inventoryへ引き継ぐ。
+
+- `DiskBudget`はledger parentのmkdirを、ancestor volume、native guard capability、bounded poolのquota/min-free/drain検査より後へ移した。quota拒否前に空の`.disk-admission`等を作らない。既存ledgerのrecovery-onlyはnamespaceを作らない。
+- 新規`VolumeCoordinator`はmetadata poolのquota/min-free/drainをparent mkdirとSQLite openより前に検査する。filesystem capabilityも既存ancestor上で判定し、unsupported filesystemでparentを残さない。
+- 新規`DistributedSimulator` rootは、ledger pool（coordinatorを新たに必要とする場合はそのpoolも）をroot mkdirより前にpreflightする。
+- 既存外部budgetを受け取る`FileBlockStore`は`store-open` namespace tokenをroot/subdir mkdirより前に取り、初期catalog openまで保持する。登録root外へ書き始めることも拒否する。tokenはnamespace classとしてowner停止・全store inventory後に精算する。
+- 自前budgetを作るstoreも、最初のrootを作る前にmetadata poolのfree-space preflightを行う。private coordinator/policyのbootstrapは同担当の変更と続けて統合する。
+
+ledgerが存在する経路では実SIGKILLを`store-open`予約直後、root mkdir直後、state subdir mkdir直後へ置き、purpose付きtoken保持、残ったnamespaceの保存、dry-run→apply→冪等を確認した。ledger/pool/coordinator/distributed/storeの容量・capability拒否では、対象parent/rootが存在しないままであることを確認した。新規11件、既存ledger/coordinator/stored回帰59件が成功した。
+
+最初のledger以前のkillは、まだ振幅やauthoritative catalog cutを公開していないbootstrapの中断である。空directoryのfilesystem metadataをlogical byte accountingで1 byteと偽って課金しない。いったん作られたregular fileは次回の既存root inventoryと固定metadata poolへ課金し、未知のpartial DBやpolicy/identity不一致を自動的に初期化し直さない。generation stagingやcoordinator claimのpath移転を、単にscope外のtempへ書く形で導入してはいない。既存のfinal pathとledger bindingを維持し、最初の明示拒否がnamespace変更に先行するよう順序を直した。

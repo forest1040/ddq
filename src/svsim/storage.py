@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from hashlib import sha256
 import json
+from contextlib import nullcontext
 import os
 from pathlib import Path
 import shutil
@@ -94,16 +95,26 @@ class FileBlockStore:
         self.transport_factory = transport_factory
         self._pending_extents = {}
         self._dirty_segments, self._synced_segments = set(), set()
-        if create:
-            self.directory.mkdir(parents=True,exist_ok=True)
-            if (self.directory/'metadata/catalog.sqlite3').exists(): raise FileExistsError('Storage directory already contains a state')
-        elif not (self.directory/'metadata/catalog.sqlite3').is_file(): raise FileNotFoundError('Missing state catalog')
-        self._directory_lease = DirectoryLease(self.directory)
-        try:
-            self._open_store(config, num_qubits, create, disk_budget)
-        except BaseException:
-            self._cleanup_failed_open()
-            raise
+        from .bootstrap_preflight import preflight
+        if disk_budget is None:
+            preflight(self.directory,pool_bytes=8*1024**2)
+        if disk_budget is not None and hasattr(disk_budget,'db'):
+            roots=[Path(p) for p, in disk_budget.db.execute('SELECT path FROM roots')]
+            if not any(self.directory.resolve().is_relative_to(root) for root in roots):
+                from .disk_budget import DiskAdmissionError
+                raise DiskAdmissionError('Store bootstrap must stay inside registered roots')
+        context=(disk_budget.allocation(1,operation='store-open') if disk_budget is not None else nullcontext())
+        with context:
+            if create:
+                self.directory.mkdir(parents=True,exist_ok=True)
+                if (self.directory/'metadata/catalog.sqlite3').exists(): raise FileExistsError('Storage directory already contains a state')
+            elif not (self.directory/'metadata/catalog.sqlite3').is_file(): raise FileNotFoundError('Missing state catalog')
+            self._directory_lease = DirectoryLease(self.directory)
+            try:
+                self._open_store(config, num_qubits, create, disk_budget)
+            except BaseException:
+                self._cleanup_failed_open()
+                raise
 
     def _open_store(self, config, num_qubits, create, disk_budget):
         for sub in ('state','metadata','assets','journal','traces','manifests'): (self.directory/sub).mkdir(exist_ok=True)

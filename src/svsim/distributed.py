@@ -118,6 +118,11 @@ class DistributedSimulator:
             self.environment = self.transport.handshake()
             self.block_bits = config.block_bits
             self.directory = Path(config.directory)
+            if not self.directory.exists():
+                from .bootstrap_preflight import preflight
+                preflight(self.directory,pool_bytes=8*1024**2+(1024**2 if config.volume_coordinator else 0),
+                          quota_bytes=config.disk_quota_bytes,min_free_bytes=config.min_free_bytes,
+                          drain_reserve_bytes=config.drain_reserve_bytes)
             self.directory.mkdir(parents=True,exist_ok=True)
             self._lease_dataset_roots([self.directory])
             if config.storage_scope=='node-local':

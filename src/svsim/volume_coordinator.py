@@ -163,13 +163,18 @@ class VolumeCoordinator:
         self.quota_bytes, self.min_free_bytes = quota_bytes, min_free_bytes
         self.drain_reserve_bytes, self.bootstrap_bytes = drain_reserve_bytes, bootstrap_bytes
         path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self.path = path.parent.resolve(strict=True) / path.name
+        if not path.exists():
+            from .bootstrap_preflight import preflight
+            preflight(path.parent,pool_bytes=bootstrap_bytes,quota_bytes=quota_bytes,
+                      min_free_bytes=min_free_bytes,drain_reserve_bytes=drain_reserve_bytes)
+        from .bootstrap_preflight import ancestor
+        existing_ancestor=ancestor(path.parent)
+        self.path = path.parent.resolve() / path.name
         self.host = host if host is not None else socket.gethostname()
         self._lock = _path_lock(self.path)
         self._probe = filesystem_probe
-        self.volume_device = self.path.parent.stat().st_dev
-        self.filesystem = self._probe(self.path.parent)
+        self.volume_device = existing_ancestor.stat().st_dev
+        self.filesystem = self._probe(existing_ancestor)
         if self.filesystem not in _LOCAL_FILESYSTEMS:
             raise DiskAdmissionError(f'Unsupported filesystem for volume coordination: {self.filesystem!r} '
                                      '(only node-local filesystems; shared or unknown layouts are refused)')
@@ -181,6 +186,7 @@ class VolumeCoordinator:
         self.max_page_count = pages
         self._main_cap, self._side_cap = pages * 4096, bootstrap_bytes - pages * 4096
         self._closed = False
+        self.path.parent.mkdir(parents=True,exist_ok=True)
         self.db = self._guard.connect(self.path, main_cap_bytes=self._main_cap, side_cap_bytes=self._side_cap)
         self.db.isolation_level = None
         try:
