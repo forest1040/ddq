@@ -77,6 +77,81 @@ def test_two_independent_ledgers_share_the_volume_budget(tmp_path):
         a.close(), b.close(), coord.close()
 
 
+def test_bootstrap_pre_admission_refuses_before_namespace_creation(tmp_path):
+    coord = coordinator(tmp_path)
+    a, b = ledger(tmp_path, 'a', coord), ledger(tmp_path, 'b', coord)
+    future = tmp_path / 'future'
+    try:
+        key = a.reserve(ROOM)
+        with pytest.raises(DiskAdmissionError, match='Volume coordinator quota'):
+            coord.pre_admit_ledger(future / 'metadata/ledger.sqlite3', metadata_bytes=LEDGER_POOL, roots=[future])
+        assert not future.exists()
+        assert coord.db.execute('SELECT count(*) FROM ledgers').fetchone()[0] == 2
+        assert not coord.db.execute('SELECT 1 FROM roots WHERE path=?', (str(future),)).fetchone()
+        a.release(key)
+    finally:
+        a.close(), b.close(), coord.close()
+
+
+def test_bootstrap_retry_preserves_live_pending_epoch_and_pool(tmp_path):
+    coord = coordinator(tmp_path)
+    future = tmp_path / 'future'
+    path = future / 'ledger.sqlite3'
+    budget = None
+    try:
+        coord.pre_admit_ledger(path, metadata_bytes=LEDGER_POOL, roots=[future])
+        first = coord.claim(path)
+        coord.pre_admit_ledger(path, metadata_bytes=LEDGER_POOL, roots=[future])
+        assert coord.claim(path) == first
+        assert not future.exists()
+        future.mkdir()
+        budget = DiskBudget(path, [future], bootstrap_bytes=LEDGER_POOL, volume_coordinator=coord)
+        key = budget.reserve(ROOM)
+        live = coord.claim(path)
+        coord.pre_admit_ledger(path, metadata_bytes=LEDGER_POOL, roots=[future])
+        assert coord.claim(path) == live
+        with pytest.raises(DiskAdmissionError, match='pool mismatch'):
+            coord.pre_admit_ledger(path, metadata_bytes=2 * LEDGER_POOL, roots=[future])
+        assert coord.claim(path) == live
+        budget.release(key)
+    finally:
+        if budget is not None: budget.close()
+        coord.close()
+
+
+def test_bootstrap_death_keeps_prospective_inventory_charged(tmp_path):
+    coord = coordinator(tmp_path)
+    future = tmp_path / 'future'
+    path = future / 'ledger.sqlite3'
+    code = '''
+import os,signal,sys
+from pathlib import Path
+from svsim.volume_coordinator import VolumeCoordinator
+root=Path(sys.argv[1]);coord=VolumeCoordinator.open_bound(sys.argv[2])
+coord.pre_admit_ledger(root/'ledger.sqlite3',metadata_bytes=int(sys.argv[3]),roots=[root])
+root.mkdir();(root/'orphan.bin').write_bytes(b'x'*10000)
+os.kill(os.getpid(),signal.SIGKILL)
+'''
+    budget = None
+    try:
+        result = subprocess.run([sys.executable, '-c', code, str(future), str(coord.path), str(LEDGER_POOL)],
+                                env=ENV, capture_output=True, timeout=30)
+        assert result.returncode == -signal.SIGKILL, result.stderr.decode()
+        assert coord.claim(path)['pending'] == 0
+        # Retry joins the same charged pool; orphan bytes remain real inventory.
+        coord.pre_admit_ledger(path, metadata_bytes=LEDGER_POOL, roots=[future])
+        budget = DiskBudget(path, [future], bootstrap_bytes=LEDGER_POOL, volume_coordinator=coord)
+        available = QUOTA - COORD_POOL - LEDGER_POOL - 10_000
+        key = budget.reserve(available)
+        with pytest.raises(DiskAdmissionError, match='Volume coordinator quota'):
+            budget.reserve(1)
+        assert (future / 'orphan.bin').read_bytes() == b'x' * 10_000
+        budget.release(key)
+    finally:
+        if budget is not None: budget.close()
+        coord.close()
+
+
 def test_materialized_bytes_are_not_double_charged_across_ledgers(tmp_path):
     coord = coordinator(tmp_path)
     a, b = ledger(tmp_path, 'a', coord), ledger(tmp_path, 'b', coord)

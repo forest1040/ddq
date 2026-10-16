@@ -391,19 +391,47 @@ class VolumeCoordinator:
         self.db.executemany('INSERT INTO roots VALUES(?)', [(str(p),) for p in selected])
 
     # -- ledger participation (called by DiskBudget inside its ledger transaction) ------------
+    def _check_registration(self, ledger_path, roots):
+        known = self.db.execute('SELECT 1 FROM ledgers WHERE path=?', (ledger_path,)).fetchone()
+        if known is None and self.db.execute('SELECT count(*) FROM ledgers').fetchone()[0] >= MAX_LEDGERS:
+            raise DiskAdmissionError('Volume coordinator ledger limit exceeded')
+        for (external_root,) in self.db.execute('SELECT path FROM external_roots'):
+            if (Path(ledger_path).resolve().is_relative_to(external_root)
+                    or any(Path(r).resolve().is_relative_to(external_root)
+                           or Path(external_root).is_relative_to(Path(r).resolve()) for r in roots)):
+                raise DiskAdmissionError('Ledger root overlaps a monitored external root')
+
+    def pre_admit_ledger(self, ledger_path, *, metadata_bytes, roots):
+        """Durably charge a new ledger pool and prospective roots before mkdir.
+
+        A failed bootstrap retains this conservative claim and its inventory.
+        Retrying the same path does not charge the pool twice. Existing claims
+        keep their pending bytes and epoch; this is never a reconciliation API.
+        """
+        from .bootstrap_preflight import ancestor
+        _integer(metadata_bytes, 'ledger bootstrap bytes', minimum=8192)
+        ledger_path = str(Path(ledger_path).resolve())
+        roots = tuple(Path(root).resolve() for root in roots)
+        if not roots or len(roots) > MAX_ROOTS:
+            raise DiskAdmissionError('Bootstrap needs bounded managed roots')
+        if any(ancestor(path).stat().st_dev != self.volume_device for path in (Path(ledger_path).parent, *roots)):
+            raise DiskAdmissionError('Bootstrap ledger roots must stay on the coordinator volume')
+        with self._txn():
+            self._check_registration(ledger_path, roots)
+            row = self.db.execute('SELECT metadata_bytes FROM ledgers WHERE path=?', (ledger_path,)).fetchone()
+            if row is not None and row[0] != metadata_bytes:
+                raise DiskAdmissionError('Bootstrap ledger metadata pool mismatch')
+            self._merge_roots(roots)
+            if row is None:
+                self.db.execute('INSERT INTO ledgers VALUES(?,?,0,0)', (ledger_path, metadata_bytes))
+            self._volume_check()
+
     def register_ledger(self, ledger_path, *, metadata_bytes, roots, pending, epoch):
         """Authoritatively (re)publish a ledger's claim; the caller holds the ledger's write lock."""
         ledger_path = str(ledger_path)
         roots = tuple(roots)
         with self._txn():
-            known = self.db.execute('SELECT 1 FROM ledgers WHERE path=?', (ledger_path,)).fetchone()
-            if known is None and self.db.execute('SELECT count(*) FROM ledgers').fetchone()[0] >= MAX_LEDGERS:
-                raise DiskAdmissionError('Volume coordinator ledger limit exceeded')
-            for (external_root,) in self.db.execute('SELECT path FROM external_roots'):
-                if (Path(ledger_path).resolve().is_relative_to(external_root)
-                        or any(Path(r).resolve().is_relative_to(external_root)
-                               or Path(external_root).is_relative_to(Path(r).resolve()) for r in roots)):
-                    raise DiskAdmissionError('Ledger root overlaps a monitored external root')
+            self._check_registration(ledger_path, roots)
             self._merge_roots(roots)
             self.db.execute('''INSERT INTO ledgers(path,metadata_bytes,epoch,pending) VALUES(?,?,?,?)
                 ON CONFLICT(path) DO UPDATE SET metadata_bytes=excluded.metadata_bytes,

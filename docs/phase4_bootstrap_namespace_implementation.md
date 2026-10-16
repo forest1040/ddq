@@ -11,3 +11,18 @@
 ledgerが存在する経路では実SIGKILLを`store-open`予約直後、root mkdir直後、state subdir mkdir直後へ置き、purpose付きtoken保持、残ったnamespaceの保存、dry-run→apply→冪等を確認した。ledger/pool/coordinator/distributed/storeの容量・capability拒否では、対象parent/rootが存在しないままであることを確認した。新規11件、既存ledger/coordinator/stored回帰59件が成功した。
 
 最初のledger以前のkillは、まだ振幅やauthoritative catalog cutを公開していないbootstrapの中断である。空directoryのfilesystem metadataをlogical byte accountingで1 byteと偽って課金しない。いったん作られたregular fileは次回の既存root inventoryと固定metadata poolへ課金し、未知のpartial DBやpolicy/identity不一致を自動的に初期化し直さない。generation stagingやcoordinator claimのpath移転を、単にscope外のtempへ書く形で導入してはいない。既存のfinal pathとledger bindingを維持し、最初の明示拒否がnamespace変更に先行するよう順序を直した。
+
+### Volume全体のmkdir前admission
+
+`VolumeCoordinator.pre_admit_ledger`は、prospective managed rootsと新ledgerの
+固定metadata poolをmkdir前にcoordinatorへcommitする。既存claimへの再試行は
+metadata pool一致を検査し、pending/epochを変更しない。quota拒否ではclaim/root
+transaction全体をrollbackし、callerはnamespaceを作らない。processが直後に
+死亡してもclaimとprospective inventoryを保持し、同じpathのbootstrap retryは
+poolを二重に課金せず、残ったregular filesを引き続き数える。
+
+このAPIはoffline reconcile/取消APIではない。未成立ledgerのclaimをPIDや
+経過時間で解放しない。中断した初期化は同pathで再試行し、通常ledger成立後の
+明示offline処理へ引き継ぐ。directory自体の物理metadataを1 byteと見積もる
+hard guaranteeは主張しない。coordinator関連31 passedには、満杯時の変更前拒否、
+active pending/epochを保ったretry、実SIGKILL後のorphan byteとquota上限を含む。
