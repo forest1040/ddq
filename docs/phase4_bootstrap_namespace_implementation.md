@@ -6,7 +6,7 @@
 - 新規`VolumeCoordinator`はmetadata poolのquota/min-free/drainをparent mkdirとSQLite openより前に検査する。filesystem capabilityも既存ancestor上で判定し、unsupported filesystemでparentを残さない。
 - 新規`DistributedSimulator` rootは、ledger pool（coordinatorを新たに必要とする場合はそのpoolも）をroot mkdirより前にpreflightする。
 - 既存外部budgetを受け取る`FileBlockStore`は`store-open` namespace tokenをroot/subdir mkdirより前に取り、初期catalog openまで保持する。登録root外へ書き始めることも拒否する。tokenはnamespace classとしてowner停止・全store inventory後に精算する。
-- 自前budgetを作るstoreも、最初のrootを作る前にmetadata poolのfree-space preflightを行う。private coordinator/policyのbootstrapは同担当の変更と続けて統合する。
+- 自前budgetを作るstoreも、最初のrootを作る前にmetadata poolと既存managed regular filesを合わせたquota/min-free/drain preflightを行う。対象rootだけを有限inventoryし、無関係な祖先や兄弟datasetを走査しない。ledger本体とrollback journalは固定poolへ含めて二重課金を避ける。symlink/hardlink、volume越境、未対応artifact、観測不能、16,384 entry超過は拒否する。private coordinatorは同volume・exclusive regular file・保存policy一致をread-onlyで先に検証する。
 
 ledgerが存在する経路では実SIGKILLを`store-open`予約直後、root mkdir直後、state subdir mkdir直後へ置き、purpose付きtoken保持、残ったnamespaceの保存、dry-run→apply→冪等を確認した。ledger/pool/coordinator/distributed/storeの容量・capability拒否では、対象parent/rootが存在しないままであることを確認した。新規11件、既存ledger/coordinator/stored回帰59件が成功した。
 
@@ -26,3 +26,4 @@ poolを二重に課金せず、残ったregular filesを引き続き数える。
 明示offline処理へ引き継ぐ。directory自体の物理metadataを1 byteと見積もる
 hard guaranteeは主張しない。coordinator関連31 passedには、満杯時の変更前拒否、
 active pending/epochを保ったretry、実SIGKILL後のorphan byteとquota上限を含む。
+2026-10-16追補：既存payloadを残しmetadataだけ欠落したstoreでも、payload+poolがquotaを超える場合はmetadata mkdir前に拒否する。無関係な兄弟fileは課金しないこと、観測不能/alias/bound超過はnamespace不変で拒否することを追加確認した。private bootstrapの実SIGKILLをroot直後・state subdir直後・ledger成立直後（catalog未作成）へ置いた。再試行は既存ledger inodeを保持して初期化を完了し、未知partial ledgerはbyte不変で拒否する。最初の空directoryは振幅やcatalog cutの公開ではなく、physical directory metadataのhard保証は引き続き行わない。bootstrap試験23件成功、private coordination/recovery・ledgerを含む関連回帰89 passed, 1 skipped。既存coordinatorの他ledger pendingを含むglobal envelopeをroot mkdir前に確保する配線は別の継続commitで扱う。

@@ -37,7 +37,7 @@
 | benchmark/campaign/calibration scratch、pretrial sync probe | storage測定そのもののwrite。runtimeのcost認証やexplicit benchmark budgetとは区別する。未管理のscratchを管理済みと主張しない。 |
 | development runner / PBS scriptとmetadata | local job/log/report出力。job wall/output制限はdisk ledgerの代用ではない。 |
 | native VFS extension build | compilerが一時directoryへlibraryを生成する。runtime catalogに対するVFS admissionとは別のhost build artifactである。 |
-| `FileBlockStore` / `DistributedSimulator` / `DiskBudget` / `VolumeCoordinator`の最初のroot/subdir mkdir | [bootstrap preflight](phase4_bootstrap_namespace_implementation.md)で祖先volume上のquota/min-free/drain/metadata pool/FS capabilityをmkdir前に検査する。既存外部budgetがあるstoreはstore-open tokenも使う。private coordinator/policy統合と最初のledger以前のkill証跡を続けて確認する。namespace probeだけで鶏卵問題を隠さない。 |
+| `FileBlockStore` / `DistributedSimulator` / `DiskBudget` / `VolumeCoordinator`の最初のroot/subdir mkdir | [bootstrap preflight](phase4_bootstrap_namespace_implementation.md)で祖先volume上のquota/min-free/drain/metadata pool/FS capabilityをmkdir前に検査する。既存外部budgetがあるstoreはstore-open tokenも使う。private coordinator/policyと既存managed bytesをmkdir前に検査し、root/subdir/ledger成立直後の実killでretryと未知partial DB拒否を確認済み。既存coordinatorのglobal envelopeをroot前に確保する配線は継続中。namespace probeだけで鶏卵問題を隠さない。 |
 
 ## 検証
 
