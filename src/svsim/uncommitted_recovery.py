@@ -624,14 +624,49 @@ def _manifest_root_mentions(store, roots):
     """Roots named anywhere in the store's manifests (and the global decisions beside it)."""
     mentioned = set()
     for directory in (store / 'manifests', store.parent / 'global' / 'manifests', store / 'global' / 'manifests'):
-        if not directory.is_dir() or directory.is_symlink():
+        if directory.is_symlink() or directory.resolve()!=directory:
+            raise DiskAdmissionError('GC manifest directory is aliased')
+        if not directory.exists():
             continue
-        for file in sorted(directory.glob('*.json'))[:MAX_ENTRIES]:
+        if not directory.is_dir() or directory.stat().st_dev!=store.stat().st_dev:
+            raise DiskAdmissionError('GC manifest directory changed type or volume')
+        for index,file in enumerate(directory.glob('*.json')):
+            if index>=MAX_ENTRIES:
+                raise DiskAdmissionError('GC manifest inspection limit exceeded')
             info = file.lstat()
-            if not stat.S_ISREG(info.st_mode) or info.st_size > 16 * 1024 ** 2:
+            if (not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 or info.st_dev!=directory.stat().st_dev
+                    or info.st_size > 16 * 1024 ** 2):
                 raise DiskAdmissionError(f'Manifest {file} is not a bounded regular file')
-            mentioned.update(set(_ROOT_ID.findall(file.read_text(errors='replace'))) & roots)
+            from .checkpoint_recovery import _read_bytes
+            try:document=json.loads(_read_bytes(directory,file.name,16*1024**2))
+            except (ValueError,RecursionError) as exc:
+                raise DiskAdmissionError(f'Manifest {file} cannot prove a reference closure') from exc
+            pending=[document]
+            while pending:
+                value=pending.pop()
+                if isinstance(value,str):mentioned.update(set(_ROOT_ID.findall(value)) & roots)
+                elif isinstance(value,dict):pending.extend(value.keys());pending.extend(value.values())
+                elif isinstance(value,list):pending.extend(value)
     return mentioned
+
+
+def _segment_number(name):
+    match=re.fullmatch(r'segment-([0-9]+)\.bin',name)
+    if match is None:
+        raise DiskAdmissionError('GC segment name is malformed')
+    number=int(match[1])
+    if name!=f'segment-{number:06d}.bin':
+        raise DiskAdmissionError('GC segment name is not canonical')
+    return number
+
+
+def _assert_gc_segment(store,name,size,expected):
+    path=store/'state'/name;info=path.lstat()
+    if (not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 or info.st_size!=size or
+            (info.st_dev,info.st_ino,catalog_birth_identity(path,info))!=
+            (expected['device'],expected['inode'],expected['birth_identity'])):
+        raise UncommittedRecoveryRefused(f'Segment {name} changed after review')
+    return path
 
 
 def _plan_store_branches(store):
@@ -664,9 +699,15 @@ def _plan_store_branches(store):
         removable = [v for v in versions if v not in live_versions]
         kept_segments = {seg for v, seg in versions.items() if v in live_versions and seg is not None}
         sizes = {p.name: p.stat().st_size for p in (store / 'state').glob('segment-*.bin')} if (store / 'state').is_dir() else {}
-        removable_segments = sorted(name for name in sizes if int(name[8:14]) not in kept_segments)
+        removable_segments = sorted(name for name in sizes if _segment_number(name) not in kept_segments)
+        identities={}
+        for name in removable_segments:
+            path=store/'state'/name;info=path.lstat();birth=catalog_birth_identity(path,info)
+            if birth is None:raise DiskAdmissionError('GC segment birth identity is unavailable')
+            identities[name]={'device':info.st_dev,'inode':info.st_ino,'birth_identity':birth}
         return {'store': str(store), 'snapshots': snapshots, 'live_roots': len(live), 'dead_roots': dead,
                 'removable_versions': len(removable), 'removable_segments': [[n, sizes[n]] for n in removable_segments],
+                'segment_identities':identities,
                 'stale_active_runs': sorted(r for (r,) in con.execute('SELECT id FROM active_runs'))}
     finally:
         con.close()
@@ -836,6 +877,8 @@ def collect_dead_branches(ledger, *, apply=False, confirm_plan=None, policy=None
             db = CatalogConnection(store / 'metadata/catalog.sqlite3', budget_getter=lambda: scope['budget'],
                                    require_native=True)
             try:
+                for name,size in plan['removable_segments']:
+                    _assert_gc_segment(store,name,size,plan['segment_identities'][name])
                 with db:
                     db.execute('CREATE TEMP TABLE IF NOT EXISTS live_roots(root TEXT PRIMARY KEY)')
                     db.execute('DELETE FROM live_roots')
@@ -852,12 +895,9 @@ def collect_dead_branches(ledger, *, apply=False, confirm_plan=None, policy=None
             finally:
                 db.close()
             for name, size in plan['removable_segments']:
-                if int(name[8:14]) in survivors:
+                if _segment_number(name) in survivors:
                     raise UncommittedRecoveryRefused(f'Segment {name} gained a reference during GC', report)
-                path = store / 'state' / name
-                info = path.lstat()
-                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size != size:
-                    raise UncommittedRecoveryRefused(f'Segment {name} changed after review', report)
+                path=_assert_gc_segment(store,name,size,plan['segment_identities'][name])
                 path.unlink()
                 reclaimed += size
             if plan['removable_segments']:

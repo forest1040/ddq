@@ -34,6 +34,9 @@ CHILD = '''
     probe = StorageConfig(os.path.join(root, 'store'), 2, backend=os.environ.get('SVSIM_TEST_BACKEND', 'buffered'))
     config = StorageConfig(os.path.join(root, 'store'), 2, backend=os.environ.get('SVSIM_TEST_BACKEND', 'buffered'), segment_size_bytes=probe.slot_bytes)
     store = FileBlockStore(config, 4, disk_budget=budget)
+    if len(sys.argv)>2:
+        with store.db:
+            store.db.execute("UPDATE settings SET data=? WHERE key='allocator'",(json.dumps([int(sys.argv[2]),0]),))
     versions = []
     for _ in range(3):
         v = store.new_version(); store.write_version(v, __import__('mmap').mmap(-1, store.slot_bytes)); versions.append(v)
@@ -52,8 +55,8 @@ CHILD = '''
 ''' % QUOTA
 
 
-def build(tmp_path):
-    out = subprocess.run([sys.executable, '-c', textwrap.dedent(CHILD), tmp_path], cwd=ROOT, env=ENV,
+def build(tmp_path,first_segment=0):
+    out = subprocess.run([sys.executable, '-c', textwrap.dedent(CHILD), tmp_path,str(first_segment)], cwd=ROOT, env=ENV,
                          capture_output=True, text=True, timeout=120)
     assert out.returncode == 0, out.stderr
     return tmp_path / 'ledger/ledger.sqlite3', json.loads(out.stdout.strip().splitlines()[-1])
@@ -250,3 +253,85 @@ def test_reconcile_then_gc_compose_on_one_killed_dataset(tmp_path):
     collect_dead_branches(ledger, apply=True, confirm_plan=report['plan_sha256'])
     assert recover_uncommitted_reservations(ledger)['status'] == 'nothing-to-do'
     assert collect_dead_branches(ledger)['status'] == 'nothing-to-do'
+
+
+def test_branch_gc_keeps_live_segments_beyond_six_decimal_digits(tmp_path):
+    import mmap
+    import numpy as np
+    ledger,ids=build(tmp_path,first_segment=1000000)
+    live=tmp_path/'store/state/segment-1000000.bin'
+    expected=digest(live)
+    plan=collect_dead_branches(ledger)
+    assert [name for name,_ in plan['stores'][0]['removable_segments']]==[
+        'segment-1000001.bin','segment-1000002.bin']
+    collect_dead_branches(ledger,apply=True,confirm_plan=plan['plan_sha256'])
+    assert digest(live)==expected
+    assert sorted(p.name for p in live.parent.glob('segment-*.bin'))==['segment-1000000.bin']
+    budget=DiskBudget(ledger,[tmp_path/'store'],quota_bytes=QUOTA,shared_policy=True)
+    try:
+        store=FileBlockStore(StorageConfig(str(tmp_path/'store'),2,backend=BACKEND,segment_size_bytes=4096),
+                             4,create=False,disk_budget=budget)
+        view=store.view(ids['committed'],0)
+        assert store.ref(view.version_id).segment==1000000
+        buffer=mmap.mmap(-1,store.slot_bytes)
+        store.read_version(view.version_id,buffer)
+        np.testing.assert_array_equal(np.frombuffer(buffer[:store.payload_bytes],dtype=np.complex128),np.zeros(4))
+        buffer.close();store.close()
+    finally:budget.close()
+
+
+def test_gc_decodes_escaped_manifest_roots_before_liveness_decisions(tmp_path):
+    ledger,ids=build(tmp_path)
+    escaped=''.join('\\u%04x'%ord(c) for c in ids['child'])
+    (tmp_path/'store/manifests/reference.json').write_text('{"root":"'+escaped+'"}')
+    plan=collect_dead_branches(ledger)
+    assert plan['stores'][0]['dead_roots']==[ids['lone']]
+    collect_dead_branches(ledger,apply=True,confirm_plan=plan['plan_sha256'])
+    assert (tmp_path/'store/state/segment-000001.bin').exists()
+    assert catalog(tmp_path,'SELECT id FROM roots ORDER BY id')==[(r,) for r in sorted((ids['committed'],ids['child']))]
+
+
+def test_gc_refuses_incomplete_global_manifest_inspection_without_mutation(tmp_path,monkeypatch):
+    import svsim.uncommitted_recovery as module
+    from svsim.disk_budget import DiskAdmissionError
+    ledger,_=build(tmp_path)
+    initial=collect_dead_branches(ledger)
+    directory=tmp_path/'global/manifests';directory.mkdir(parents=True)
+    for i in range(65):(directory/f'{i:04d}.json').write_text('{}')
+    monkeypatch.setattr(module,'MAX_ENTRIES',64)
+    before=tree(tmp_path)
+    with pytest.raises(DiskAdmissionError,match='manifest inspection limit'):
+        collect_dead_branches(ledger,apply=True,confirm_plan=initial['plan_sha256'])
+    assert tree(tmp_path)==before
+
+
+@pytest.mark.parametrize('kind',['aliased-manifests','noncanonical-segment','invalid-manifest'])
+def test_gc_unknown_namespaces_never_delete_a_branch(tmp_path,kind):
+    from svsim.disk_budget import DiskAdmissionError
+    ledger,_=build(tmp_path)
+    if kind=='aliased-manifests':
+        external=tmp_path/'external';external.mkdir()
+        (tmp_path/'global').symlink_to(external,target_is_directory=True)
+        (external/'manifests').mkdir()
+    elif kind=='noncanonical-segment':
+        (tmp_path/'store/state/segment-0000000.bin').write_bytes(b'orphan')
+    else:(tmp_path/'store/manifests/invalid.json').write_text('{"root":')
+    before=tree(tmp_path)
+    with pytest.raises(DiskAdmissionError):collect_dead_branches(ledger)
+    assert tree(tmp_path)==before
+
+
+def test_gc_rechecks_segment_birth_before_catalog_deletion(tmp_path,monkeypatch):
+    import svsim.uncommitted_recovery as module
+    ledger,ids=build(tmp_path)
+    plan=collect_dead_branches(ledger);original=module.CatalogConnection
+    victim=tmp_path/'store/state/segment-000001.bin'
+    def replace_on_open(*args,**kwargs):
+        db=original(*args,**kwargs)
+        saved=victim.with_suffix('.saved');victim.rename(saved);victim.write_bytes(saved.read_bytes())
+        return db
+    monkeypatch.setattr(module,'CatalogConnection',replace_on_open)
+    with pytest.raises(UncommittedRecoveryRefused,match='changed after review'):
+        collect_dead_branches(ledger,apply=True,confirm_plan=plan['plan_sha256'])
+    assert catalog(tmp_path,'SELECT count(*) FROM roots')==[(3,)]
+    assert victim.exists() and (tmp_path/'store/state/segment-000002.bin').exists()
