@@ -2,6 +2,8 @@
 
 更新日：2026-10-16。現在の実装一覧である。2026-10-14の初回監査（`bb87551`）に書かれていた「export未予約」「payload回収なし」「catalog synchronous=FULL」は現状ではない。履歴はGitに残し、この表を過去の未修正一覧として読まない。以下の予約はmanaged disk ledgerによるsoft admissionであり、全filesystem metadataへのphysical quotaや非協調writerの強制ではない。`strict_capacity_guarantee=false`を維持する。
 
+元の009A〜Dとの対応、最新source別証跡、真の受入残りは[受入対応表](phase4_p4_009_acceptance_2026-10-16.md)を参照する。Mac高速1317 passだけでLinux最終差分／実別hostの合格を代用しない。
+
 ## managed runtimeのwriter
 
 | writer / 主なcallsite | admissionと公開境界 | owner停止後の回収と証跡 |
@@ -20,12 +22,16 @@
 | stored / distributed state export | [専用実装](phase4_state_export_admission_implementation.md)。明示output rootsもusageへ含め、stored file/全rank shard/manifestを予約。bounded streaming、file/dir fsync、atomic replace/whole-directory exchange、old-generation cleanup後に解除。 | `state-export*` purposeとbirth/identity/lease/generation intent。実SIGKILL 5段階、oracle、回収冪等性。別volume/cross-host未証明namespaceは変更前拒否。 |
 | stored snapshot migration | temp namespaceを`migration-open`で作成前からcleanupまで予約。temp catalogを`sim.store.directory`内に置き、rank rootしか登録していない構成でもinventoryから外さない。backup catalogとsegmentは各々上記の予約を使う。 | [source-bound intent/clone回収](phase4_migration_recovery_implementation.md)はsource snapshotと実payloadをstreamingで検証する。sourceにもexclusive leaseを要求し、cloneを通常storeとして誤認せず全physical closureを証明する。実backup途中killはadmitted hot-journal rollback後に精算する。 |
 | batch/fork/parameter-shift | 子datasetは親の明示ledger/coordinatorを継承し、root合算とpolicy一致を検査。stored prefixも明示注入budgetをconstructorへ保持し、自前privateは独立connection ownershipを維持。RAM shareとは別管理。 | 子closeでdurable bytesを勝手に消さず、引き続きinventoryへ課金。kill/独立dataset/Binding matrixは各既存tests。 |
+| offline temporary / branch GC | exclusive owner停止証明、全inventory/cutとplan digestを確認し、maintenance writerも同ledger/coordinatorを使用。segment番号は最小6桁formatの全桁を扱い、JSON escape後のmanifest参照も保護。 | 削除候補のdevice/inode/birthをcatalog変更前とunlink直前に再確認。上限超過・未知manifestは拒否。百万番台の実live extentがGC後もchecksum／数値一致する[回帰](phase4_gc_acceptance_audit_2026-10-16.md)。 |
+| standalone distributed shard reader | local private ledgerが無いだけでは履歴を作り直さない。catalogのpersisted shared locatorをread-onlyで読み、shared policy/root包含/volume/排他fileを検証して既存budget/coordinatorを継承。 | store leaseが同時offline回収を阻止。真のprivate欠落、別root/private ledger、policy衝突はnamespace変更前拒否。[reader回帰](phase4_standalone_shard_reader_2026-10-16.md)。 |
 
 ## namespaceと最初のadmission
 
 `trace-open`、`journal-open`、`migration-open`の1 byteは「明示的なlogical capacity拒否がmkdir/openより先に起きる」ためのprobeであり、directory entryやfilesystem metadataの実割当が1 byte以内という主張ではない。namespace tokenの回収ではartifactを削除せず、kernel exclusive leaseによるowner停止証明、全storeのcatalog/journal/extent/trace inventoryを要求する。不明なcatalog、resident amplitude、hot sidefile、symlink、未証明cutは従来どおり拒否する。
 
 `Journal.append`は、最初のrecordのcreditを得る前には既存partial tailも変更しない。明示rollbackは容量を増やさないreclaim操作であり、protected cursor・現在のfile長を検証する。rollbackで容量を増やすtruncateは許可しない。authorityはdurable snapshot/global decisionとcommitted journal cursorであり、traceやprobe tokenではない。
+
+managed budgetを受け取るatomic sidecar、Journal、trace、raw measurementは、予約やnamespace変更前にcanonical destinationが永続generic roots／明示export rootsへ含まれることも検査する。root外、parent symlink脱出、leaf symlink/hardlinkは拒否する。正規rootへ戻るparent alias表記とbudgetなしAPIは維持する。traceはopen後にbudgetが付いた場合も次record前に検査する。[閉包補修と無変更oracle](phase4_sidecar_inventory_audit_2026-10-16.md)を参照。
 
 ## toolingとbootstrapの継続監査
 
@@ -60,6 +66,6 @@
 | RAM payload / flush | node-local RAM storeへの交換は明示`disk_budget=self.disk_budget`。`MemoryBlockStore.flush_to_file`は`super().write_version`へ委譲し、同budgetのslot予約を通る。resident metadata SQLも同catalog VFS。 | `test_memory_store`のdurability/flush失敗/retry・immutable oracle。volatile residentがある状態のoffline recoveryは既存fail-closed契約を保持。 |
 | physical-layout migration | `apply_layout_migration`→既存simのphysical swap→既存cache/store writer→同budget checkpoint。Phase2 snapshot輸送のcloneも`FileBlockStore(...,disk_budget=sim.store.disk_budget)`。 | `test_layout_migration`のswap fault/old cut保持/実oracle、`test_distributed_checkpoint`とsource-bound migration kill matrix。性能campaignの再実行はこの機能監査には含めない。 |
 
-この監査の追加修正はstored prefixの明示budget継承に限定する。自前private ledgerの所有権を親子で共有してparent close時に子まで閉じる変更は行わない。standalone readerの互換修正とappend/sidecarのdestination閉包は別担当の受入試験で管理する。
+このruntime継承監査の追加修正はstored prefixの明示budget継承である。自前private ledgerの所有権を親子で共有してparent close時に子まで閉じる変更は行わない。standalone readerの互換修正とappend/sidecarのdestination閉包も統合済みであり、上表と専用資料の受入試験へ接続した。
 
 結合監査の検証結果：上記frame/prefix/replan/gradient/tile/RAM/layout/volume機能回帰108 passed（実MPI 1/2rank、decision前後の実process killを含む）、性能campaign1件は意図的に除外。追加inheritance試験は全5 passed（外部shared ledger prefix、private子所有権2条件、RAM flush/tile volume ledger各1件）。source-bound migration/checkpointの実kill・oracle回帰も16 passed。性能改善やbaseline認証の再実証としては扱わない。

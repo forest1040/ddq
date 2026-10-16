@@ -159,11 +159,9 @@ raw／resolved identityとbounded cost hintを追加した。validated・同unit
 
 ### P4-009：SQLite書込み前のdisk admission
 
-catalog open／transaction前の予約と同SQLite VFS、ledger pool、extent・journal・trace・assetへの接続を実装した。実子processの異常終了後に予約とpartial fileを保持し、明示回収の二重適用と既記録byteの減算を拒否する。checkpoint sidecarについては最新committed v4 cutに結び付けた限定的なoffline回収を追加した。2026-10-15に[disk faultマトリクス](phase4_disk_fault_matrix_implementation.md)でquota境界の1 byte／page掃引と実process kill matrix（catalog gate batch、ledger lease append、sidecar、SIGKILL連続commit）を追加した（Mac・Linux成功、実装バグなし）。2026-10-15に[未commit予約の回収とtemporary GC](phase4_uncommitted_recovery_implementation.md)（排他flockによるowner停止証明、dry run→plan digest付きapply、dead branch GC）を追加した。2026-10-15に実ENOSPC（tmpfs上でfillerが空きを消費、5 writer、拒否前／admission後の両方）、O_DIRECT下の全matrix（ent ext4）、2 rankのprepare／decision／decision-copy kill（実process、各5位置）を追加し、未commit snapshotのintent付きtokenがどの回収手順でも精算できないバグを修正した（[記録](phase4_disk_fault_matrix_implementation.md)）。同日、[segment write／fsync／公開のstage kill](phase4_disk_fault_matrix_implementation.md)（同期／非同期、buffered／O_DIRECT）と[store-private ledgerの回収](phase4_uncommitted_recovery_design.md#store-private-ledgerの回収)を追加した（Mac・Linux成功、実装バグなし）。残りは、別ledger／外部job／複数hostの調停と一括回収、extent公開とsegment fsyncの電源断時の順序（kill試験では検証できない）、SQLite fsync内部への決定的なstage注入、catalog tokenのfile単位の帰属、private ledgerのpolicy非永続による検査の弱さである。Linuxの一部機能検証は済んでいる。
+catalog／ledgerの同SQLite VFS、全runtime writerの事前予約、private policy/coordinator、catalog file帰属とstartup intent、payload/export/migrationの専用回収、GC、mkdir前bootstrap、DELETE/EXTRAとtest-only電源断模型まで実装した。[現行writer監査](phase4_writer_audit.md)と[009A〜Dの受入対応表](phase4_p4_009_acceptance_2026-10-16.md)を現在の状態とする。上の日付付き履歴の「未実装」は当時の残件であり、現行一覧ではない。
 
-- catalog／journalの成長をtransaction前に予約し、並行rankのdataset／host／device総予算に含める。
-- commit/rollback後の予約精算と、drain用余裕の保護、容量不足時の一貫した失敗を検証する。
-- 完了証跡：quota境界・並行書込み・rollback・異常終了後のreservationを含むfault試験。
+固定source `9eb426f`までのMac高速1317 passed／38 skipped／83 deselectedは[証跡](internal/phase4_wave3_validation/README.md)に保存した。残りは最終reader/fork/GC等を含むLinux buffered／O_DIRECT追加回帰、明示許可された実別hostジョブの結果、全writerと009A〜Dの最終照合。ジョブ投入だけでは受入成功としない。IN_PROGRESSと`strict_capacity_guarantee=false`を維持する。
 
 ### P4-010：native io_uringのLinux実機検証
 

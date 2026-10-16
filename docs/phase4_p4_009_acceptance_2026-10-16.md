@@ -1,0 +1,24 @@
+# P4-009 受入条件と現在の証拠（2026-10-16）
+
+状態は**IN_PROGRESS**。この表は[元の009A〜D](phase4_tasks/P4-009_disk_admission.md#受入実装単位)を変更せず、実装済みと環境別の未確認を分ける。過去の進捗記録にある「catalog file帰属、private policy/coordinator、payload/export回収、電源断模型が未実装」は現在の残件ではない。[writer監査](phase4_writer_audit.md)がcallsiteの対応表、本書が受入証拠への入口である。
+
+本番source `9eb426f`までのMac高速全体は**1317 passed / 38 skipped / 83 deselected**。後続のcampaign evaluatorだけのguardは5 passed。[統合ログとsource差分](internal/phase4_wave3_validation/README.md)に初期失敗も残す。このpass数はLinux最終sourceや実別hostの合格を代用しない。
+
+| 受入単位・元の条件 | 現在の実装と意味ある証拠 | 最終確認の残り |
+|---|---|---|
+| 009A ledger/transaction：同volume複数rank/Binding、bootstrap満杯、lock順序、mutation前quota拒否、二重計数 | 共有ledgerの永続policy/root inventory、独立private ledgerのvolume coordinator、外部jobの明示claimと観測増分、ledger→coordinatorのleaf lock順序。metadata pool/ancestor/volume/FS/policy preflightとprospective claimをmkdir前へ配線。実process競合、共同quota境界、claim直後kill→retry、private owner SIGKILL→回収→他store再予約を検証。[coordinator](phase4_disk_coordination_implementation.md)、[private](phase4_private_volume_coordination_implementation.md)、[bootstrap](phase4_bootstrap_namespace_implementation.md)。 | 最終sourceのLinux追加回帰、下記の実別host環境でhostごとのlocal coordinatorとcollective拒否・回収を確認。 |
+| 009B enforcement：page/index split、bounded asset、journal/temp growth、build/mode不一致、guard超過時旧cut保持 | 同じSQLite libraryのnative VFSでmain/journalのwrite/truncate cap、page cap、限定SQL/modeを検証。capability不一致はstartup token/namespace前に拒否。matrix/snapshot/JSONはexact bytes、payload/chunk/exportはbounded transfer、fsyncとatomic publish。registered roots外、parent symlink脱出、leaf aliasはmanaged sidecar/appendで変更前拒否。[durability](phase4_writer_durability_implementation.md)、[fault matrix](phase4_disk_fault_matrix_implementation.md)、[inventory補修](phase4_sidecar_inventory_audit_2026-10-16.md)。 | 最後のreader/fork/GC等を含むLinux buffered/O_DIRECT差分の成功確認。native guard未提供環境を成功と数えない。 |
+| 009C crash/lifecycle：reserve/SQL/commit/fsync/decision前後kill、hot journal、partial extent/orphan、drain、二重回収拒否 | 全owner停止のexclusive lease、full inventory/cut、dry-run/digest/CAS/receipt、artifact保存と観測byte課金。catalogはcanonical path/device/inode/birth帰属、作成前startup intent→CAS bind→通常owner。payload/chunkは未commit/committed cut、exportとmigrationは専用intent。実kill、実tmpfs ENOSPC、segment公開前fsync、2rank checkpoint kill。GCは百万番台segment/escaped manifest/identity置換を数値oracleで補修。SQLite DELETE/EXTRAのtest-only durable image模型はFULL負例とcatalog/coordinator/ledger cutsを検証。[回収](phase4_uncommitted_recovery_implementation.md)、[startup](phase4_catalog_startup_recovery_implementation.md)、[payload](phase4_checkpoint_metadata_recovery_implementation.md)、[export](phase4_state_export_admission_implementation.md)、[migration](phase4_migration_recovery_implementation.md)、[GC](phase4_gc_acceptance_audit_2026-10-16.md)、[電源断模型](phase4_sqlite_power_loss_implementation.md)。 | Linux最終追加回帰と実別hostでのoffline回収・claim再公開・resumeの証拠。process kill、durable image模型、物理電源断を混同しない。 |
+| 009D 接続：async completion、RAM flush、prefix/gradient/replan/tile/offline copy、全writer audit | allocator/enqueue前のslot予約、validated completion、RAM flushの同writer委譲。prefix/shiftはshared ledger/coordinatorを継承、private childは自分のconnectionを所有。replan/frame/adjoint/tileは既存storeを使用。migration cloneはsource-bound closure。standalone shard readerはpersisted shared policy/root/locatorをread-only検証して継承し、private history欠落は再作成しない。[runtime接続表](phase4_writer_audit.md#runtime切替forkのadmission継承監査2026-10-16)、[reader](phase4_standalone_shard_reader_2026-10-16.md)。 | 最後に追加したreader/fork/GC等のLinux追加回帰、実別hostのfork/shiftと共同admission。 |
+
+## 受入を閉じるために残すもの
+
+1. **Linux最終差分。** 初期buffered305 pass、direct304 pass/1 race fail、改訂selected buffered83 passはsourceが異なる。reader/forkの4file差分と後続GC/sidecar/appendを含む最終lifecycle回帰を実行し、source manifestとbuffered/O_DIRECTの結果を保存する。旧sourceの成功や修正前のrace失敗を最終結果に読み替えない。
+2. **実別host。** 利用者は新規PBS1ジョブを明示許可し、rootが固定source束`9eb426f`、archive SHA256 `9cdb8c95f8b6d801d79f58ec35d360d37ee5ac442b2e986f1213bd977481014e`の配布・投入を進めている。異なる物理host、各host local filesystem/coordinatorで、buffered/directの独立dataset/fork/shift、共同quota、conflict/unsupportedのcollective拒否、checkpoint offline回収→claim再公開→数値resumeを確認する。[ジョブとartifact仕様](internal/phase4_crosshost_acceptance/README.md)。準備・許可・投入を成功結果と数えず、rootがjob ID／終了状態／manifest／結果を保存してから判定する。
+3. **最終照合。** 上記結果に新たな欠陥やunsupportedがあれば修正・再実行する。skipped/deselectedは理由と元の条件への影響を確認する。009A〜Dと全writerの必要証拠が揃うまでDONEへ変えない。
+
+## 保守拒否と保証の意味
+
+旧purpose不明token、旧policy不在ledger、帰属不能token、birth取得不能、未知/hot/破損状態、resident source未証明は、推測で解放せず拒否する。これは未実装の自動回収をDONEと呼ぶための除外ではなく、元のowner/cut/inventory証明条件を満たさない入力への安全な結果である。正規new writerが生成する各intentの回収経路は上表で検証する。
+
+`strict_capacity_guarantee=false`は維持する。software admission、native SQLite cap、managed regular file inventoryは、任意外部writer、OS/library、filesystem directory metadata、観測間の一時超過、sync成功を偽るhardwareへのphysical quota保証ではない。cross-hostは共有filesystem上の1個のSQLite coordinatorを許可する意味ではなく、各host/volumeのlocal coordinatorとMPI合意を検証する。電源断模型の制限は専用資料どおりで、物理抜電・torn write・dishonest hardwareを合格と主張しない。この保証の説明を使って元の009A〜Dを削らない。

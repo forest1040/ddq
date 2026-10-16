@@ -91,13 +91,8 @@
   - offline回収（未commit予約、checkpoint）の後で、coordinatorのclaimを真の値へ再公開する。
   - 試験は16件（実mpiexecの1／2 rankを含む）で、Macで成功した。
   - **未確認。** このcommitのLinux（ent）での結果は、subagentの報告前に取り込んだため確認していない。再起動後に、`tests/test_volume_coordination_runtime.py`ほかをentのbuffered／O_DIRECTで実行して確かめる。
-- **残り。**
-  - 外部jobが宣言を超えて書いた場合の検出
-  - 全writerのfault／回収
-  - catalogの予約をfile単位で帰属させること
-  - 電源断のmodel（SQLite journal、coordinator DB）
-  - 複数hostの調停（現在は拒否）
-  - `strict_capacity_guarantee`は立てない
+- **現在の受入残り（2026-10-16）。** [009A〜D対応表](phase4_p4_009_acceptance_2026-10-16.md)に集約する。catalog file帰属、外部job宣言超過検出、private coordinator、payload/export/migration回収、EXTRA電源断模型は実装済み。上の「未確認」は当時の履歴であり、[wave 3 source別記録](internal/phase4_wave3_validation/README.md)を確認する。
+- **最終確認。** reader/fork/GC等を含むLinux buffered／O_DIRECT追加回帰と、明示許可された実別host PBSジョブの結果を保存し、元の全受入条件へ照合する。現時点でP4-009はIN_PROGRESS、`strict_capacity_guarantee=false`を維持する。
 
 ## 未決・相談事項
 
