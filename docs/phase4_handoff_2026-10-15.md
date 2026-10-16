@@ -1,5 +1,16 @@
 # Phase 4 引き継ぎ書（2026-10-15）
 
+## 継続wave 3（2026-10-16、実装・検証継続中）
+
+3つの専用worktreeを並列使用し、Lunaへwork coverage・overhead runner、続いてendpoint認証を委譲した。利用者の指示はP4-009とP4-002がDONEになるまで継続であり、以下の追加実装だけで完了とはしない。
+
+- **P4-009：durability。** SQLite DELETE journalをEXTRAへ統一し、成功したxSync/xDeleteだけをdurable imageへ反映する試験用電源断模型を追加した。FULLでacknowledged commitが戻るnegativeとEXTRAの保持を含む。[実装と模型の範囲](phase4_sqlite_power_loss_implementation.md)。
+- **P4-009：起動と回収。** catalog作成前のgeneration intent、空fileのfsync、inode/birthtimeのCAS束縛、exclusive rename、open後の通常ownerへの移行を追加。[catalog起動復旧](phase4_catalog_startup_recovery_implementation.md)。payload/chunkは[checkpoint metadata回収](phase4_checkpoint_metadata_recovery_implementation.md)。保存済private policyが欠けた旧ledgerは推測でbindせず拒否する。
+- **P4-009：writer。** [state export](phase4_state_export_admission_implementation.md)をstreaming・予約・atomic publish・intent付き回収へ接続。export rootと追加dataset rootをvolume coordinatorにも登録し、pending減少後の実byteを課金に残す。Journalはopen/repairより先に予約、trace/journal/migration namespaceとpurpose限定fork lease JSONはowner-death/inventory検証後に回収する。[現行writer監査](phase4_writer_audit.md)。
+- **P4-002：残work。** [実executorと共通のstage DAG](phase4_executor_stage_dag_implementation.md)をwindow/counted futureへ接続し、親inclusive時間は一度だけ課金する。件数、MPI amplitude送信payload、main kernel、physical storageのcoverageを区別し、不明な分母はnullと理由を返す。
+- **検証。** 初回統合高速は1198 passed/37 skipped/83 deselected、6 failed。能力検査前のstartup予約、管理root外のmigration clone、走査方式変更に伴う消失journal回帰を検出し修正した。該当6件を含む選択は40 passed。後続のexport全rank精算競合、shared shard readerの互換、追加diagnosticに対する旧assertも修正し、最終固定sourceの高速は **1317 passed/38 skipped/83 deselected（280.88秒）**。Linux初回buffered305 passed、O_DIRECT304 passed＋同export競合1件を記録。修正版追加選択はbuffered83 passed。監視overhead/held-outと最終Linux追加回帰は継続中。[実行証跡](internal/phase4_wave3_validation/README.md)に初期失敗も保存する。
+- **残り。** Linux/multi-rank overheadとheld-out再評価、Linuxでの最終追加回帰、実別host調停。bootstrapの変更前pool admission・kill/retry課金、source-bound migration clone回収、store-private coordinator、checkpoint work shape、GC/sidecar/appendのinventory強制は実装済み。実別hostの[PBS計画](internal/phase4_crosshost_acceptance/README.md)は準備済み、未投入。P4-002/009はIN_PROGRESSを維持する。
+
 ## 継続wave 2（同日）
 
 3つの専用worktreeでcatalog帰属・移行判断・比較matrixを並列実装した。比較matrix担当はLunaへ委譲した。

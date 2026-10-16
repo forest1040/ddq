@@ -2,13 +2,13 @@
 
 状態：IN_PROGRESS（2026-10-14）。依存：P4-001。共通契約は[全体設計](../phase4_remaining_design.md)。実行中に未完了gate、actual layout、request、metadata/commitを集計し、baseline/observed/adapted ETAを自動更新する。
 
-window／counted suffix／in-flight capture、private STAGED delta、strict-profile／diagnostic view、epoch／local completion更新を先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#残workとetap4-002)。現endpointはgates-only、suffix executor／private residualはunknown。細粒度stageとpayload coverage、held-out誤差／overheadの受入は残る。
+window／counted suffix／in-flight capture、private STAGED delta、strict-profile／diagnostic view、epoch／local completion更新を先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#残workとetap4-002)。先行実装時点はgates-onlyで、suffix executor／private residualがunknownだった。現在は下記endpointと実executor stage DAGへ接続済みで、現在sourceのLinux held-out／overhead受入は継続中。
 
 [残りepochの正確な実行形状と実測費用によるETA](../phase4_exact_future_eta_implementation.md)（2026-10-15）で、S0／S2の残りの実行形状を正確に数えてobserved viewで価格付けし、private epochの実行中の呼出しをresidualで扱い、held-out評価を行った。答えたcheckのmedianは目標内である。続いて、end-to-end endpoint（期待値／gradient／checkpoint）と、multi-rankのS1判断の再現を追加した。短いrunの未回答理由はruntime ETAへ反映するようにしたが、回答率の改善は未実証である。checkpoint payload v2は512件単位のchunk再利用を行い、更新conditionにpayload sizeとincrementを保持する。同サイズの小さなend-to-end checkpointは14 sampleからinterval回答したが、可変size checkpointのgrowthはsizeごとのheld-out評価が残る。
 
 ## 現状・変更箇所
 
-[runtime_cost.py](../../src/svsim/runtime_cost.py)はcallerの有限CostTask DAGを維持する。[execution_tasks.py](../../src/svsim/execution_tasks.py)のEpochLedgerはwindow coverage用。[async_scheduler.py](../../src/svsim/async_scheduler.py)から新規`remaining_work.py`／`runtime_eta.py`へ接続した。実I/O/MPI/computeの細粒度DAGはまだ生成しない。
+[runtime_cost.py](../../src/svsim/runtime_cost.py)はcallerの有限CostTask DAGを維持する。[execution_tasks.py](../../src/svsim/execution_tasks.py)のEpochLedgerはwindow coverage用。[async_scheduler.py](../../src/svsim/async_scheduler.py)から新規`remaining_work.py`／`runtime_eta.py`へ接続した。現在は[共通route classifierと有界stage DAG](../phase4_executor_stage_dag_implementation.md)で実I/O／MPI／kernel／metadataの依存を保持する。親inclusive実測時間を一度だけ課金し、不明なcache／Frame／placementや物理byteはunknownとする。
 
 ## 入出力
 

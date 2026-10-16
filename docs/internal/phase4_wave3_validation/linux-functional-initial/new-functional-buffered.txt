@@ -1,0 +1,29 @@
+.......................................F................................ [ 93%]
+.....                                                                    [100%]
+=================================== FAILURES ===================================
+____ test_injected_coordinator_cannot_admit_a_store_on_another_real_volume _____
+
+tmp_path = PosixPath('/scratch/pytest-of-ddq/pytest-0/test_injected_coordinator_cann0')
+
+    @pytest.mark.skipif(sys.platform!='linux',reason='requires a real second Linux volume')
+    def test_injected_coordinator_cannot_admit_a_store_on_another_real_volume(tmp_path):
+        import tempfile
+        if not Path('/dev/shm').is_dir():pytest.skip('tmpfs is unavailable')
+        with tempfile.TemporaryDirectory(prefix='svsim-private-coord-',dir='/dev/shm') as directory:
+            other=Path(directory)
+            if other.stat().st_dev==tmp_path.stat().st_dev:pytest.skip('tmpfs is not another device')
+            managed=tmp_path/'managed';managed.mkdir()
+            coordinator=VolumeCoordinator(tmp_path/'volume.sqlite3',quota_bytes=QUOTA)
+            budget=DiskBudget(tmp_path/'ledger.sqlite3',[managed],quota_bytes=QUOTA,shared_policy=True,volume_coordinator=coordinator)
+            try:
+                cfg=StorageConfig(str(other/'store'),2,volume_coordinator=str(coordinator.path),disk_quota_bytes=QUOTA)
+>               with pytest.raises(DiskAdmissionError,match='another volume'):
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               AssertionError: Regex pattern did not match.
+E                 Expected regex: 'another volume'
+E                 Actual message: 'Store bootstrap must stay inside registered roots'
+
+tests/test_private_volume_coordination.py:232: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_private_volume_coordination.py::test_injected_coordinator_cannot_admit_a_store_on_another_real_volume
+1 failed, 76 passed in 58.02s

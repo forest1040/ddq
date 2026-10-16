@@ -15,6 +15,10 @@ bootstrap() {
   set -euo pipefail
   umask 077
   test "$(df -B1 --output=avail /var/tmp | tail -n 1)" -ge 107374182400
+  local initial_bytes=0
+  if test -d /var/tmp/ddq-20009; then initial_bytes=$(du -sb /var/tmp/ddq-20009 | cut -f1); fi
+  # Keep 512 MiB for the known runtime/archive and this small overlay before copying.
+  test "$initial_bytes" -le 8053063680
   mkdir -p "$DDQ_CODE" "$DDQ_JOB/tmp" "$DDQ_JOB/scratch"
   if ! test -f "$DDQ_ENV/image.ready"; then
     mkdir -p "$DDQ_ENV"

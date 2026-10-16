@@ -1,0 +1,98 @@
+........................................................................ [  5%]
+....................................s...........................s....... [ 11%]
+........................................................................ [ 17%]
+.........ssssss......................................................... [ 22%]
+......................sssssssssssssss................................... [ 28%]
+........................................................................ [ 34%]
+........................................................................ [ 40%]
+ssssssssssss............................................................ [ 45%]
+........................................................................ [ 51%]
+........................................................................ [ 57%]
+........................................................................ [ 62%]
+........................................................................ [ 68%]
+........................................................................ [ 74%]
+..............................................................F......... [ 80%]
+........................................................................ [ 85%]
+............................s....s...................................... [ 91%]
+........................................................................ [ 97%]
+...................................                                      [100%]
+=================================== FAILURES ===================================
+_____ test_mpi_export_atomic_generation_and_partial_rank_admission_refusal _____
+
+tmp_path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1628/test_mpi_export_atomic_generat0')
+
+    @pytest.mark.skipif(__import__('shutil').which('mpiexec') is None,reason='MPI launcher unavailable')
+    def test_mpi_export_atomic_generation_and_partial_rank_admission_refusal(tmp_path):
+        import shutil
+        script=r'''
+    import sys
+    from pathlib import Path
+    import numpy as np
+    from mpi4py import MPI
+    from svsim import DistributedSimulator,DistributedConfig
+    from svsim.disk_budget import DiskAdmissionError
+    root=Path(sys.argv[1]);comm=MPI.COMM_WORLD
+    cfg=DistributedConfig(str(root/'store'),2,ram_budget_bytes_per_rank=8*1024**2,
+     metadata_reserve_bytes=128*1024,tile_bytes=4096,frame_policy='materialize',storage_scope='node-local')
+    with DistributedSimulator(4,cfg,comm=comm) as sim:
+     sim.gate('H',(3,));sim.gate('RY',(0,),angle=.3)
+     output=root/'out';sim.export_state(output)
+     expected=sim.state(allow_gather=True)
+     if sim.rank==0:
+      actual=np.concatenate([np.fromfile(output/f'rank-{r:04d}.bin',dtype='<c16') for r in range(sim.size)])
+      np.testing.assert_allclose(actual,expected)
+     before={p.name:p.read_bytes() for p in output.iterdir()}
+     original=sim.disk_budget.reserve
+     def reserve(amount,**kw):
+      if sim.rank==1 and kw.get('operation')=='state-export-shard':raise DiskAdmissionError('rank-one-quota')
+      return original(amount,**kw)
+     sim.disk_budget.reserve=reserve
+     try:sim.export_state(output)
+     except Exception as exc:assert 'rank-one-quota' in str(exc)
+     else:raise AssertionError('rank-local quota was not collectively refused')
+     sim.disk_budget.reserve=original
+     assert {p.name:p.read_bytes() for p in output.iterdir()}==before
+     assert not sim.disk_budget.live_reservations(linked=True)
+     sim.gate('X',(2,));sim.export_state(output)
+     expected=sim.state(allow_gather=True)
+     if sim.rank==0:
+      actual=np.concatenate([np.fromfile(output/f'rank-{r:04d}.bin',dtype='<c16') for r in range(sim.size)])
+      np.testing.assert_allclose(actual,expected)
+     assert not list(root.glob('*.tmp'))
+    '''
+>       result=subprocess.run([shutil.which('mpiexec'),'-n','2',sys.executable,'-c',script,str(tmp_path)],
+            env={**os.environ,'PYTHONPATH':'src','OMP_NUM_THREADS':'1'},capture_output=True,timeout=120)
+
+tests/test_state_export_admission.py:268: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../../.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/subprocess.py:550: in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/subprocess.py:1209: in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/subprocess.py:2116: in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Popen: returncode: -9 args: ['/opt/homebrew/bin/mpiexec', '-n', '2', '/User...>
+endtime = 944635.502929791, orig_timeout = 120, stdout_seq = []
+stderr_seq = [b'Traceback (most recent call last):\n  File "<string>", line 29, in <module>\nAssertionError\n']
+skip_check_and_raise = False
+
+    def _check_timeout(self, endtime, orig_timeout, stdout_seq, stderr_seq,
+                       skip_check_and_raise=False):
+        """Convenience for checking if a timeout has expired."""
+        if endtime is None:
+            return
+        if skip_check_and_raise or _time() > endtime:
+>           raise TimeoutExpired(
+                    self.args, orig_timeout,
+                    output=b''.join(stdout_seq) if stdout_seq else None,
+                    stderr=b''.join(stderr_seq) if stderr_seq else None)
+E           subprocess.TimeoutExpired: Command '['/opt/homebrew/bin/mpiexec', '-n', '2', '/Users/tmori/work3/ddq/.venv/bin/python', '-c', "\nimport sys\nfrom pathlib import Path\nimport numpy as np\nfrom mpi4py import MPI\nfrom svsim import DistributedSimulator,DistributedConfig\nfrom svsim.disk_budget import DiskAdmissionError\nroot=Path(sys.argv[1]);comm=MPI.COMM_WORLD\ncfg=DistributedConfig(str(root/'store'),2,ram_budget_bytes_per_rank=8*1024**2,\n metadata_reserve_bytes=128*1024,tile_bytes=4096,frame_policy='materialize',storage_scope='node-local')\nwith DistributedSimulator(4,cfg,comm=comm) as sim:\n sim.gate('H',(3,));sim.gate('RY',(0,),angle=.3)\n output=root/'out';sim.export_state(output)\n expected=sim.state(allow_gather=True)\n if sim.rank==0:\n  actual=np.concatenate([np.fromfile(output/f'rank-{r:04d}.bin',dtype='<c16') for r in range(sim.size)])\n  np.testing.assert_allclose(actual,expected)\n before={p.name:p.read_bytes() for p in output.iterdir()}\n original=sim.disk_budget.reserve\n def reserve(amount,**kw):\n  if sim.rank==1 and kw.get('operation')=='state-export-shard':raise DiskAdmissionError('rank-one-quota')\n  return original(amount,**kw)\n sim.disk_budget.reserve=reserve\n try:sim.export_state(output)\n except Exception as exc:assert 'rank-one-quota' in str(exc)\n else:raise AssertionError('rank-local quota was not collectively refused')\n sim.disk_budget.reserve=original\n assert {p.name:p.read_bytes() for p in output.iterdir()}==before\n assert not sim.disk_budget.live_reservations(linked=True)\n sim.gate('X',(2,));sim.export_state(output)\n expected=sim.state(allow_gather=True)\n if sim.rank==0:\n  actual=np.concatenate([np.fromfile(output/f'rank-{r:04d}.bin',dtype='<c16') for r in range(sim.size)])\n  np.testing.assert_allclose(actual,expected)\n assert not list(root.glob('*.tmp'))\n", '/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1628/test_mpi_export_atomic_generat0']' timed out after 120 seconds
+
+../../.local/share/uv/python/cpython-3.12.13-macos-aarch64-none/lib/python3.12/subprocess.py:1253: TimeoutExpired
+=========================== short test summary info ============================
+FAILED tests/test_state_export_admission.py::test_mpi_export_atomic_generation_and_partial_rank_admission_refusal
+1 failed, 1221 passed, 37 skipped, 83 deselected in 411.00s (0:06:51)

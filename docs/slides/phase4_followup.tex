@@ -45,3 +45,31 @@
   \takeaway{不確かな証拠を完了扱いせず、\textbf{拒否理由と不足する検証を記録する}。P4-003・004・005・009はIN\_PROGRESS。}
   \note{根拠：docs/phase4\_uncommitted\_recovery\_implementation.md、docs/phase4\_layout\_migration\_implementation.md、docs/phase4\_comparison\_matrix.md。birthtimeはfilesystemの分解能に依存する。比較matrixはrepresentative coverage onlyで、Phase 4 acceptanceはnot-assessed。損益分岐規則は変更しない。}
 \end{frame}
+
+\begin{frame}{Phase 4：実行経路とクラッシュ境界の追加検証（2026-10-16）}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{P4-002：実行経路を明示}\par
+      \small
+      \begin{itemize}
+        \item 実dispatchと共通のrouteから有界stage DAGを生成。
+        \item 読み書き・kernel・通信・公開の依存を保持。
+        \item inclusive親時間は一度だけ計上。
+        \item 件数・MPI payload・kernel・storage coverageを分離。
+      \end{itemize}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{P4-009：起動・export・電源断模型}\par
+      \small
+      \begin{itemize}
+        \item catalog作成前intentとinode束縛を段階的に永続化。
+        \item payload／chunkとexportの故障後予約を回収。
+        \item export先もvolume全体の使用量へ反映。
+        \item SQLiteをEXTRAへ変更しjournal削除を同期。
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \smallnote{統合高速1317成功・38 skip。Linux修正版の選択83成功（buffered）。O\_DIRECTと長時間計測は継続。}
+  \takeaway{P4-002・009はIN\_PROGRESS。実別host受入、全writer閉包、監視費用・endpoint認証の残件を継続する。}
+  \note{根拠：docs/phase4\_executor\_stage\_dag\_implementation.md、docs/phase4\_catalog\_startup\_recovery\_implementation.md、docs/phase4\_sqlite\_power\_loss\_implementation.md。電源断模型は成功したVFS syncのみをdurable imageへ反映する。実装済みDBとjournalの模型であり、実hardwareやtorn writeの保証は主張しない。payload/storage/Frameの未確定量はunknownとし、logical state bytesで代用しない。}
+\end{frame}

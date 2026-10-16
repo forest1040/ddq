@@ -25,6 +25,14 @@ are copied back to the login node, then downloaded to the repository evidence
 folder. Dataset, code, and runtime never execute from shared `/home`. Earlier
 job directories and environments are preserved.
 
-Source is packaged after the current fixes are committed; exact SHA256 manifests
-are retained with results. No cross-host result is claimed until the actual job
+The reviewable source bundle is prepared from production commit `9eb426f` after
+its full fast suite passed (1317 passed). It has 270 tracked source/test/example
+files, archive size 659201 bytes, SHA256
+`9cdb8c95f8b6d801d79f58ec35d360d37ee5ac442b2e986f1213bd977481014e`.
+The local archive is `/private/tmp/ddq-p4-crosshost-20261016/overlay.tar.gz`;
+[planned-source.sha256](planned-source.sha256) lists every member digest.
+No source has been uploaded to lg and no job has been submitted.
+The later campaign-only incomplete-CI guard does not affect this worker. This
+prepared bundle stays pinned to the tested production source above.
+Exact SHA256 manifests are retained with results. No cross-host result is claimed until the actual job
 passes. This prepared script has passed `bash -n` only.

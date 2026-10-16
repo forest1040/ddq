@@ -1,0 +1,250 @@
+........................................................................ [  5%]
+...........................FF......s...........................s........ [ 11%]
+........................................................................ [ 17%]
+........ssssss.......................................................... [ 23%]
+.....................sssssssssssssss.................................... [ 29%]
+..................FFF................................................... [ 34%]
+.......................................................................s [ 40%]
+sssssssssss............................................................. [ 46%]
+........................................................................ [ 52%]
+...........F............................................................ [ 58%]
+........................................................................ [ 63%]
+........................................................................ [ 69%]
+........................................................................ [ 75%]
+........................................................................ [ 81%]
+........................................................................ [ 87%]
+.........................s....s......................................... [ 92%]
+........................................................................ [ 98%]
+.................                                                        [100%]
+=================================== FAILURES ===================================
+________ test_binary_mismatch_prevents_load_and_releases_startup_credit ________
+
+tmp_path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1615/test_binary_mismatch_prevents_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x110258320>
+
+    def test_binary_mismatch_prevents_load_and_releases_startup_credit(tmp_path,monkeypatch):
+        budget=DiskBudget(tmp_path/'ledger.sqlite',[tmp_path],usage=lambda:0,free=lambda:10**9)
+        guard=get_sqlite_guard()
+        try:
+            assert budget.snapshot()['ledger_vfs_capability'] is None  # injected accounting
+            monkeypatch.setattr(guard,'_binary_hash','0'*64)
+            with pytest.raises(CatalogAdmissionError,match='binary changed'):
+                CatalogConnection(tmp_path/'catalog.sqlite',budget_getter=lambda:budget,require_native=True)
+>           assert budget.reserved_bytes==0
+E           assert 1646592 == 0
+E            +  where 1646592 = <svsim.disk_budget.DiskBudget object at 0x11025a9f0>.reserved_bytes
+
+tests/test_catalog_capability.py:60: AssertionError
+_______ test_identity_failure_cannot_downgrade_to_optional_soft_catalog ________
+
+tmp_path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1615/test_identity_failure_cannot_d0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1102592e0>
+
+    def test_identity_failure_cannot_downgrade_to_optional_soft_catalog(tmp_path,monkeypatch):
+        budget=DiskBudget(tmp_path/'ledger.sqlite',[tmp_path],usage=lambda:0,free=lambda:10**9)
+    
+        def failed_guard():raise CatalogAdmissionError('dispatch identity mismatch')
+    
+        monkeypatch.setattr(catalog_admission,'get_sqlite_guard',failed_guard)
+        try:
+            with pytest.raises(CatalogAdmissionError,match='dispatch identity mismatch'):
+                CatalogConnection(tmp_path/'catalog.sqlite',budget_getter=lambda:budget,require_native=False)
+            assert not (tmp_path/'catalog.sqlite').exists()
+>           assert budget.reserved_bytes==0
+E           assert 1646592 == 0
+E            +  where 1646592 = <svsim.disk_budget.DiskBudget object at 0x11025a270>.reserved_bytes
+
+tests/test_catalog_capability.py:74: AssertionError
+_____ test_phase2_snapshot_migration_preserves_source_and_adjoint_history ______
+
+tmp_path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1615/test_phase2_snapshot_migration0')
+
+    def test_phase2_snapshot_migration_preserves_source_and_adjoint_history(tmp_path):
+        from svsim.stored_runtime import StoredSimulator
+        from svsim.storage import StorageConfig
+        from svsim.parameters import ParameterSymbol
+        from svsim.observables import ObservableIR,PauliTerm
+        source_config = StorageConfig(str(tmp_path/'stored'),1,ram_budget_bytes=4*1024**2,
+                                      metadata_reserve_bytes=256*1024)
+        theta = ParameterSymbol('migration-angle',parameter_id='migration-angle')
+        with StoredSimulator(3,source_config) as source:
+            source.gate('H',(0,)); source.gate('RY',(2,),angle=theta)
+            source.materialize(binding=source.bind({theta.parameter_id:.31}))
+            source.physical_index_bit_swap(0,2)
+            source.gate('RZ',(0,),angle=theta)
+            source.materialize(binding=source.bind({theta.parameter_id:.31}))
+            snapshot = source.commit_snapshot()
+            expected = source.state().copy()
+        catalog = Path(source_config.directory)/'metadata/catalog.sqlite3'
+        before = catalog.read_bytes()
+        settings = config(tmp_path/'distributed')
+        with DistributedSimulator(3,settings,comm=MPI.COMM_SELF) as target:
+>           migrated = checkpoint.migrate_stored_snapshot(target,source_config,snapshot)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_distributed_checkpoint.py:112: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/svsim/distributed_checkpoint.py:434: in migrate_stored_snapshot
+    target_db = CatalogConnection(Path(temporary)/'metadata/catalog.sqlite3',
+src/svsim/catalog_admission.py:333: in __init__
+    main,side=self._reserve()
+              ^^^^^^^^^^^^^^^
+src/svsim/catalog_admission.py:392: in _reserve
+    self._token=self._lease.cover(budget,size,main_cap-size+side_cap,
+src/svsim/catalog_admission.py:260: in cover
+    intent=make_intent(budget,startup_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+budget = <svsim.disk_budget.DiskBudget object at 0x1103369f0>
+path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1615/test_phase2_snapshot_migration0/distributed/ddq-migrate-h31p4g1y/metadata/catalog.sqlite3')
+
+    def make_intent(budget,path):
+        path=Path(path)
+        roots=[Path(p) for (p,) in budget.db.execute('SELECT path FROM roots')]
+        covered=[root for root in roots if path.parent.is_relative_to(root)]
+>       if not covered:raise DiskAdmissionError('Catalog startup is outside registered roots')
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       svsim.disk_budget.DiskAdmissionError: Catalog startup is outside registered roots
+
+src/svsim/catalog_startup.py:36: DiskAdmissionError
+_________ test_phase1_catalog_migration_retains_legacy_relative_phase __________
+
+tmp_path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1615/test_phase1_catalog_migration_0')
+
+    def test_phase1_catalog_migration_retains_legacy_relative_phase(tmp_path):
+        import sqlite3
+        from svsim.stored_runtime import StoredSimulator
+        from svsim.storage import StorageConfig,StoredBlockView
+        source_config = StorageConfig(str(tmp_path/'legacy'),1,ram_budget_bytes=4*1024**2,
+                                      metadata_reserve_bytes=256*1024)
+        with StoredSimulator(3,source_config) as source:
+            word=[]
+            for _ in range(3):
+                word.extend((source.gate('H',(0,)),source.gate('S',(0,))))
+            frame_id = source.store.intern_frame(word)
+            source.store.phase2=None
+            source.store.publish(source.root,[(0,StoredBlockView('initial-one',5,5,frame_id))])
+            source.store.phase2=source.phase2
+            source.frontier=5; source.binding=source.bind()
+            snapshot = replace(source.commit_snapshot(),schema_version=1,semantics_version=1)
+            source.store.db.execute('UPDATE snapshots SET data=? WHERE id=?',
+                                    (checkpoint.canonical(asdict(snapshot)),snapshot.snapshot_id))
+            source.store.db.commit()
+        catalog = Path(source_config.directory)/'metadata/catalog.sqlite3'
+        db = sqlite3.connect(catalog)
+        for table in ('root_edges','frames_v2','views_v2','root_log_bounds','catalog_checksums'):
+            db.execute(f'DROP TABLE {table}')
+        db.execute('PRAGMA user_version=1'); db.commit(); db.close()
+        before = catalog.read_bytes()
+        with DistributedSimulator(3,config(tmp_path/'migrated'),comm=MPI.COMM_SELF) as target:
+>           checkpoint.migrate_stored_snapshot(target,source_config,snapshot)
+
+tests/test_distributed_checkpoint.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/svsim/distributed_checkpoint.py:434: in migrate_stored_snapshot
+    target_db = CatalogConnection(Path(temporary)/'metadata/catalog.sqlite3',
+src/svsim/catalog_admission.py:333: in __init__
+    main,side=self._reserve()
+              ^^^^^^^^^^^^^^^
+src/svsim/catalog_admission.py:392: in _reserve
+    self._token=self._lease.cover(budget,size,main_cap-size+side_cap,
+src/svsim/catalog_admission.py:260: in cover
+    intent=make_intent(budget,startup_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+budget = <svsim.disk_budget.DiskBudget object at 0x11010b200>
+path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1615/test_phase1_catalog_migration_0/migrated/ddq-migrate-ky3_saav/metadata/catalog.sqlite3')
+
+    def make_intent(budget,path):
+        path=Path(path)
+        roots=[Path(p) for (p,) in budget.db.execute('SELECT path FROM roots')]
+        covered=[root for root in roots if path.parent.is_relative_to(root)]
+>       if not covered:raise DiskAdmissionError('Catalog startup is outside registered roots')
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       svsim.disk_budget.DiskAdmissionError: Catalog startup is outside registered roots
+
+src/svsim/catalog_startup.py:36: DiskAdmissionError
+________ test_failed_migration_global_publication_restores_empty_target ________
+
+tmp_path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1615/test_failed_migration_global_p0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x11069b3e0>
+
+    def test_failed_migration_global_publication_restores_empty_target(tmp_path,monkeypatch):
+        from svsim.stored_runtime import StoredSimulator
+        from svsim.storage import StorageConfig
+        source_config=StorageConfig(str(tmp_path/'source'),1,ram_budget_bytes=4*1024**2,
+                                    metadata_reserve_bytes=256*1024)
+        with StoredSimulator(3,source_config) as source:
+            source.gate('H',(0,)); source.materialize(binding=source.bind())
+            snapshot=source.commit_snapshot()
+        with DistributedSimulator(3,config(tmp_path/'target'),comm=MPI.COMM_SELF) as target:
+            original_root=target.root
+            original=checkpoint.atomic_json
+    
+            def fail(path,data):
+                if '/global/manifests/' in str(path): raise OSError('injected migration publication failure')
+                original(path,data)
+    
+            with monkeypatch.context() as scope:
+                scope.setattr(checkpoint,'atomic_json',fail)
+                with pytest.raises(CollectiveError,match='publication'):
+>                   checkpoint.migrate_stored_snapshot(target,source_config,snapshot)
+
+tests/test_distributed_checkpoint.py:175: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/svsim/distributed_checkpoint.py:434: in migrate_stored_snapshot
+    target_db = CatalogConnection(Path(temporary)/'metadata/catalog.sqlite3',
+src/svsim/catalog_admission.py:333: in __init__
+    main,side=self._reserve()
+              ^^^^^^^^^^^^^^^
+src/svsim/catalog_admission.py:392: in _reserve
+    self._token=self._lease.cover(budget,size,main_cap-size+side_cap,
+src/svsim/catalog_admission.py:260: in cover
+    intent=make_intent(budget,startup_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+budget = <svsim.disk_budget.DiskBudget object at 0x11026e630>
+path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1615/test_failed_migration_global_p0/target/ddq-migrate-9v2jwh29/metadata/catalog.sqlite3')
+
+    def make_intent(budget,path):
+        path=Path(path)
+        roots=[Path(p) for (p,) in budget.db.execute('SELECT path FROM roots')]
+        covered=[root for root in roots if path.parent.is_relative_to(root)]
+>       if not covered:raise DiskAdmissionError('Catalog startup is outside registered roots')
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       svsim.disk_budget.DiskAdmissionError: Catalog startup is outside registered roots
+
+src/svsim/catalog_startup.py:36: DiskAdmissionError
+____________ test_disk_usage_tolerates_disappearing_sqlite_journal _____________
+
+tmp_path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1615/test_disk_usage_tolerates_disa0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x110d954f0>
+
+    def test_disk_usage_tolerates_disappearing_sqlite_journal(tmp_path,monkeypatch):
+        root=tmp_path/'owner'; root.mkdir()
+        stable=root/'state.bin'; stable.write_bytes(b'1234')
+        temporary=root/'catalog.sqlite3-journal'; temporary.write_bytes(b'not committed')
+        budget=DiskBudget(tmp_path/'ledger',[root],quota_bytes=14,free=lambda:1024**2)
+        original=Path.stat
+        def vanishing(path,*,follow_symlinks=True):
+            if path == temporary:
+                path.unlink(missing_ok=True)
+            return original(path,follow_symlinks=follow_symlinks)
+        monkeypatch.setattr(Path,'stat',vanishing)
+>       assert budget._observed_usage() == 4
+E       assert 17 == 4
+E        +  where 17 = _observed_usage()
+E        +    where _observed_usage = <svsim.disk_budget.DiskBudget object at 0x110d958e0>._observed_usage
+
+tests/test_phase4_lifecycle.py:101: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_catalog_capability.py::test_binary_mismatch_prevents_load_and_releases_startup_credit
+FAILED tests/test_catalog_capability.py::test_identity_failure_cannot_downgrade_to_optional_soft_catalog
+FAILED tests/test_distributed_checkpoint.py::test_phase2_snapshot_migration_preserves_source_and_adjoint_history
+FAILED tests/test_distributed_checkpoint.py::test_phase1_catalog_migration_retains_legacy_relative_phase
+FAILED tests/test_distributed_checkpoint.py::test_failed_migration_global_publication_restores_empty_target
+FAILED tests/test_phase4_lifecycle.py::test_disk_usage_tolerates_disappearing_sqlite_journal
+6 failed, 1198 passed, 37 skipped, 83 deselected in 259.29s (0:04:19)

@@ -1,0 +1,79 @@
+........................................................................ [  5%]
+...........................................................s............ [ 10%]
+...............s..................................................F..... [ 16%]
+.................................ssssss................................. [ 21%]
+..............................................sssssssssssssss........... [ 27%]
+........................................................................ [ 32%]
+........................................................................ [ 38%]
+................................ssssssssssss............................ [ 43%]
+........................................................................ [ 49%]
+........................................................................ [ 54%]
+.................................s..............................F....... [ 60%]
+........................................................................ [ 65%]
+........................................................................ [ 71%]
+........................................................................ [ 76%]
+........................................................................ [ 82%]
+........................................................................ [ 87%]
+........s....s.......................................................... [ 93%]
+........................................................................ [ 98%]
+..................                                                       [100%]
+=================================== FAILURES ===================================
+________________ test_standalone_shard_reader_prevents_recovery ________________
+
+saved = (DistributedConfig(directory='/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1665/tes....        +0.j, 0.        +0.j, 0.        +0.j,
+       0.        +0.j, 0.        +0.j, 0.        +0.j, 0.        +0.j]))
+
+    def test_standalone_shard_reader_prevents_recovery(saved):
+        from svsim.storage import FileBlockStore,StorageConfig
+        config,_,_=saved
+        key,_,_=_reserve(saved)
+>       store=FileBlockStore(StorageConfig(str(Path(config.directory)/'rank-0000'),2),6,create=False)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_checkpoint_recovery.py:207: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/svsim/storage.py:114: in __init__
+    self._open_store(config, num_qubits, create, disk_budget)
+src/svsim/storage.py:125: in _open_store
+    self._owned_disk_budget=open_private_budget(config,self.directory,create=create)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+config = StorageConfig(directory='/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1665/test_sta...es=65536, root_depth_limit=16, volume_coordinator=None, disk_quota_bytes=None, min_free_bytes=0, drain_reserve_bytes=0)
+directory = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1665/test_standalone_shard_reader_p0/state/rank-0000')
+create = False
+
+    def open_private_budget(config, directory, *, create):
+        directory=Path(directory).resolve();ledger=directory/'metadata/disk-ledger.sqlite3'
+        if not create and not ledger.is_file():
+>           raise DiskAdmissionError('Store-private ledger is missing; refusing to recreate admission history')
+E           svsim.disk_budget.DiskAdmissionError: Store-private ledger is missing; refusing to recreate admission history
+
+src/svsim/private_disk_budget.py:40: DiskAdmissionError
+_____ test_observed_view_prices_full_remaining_from_measured_epoch_stages ______
+
+tmp_path = PosixPath('/private/var/folders/0h/2j_p39951yb_myst5c8tz4fw0000gn/T/pytest-of-tmori/pytest-1665/test_observed_view_prices_full0')
+
+    def test_observed_view_prices_full_remaining_from_measured_epoch_stages(tmp_path):
+        config = DistributedConfig(str(tmp_path / "observed"), 2, ram_budget_bytes_per_rank=64 * 1024**2,
+                                   metadata_reserve_bytes=8 * 1024**2, amplitude_store="file")
+        policy = AsyncPolicy(io_engine="cooperative", swap_policy="S2", lookahead_gates=4, prefetch_blocks=0)
+        with AsyncDistributedSimulator(4, config, comm=MPI.COMM_SELF, policy=policy) as sim:
+            sim.runtime.configure_measurements(max_bytes=2 * 1024**2)
+            _layers(sim, 30)
+            end = len(sim.sequencer.operations) - 1
+            sim.materialize(frontier=79)
+            stages = {r.stage for r in sim.runtime.measurements.cost_observations()}
+            assert {"epoch-publication", "epoch-boundary"} <= stages
+            observed = sim.runtime.update_eta(endpoint_frontier=end)["views"]["observed"]
+            reasons = observed["unknown_reasons"]
+            # Only measured, certified classes may answer; otherwise the reason is a missing cost.
+>           assert observed["expected_seconds"] is not None or all(r.startswith("MISSING_COST:") for r in reasons)
+E           assert (None is not None or False)
+E            +  where False = all(<generator object test_observed_view_prices_full_remaining_from_measured_epoch_stages.<locals>.<genexpr> at 0x112adaf60>)
+
+tests/test_remaining_work.py:360: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_checkpoint_recovery.py::test_standalone_shard_reader_prevents_recovery
+FAILED tests/test_remaining_work.py::test_observed_view_prices_full_remaining_from_measured_epoch_stages
+2 failed, 1274 passed, 38 skipped, 83 deselected in 290.02s (0:04:50)
