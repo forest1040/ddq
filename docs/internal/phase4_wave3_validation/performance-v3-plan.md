@@ -29,3 +29,12 @@ The driver does not set an ETA accuracy or answer-rate acceptance threshold.
 The separate result auditor reports all missing/error rows and forces partial
 overhead artifacts to remain inconclusive. `backend_resolved_by_rank: [[]]`
 remains unverified; it is not proof that a requested backend serviced I/O.
+
+
+## Frozen execution, 2026-10-17
+
+No v3 measurement ran against the earlier prepared context. That unused context was retained as `wave3-performance-context-v3-pre-endpoint-fix`; the fresh v3 context is production/validation revision `89e8ad2`, including the bounded endpoint-prelude fix, actual trace I/O evidence after timing, and exact-container cleanup. The image is pinned by immutable ID `sha256:3bee5df0c2960ab030ea1e9cb5528638929ab3cb6e45ee2ee073102f1d8cce14` via --image. All source hashes and the supplied revision are recorded per attempt.
+
+The declared order is heldout-buffered-p1, heldout-buffered-p2, heldout-direct-p1, heldout-direct-p2, then overhead-buffered-p1, overhead-buffered-p2, overhead-direct-p1, overhead-direct-p2. The order was fixed before any v3 result. Each case uses fresh scratch and output; no trial data is shared across cases. Four Linux endpoint/MPI test files run before the first measurement. All performance cases run serially, after the separate Linux fault/lifecycle containers have exited. The Mac fast suite and subsequent Mac endpoint evaluation run on a different physical host. No TeX rebuild is planned during the final measurement.
+
+Trial errors, unknown outcomes, command timeouts and failed cleanup remain reportable artifacts. An unsuccessful case does not cause its rows to be removed; the finite batch continues to the remaining predeclared cases.

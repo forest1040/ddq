@@ -104,3 +104,10 @@ Separately, the explicitly authorized [PBS retry 265180](../phase4_crosshost_acc
 
 
 The integrated endpoint-prelude core fix `83cfc36` subsequently passed the full Mac fast suite: **1351 passed / 38 skipped / 83 deselected**, 292.77 s ([raw log](mac-wave5-fast-full.txt)); the unchanged disk implementation remains covered, while P4-002's final bounded-analysis review and held-out measurement continue. Validation-focused checks passed **33** before the later container-cleanup-only driver change ([raw log](mac-wave5-focused.txt)). TeX/PDF was rebuilt to **41 pages**, no overfull boxes, and the new P4-009 DONE / M1 slide was visually checked. This intermediate closure is not the final P4-002 acceptance.
+
+
+## P4-002 frozen final source validation (2026-10-17)
+
+Production source **89e8ad2** adds bounded endpoint identity analysis after the schedule-inclusive/prelude timing fix. Sources above the finite scan/field/expression budgets carry ENDPOINT_IDENTITY_BUDGET and remain unknown even if a resolver has a sentinel-class sample. Actual materialization continues. Normal 128-gate endpoint identity is unchanged. Related DAG/runtime/endpoint checks passed 84 tests.
+
+The final full Mac fast suite passed **1363 / 38 skipped / 83 deselected**, 291.71 seconds ([raw log](mac-wave6-fast-final.txt)). [Latest Linux endpoint and actual MPI functionality](linux-endpoint-final/README.md) passed **19 / 0 skipped**, 26.74 seconds, before the frozen held-out/overhead batch. The [predeclared v3 plan](performance-v3-plan.md) preserves all trial/error/unknown rows, and verifies exact 54-cell grids and seven distinct measured pairs per workload. TeX/PDF stays at the previous update per the user's latest instruction. P4-002 remains IN_PROGRESS until measured results and endpoint holdouts are reviewed.
