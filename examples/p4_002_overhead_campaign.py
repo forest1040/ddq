@@ -191,7 +191,8 @@ def resolved_conditions(backend, ranks, workloads):
                               "frame_policy": "materialize", "ram_budget_bytes_per_rank": 64 * 1024**2,
                               "metadata_reserve_bytes": 8 * 1024**2,
                               "measurement_collector_max_bytes": 2 * 1024**2,
-                              "backend_resolved": backend},
+                              "backend_requested": backend,
+                              "backend_resolved": None},
         "ranks": ranks,
         "threads": {name: os.environ.get(name) for name in
                     ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS")},
@@ -214,12 +215,13 @@ def main(argv=None):
     parser.add_argument("--workloads", default=",".join(DEFAULT_WORKLOADS))
     parser.add_argument("--warmups", type=int, default=2)
     parser.add_argument("--pairs", type=int, default=7)
+    parser.add_argument("--long-layers", type=int, default=120)
     parser.add_argument("--seed", type=int, default=20261016)
     parser.add_argument("--bootstrap-replicates", type=int, default=5000)
     parser.add_argument("--plan-only", action="store_true", help="validate and emit conditions without running trials")
     args = parser.parse_args(argv)
-    if args.warmups < 0 or args.pairs < 1 or args.bootstrap_replicates < 100:
-        parser.error("warmups must be nonnegative, pairs >= 1, and bootstrap-replicates >= 100")
+    if args.warmups < 0 or args.pairs < 1 or args.bootstrap_replicates < 100 or args.long_layers < 1:
+        parser.error("warmups must be nonnegative, pairs/long-layers >= 1, and bootstrap-replicates >= 100")
     selected = set(args.workloads.split(","))
     definitions = {"rx-ry-low": ("small", 0), "mixed": ("long", 3)}
     missing = selected - definitions.keys()
@@ -231,6 +233,8 @@ def main(argv=None):
             continue
         campaign_class, index = definitions[name]
         wl = dict(observed.WORKLOADS[index])
+        if campaign_class == 'long':
+            wl['layers'] = args.long_layers
         wl["campaign_class"] = campaign_class
         workloads.append(wl)
     comm = MPI.COMM_WORLD
@@ -265,6 +269,12 @@ def main(argv=None):
                            warmups=args.warmups, pairs=args.pairs, seed=args.seed,
                            bootstrap_replicates=args.bootstrap_replicates, progress_path=progress_path)
     if rank == 0:
+        identities = sorted({identity for result in results.values()
+                             for row in result['warmup_pairs'] + result['measured_pairs']
+                             for side in ('eta_on', 'eta_off') if isinstance(row.get(side), dict)
+                             for rank_backends in row[side].get('backend_resolved_by_rank', [])
+                             for identity in rank_backends})
+        metadata['conditions']['shared_conditions']['backend_resolved'] = identities or None
         payload = {**metadata, "status": "complete" if all(v["status"] == "complete"
                                                              for v in results.values()) else "incomplete",
                    "results": results, "progress_jsonl": str(Path(progress_path).resolve())}

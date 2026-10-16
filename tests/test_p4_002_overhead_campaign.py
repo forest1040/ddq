@@ -77,7 +77,8 @@ def test_plan_only_smoke_records_resolved_workloads_and_sources(tmp_path):
     assert main(["--plan-only", "--output", str(output), "--backend", "direct"]) == 0
     plan = json.loads(output.read_text(encoding="utf-8"))
     assert plan["status"] == "plan-only"
-    assert plan["conditions"]["shared_conditions"]["backend_resolved"] == "direct"
+    assert plan["conditions"]["shared_conditions"]["backend_requested"] == "direct"
+    assert plan["conditions"]["shared_conditions"]["backend_resolved"] is None
     assert [(row["name"], row["campaign_class"]) for row in plan["conditions"]["workloads"]] == [
         ("rx-ry-low", "small"), ("mixed", "long")]
     assert len(plan["source"]["sha256"]) >= 5

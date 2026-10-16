@@ -554,6 +554,8 @@ def run_overhead_circuit(comm, scratch_dir: Path, wl: dict, backend: str,
                 for key in ("capture_count", "eta_evaluation_count"):
                     max_metrics[key] = max(row[key] for row in rank_metrics)
                 local_metrics = max_metrics
+            local_metrics['backend_resolved_by_rank'] = comm.allgather(
+                sorted({handle.backend_identity for handle in sim.store.files.values()}))
     except Exception as exc:
         err = str(exc)
     finally:
