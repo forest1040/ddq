@@ -35,14 +35,14 @@ def case_names():
                  for backend in BACKENDS for ranks in RANKS)
 
 
-def manifest(case, context, timeout_seconds, source_hash_manifest_sha256):
+def manifest(case, context, timeout_seconds, source_hash_manifest_sha256, image=IMAGE):
     stage, backend, rank_tag = case.split("-")
     ranks = int(rank_tag[1:])
     revision_path = context / "SOURCE_REVISION"
     revision = revision_path.read_text(encoding="utf-8").strip() if revision_path.is_file() else None
     common = {"case": case, "backend": backend, "ranks": ranks,
               "timeout_seconds": timeout_seconds, "source_context": str(context),
-              "image": IMAGE, "source_revision": revision,
+              "image": image, "source_revision": revision,
               "source_hash_manifest_sha256": source_hash_manifest_sha256}
     if stage == "overhead":
         return {**common, "stage": stage, "workloads": ["rx-ry-low", "mixed"],
@@ -134,7 +134,11 @@ def classify_artifact(case, output, expected_pairs):
             artifacts_complete = document.get("status") in ("complete", "incomplete") and \
                 expected_workloads <= results.keys() and all(
                     len(results[name].get("warmup_pairs", ())) == WARMUPS and
-                    len(results[name].get("measured_pairs", ())) == expected_pairs
+                    {row.get("pair_index") for row in results[name].get("warmup_pairs", ())} ==
+                        set(range(WARMUPS)) and
+                    len(results[name].get("measured_pairs", ())) == expected_pairs and
+                    {row.get("pair_index") for row in results[name].get("measured_pairs", ())} ==
+                        set(range(WARMUPS, WARMUPS + expected_pairs))
                     for name in expected_workloads)
             if not artifacts_complete:
                 return "artifact-incomplete", document.get("status")
@@ -150,9 +154,22 @@ def classify_artifact(case, output, expected_pairs):
         document = json.loads(path.read_text(encoding="utf-8"))
         rows = document.get("rows", [])
         expected = len(REPRESENTATIVE_HELDOUT) * 3 * 2 * 3
-        workloads = {row.get("workload") for row in rows}
+        _, backend, rank_tag = case.split("-")
+        ranks = int(rank_tag[1:])
+        expected_conditions = {
+            (workload, policy, store, fraction, 0, "cooperative", backend, ranks)
+            for workload in REPRESENTATIVE_HELDOUT
+            for policy in ("S0", "S1", "S2")
+            for store in ("file", "ram")
+            for fraction in (0.4, 0.6, 0.8)
+        }
+        observed_conditions = {
+            (row.get("workload"), row.get("policy"), row.get("store"), row.get("frac"),
+             row.get("trial"), row.get("engine"), row.get("backend"), row.get("ranks"))
+            for row in rows if isinstance(row, dict)
+        }
         if (len(rows) != expected or document.get("summary", {}).get("overall", {}).get("n_checks") != expected
-                or workloads != set(REPRESENTATIVE_HELDOUT)):
+                or observed_conditions != expected_conditions):
             return "artifact-incomplete", document.get("kind")
         # Trial errors/unknown ETA remain measured rows, not driver failures.
         return "complete", document.get("kind")
@@ -189,7 +206,7 @@ def main(argv=None):
     hashes = source_hashes(context)
     hash_text = "\n".join(hashes) + "\n"
     manifest_data = manifest(args.case, context, args.timeout,
-                             hashlib.sha256(hash_text.encode()).hexdigest())
+                             hashlib.sha256(hash_text.encode()).hexdigest(), image=args.image)
     case_output, attempt = next_attempt(output_root, args.case)
     output = case_output / "output"
     scratch = scratch_root / args.case / f"attempt-{attempt:02d}"
