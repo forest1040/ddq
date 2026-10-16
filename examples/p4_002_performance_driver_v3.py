@@ -77,7 +77,7 @@ def next_attempt(output_root, case):
     return path, index
 
 
-def command_for(case, *, context, scratch, output, timeout_seconds, image):
+def command_for(case, *, context, scratch, output, timeout_seconds, image, container_name):
     stage, backend, rank_tag = case.split("-")
     ranks = int(rank_tag[1:])
     if stage == "overhead":
@@ -106,7 +106,8 @@ def command_for(case, *, context, scratch, output, timeout_seconds, image):
     container_script = "set -eu; timeout --signal=TERM --kill-after=15s {timeout}s sh -c {inner}".format(
         timeout=timeout_seconds, inner=shlex.quote(command))
     return [
-        "docker", "run", "--rm", "--network", "none", "--hostname", "ddq-p4-vcoord-v3",
+        "docker", "run", "--rm", "--name", container_name,
+        "--network", "none", "--hostname", "ddq-p4-vcoord-v3",
         "--cpus=4", "--memory=8g", "--pids-limit=512", "--shm-size=256m", "--stop-timeout=15",
         "-v", f"{context / 'src'}:/workspace/src:ro",
         "-v", f"{context / 'tests'}:/workspace/tests:ro",
@@ -120,6 +121,63 @@ def command_for(case, *, context, scratch, output, timeout_seconds, image):
         "-e", f"SVSIM_TEST_BACKEND={backend}", "-e", f"DDQ_BACKEND={backend}",
         "-e", f"DDQ_RANKS={ranks}", image, "sh", "-c", container_script,
     ], expected
+
+
+def cleanup_container(container_name):
+    """Remove only this attempt's container and verify it is absent afterward."""
+    result = {"container_name": container_name, "verified_absent": False, "status": "cleanup-failed"}
+    list_command = ["docker", "ps", "--all", "--quiet", "--filter", f"name=^/{container_name}$"]
+
+    def list_ids():
+        listed = subprocess.run(list_command, capture_output=True, text=True, check=False)
+        return listed, [line.strip() for line in listed.stdout.splitlines() if line.strip()]
+
+    try:
+        listed, ids = list_ids()
+        result["initial_list"] = {"return_code": listed.returncode, "stdout": listed.stdout,
+                                  "stderr": listed.stderr}
+        if listed.returncode != 0:
+            result["status"] = "container-list-failed"
+            return result
+        if not ids:
+            result.update({"status": "already-absent", "verified_absent": True})
+            return result
+
+        removed = subprocess.run(["docker", "rm", "--force", *ids],
+                                 capture_output=True, text=True, check=False)
+        result["remove"] = {"return_code": removed.returncode, "stdout": removed.stdout,
+                            "stderr": removed.stderr}
+        verified, remaining = list_ids()
+        result["verification_list"] = {"return_code": verified.returncode, "stdout": verified.stdout,
+                                       "stderr": verified.stderr}
+        if verified.returncode != 0:
+            result["status"] = "cleanup-verification-failed"
+        elif not remaining:
+            result.update({"status": "removed" if removed.returncode == 0 else "absent-after-remove-race",
+                           "verified_absent": True})
+        else:
+            result["status"] = "container-remains"
+            result["remaining_ids"] = remaining
+        return result
+    except Exception as exc:
+        result["error"] = f"{type(exc).__name__}: {exc}"
+        result["status"] = "cleanup-error"
+        return result
+
+
+def run_with_container_cleanup(command, *, container_name, log):
+    """Run the timeout-wrapped Docker command and always clean up this named case."""
+    return_code = 127
+    launch_error = None
+    try:
+        try:
+            result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=False)
+            return_code = result.returncode
+        except OSError as exc:
+            launch_error = f"{type(exc).__name__}: {exc}"
+    finally:
+        cleanup = cleanup_container(container_name)
+    return return_code, launch_error, cleanup
 
 
 def classify_artifact(case, output, expected_pairs):
@@ -220,18 +278,20 @@ def main(argv=None):
     status = {"case": args.case, "attempt": attempt, "status": "running",
               "started_unix_seconds": started, "manifest": manifest_data}
     status_path.write_text(json.dumps(status, indent=2) + "\n", encoding="utf-8")
+    container_name = f"ddq-p4-v3-{args.case}-a{attempt:02d}"
     cmd, result_path = command_for(args.case, context=context, scratch=scratch,
-                                   output=output, timeout_seconds=args.timeout, image=args.image)
+                                   output=output, timeout_seconds=args.timeout, image=args.image,
+                                   container_name=container_name)
     outer = ["timeout", "--signal=TERM", "--kill-after=30s", str(args.timeout), *cmd]
     status["command"] = outer
+    status["container_name"] = container_name
     status["expected_result_in_container"] = result_path
     with (case_output / "driver.log").open("w", encoding="utf-8") as log:
-        try:
-            result = subprocess.run(outer, stdout=log, stderr=subprocess.STDOUT, check=False)
-            return_code = result.returncode
-        except OSError as exc:
-            return_code = 127
-            status["launch_error"] = f"{type(exc).__name__}: {exc}"
+        return_code, launch_error, cleanup = run_with_container_cleanup(
+            outer, container_name=container_name, log=log)
+    if launch_error is not None:
+        status["launch_error"] = launch_error
+    status["container_cleanup"] = cleanup
     artifact_status, artifact_kind = classify_artifact(args.case, output, PAIRS)
     status.update({"return_code": return_code,
                    "elapsed_seconds": time.time() - started,
@@ -245,6 +305,9 @@ def main(argv=None):
         status["status"] = "driver-failed"
     else:
         status["status"] = artifact_status
+    if not cleanup["verified_absent"]:
+        status["execution_status"] = status["status"]
+        status["status"] = "cleanup-failed"
     status_path.write_text(json.dumps(status, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(status, indent=2))
     return 0 if status["status"] in ("complete", "complete-with-failed-pairs") else 1
