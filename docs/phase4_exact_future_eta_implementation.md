@@ -151,3 +151,13 @@ sequence管理のbyte課金を加えた後の60％地点の8 check smokeは、3�
 `checkpoint-commit`のconditionは、実測／予測の両方でformat 2のgate/history総数、既存chunkの再利用数、更新tail件数、chunk参照数を持つ。記録時はcommit直前のshapeを使う。format 2のpayload cacheは、source list identityと長さが同じ場合に限ってpartial tailも再利用する。appendで長さが変わればtailを再構成する。これはunchanged same-size commitの再計算を減らし、gate/historyの全件変換とrank間hash合意は毎回行う。
 
 成長を含む小さなend-to-end smoke（Mac、1 rank、file store、14回、各4 RX gate→expectation→checkpoint）ではcheckpoint stageが14.556〜20.787 msへ増えた。次のendpointはsource sizeが異なるため`COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:endpoint:checkpoint`でunknownとなった。boundaryも`LOW_HELD_OUT_COVERAGE`でunknownだった。同サイズoracle（1 gateを実行後、sourceを増やさず14回checkpoint）では、初回dirty-tailと再利用済tailの2 shapeに分かれ、再利用済tail shapeは14 sampleになった。実際の全gate変換と全data hashを含むcheckpoint ETAはunknown理由なしで回答し、lower／expected／upperは8.668／8.916／9.564 msだった。rank間condition一致は2-rank MPIでも確認した。単一trialのinterval coverageではない。サイズ別checkpoint classのheld-out評価、複数trialでの予測区間、短run全体の回答率比較は残る。
+
+## 実endpoint heldout baseline（2026-10-16）
+
+`examples/p4_002_endpoint_heldout.py`で、同size／同payload shapeの実校正後にquery→次実completionを行うprequential評価を追加した。Mac COMM_SELF、4 qubit、4／32／128 gate、各endpoint3独立trial、校正16回＋heldout5回。手動costを入れず、全unknown/error、condition、query前sample数、実completion、数値oracleを[raw JSONとprotocol](internal/p4_002_observed_eta/endpoint-heldout-20261016/README.md)へ保存した。校正432・heldout135・growth9、約376秒。前半はroot TeX buildと重複した診断観測であり、性能改善の実証ではない。
+
+- checkpoint：38/45回答、相対誤差median 8.01%、p95 11.27%、worst 14.97%、API wall区間coverage 13.2%。未測定のsource/history増加shapeは9/9 unknownで、直後の実checkpointとresume oracleは成功。
+- expectation：45/45回答、median 25.15%、p95 45.44%、worst 47.77%、API coverage 44.4%に対し内部stage coverage 95.6%。128 gateではmedian 32.40%、API/stage比1.446で、timer外のmaterialize前処理をendpoint modelが落としていたことを確認した。
+- adjoint gradient：45/45回答、median 0.69%、p95 5.06%、worst 10.11%、coverage 97.8%。gradientもcontext/schedule/vote/traceがstage timer外である。
+
+この結果をendpointの受入完了とはしない。explicit expectation/gradientのfuture APIに必要なmaterialize前処理（実gate/epochを除く）を別stageとして補完し、gradient timerにも必須準備を含めた後に再測定する。checkpoint低coverage、Linux／multi-rank、非quiescent snapshot、monitor overheadは引き続き評価対象である。
