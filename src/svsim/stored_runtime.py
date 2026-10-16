@@ -726,7 +726,7 @@ class StoredSimulator:
         run = StoredSimulator(self.num_qubits,self.config,profile=self.profile,execution=self.execution,mode=self.mode,
                               frame_policy=self.frame_policy,alignment_policy=self.alignment_policy,
                               frame_profile=self.frame_profile,
-                              _snapshot=manifest,_create=False,**({'transport_factory':self._store_kwargs['transport_factory']} if 'transport_factory' in self._store_kwargs else {}))
+                              _snapshot=manifest,_create=False,**self._store_kwargs)
         run.binding = binding
         run.trace.record('prefix-fork',metadata={'path':'PREFIX_FORK','snapshot_id':manifest.snapshot_id,'payload_copy_bytes':0,'binding_id':binding.binding_id})
         return run
