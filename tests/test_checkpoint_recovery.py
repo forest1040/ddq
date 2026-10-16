@@ -202,16 +202,61 @@ def test_unlinked_token_is_preserved(saved):
 
 def test_standalone_shard_reader_prevents_recovery(saved):
     from svsim.storage import FileBlockStore,StorageConfig
-    config,_,_=saved
+    config,snapshot,expected=saved
     key,_,_=_reserve(saved)
     store=FileBlockStore(StorageConfig(str(Path(config.directory)/'rank-0000'),2),6,create=False)
     try:
+        assert store.disk_budget._ledger_path==Path(config.disk_admission_ledger)
+        assert store.disk_budget.quota_bytes==config.disk_quota_bytes
+        assert not (store.directory/'metadata/disk-ledger.sqlite3').exists()
         with pytest.raises(CollectiveError,match='unavailable|busy'):
             recover_checkpoint_reservations(config,comm=MPI.COMM_SELF,apply=True)
     finally:store.close()
     budget=_budget(config)
     try:assert budget.reservation(key)['state']=='WRITING'
     finally:budget.close()
+    with DistributedSimulator.resume(config,snapshot,comm=MPI.COMM_SELF) as sim:
+        np.testing.assert_allclose(sim.state(allow_gather=True),expected,atol=1e-12)
+
+
+@pytest.mark.parametrize('invalid',['missing','uncovered','private'])
+def test_standalone_shard_refuses_unproven_shared_ledger(saved,tmp_path,invalid):
+    from svsim.storage import FileBlockStore,StorageConfig
+    config,_,_=saved
+    shard=Path(config.directory)/'rank-0000'
+    ledger=tmp_path/'missing.sqlite3'
+    if invalid!='missing':
+        other=tmp_path/'other';other.mkdir();ledger=other/'ledger.sqlite3'
+        disk=DiskBudget(ledger,[other],shared_policy=invalid=='uncovered',persist_private_policy=invalid=='private')
+        disk.close()
+    con=sqlite3.connect(shard/'metadata/catalog.sqlite3')
+    con.execute("UPDATE distributed_settings SET data=? WHERE key='disk_admission_ledger'",(canonical(str(ledger)),))
+    con.commit();con.close()
+    (shard/'assets').rmdir()
+    before=ledger.read_bytes() if ledger.exists() else None
+    with pytest.raises(DiskAdmissionError):FileBlockStore(StorageConfig(str(shard),2),6,create=False)
+    assert not (shard/'metadata/disk-ledger.sqlite3').exists()
+    assert not (shard/'assets').exists()
+    assert (ledger.read_bytes() if ledger.exists() else None)==before
+
+
+def test_missing_private_ledger_cannot_be_recreated_as_a_shard(tmp_path):
+    from svsim.storage import FileBlockStore,StorageConfig
+    config=StorageConfig(str(tmp_path/'private'),2)
+    store=FileBlockStore(config,6);store.close()
+    ledger=Path(config.directory)/'metadata/disk-ledger.sqlite3';ledger.unlink()
+    with pytest.raises(DiskAdmissionError,match='missing'):
+        FileBlockStore(config,6,create=False)
+    assert not ledger.exists()
+
+
+def test_standalone_shard_refuses_explicit_policy_conflict(saved):
+    from svsim.storage import FileBlockStore,StorageConfig
+    config,_,_=saved
+    shard=Path(config.directory)/'rank-0000'
+    with pytest.raises(DiskAdmissionError,match='policy differs'):
+        FileBlockStore(StorageConfig(str(shard),2,disk_quota_bytes=64*1024**2),6,create=False)
+    assert not (shard/'metadata/disk-ledger.sqlite3').exists()
 
 
 def test_checkpoint_writer_and_recovery_accept_root_external_symlink_parent_traversal(saved):

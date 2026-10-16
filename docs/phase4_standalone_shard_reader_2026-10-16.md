@@ -1,0 +1,7 @@
+# standalone shard readerの永続ledger継承
+
+2026-10-16。private ledger欠落時の再作成拒否が、distributed shared ledgerに最初から属するshardにも適用され、既存`FileBlockStore(create=False)` readerを拒否していた。元の`test_standalone_shard_reader_prevents_recovery`で再現した。
+
+local private ledgerが無い既存storeでは、catalogの`distributed_settings.disk_admission_ledger`をread-onlyで取得する。canonical path、regular fileの排他性、volume、persisted shared policy、registered rootsによるshard包含を確認し、既存shared ledgerのpolicyとvolume coordinatorを継承する。明示されたStorageConfig policy/coordinatorが矛盾する場合は拒否する。既存ledgerを継承するだけで、新しいprivate ledgerや欠落したshared ledgerは作らない。private storeにdistributed設定が無い場合、shared policyの無いledgerやshardを含まないledgerの場合は従来の保守拒否を維持する。
+
+readerは従来と同じstore directory leaseを保持するため、同時offline recoveryを阻止する。reader close後も元のWRITING reservationは維持される。locator欠落、別rootのshared ledger、private ledgerへの誤帰属、真のprivate ledger欠落、明示policy conflictを回帰に追加した。

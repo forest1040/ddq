@@ -117,7 +117,6 @@ class FileBlockStore:
                 raise
 
     def _open_store(self, config, num_qubits, create, disk_budget):
-        for sub in ('state','metadata','assets','journal','traces','manifests'): (self.directory/sub).mkdir(exist_ok=True)
         from .catalog_admission import CatalogConnection
         self._owned_disk_budget = None
         if disk_budget is None:
@@ -136,6 +135,7 @@ class FileBlockStore:
                     (disk_budget.quota_bytes,disk_budget.min_free_bytes,disk_budget.drain_reserve_bytes)!=requested):
                 raise DiskAdmissionError('StorageConfig coordinator policy differs from the supplied disk budget')
         self.disk_budget=disk_budget
+        for sub in ('state','metadata','assets','journal','traces','manifests'): (self.directory/sub).mkdir(exist_ok=True)
         self.db=CatalogConnection(self.directory/'metadata/catalog.sqlite3',
             budget_getter=lambda:self.disk_budget,drain_getter=lambda:getattr(self,'_disk_drain',False),
             require_native=self.disk_budget.quota_bytes is not None)
