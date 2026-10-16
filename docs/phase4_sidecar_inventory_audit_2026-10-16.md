@@ -1,0 +1,11 @@
+# P4-009 sidecar inventory受入監査
+
+2026-10-16。共通atomic sidecar writerのcallsiteを照合したところ、実`DiskBudget`に登録されていないdestinationへも予約付きwriteが成功していた。write完了後に予約を解放すると、作成byteはinventoryにもpendingにも現れず、次のadmissionでquotaを超過できた。managed root内のparent symlinkから外部へ出る場合も同様だった。
+
+`admitted_files.atomic_write_bytes`と`distributed_checkpoint.atomic_json`は、予約／mkdir／write前にdestinationのcanonical parentを確定し、ledgerの永続generic rootsと明示export rootsのいずれかに含まれることを検証する。未作成parentは最寄り既存ancestorのvolumeも照合する。既存leafのsymlink、hardlink、非regular file、別volumeは拒否する。temporaryにも同じinventory preflightを適用し、checkpoint JSON、stored matrix／snapshot assetsなど共通helperを使うwriterの課金閉包を維持する。
+
+既存契約で許可した外部parent alias／`..`を経て正規managed rootへ到達する表記はcanonical pathへ変換して受理する。`DiskBudget`を持たないunmanaged APIとadmission-only test doubleの振舞いは維持する。非協調プロセスによるdirectory差替えへの任意の耐性を追加する変更ではなく、既存のwriter lease／inventory所有契約の中でdestinationの閉包を検査する。
+
+実ledgerを用いる9件の回帰で、bytes／checkpoint JSONの各writerに対するroot外、parent symlink、leaf symlink、leaf hardlinkの拒否を確認した。拒否時に外部sentinel、namespace、pending creditが変化しないことを検証する。許可されるparent alias表記では実byteがobserved usageへ計上され、pendingが0になることを検証する。既存のprocess kill、quota、write／fsync／rename fault、stored snapshotの数値再開oracleを含む関連55件が成功した。
+
+これは共通sidecarの補修であり、bootstrapとclusterを含むP4-009全体の受入完了を意味しない。

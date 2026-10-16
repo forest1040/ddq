@@ -259,3 +259,42 @@ atomic_write_bytes(root/'manifest.bin',b'new',disk_budget=budget,operation='cras
         # checkpoint decision. No automatic reconciliation is performed.
         assert recovered.snapshot()['strict_capacity_guarantee'] is False
     finally:recovered.close()
+
+
+@pytest.mark.parametrize('writer',['bytes','checkpoint-json'])
+@pytest.mark.parametrize('destination',['outside','parent-symlink','leaf-symlink','leaf-hardlink'])
+def test_admitted_sidecars_cannot_escape_or_alias_the_charged_inventory(tmp_path,writer,destination):
+    from svsim.distributed_checkpoint import atomic_json
+    managed=tmp_path/'managed';managed.mkdir()
+    outside=tmp_path/'outside';outside.mkdir()
+    sentinel=outside/'sentinel';sentinel.write_bytes(b'foreign')
+    budget=DiskBudget(managed/'ledger.sqlite',[managed],quota_bytes=32*1024**2)
+    if destination=='outside':target=outside/'new'/'sidecar'
+    elif destination=='parent-symlink':
+        alias=managed/'alias';alias.symlink_to(outside,target_is_directory=True)
+        target=alias/'sidecar'
+    elif destination=='leaf-symlink':
+        target=managed/'sidecar';target.symlink_to(sentinel)
+    else:
+        target=managed/'sidecar';os.link(sentinel,target)
+    try:
+        pending=budget.reserved_bytes
+        with pytest.raises(DiskAdmissionError):
+            if writer=='bytes':admitted_files.atomic_write_bytes(target,b'new',disk_budget=budget)
+            else:atomic_json(target,{'new':True},disk_budget=budget)
+        assert sentinel.read_bytes()==b'foreign' and not (outside/'new').exists()
+        assert not (outside/'sidecar').exists() and budget.reserved_bytes==pending
+        assert not list(managed.glob('*.tmp'))
+    finally:budget.close()
+
+
+def test_sidecar_parent_spelling_is_canonicalized_without_losing_inventory(tmp_path):
+    managed=tmp_path/'managed';managed.mkdir()
+    child=tmp_path/'child';child.mkdir()
+    alias=tmp_path/'alias';alias.symlink_to(child,target_is_directory=True)
+    budget=DiskBudget(managed/'ledger.sqlite',[managed],quota_bytes=32*1024**2)
+    try:
+        admitted_files.atomic_write_bytes(alias/'..'/'managed'/'sidecar',b'new',disk_budget=budget)
+        assert (managed/'sidecar').read_bytes()==b'new'
+        assert budget._observed_usage()==3 and budget.reserved_bytes==0
+    finally:budget.close()

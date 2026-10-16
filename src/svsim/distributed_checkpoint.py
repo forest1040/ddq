@@ -11,7 +11,7 @@ import numpy as np
 from .journal import canonical,content_hash,gate_data,decode_gate
 from .parameters import ParameterBinding,ExactPi
 from .layout import QubitLayout
-from .admitted_files import file_allocation
+from .admitted_files import file_allocation,checked_sidecar_path
 
 
 def atomic_json(path,data,*,disk_budget=None,checkpoint_context=None,owner=None,operation='atomic-json'):
@@ -22,7 +22,7 @@ def atomic_json(path,data,*,disk_budget=None,checkpoint_context=None,owner=None,
 
 
 def _atomic_json(path,data,*,disk_budget=None,checkpoint_context=None,owner=None,operation='atomic-json'):
-    path=Path(path)
+    path=checked_sidecar_path(disk_budget,path)
     raw=(canonical(data)+'\n').encode()
     nonce=uuid4().hex
     temporary=path.with_name('.'+path.name+'.'+nonce+'.tmp')
