@@ -356,8 +356,15 @@ def test_observed_view_prices_full_remaining_from_measured_epoch_stages(tmp_path
         assert {"epoch-publication", "epoch-boundary"} <= stages
         observed = sim.runtime.update_eta(endpoint_frontier=end)["views"]["observed"]
         reasons = observed["unknown_reasons"]
-        # Only measured, certified classes may answer; otherwise the reason is a missing cost.
-        assert observed["expected_seconds"] is not None or all(r.startswith("MISSING_COST:") for r in reasons)
+        # Only measured, certified classes may answer. An uncertified rolling
+        # class reports both its rejection reason and the resulting missing cost.
+        if observed["expected_seconds"] is None:
+            assert reasons
+            assert all(r.startswith(("MISSING_COST:", "COST_UNCERTIFIED:")) for r in reasons)
+            for reason in reasons:
+                if reason.startswith("COST_UNCERTIFIED:"):
+                    _, _, task_id = reason.split(":", 2)
+                    assert "MISSING_COST:" + task_id in reasons
         if observed["expected_seconds"] is not None:
             assert observed["coverage"] == 1.0
             assert observed["lower_seconds"] <= observed["expected_seconds"] <= observed["upper_seconds"]
