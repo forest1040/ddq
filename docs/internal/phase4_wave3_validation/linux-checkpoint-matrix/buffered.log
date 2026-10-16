@@ -1,0 +1,5 @@
+...........s.s.s.s.s.............s..                                     [100%]
+=========================== short test summary info ============================
+SKIPPED [5] tests/test_checkpoint_stage_kills_mpi.py:60: only rank 0 writes the global decision
+SKIPPED [1] tests/test_checkpoint_stage_kills_mpi.py:68: only rank 0 writes the global decision
+30 passed, 6 skipped in 220.62s (0:03:40)

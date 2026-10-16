@@ -1,0 +1,17 @@
+{
+  "cases": 73,
+  "failed": 0,
+  "skipped": [
+    {
+      "name": "test_mid_write_extent_failure_keeps_the_old_cut_and_releases_the_token",
+      "reason": "O_DIRECT transfers whole aligned pages, so a sub-page short write cannot occur"
+    }
+  ],
+  "unexpected_skips": [],
+  "junit": "docs/internal/phase4_wave3_validation/linux-lifecycle-direct-retry/physical-direct.xml",
+  "backend": "direct",
+  "recheck_only": true,
+  "status": "passed",
+  "source_xml_sha256": "505479918c6a031e14b4bdc6b10b4603344bcf6c874f7a2f396f1d550fe791fe",
+  "original_summary_sha256": "0ef42e5b5b03e6474e9a6b467e70596ba8fd887784ec4a80779059d67f0b23c5"
+}

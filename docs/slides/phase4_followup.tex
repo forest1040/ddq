@@ -73,3 +73,32 @@
   \takeaway{P4-002・009はIN\_PROGRESS。Linux最終fault matrix、監視費用・endpointのheld-out評価を継続する。}
   \note{根拠：docs/phase4\_executor\_stage\_dag\_implementation.md、docs/phase4\_catalog\_startup\_recovery\_implementation.md、docs/phase4\_sqlite\_power\_loss\_implementation.md。電源断模型は成功したVFS syncのみをdurable imageへ反映する。実装済みDBとjournalの模型であり、実hardwareやtorn writeの保証は主張しない。payload/storage/Frameの未確定量はunknownとし、logical state bytesで代用しない。}
 \end{frame}
+
+
+\begin{frame}{Phase 4：容量予約の受入完了とETA再評価（2026-10-17）}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.48\textwidth}
+      \textbf{P4-009：DONE}\par
+      \small
+      \begin{itemize}
+        \item 元の009A〜Dと全managed writerを照合。
+        \item Linux追加367成功・13件は理由付き非適用。
+        \item 実2 host・4 rankで調停8 case成功。
+        \item 故障・回収後の旧／新cutを数値oracleで検証。
+      \end{itemize}
+    \end{column}
+    \begin{column}{.48\textwidth}
+      \textbf{P4-002：実完了までの費用を補修}\par
+      \small
+      \begin{itemize}
+        \item 期待値APIの前処理の計測漏れを実測で検出。
+        \item 前処理を各callへ1回追加しgate費用と分離。
+        \item 勾配のschedule費用も実測へ含める。
+        \item 修正版の高速試験・held-out評価を継続。
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \smallnote{13非適用はdirectのsub-page短write 1件、global decisionを書かないrank 1の6条件×2 backend。}
+  \takeaway{P4-001・009がDONEとなり\textbf{M1達成}。P4-002とPhase 4全体はIN\_PROGRESS。}
+  \note{根拠：docs/phase4\_p4\_009\_acceptance\_2026-10-16.md、docs/internal/phase4\_wave3\_validation/README.md。strict\_capacity\_guarantee=falseを維持する。物理電源断ではなくdurable image模型で検証し、未管理writerやfilesystem metadataへのhardware容量保証を主張しない。旧timeoutとskip guardの失敗は保存し、JUnitの読取専用再判定を別保存した。P4-002の修正前endpoint baselineは診断観測であり、正味利益や区間coverageの保証とはしない。}
+\end{frame}

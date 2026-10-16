@@ -1,0 +1,5 @@
+........................................................................ [ 98%]
+s                                                                        [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_disk_quota_sweep.py:159: O_DIRECT transfers whole aligned pages, so a sub-page short write cannot occur
+72 passed, 1 skipped in 390.47s (0:06:30)

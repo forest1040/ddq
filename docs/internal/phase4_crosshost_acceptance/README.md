@@ -7,7 +7,7 @@ coordinator refusal, unsupported-filesystem collective refusal, and offline
 checkpoint recovery/claim republication/resume. The worker explicitly rejects a
 single physical hostname when `--require-cross-host` is given.
 
-Requested authorization: one new workq job, select=2:ncpus=4:mpiprocs=2:mem=8gb,
+Each separately authorized attempt uses one workq job, select=2:ncpus=4:mpiprocs=2:mem=8gb,
 place=scatter, walltime 10 minutes. Upload only `src/`, `tests/`, `examples/` plus
 SHA256 inventory as an overlay archive, the archive hash and this PBS script to
 `lg:/var/tmp/ddq-20009/p4-acceptance-20261016/`. Code and tests are private repository
@@ -31,8 +31,7 @@ files, archive size 659201 bytes, SHA256
 `9cdb8c95f8b6d801d79f58ec35d360d37ee5ac442b2e986f1213bd977481014e`.
 The local archive is `/private/tmp/ddq-p4-crosshost-20261016/overlay.tar.gz`;
 [planned-source.sha256](planned-source.sha256) lists every member digest.
-The user explicitly authorized the upload and one PBS job on 2026-10-16. Job `265179.CPUcluster-PRISM` reached two distinct nodes, verified the overlay and capacity, then failed before any worker case during singleton MPI initialization (Exit_status 14). See [verbatim failure evidence](job-265179/README.md). The corrected launcher avoids importing MPI in singleton diagnostics and returns stage/status/logs through an EXIT trap. Its local fake PBS/SSH regression passed 8 cases. The user explicitly authorized one retry, submitted as `265180.CPUcluster-PRISM`; its actual result is pending.
+The user explicitly authorized the upload and one PBS job on 2026-10-16. Job `265179.CPUcluster-PRISM` reached two distinct nodes, verified the overlay and capacity, then failed before any worker case during singleton MPI initialization (Exit_status 14). See [verbatim failure evidence](job-265179/README.md). The corrected launcher avoids importing MPI in singleton diagnostics and returns stage/status/logs through an EXIT trap. Its local fake PBS/SSH regression passed 8 cases. The user explicitly authorized one retry, `265180.CPUcluster-PRISM`, which passed all 8 actual worker cases on 2 physical hosts / 4 MPI ranks, Exit_status 0 and walltime 33 s. [All results, source checks and cleanup evidence](job-265180/README.md) are retained.
 The later campaign-only incomplete-CI guard does not affect this worker. This
 prepared bundle stays pinned to the tested production source above.
-Exact SHA256 manifests are retained with results. No cross-host result is claimed until the actual job
-passes. The initial script passed `bash -n`; actual execution exposed the singleton MPI initialization problem above. The eight worker cases remain unvalidated across hosts.
+Exact SHA256 manifests are retained with results. The initial script passed `bash -n`; actual execution exposed the singleton MPI initialization problem above. The corrected script passed the local 8-case failure regression and all eight actual cross-host worker cases.

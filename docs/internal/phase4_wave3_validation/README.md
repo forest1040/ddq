@@ -82,3 +82,25 @@ PBS 265179 reached two nodes but failed in singleton MPI diagnostics before any 
 The 120-layer performance v2 campaign was resource-aborted before any long measured pair: the first long warmup pair took 1315 s, so 9 pairs could not fit its 3600 s command budget. [All partial rows](linux-performance-v2-aborted/README.md) are retained and inconclusive. The independent [v3 plan](performance-v3-plan.md) fixes long layers at 20 while retaining warmup 2 / paired measured 7, and uses fresh per-attempt output/scratch. A new result audit preserves unknown/error outcomes and reports absolute seconds and relative errors; extraction is nested in capture time, never added twice.
 
 The follow-up focused fast checks passed **16 tests** (overhead incomplete-CI guard, exact v3 artifact grid, PBS launcher failure modes), [log](mac-wave4-focused.txt). Production core remains 9eb426f, already covered by 1317 passed / 38 skipped / 83 deselected. The latest additions here are validation tooling and documentation. TeX/PDF was rebuilt successfully (40 pages, no overfull boxes) to record the actual cross-host result. P4-002 and P4-009 stay IN_PROGRESS until the outstanding Linux lifecycle/checkpoint and endpoint/measurement results are reviewed.
+
+
+## P4-009 final Linux and cross-host acceptance (2026-10-17)
+
+The final disk-admission production source is `9eb426f`. Every `src/` file in the saved final Linux inventories matches that source. Later changes through validation `26ddac5` affect test tooling, reporting and documentation. The original 009A–D criteria and writer coverage are reviewed in [the acceptance matrix](../../phase4_p4_009_acceptance_2026-10-16.md); the [selection audit](../../phase4_p4_009_test_selection_coverage_2026-10-16.md) explains all 38 Mac skips and 83 slow exclusions rather than waiving them.
+
+| Final evidence | Passed | Non-applicable skips | Notes |
+|---|---:|---:|---|
+| [Linux contracts](linux-lifecycle-initial/README.md) | 119 | 0 | latest reader/fork/bootstrap/birth/sidecar/append/migration; actual inode reuse test passed |
+| Native SQLite fault points (same initial run) | 13 | 0 | no unavailable-native skip accepted |
+| Buffered physical lifecycle (same initial run) | 73 | 0 | private recovery, GC, segment kills/model, extent boundaries |
+| [Direct physical lifecycle retry](linux-lifecycle-direct-retry/README.md) | 72 | 1 | exact sub-page short-write test is non-applicable to O_DIRECT; aligned failures remain tested |
+| [Physical ENOSPC](linux-lifecycle-enospc/README.md) | 30 | 0 | 15 each buffered/direct, dedicated 16 MiB tmpfs |
+| [Complete MPI checkpoint kill/ENOSPC matrix](linux-checkpoint-matrix/README.md) | 60 | 12 | 30 pass each backend; decision rank1 is non-applicable, exact names/reasons checked |
+| Total Linux follow-up | **367** | **13** | no test failures; original timeout and failed validation-guard reports preserved |
+
+The direct retry's pytest exit was 0 but its original generic skip guard reported failure. [Read-only recheck](linux-lifecycle-direct-retry/acceptance-recheck.json) accepts only the exact test name/reason on backend direct; the original XML/summary were not rewritten and their hashes are recorded. The first 240-second timeout likewise remains in the initial artifact. This is an explained acceptance review, not a claim that the original launcher was green.
+
+Separately, the explicitly authorized [PBS retry 265180](../phase4_crosshost_acceptance/job-265180/README.md) passed all **8** cases on two actual physical hosts/four MPI ranks, with pinned source checks, capacity checks, cleanup and numerical recovery/fork/gradient oracles. Its first singleton-MPI failure is retained. P4-009 can close using these results together with the existing Mac semantic/guard/power-loss-model evidence. Hardware power-loss/torn-write guarantees and unmanaged filesystem metadata remain outside the original software-admission claim; strict_capacity_guarantee stays false. P4-002 and the other unfinished Phase 4 items remain separate.
+
+
+The integrated endpoint-prelude core fix `83cfc36` subsequently passed the full Mac fast suite: **1351 passed / 38 skipped / 83 deselected**, 292.77 s ([raw log](mac-wave5-fast-full.txt)); the unchanged disk implementation remains covered, while P4-002's final bounded-analysis review and held-out measurement continue. Validation-focused checks passed **33** before the later container-cleanup-only driver change ([raw log](mac-wave5-focused.txt)). TeX/PDF was rebuilt to **41 pages**, no overfull boxes, and the new P4-009 DONE / M1 slide was visually checked. This intermediate closure is not the final P4-002 acceptance.
