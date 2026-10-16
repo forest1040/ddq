@@ -1,0 +1,13 @@
+# P4-009：stored migrationのsource-bound clone回収
+
+2026-10-16。migrationの一時catalogもmanaged rank root内に置き、`migration-open`のUUID scratchを`purpose=stored-migration` intentへbindした。namespaceの1 byteは実filesystem metadata全体の容量保証ではない。clone catalog自身の全writeは従来の`CatalogConnection` envelope/VFS、target振幅はextent admissionを使う。
+
+intentはtarget root、source root/catalogのdevice/inode/birth、source snapshot IDとcanonical digest、scratch UUIDを永続化する。scratchの作成前に予約し、通常はtemp catalog close・directory cleanup・parent fsyncまで保持する。SQLite closeが不確定でcatalog/startup tokenが生きている場合は、そのattribution inodeを消さずscratchとmigration tokenも残す。
+
+offline recoveryはtargetの全owner停止に加え、sourceにもexclusive directory leaseを要求する。source catalog quick_check、snapshot digest、committed journal prefixをread-onlyで確認する。cloneの各published versionについて、sourceの同version IDが同segment/offset/checksumを持ち、実source payloadがそのchecksumに一致することを64 KiB以下のstreaming bufferで証明する。source振幅やcatalog全体をRAMへコピーしない。cloneを検査対象から除外したり、source extentをcloneローカルのpayloadと誤認したりしない。
+
+clone以外のtarget catalogは従来のphysical closure検査を受ける。sourceやcloneの改変、birth/generation不一致、sourceのlive owner、symlink、不明なhot sidefile等は精算前に拒否する。実SQLite backup途中でhot clone journalが残った場合は、通常のadmitted CatalogConnection openでrollbackを行ってから新しいdry-run planを取得する。hot journalがあるままpendingを回収しない。
+
+回収はartifactを保存し、pendingだけをexact reservation/link CASで一度精算する。source-bound intentはterminal receipt後にも残すため、保存したcloneが次回のinventoryで通常storeと誤認されて再拒否されることを防ぐ。cloneが残る間は再検証にもsourceが必要であり、sourceの変更や削除を黙認しない。scratchの物理bytesはtarget ledgerのusageへ課金し続ける。
+
+検証は`tests/test_migration_scratch_recovery.py`。実process SIGKILLを予約直後、clone open直後、SQLite backupを1 pageずつ進めた途中、copy完了後、target block flush直後に置いた。source全fileのbyte不変、target artifact保持、dry-run→apply→冪等、旧global decisionへのresumeと実numerical oracleを確認した。source live、source payload破損、clone offset改変はtokenを残して拒否した。新規8件が成功し、startup/uncommitted/既存migrationを合わせた回帰は72 passed・1 skippedだった。SIGKILLは実power-loss試験と区別する。

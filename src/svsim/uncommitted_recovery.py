@@ -149,6 +149,9 @@ def offline_scope(ledger, *, policy=None, writer=False):
             stores.extend(found); to_lease.update(directories)
         con = sqlite3.connect(ledger.as_uri() + '?mode=ro', uri=True)
         try:
+            from .migration_admission import inventory
+            migration_clones=inventory(con,roots)
+            to_lease.update(Path(link['source_root']) for link in migration_clones.values())
             from .catalog_startup import inventory_directories
             to_lease.update(inventory_directories(con,roots))
             try:
@@ -191,7 +194,7 @@ def offline_scope(ledger, *, policy=None, writer=False):
             budget = DiskBudget(ledger, roots, shared_policy=True, recovery_only=True, **persisted)
         yield {'ledger': ledger, 'ledger_lease': ledger_lease, 'leases': leases, 'budget': budget, 'roots': roots,
                'stores': sorted(set(stores), key=str), 'policy': persisted, 'private_ledger': private,
-               'coordinator': coordinator, 'export_roots': export_roots}
+               'coordinator': coordinator, 'export_roots': export_roots, 'migration_clones':migration_clones}
     finally:
         if budget is not None:
             budget.close()
@@ -271,9 +274,13 @@ def _walk_files(store, budget_entries):
     return files, odd
 
 
-def _inspect_store(store, *, max_journal_bytes, entries):
+def _inspect_store(store, *, max_journal_bytes, entries, migration=None):
     out = {'path': str(store), 'blockers': []}
     block = out['blockers']
+    if migration is not None:
+        from .migration_admission import read_snapshot
+        read_snapshot(migration)
+        out['migration_source_digest']=migration['source_digest']
     relative = 'metadata/catalog.sqlite3'
     path, info = _checked_path(store, relative)
     artifacts = {'database': {'path': str(path), 'device': info.st_dev, 'inode': info.st_ino,
@@ -297,10 +304,15 @@ def _inspect_store(store, *, max_journal_bytes, entries):
                 out['published_versions'] = out['orphan_versions'] = 0
                 segments = {p.name: p.stat().st_size for p in (store / 'state').glob('segment-*.bin')} if (store / 'state').is_dir() else {}
                 if 'versions' in tables:
-                    for segment, offset in con.execute('SELECT segment,offset FROM versions'):
+                    for version,segment,offset,checksum in con.execute('SELECT id,segment,offset,checksum FROM versions'):
                         if segment is None:
                             out['orphan_versions'] += 1; continue
                         out['published_versions'] += 1
+                        if migration is not None:
+                            from .migration_admission import verify_clone_version
+                            if out['published_versions']>MAX_ENTRIES:raise DiskAdmissionError('Migration clone version limit exceeded')
+                            verify_clone_version(migration,version,segment,offset,checksum)
+                            continue
                         size = segments.get(f'segment-{segment:06d}.bin')
                         if size is None or offset >= size:
                             block.append('published-extent-beyond-segment-file')
@@ -462,7 +474,8 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
     with offline_scope(ledger, policy=policy) as scope:
         budget = scope['budget']
         entries = [0]
-        stores = [_inspect_store(s, max_journal_bytes=max_journal_bytes, entries=entries) for s in scope['stores']]
+        stores = [_inspect_store(s, max_journal_bytes=max_journal_bytes, entries=entries,
+                                 migration=scope['migration_clones'].get(str(s))) for s in scope['stores']]
         owners = _catalog_owner_digests(stores)
         live = budget.live_reservations(linked=False, limit=max_tokens)
         linked = budget.live_reservations(linked=True, limit=max_tokens)
@@ -474,7 +487,7 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
         deferred, uncommitted_linked = [], []
         for token in linked:
             link = link_of[token['id']]
-            dedicated = link is not None and (link.get('purpose') in ('state-export','catalog-startup') or
+            dedicated = link is not None and (link.get('purpose') in ('state-export','catalog-startup','stored-migration') or
                                               link.get('stage') in ('metadata-payload','metadata-chunk'))
             if not dedicated and link is not None and link.get('snapshot_id') in committed_snapshots:
                 deferred.append(token)       # a committed cut: checkpoint recovery owns it
@@ -483,10 +496,13 @@ def recover_uncommitted_reservations(ledger, *, apply=False, confirm_plan=None, 
         linked = deferred
         for token, link in uncommitted_linked:
             attribution = None
-            if link is not None and (link.get('purpose') in ('state-export','catalog-startup') or
+            if link is not None and (link.get('purpose') in ('state-export','catalog-startup','stored-migration') or
                                      link.get('stage') in ('metadata-payload','metadata-chunk')):
                 try:
-                    if link.get('purpose') == 'catalog-startup':
+                    if link.get('purpose') == 'stored-migration':
+                        from .migration_admission import plan_recovery
+                        dedicated_plan = plan_recovery(token,link,scope)
+                    elif link.get('purpose') == 'catalog-startup':
                         from .catalog_startup import plan_recovery
                         dedicated_plan = plan_recovery(token,link,scope)
                     elif link.get('purpose') == 'state-export':
@@ -688,7 +704,8 @@ def _fsync_directory(path):
 
 def _inspect_all(scope, max_journal_bytes):
     entries = [0]
-    stores = [_inspect_store(s, max_journal_bytes=max_journal_bytes, entries=entries) for s in scope['stores']]
+    stores = [_inspect_store(s, max_journal_bytes=max_journal_bytes, entries=entries,
+                                 migration=scope['migration_clones'].get(str(s))) for s in scope['stores']]
     return stores, [f"{s['path']}: {b}" for s in stores for b in s['blockers']]
 
 

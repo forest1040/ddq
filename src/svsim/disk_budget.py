@@ -795,6 +795,9 @@ class DiskBudget:
         if link.get('purpose') == 'state-export':
             from .export_admission import normalize_intent
             return normalize_intent(self,link,amount)
+        if link.get('purpose') == 'stored-migration':
+            from .migration_admission import normalize_intent
+            return normalize_intent(self,link,amount)
         if link.get('purpose') == 'catalog-startup':
             from .catalog_startup import normalize_intent
             return normalize_intent(self,link,amount)

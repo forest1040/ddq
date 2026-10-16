@@ -427,42 +427,41 @@ def migrate_stored_snapshot(sim,source_config,snapshot):
         if layout.logical_to_physical != manifest.layout: raise OSError('Source layout history mismatch')
         if len(canonical(history).encode())*4 > sim.config.metadata_reserve_bytes:
             raise MemoryError('Migration history exceeds metadata reserve')
-        with sim.store.disk_budget.allocation(1,operation='migration-open',
-                drain=bool(getattr(sim.store,'_disk_drain',False))):
+        from .migration_admission import scratch
+        with scratch(sim,source,manifest) as temporary:
             root = sim._new_root()
-            with TemporaryDirectory(prefix='ddq-migrate-',dir=sim.store.directory) as temporary:
-                copied = replace(source_config,directory=temporary,metadata_reserve_bytes=metadata)
-                (Path(temporary)/'metadata').mkdir()
-                from .catalog_admission import CatalogConnection
-                target_db = CatalogConnection(Path(temporary)/'metadata/catalog.sqlite3',
-                    budget_getter=lambda:sim.store.disk_budget)
-                try: target_db.backup_from(source.db)
-                finally: target_db.close()
-                catalog = FileBlockStore(copied,sim.num_qubits,create=False,disk_budget=sim.store.disk_budget)
+            copied = replace(source_config,directory=temporary,metadata_reserve_bytes=metadata)
+            (Path(temporary)/'metadata').mkdir()
+            from .catalog_admission import CatalogConnection
+            target_db = CatalogConnection(Path(temporary)/'metadata/catalog.sqlite3',
+                budget_getter=lambda:sim.store.disk_budget)
+            try: target_db.backup_from(source.db)
+            finally: target_db.close()
+            catalog = FileBlockStore(copied,sim.num_qubits,create=False,disk_budget=sim.store.disk_budget)
+            try:
+                proxy = SimpleNamespace(store=catalog,config=copied,block_bits=sim.block_bits,
+                                        assets=sim.assets,binding=binding,trace=sim.trace)
+                phase2 = Phase2Catalog(proxy); catalog.phase2=phase2
+                phase2.validate_root(manifest.root)
+                work = BufferLease(sim.budget,source.slot_bytes,source_config.alignment)
                 try:
-                    proxy = SimpleNamespace(store=catalog,config=copied,block_bits=sim.block_bits,
-                                            assets=sim.assets,binding=binding,trace=sim.trace)
-                    phase2 = Phase2Catalog(proxy); catalog.phase2=phase2
-                    phase2.validate_root(manifest.root)
-                    work = BufferLease(sim.budget,source.slot_bytes,source_config.alignment)
-                    try:
-                        for h in range(source.num_blocks):
-                            view = catalog.view(manifest.root,h)
-                            source.read_version(view.version_id,work.view)
-                            array = work.array(source.payload_bytes)
-                            try: phase2.resolve(array,view,h)
-                            finally: del array
-                            with sim.cache.outputs(1) as outputs:
-                                padding = outputs[0].array()
-                                padding.fill(0); del padding
-                                outputs[0].view[:source.payload_bytes] = work.view[:source.payload_bytes]
-                                version = sim.cache.adopt(outputs[0])
-                                sim._publish(root,h,StoredBlockView(version,manifest.frontier,manifest.frontier))
-                            sim.cache.flush()
-                            if hasattr(sim.store,'flush_to_file'): sim.store.flush_to_file()
-                            sim.cache.clear()
-                    finally: work.close()
-                finally: catalog.close()
+                    for h in range(source.num_blocks):
+                        view = catalog.view(manifest.root,h)
+                        source.read_version(view.version_id,work.view)
+                        array = work.array(source.payload_bytes)
+                        try: phase2.resolve(array,view,h)
+                        finally: del array
+                        with sim.cache.outputs(1) as outputs:
+                            padding = outputs[0].array()
+                            padding.fill(0); del padding
+                            outputs[0].view[:source.payload_bytes] = work.view[:source.payload_bytes]
+                            version = sim.cache.adopt(outputs[0])
+                            sim._publish(root,h,StoredBlockView(version,manifest.frontier,manifest.frontier))
+                        sim.cache.flush()
+                        if hasattr(sim.store,'flush_to_file'): sim.store.flush_to_file()
+                        sim.cache.clear()
+                finally: work.close()
+            finally: catalog.close()
         sim.root=sim.local.root=root; sim.frontier=sim.local.frontier=manifest.frontier
         sim.binding=sim.local.binding=binding
         sim.layout=sim.local.layout=QubitLayout(manifest.layout,manifest.layout_id)

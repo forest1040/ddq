@@ -18,7 +18,7 @@
 | checkpoint metadata payload/chunk | `checkpoint-metadata-payload/chunk`をdataset/snapshot/digest/generation intentへbind。bounded transfer、digest、fsync、write-once publication。 | [専用実装](phase4_checkpoint_metadata_recovery_implementation.md)。実kill、semantic validation、dry-run/apply/CAS/receipt、artifact保持。 |
 | matrix asset / stored snapshot sidecar | `matrix-asset` / `snapshot-export`のexact bytesをnamespace前に予約しatomic sidecar保存。 | sidecar class、停止後のmanaged inventoryとsemantic cutを保護。 |
 | stored / distributed state export | [専用実装](phase4_state_export_admission_implementation.md)。明示output rootsもusageへ含め、stored file/全rank shard/manifestを予約。bounded streaming、file/dir fsync、atomic replace/whole-directory exchange、old-generation cleanup後に解除。 | `state-export*` purposeとbirth/identity/lease/generation intent。実SIGKILL 5段階、oracle、回収冪等性。別volume/cross-host未証明namespaceは変更前拒否。 |
-| stored snapshot migration | temp namespaceを`migration-open`で作成前からcleanupまで予約。temp catalogを`sim.store.directory`内に置き、rank rootしか登録していない構成でもinventoryから外さない。backup catalogとsegmentは各々上記の予約を使う。 | namespace classは全store inspectionが通る場合のみ回収する。mid-copyのclone catalogがsource extentを参照する場合の専用intent/closure証明は次commitで実装する。 |
+| stored snapshot migration | temp namespaceを`migration-open`で作成前からcleanupまで予約。temp catalogを`sim.store.directory`内に置き、rank rootしか登録していない構成でもinventoryから外さない。backup catalogとsegmentは各々上記の予約を使う。 | [source-bound intent/clone回収](phase4_migration_recovery_implementation.md)はsource snapshotと実payloadをstreamingで検証する。sourceにもexclusive leaseを要求し、cloneを通常storeとして誤認せず全physical closureを証明する。実backup途中killはadmitted hot-journal rollback後に精算する。 |
 | batch/fork/parameter-shift | 子datasetは親の明示ledger/coordinatorを継承し、root合算とpolicy一致を検査。RAM shareとは別管理。 | 子closeでdurable bytesを勝手に消さず、引き続きinventoryへ課金。kill/独立dataset/Binding matrixは各既存tests。 |
 
 ## namespaceと最初のadmission
@@ -43,4 +43,4 @@
 
 今回のnamespace matrixは、Journal/traceの1 byte境界拒否、初回appendのexact byte拒否、既存partial tailのbyte不変、invalid serializationのbyte不変、exact creditによるrepairとcommitted cursor保持を確認する。実SIGKILLはnamespace予約直後、mkdir直後、trace open直後、およびdataset lease JSON予約/temp open直後へ置き、全artifactのbyte不変、dry-run→apply→再実行の冪等性、旧snapshotの実numerical oracleを検証する。
 
-既存writer/VFS/ENOSPC/kill/coordinator testsの結果と今回の新規結果は各実行logで区別する。SIGKILLは実power-loss durabilityの代用ではなく、SQLite EXTRAとnative VFS durability imageの検証もfilesystem/OS契約の範囲を明記する。bootstrapとmigration intentの継続作業を完了する前にP4-009の全writer受入をDONEとはしない。
+既存writer/VFS/ENOSPC/kill/coordinator testsの結果と今回の新規結果は各実行logで区別する。SIGKILLは実power-loss durabilityの代用ではなく、SQLite EXTRAとnative VFS durability imageの検証もfilesystem/OS契約の範囲を明記する。bootstrapの継続作業を完了する前にP4-009の全writer受入をDONEとはしない。
