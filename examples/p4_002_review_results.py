@@ -114,8 +114,13 @@ def _monitor_cost(row):
 
 
 def _backend_identities(rows):
-    values = set()
+    cached_values = set()
+    actual_values = set()
     empty = 0
+    actual_observations = 0
+    incomplete_actual_observations = 0
+    read_bytes = write_bytes = read_events = write_events = outstanding = 0
+    windows = set()
     for row in rows:
         for side in ("eta_on", "eta_off"):
             metrics = row.get(side)
@@ -128,9 +133,44 @@ def _backend_identities(rows):
                 empty += 1
             for identities in per_rank:
                 if isinstance(identities, list):
-                    values.update(value for value in identities if isinstance(value, str))
-    return {"observed_identities": sorted(values), "empty_backend_observation_count": empty,
-            "empty_means_backend_unverified": True}
+                    cached_values.update(value for value in identities if isinstance(value, str))
+            actual_by_rank = metrics.get("storage_io_by_rank")
+            if not isinstance(actual_by_rank, list):
+                continue
+            actual_observations += 1
+            for evidence in actual_by_rank:
+                if not isinstance(evidence, dict):
+                    incomplete_actual_observations += 1
+                    continue
+                identities = evidence.get("backend_identities", [])
+                if isinstance(identities, list):
+                    actual_values.update(value for value in identities if isinstance(value, str))
+                read_bytes += evidence.get("read_bytes", 0) if _number(evidence.get("read_bytes")) else 0
+                write_bytes += evidence.get("write_bytes", 0) if _number(evidence.get("write_bytes")) else 0
+                read_events += evidence.get("read_events", 0) if _number(evidence.get("read_events")) else 0
+                write_events += evidence.get("write_events", 0) if _number(evidence.get("write_events")) else 0
+                outstanding += evidence.get("outstanding_requests_at_observation", 0) if _number(
+                    evidence.get("outstanding_requests_at_observation")) else 0
+                if evidence.get("backend_observation_complete") is not True:
+                    incomplete_actual_observations += 1
+                if isinstance(evidence.get("observation_window"), str):
+                    windows.add(evidence["observation_window"])
+    return {
+        "observed_identities": sorted(cached_values),
+        "cached_handle_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO",
+        "empty_backend_observation_count": empty,
+        "empty_means_backend_unverified": True,
+        "actual_completed_storage_identities_from_trace": sorted(actual_values),
+        "actual_storage_observation_records": actual_observations,
+        "incomplete_actual_storage_observation_count": incomplete_actual_observations,
+        "completed_storage_read_bytes": read_bytes,
+        "completed_storage_write_bytes": write_bytes,
+        "completed_storage_read_events": read_events,
+        "completed_storage_write_events": write_events,
+        "outstanding_io_requests_at_observation_sum": outstanding,
+        "actual_storage_observation_windows": sorted(windows),
+        "actual_identity_claim_scope": "completed storage trace events only; empty remains unverified",
+    }
 
 
 def _safe_workload_summary(name, rows, *, expected_pairs, reported=None, final_document=False):

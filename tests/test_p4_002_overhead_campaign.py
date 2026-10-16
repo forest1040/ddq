@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 try:
     from examples.p4_002_overhead_campaign import main, run_campaign, summarize_pairs
+    from examples.p4_002_review_results import _backend_identities
 finally:
     sys.path.pop(0)
 
@@ -91,3 +92,27 @@ def test_plan_only_smoke_records_resolved_workloads_and_sources(tmp_path):
     assert [(row["name"], row["campaign_class"]) for row in plan["conditions"]["workloads"]] == [
         ("rx-ry-low", "small"), ("mixed", "long")]
     assert len(plan["source"]["sha256"]) >= 5
+
+
+def test_actual_trace_backend_evidence_is_separate_from_cached_handles():
+    evidence = _backend_identities([{
+        "warmup": False,
+        "eta_on": {
+            "backend_resolved_by_rank": [[], []],
+            "storage_io_by_rank": [
+                {"backend_identities": ["linux-o-direct"], "read_bytes": 0, "write_bytes": 4096,
+                 "read_events": 0, "write_events": 1, "outstanding_requests_at_observation": 0,
+                 "backend_observation_complete": True, "observation_window": "test window"},
+                {"backend_identities": [], "read_bytes": 0, "write_bytes": 0,
+                 "read_events": 0, "write_events": 0, "outstanding_requests_at_observation": 1,
+                 "backend_observation_complete": False, "observation_window": "test window"},
+            ],
+        },
+        "eta_off": {"backend_resolved_by_rank": [[], []]},
+    }])
+    assert evidence["observed_identities"] == []
+    assert evidence["empty_means_backend_unverified"] is True
+    assert evidence["actual_completed_storage_identities_from_trace"] == ["linux-o-direct"]
+    assert evidence["completed_storage_write_bytes"] == 4096
+    assert evidence["completed_storage_write_events"] == 1
+    assert evidence["incomplete_actual_storage_observation_count"] == 1

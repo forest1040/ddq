@@ -541,6 +541,13 @@ def run_overhead_circuit(comm, scratch_dir: Path, wl: dict, backend: str,
             local_metrics = {"capture_count": 0, "capture_wall_seconds": 0.0,
                              "reported_extraction_seconds": 0.0,
                              "eta_evaluation_count": 0, "eta_evaluation_seconds": 0.0}
+            storage_io_start = {
+                "trace_event_count": sim.trace.event_count,
+                "read_bytes": sim.trace.read_bytes,
+                "write_bytes": sim.trace.write_bytes,
+                "io_submitted": sim.io_engine.submitted,
+                "io_completed": sim.io_engine.completed,
+            }
             t0 = perf_counter()
             sim.materialize(binding=binding)
             t1 = perf_counter()
@@ -554,8 +561,75 @@ def run_overhead_circuit(comm, scratch_dir: Path, wl: dict, backend: str,
                 for key in ("capture_count", "eta_evaluation_count"):
                     max_metrics[key] = max(row[key] for row in rank_metrics)
                 local_metrics = max_metrics
-            local_metrics['backend_resolved_by_rank'] = comm.allgather(
-                sorted({handle.backend_identity for handle in sim.store.files.values()}))
+            # The async store opens short-lived handles and closes them in each
+            # completion callback, so store.files only describes currently
+            # cached synchronous handles. Read completed I/O evidence from the
+            # trace after stopping the timed materialize interval. Do not drain
+            # pending requests here: record the exact observation window and
+            # mark its backend list incomplete if requests remain outstanding.
+            local_io_evidence = {
+                "backend_identities": [],
+                "read_bytes": max(0, sim.trace.read_bytes - storage_io_start["read_bytes"]),
+                "write_bytes": max(0, sim.trace.write_bytes - storage_io_start["write_bytes"]),
+                "read_events": 0,
+                "write_events": 0,
+                "read_event_bytes": 0,
+                "write_event_bytes": 0,
+                "submitted_requests": max(0, sim.io_engine.submitted - storage_io_start["io_submitted"]),
+                "completed_requests": max(0, sim.io_engine.completed - storage_io_start["io_completed"]),
+            }
+            for event_index, event in enumerate(sim.trace.iter_events()):
+                if event_index < storage_io_start["trace_event_count"]:
+                    continue
+                metadata = event.get("metadata") or {}
+                operation = metadata.get("operation")
+                if event.get("performance_class") not in {"storage-read", "storage-write"}:
+                    continue
+                if operation == "read":
+                    local_io_evidence["read_events"] += 1
+                    local_io_evidence["read_event_bytes"] += event.get("bytes") or 0
+                elif operation == "write":
+                    local_io_evidence["write_events"] += 1
+                    local_io_evidence["write_event_bytes"] += event.get("bytes") or 0
+                else:
+                    continue
+                resolved = metadata.get("backend")
+                if isinstance(resolved, str) and resolved:
+                    local_io_evidence["backend_identities"].append(resolved)
+            local_io_evidence["backend_identities"] = sorted(set(local_io_evidence["backend_identities"]))
+            local_io_evidence["outstanding_requests_at_observation"] = max(
+                0, local_io_evidence["submitted_requests"] - local_io_evidence["completed_requests"])
+            local_io_evidence["trace_event_bytes_match_counters"] = (
+                local_io_evidence["read_event_bytes"] == local_io_evidence["read_bytes"] and
+                local_io_evidence["write_event_bytes"] == local_io_evidence["write_bytes"])
+            if local_io_evidence["outstanding_requests_at_observation"]:
+                observation_status = "incomplete-pending-requests"
+            elif not local_io_evidence["trace_event_bytes_match_counters"]:
+                observation_status = "incomplete-trace-counter-mismatch"
+            elif ((local_io_evidence["read_events"] + local_io_evidence["write_events"]) and
+                  not local_io_evidence["backend_identities"]):
+                observation_status = "incomplete-missing-backend-identity"
+            elif not (local_io_evidence["read_events"] + local_io_evidence["write_events"]):
+                observation_status = "complete-no-storage-io"
+            else:
+                observation_status = "complete"
+            local_io_evidence["backend_observation_status"] = observation_status
+            local_io_evidence["backend_observation_complete"] = observation_status in {
+                "complete", "complete-no-storage-io"}
+            local_io_evidence["observation_window"] = "completed storage events during materialize; sampled after wall stop"
+            local_io_evidence["byte_counter_scope"] = "exact trace counter delta during materialize"
+            local_io_evidence["event_identity_scope"] = "trace events since pre-materialize event count"
+            local_io_evidence["cached_handle_backend_identities"] = sorted(
+                {handle.backend_identity for handle in sim.store.files.values()})
+            local_io_evidence["cached_handle_scope"] = "currently cached FileBlockStore handles; not async handles"
+            local_metrics["storage_io_local"] = local_io_evidence
+            local_metrics["storage_io_by_rank"] = comm.allgather(local_io_evidence)
+            # Preserve the historical field but make its narrower meaning
+            # explicit. Actual completion identities are in storage_io_by_rank.
+            local_metrics["backend_resolved_by_rank"] = comm.allgather(
+                local_io_evidence["cached_handle_backend_identities"])
+            local_metrics["backend_resolved_by_rank_scope"] = (
+                "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO")
     except Exception as exc:
         err = str(exc)
     finally:
