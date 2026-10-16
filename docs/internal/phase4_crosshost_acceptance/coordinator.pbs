@@ -11,6 +11,35 @@ umask 077
 export DDQ_ENV=/var/tmp/ddq-20009/phase4-dfdd4a403586
 export DDQ_CODE=/var/tmp/ddq-20009/p4-acceptance-20261016
 export DDQ_JOB="$DDQ_CODE/jobs/$PBS_JOBID"
+status=1
+stage=bootstrap
+finish() {
+  local original_rc=$1 failed_command=$2 cleanup_rc=0 archive_rc=0
+  trap - EXIT
+  set +e
+  if test "$original_rc" -ne 0; then status=$original_rc; fi
+  if ! test -d "$DDQ_JOB"; then
+    echo "DDQ_P4_COORDINATOR_NO_LOG_DIRECTORY stage=$stage exit=$original_rc" >&2
+    exit "$status"
+  fi
+  printf 'stage=%s\nshell_exit=%s\ncommand=%s\n' "$stage" "$original_rc" "$failed_command" > "$DDQ_JOB/exit-summary.txt"
+  # Cleanup is confined to this job; keep code/runtime and all diagnostic logs.
+  /opt/pbs/bin/pbsdsh -s -- /bin/bash -c "DDQ_CODE='$DDQ_CODE'; $(declare -f check_capacity); rm -rf '$DDQ_JOB/scratch' '$DDQ_JOB/tmp'; check_capacity" \
+    > "$DDQ_JOB/cleanup.log" 2>&1 || cleanup_rc=$?
+  if test "$cleanup_rc" -ne 0 && test "$status" -eq 0; then status=1; fi
+  printf '%s\n' "$status" > "$DDQ_JOB/status.txt"
+  # pipefail reports either tar or transport failure; local logs remain available.
+  tar -C "$DDQ_JOB" -czf - --exclude=scratch --exclude=tmp . | \
+    ssh -o BatchMode=yes CPUcluster-PRISM "cat > $DDQ_CODE/results-$PBS_JOBID.tar.gz" || archive_rc=$?
+  if test "$archive_rc" -ne 0; then
+    test "$status" -ne 0 || status=1
+    printf '%s\n' "$status" > "$DDQ_JOB/status.txt"
+    printf 'archive_exit=%s\n' "$archive_rc" > "$DDQ_JOB/archive-failure.txt"
+  fi
+  echo "DDQ_P4_COORDINATOR_DONE status=$status stage=$stage cleanup=$cleanup_rc archive=$archive_rc"
+  exit "$status"
+}
+trap 'finish "$?" "$BASH_COMMAND"' EXIT
 bootstrap() {
   set -euo pipefail
   umask 077
@@ -51,6 +80,7 @@ check_capacity() {
 }
 export -f bootstrap check_capacity
 /opt/pbs/bin/pbsdsh -s -- /bin/bash -c "DDQ_ENV='$DDQ_ENV'; DDQ_CODE='$DDQ_CODE'; DDQ_JOB='$DDQ_JOB'; $(declare -f bootstrap check_capacity); bootstrap; check_capacity"
+stage=diagnostics
 export PATH="$DDQ_ENV/.venv/bin:/opt/openmpi/gcc/8.5.0/5.0.6/bin:/opt/pbs/bin:/usr/bin:/bin"
 export LD_LIBRARY_PATH=/opt/openmpi/gcc/8.5.0/5.0.6/lib
 export PYTHONPATH="$DDQ_CODE/src" TMPDIR="$DDQ_JOB/tmp"
@@ -59,25 +89,24 @@ export OMPI_MCA_pml=cm OMPI_MCA_mtl=psm2
 cd "$DDQ_CODE"
 test "$(sort -u "$PBS_NODEFILE" | wc -l)" -eq 2
 sort -u "$PBS_NODEFILE"
-python -c 'from mpi4py import MPI; import sys; print(sys.version); print(MPI.Get_library_version())'
+# Package metadata does not import MPI or invoke singleton MPI_Init. The PSM2
+# transport is initialized only by the real mpiexec workers below.
+python -c 'import sys; from importlib.metadata import version; print(sys.version); print("mpi4py", version("mpi4py"))' \
+  > "$DDQ_JOB/environment.log" 2>&1
 status=0
 for backend in buffered direct; do
   for mode in run mismatch unsupported recover; do
+    stage="$backend-$mode"
     /opt/pbs/bin/pbsdsh -s -- /bin/bash -c "DDQ_CODE='$DDQ_CODE'; $(declare -f check_capacity); check_capacity"
     rc=0
     timeout --signal=TERM --kill-after=10s 55 mpiexec --bind-to none --map-by ppr:2:node -n 4 \
       -x PATH -x LD_LIBRARY_PATH -x PYTHONPATH -x TMPDIR -x OMP_NUM_THREADS -x OPENBLAS_NUM_THREADS -x MKL_NUM_THREADS \
       python tests/mpi_volume_coordinator_runtime_worker.py "$DDQ_JOB/scratch/$backend-$mode" "$mode" \
       --backend "$backend" --require-cross-host > "$DDQ_JOB/$backend-$mode.log" 2>&1 || rc=$?
-    echo "CASE backend=$backend mode=$mode exit=$rc"
+    echo "CASE backend=$backend mode=$mode exit=$rc" | tee -a "$DDQ_JOB/cases.txt"
     test "$rc" -eq 0 || status=1
     /opt/pbs/bin/pbsdsh -s -- /bin/bash -c "DDQ_CODE='$DDQ_CODE'; $(declare -f check_capacity); check_capacity"
   done
 done
-/opt/pbs/bin/pbsdsh -s -- /bin/bash -c "DDQ_CODE='$DDQ_CODE'; $(declare -f check_capacity); rm -rf '$DDQ_JOB/scratch' '$DDQ_JOB/tmp'; check_capacity"
-# Only test logs, manifest verification, and exit summary are returned; no dataset.
-printf '%s\n' "$status" > "$DDQ_JOB/status.txt"
-tar -C "$DDQ_JOB" -czf - --exclude=scratch --exclude=tmp . | \
-  ssh -o BatchMode=yes CPUcluster-PRISM "cat > $DDQ_CODE/results-$PBS_JOBID.tar.gz"
-echo "DDQ_P4_COORDINATOR_DONE status=$status"
+stage=complete
 exit "$status"
