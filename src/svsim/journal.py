@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from contextlib import nullcontext
 from .disk_budget import AppendReservation
+from .admitted_files import checked_sidecar_path
 from .ir import GateOp
 from .parameters import Expr, ParameterSymbol, ExactPi
 
@@ -50,11 +51,13 @@ class Journal:
     def __init__(self, directory, *, disk_budget_getter=lambda:None, drain_getter=lambda:False):
         self.directory = Path(directory)
         budget=disk_budget_getter()
+        self.directory=checked_sidecar_path(budget,self.directory/'.inventory-probe',exclusive_leaf=False).parent
         # This admits namespace creation, not filesystem metadata's physical size.
         with (budget.allocation(1,drain=bool(drain_getter()),operation='journal-open')
               if budget is not None else nullcontext()):
             self.directory.mkdir(parents=True, exist_ok=True)
         self.streams = {}
+        self._stream_budgets = {}
         self.protected_cursor = lambda kind: 0
         self._disk_budget_getter,self._drain_getter=disk_budget_getter,drain_getter
         self._append=AppendReservation(disk_budget_getter,operation='journal-append',drain_getter=drain_getter)
@@ -65,11 +68,15 @@ class Journal:
         record['checksum'] = content_hash(record)
         raw = (canonical(record)+'\n').encode()
         if len(raw)>1024**2: raise ValueError('Journal record exceeds bounded 1 MiB envelope')
+        budget=self._disk_budget_getter()
+        stream=self.streams.get(kind)
+        path=self.directory/f'{kind}.jsonl'
+        if stream is None or self._stream_budgets.get(kind) is not budget:
+            path=checked_sidecar_path(budget,path)
+            self._stream_budgets[kind]=budget
         # Admission precedes open/create and any repair of an uncommitted tail.
         self._append.admit(len(raw))
-        stream = self.streams.get(kind)
         if stream is None:
-            path = self.directory/f'{kind}.jsonl'
             if path.exists() and path.stat().st_size:
                 with open(path,'r+b') as repair:
                     end = repair.seek(0,os.SEEK_END)

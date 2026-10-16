@@ -69,6 +69,9 @@ class StreamingExecutionTrace:
         self._poisoned = False
         self._append = AppendReservation(disk_budget_getter, operation="trace-append", drain_getter=drain_getter)
         budget = self._disk_budget_getter()
+        from .admitted_files import checked_sidecar_path
+        self.path=checked_sidecar_path(budget,self.path)
+        self._inventory_budget=budget
         # Admit the namespace operation before mkdir/open. This one-byte probe
         # is accounting only; capacity remains a soft guarantee.
         with (budget.allocation(1, drain=bool(self._drain_getter()), operation="trace-open")
@@ -94,6 +97,11 @@ class StreamingExecutionTrace:
             self._ensure_usable()
             if self._stream.closed:
                 raise ValueError('Cannot append to a closed trace')
+            budget=self._disk_budget_getter()
+            if budget is not self._inventory_budget:
+                from .admitted_files import checked_sidecar_path
+                self.path=checked_sidecar_path(budget,self.path)
+                self._inventory_budget=budget
             # The chunked token covers this record before any byte is written.
             self._append.admit(nbytes)
             start = os.fstat(self._stream.fileno()).st_size

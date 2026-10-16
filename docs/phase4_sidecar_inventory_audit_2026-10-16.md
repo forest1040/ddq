@@ -9,3 +9,9 @@
 実ledgerを用いる9件の回帰で、bytes／checkpoint JSONの各writerに対するroot外、parent symlink、leaf symlink、leaf hardlinkの拒否を確認した。拒否時に外部sentinel、namespace、pending creditが変化しないことを検証する。許可されるparent alias表記では実byteがobserved usageへ計上され、pendingが0になることを検証する。既存のprocess kill、quota、write／fsync／rename fault、stored snapshotの数値再開oracleを含む関連55件が成功した。
 
 これは共通sidecarの補修であり、bootstrapとclusterを含むP4-009全体の受入完了を意味しない。
+
+## append writerの追加閉包検査
+
+同じ実ledgerを任意directoryへ渡せる`Journal`、`StreamingExecutionTrace`、runtime raw measurementも照合した。Journalはconstructorのdirectory、各kindの最初のopen前にcanonical inventoryとleaf排他性を検査する。partial-tail repairより前に拒否するため、foreign symlink／hardlinkへtruncateしてしまうこともない。traceはconstructorで検査し、初回open後にgetterへmanaged budgetが付いた場合も次のrecordより前に検査する。raw measurementは初回namespace／stream作成より前に検査する。unmanaged APIは維持し、毎recordでinventory SQLを繰り返さない。
+
+root外とparent symlinkを各writerで試す6件、Journalのforeign leaf2件、traceのbudget後付け1件を追加した。変更前拒否のoracleは外部namespace／sentinel／pending creditの無変更である。既存のnamespace実SIGKILL、recoveryと数値oracleを含めて24件が成功した。

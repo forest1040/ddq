@@ -915,12 +915,14 @@ class RuntimeControl:
     def _spill_raw(self,lines):
         """Append raw lines under a chunked disk reservation; stop (counted) at the total limit."""
         from .disk_budget import AppendReservation
+        from .admitted_files import checked_sidecar_path
         if not lines:return 0
         sim=self.sim
         spill=getattr(self,'_raw_spill',None)
         if spill is None:
             path=sim.directory/f'rank-{sim.rank:04d}'/'measurements'/f'raw-{sim.run_id}.jsonl'
             budget=lambda:getattr(sim,'disk_budget',None) or getattr(sim.store,'disk_budget',None)
+            path=checked_sidecar_path(budget(),path)
             lease=AppendReservation(budget,operation='measurement-append')
             lease.admit(1)
             path.parent.mkdir(parents=True,exist_ok=True)

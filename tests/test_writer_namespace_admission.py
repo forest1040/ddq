@@ -23,6 +23,57 @@ def budget(path):
     finally:disk.close()
 
 
+@pytest.mark.parametrize('writer',['journal','trace','measurement'])
+@pytest.mark.parametrize('aliased',[False,True])
+def test_supplied_budget_append_writers_reject_uninventoried_destination(tmp_path,writer,aliased):
+    from types import SimpleNamespace
+    from svsim.runtime_control import RuntimeControl
+    managed=tmp_path/'managed';managed.mkdir()
+    outside=tmp_path/'outside';outside.mkdir()
+    destination=outside/'new'
+    if aliased:
+        destination=managed/'alias';destination.symlink_to(outside,target_is_directory=True)
+    disk=DiskBudget(managed/'ledger.sqlite',[managed],quota_bytes=32*1024**2)
+    try:
+        with pytest.raises(DiskAdmissionError):
+            if writer=='journal':Journal(destination,disk_budget_getter=lambda:disk)
+            elif writer=='trace':
+                StreamingExecutionTrace(destination/'trace.jsonl',profile_id='p',plan_id='p',disk_budget_getter=lambda:disk)
+            else:
+                control=RuntimeControl.__new__(RuntimeControl)
+                control.sim=SimpleNamespace(directory=destination,rank=0,run_id='r',disk_budget=disk,store=None)
+                control._spill_raw([b'raw\n'])
+        assert list(outside.iterdir())==[] and disk.reserved_bytes==0
+    finally:disk.close()
+
+
+@pytest.mark.parametrize('alias',['symlink','hardlink'])
+def test_journal_first_append_rejects_foreign_leaf_before_tail_repair(tmp_path,alias):
+    managed=tmp_path/'managed';managed.mkdir()
+    sentinel=tmp_path/'sentinel';sentinel.write_bytes(b'{"foreign-partial":')
+    disk=DiskBudget(managed/'ledger.sqlite',[managed],quota_bytes=32*1024**2)
+    journal=Journal(managed/'journal',disk_budget_getter=lambda:disk)
+    target=journal.directory/'gates.jsonl'
+    if alias=='symlink':target.symlink_to(sentinel)
+    else:os.link(sentinel,target)
+    try:
+        with pytest.raises(DiskAdmissionError):journal.append('gates',{'new':True})
+        assert sentinel.read_bytes()==b'{"foreign-partial":' and disk.reserved_bytes==0
+    finally:journal.close();disk.close()
+
+
+def test_trace_budget_attached_after_open_still_requires_inventory(tmp_path):
+    managed=tmp_path/'managed';managed.mkdir()
+    disk=DiskBudget(managed/'ledger.sqlite',[managed],quota_bytes=32*1024**2)
+    holder=[None]
+    trace=StreamingExecutionTrace(tmp_path/'trace.jsonl',profile_id='p',plan_id='p',disk_budget_getter=lambda:holder[0])
+    try:
+        holder[0]=disk
+        with pytest.raises(DiskAdmissionError):trace.record('task')
+        assert (tmp_path/'trace.jsonl').read_bytes()==b'' and disk.reserved_bytes==0
+    finally:trace.close();disk.close()
+
+
 @pytest.mark.parametrize('writer',['journal','trace'])
 @pytest.mark.parametrize('quota',[0,1])
 def test_namespace_one_byte_admission_precedes_mkdir_and_open(tmp_path,writer,quota):
