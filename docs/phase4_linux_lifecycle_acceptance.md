@@ -10,6 +10,10 @@
 
 Python全体deadlineは1,200秒、stage deadlineの合計は1,080秒。実際の予算は各stage上限と残り時間の小さい方。host側GNU `timeout` は1,230秒＋TERM後15秒で、終了時に当該container名だけをcleanupする。stage失敗・timeout・予期しないskipでは先へ進まず、未実行stageを明示する。速いMac全suiteを再現せず、Linuxのbirth/statx、volume/lease、native SQLite、O_DIRECT、実容量不足の結合差を確認する。目標所要時間は10分以内だが、これは実測値ではない。
 
+再試行は元attemptのtimeout/logを保持し、別の空resultsへ`--stages physical-direct --stage-timeout-seconds 900`等を追加して実行できる。shellは3必須引数以降をPythonへ転送し、outputとsource revisionは必須引数に固定する。`--stages`は既知名のcomma listで、重複・未知・空名を拒否し、指定順によらず元のSTAGES順に実行する。stage上限overrideは1..1200秒、全体deadlineも最大1200秒を維持し、実際の待機は残り全体時間との小さい方になる。`--plan`で環境やtestを起動せず選択を確認できる。
+
+summaryには全6個の`planned_stages`、選択した`selected_stages`、意図的な`intentionally_omitted_stages`、選択済みだが未開始の`not_run`を別々に保存する。subsetのpassedはその選択だけの結果であり、元attemptの失敗を消したり全6stageの新規成功へ読み替えたりしない。再試行先もfresh outputを要求し、元artifactを上書きしない。
+
 ## 受入mapping
 
 | stage / 上限 | 選択と埋める差分 | backendの扱い |

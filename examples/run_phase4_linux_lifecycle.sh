@@ -2,8 +2,8 @@
 # Parent/operator starts this only after performance measurements finish.
 # Only the three authorized source directories enter the container.
 set -euo pipefail
-if [[ $# != 3 ]]; then
-  echo "usage: $0 EXPORTED_SOURCE_ROOT FRESH_RESULTS_DIR SUPPLIED_REVISION" >&2
+if [[ $# -lt 3 ]]; then
+  echo "usage: $0 EXPORTED_SOURCE_ROOT FRESH_RESULTS_DIR SUPPLIED_REVISION [PYTHON_ARGS...]" >&2
   exit 2
 fi
 if [[ $(id -u) == 0 ]]; then
@@ -15,6 +15,7 @@ mkdir -p "$2"
 results=$(cd "$2" && pwd -P)
 scratch="$results/scratch"
 revision=$3
+shift 3
 for directory in src tests examples; do
   [[ -d "$source_root/$directory" ]] || { echo "Missing authorized source directory: $directory" >&2; exit 2; }
 done
@@ -40,5 +41,5 @@ timeout --signal=TERM --kill-after=15s 1230s docker run --name "$container" --st
   --mount "type=bind,src=$scratch,dst=/scratch" \
   --workdir /work --entrypoint python -e PYTHONPATH=/work/src -e PYTHONDONTWRITEBYTECODE=1 \
   -e SVSIM_FULL_FS=/full -e DDQ_IMAGE="$image" -e DDQ_IMAGE_ID="$image_id" \
-  "$image_id" examples/linux_phase4_lifecycle.py --output /results \
-    --source-revision "$revision" --deadline-seconds 1200
+  "$image_id" examples/linux_phase4_lifecycle.py "$@" --output /results \
+    --source-revision "$revision"

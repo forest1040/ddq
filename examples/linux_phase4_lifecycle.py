@@ -111,15 +111,27 @@ def main(argv=None):
     parser.add_argument('--output',type=Path,default=Path('/results'))
     parser.add_argument('--source-revision',default='unspecified')
     parser.add_argument('--deadline-seconds',type=int,default=1200)
+    parser.add_argument('--stages',help='Comma-separated known stages; executed in canonical order')
+    parser.add_argument('--stage-timeout-seconds',type=int,help='Override each selected stage limit (1..1200)')
     args=parser.parse_args(argv)
+    if not 1<=args.deadline_seconds<=1200:parser.error('Deadline must be 1..1200 seconds')
+    if args.stage_timeout_seconds is not None and not 1<=args.stage_timeout_seconds<=1200:
+        parser.error('Stage timeout must be 1..1200 seconds')
+    planned=[stage.name for stage in STAGES]
+    requested=planned if args.stages is None else args.stages.split(',')
+    if len(requested)!=len(set(requested)):parser.error('Duplicate stage names are not allowed')
+    if any(name not in planned for name in requested):parser.error('Unknown or empty stage name')
+    selected=tuple(stage for stage in STAGES if stage.name in requested)
+    omitted=[name for name in planned if name not in requested]
     if args.plan:
-        print(json.dumps({'stages':[asdict(stage) for stage in STAGES],
+        print(json.dumps({'stages':[{**asdict(stage),'seconds':args.stage_timeout_seconds or stage.seconds} for stage in selected],
+            'planned_stages':planned,'selected_stages':[stage.name for stage in selected],
+            'intentionally_omitted_stages':omitted,'not_run':[stage.name for stage in selected],
             'global_deadline_seconds':args.deadline_seconds,'physical_full_fs':'/full (dedicated 16 MiB tmpfs)',
             'excluded':['performance campaigns','native io_uring capability','full Mac fast suite'],
             'optional_skip':OPTIONAL_SKIP},indent=2));return 0
     if not sys.platform.startswith('linux') or os.geteuid()==0:
         parser.error('Execution requires Linux and a nonroot user; use --plan for read-only inspection')
-    if not 1<=args.deadline_seconds<=1200:parser.error('Deadline must be 1..1200 seconds')
     if socket.gethostname()!='ddq-phase4-lifecycle':parser.error('Unexpected hostname')
     if args.source_revision=='unspecified':parser.error('An explicit supplied source revision is required')
     full=Path('/full')
@@ -140,6 +152,8 @@ def main(argv=None):
         'source':source_inventory(root),'platform':platform.platform(),'hostname':socket.gethostname(),
         'uid':os.geteuid(),'gid':os.getegid(),'python':sys.version,'image':os.environ.get('DDQ_IMAGE'),
         'image_id':os.environ.get('DDQ_IMAGE_ID'),'deadline_seconds':args.deadline_seconds,
+        'stage_timeout_seconds':args.stage_timeout_seconds,'planned_stages':planned,
+        'selected_stages':[stage.name for stage in selected],'intentionally_omitted_stages':omitted,
         'container_contract':{'cpus':4,'memory_bytes':8*1024**3,'network':'none','interfaces':interfaces,
             'cgroup_observed':{name:Path('/sys/fs/cgroup',name).read_text().strip()
                 for name in ('cpu.max','memory.max','memory.swap.max') if Path('/sys/fs/cgroup',name).is_file()}},
@@ -154,7 +168,7 @@ def main(argv=None):
     env.pop('DDQ_NATIVE_URING',None)
     try:
         report['linux_probe']=direct_and_birth_probe(args.output);save()
-        for stage in STAGES:
+        for stage in selected:
             remaining=args.deadline_seconds-(time.monotonic()-started)
             if remaining<=0:raise TimeoutError('Global deadline exhausted before '+stage.name)
             junit=args.output/(stage.name+'.xml');log=args.output/(stage.name+'.log')
@@ -164,7 +178,7 @@ def main(argv=None):
             if stage.name=='native-vfs-fault-points':stage_env['SVSIM_VFS_TEST_FAULTS']='1'
             else:stage_env.pop('SVSIM_VFS_TEST_FAULTS',None)
             row={'name':stage.name,'backend_env':stage.backend,'command':command,'status':'running',
-                 'timeout_seconds':min(stage.seconds,remaining),'log':log.name,'junit':junit.name}
+                 'timeout_seconds':min(args.stage_timeout_seconds or stage.seconds,remaining),'log':log.name,'junit':junit.name}
             report['stages'].append(row);save();tick=time.monotonic()
             print(json.dumps({'stage':stage.name,'status':'running'}),flush=True)
             with log.open('w') as output:
@@ -184,7 +198,7 @@ def main(argv=None):
             report['stages'][-1].update(status='failed',error=repr(exc))
     finally:
         report['seconds']=time.monotonic()-started
-        report['not_run']=[stage.name for stage in STAGES if stage.name not in {row['name'] for row in report['stages']}]
+        report['not_run']=[stage.name for stage in selected if stage.name not in {row['name'] for row in report['stages']}]
         report['optional_skips']=[item for row in report['stages'] for item in row.get('tests',{}).get('skipped',[])]
         save()
     print(json.dumps({'status':report['status'],'summary':str(result),'seconds':report['seconds']}),flush=True)
