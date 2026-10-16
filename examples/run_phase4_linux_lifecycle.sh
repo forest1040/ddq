@@ -13,11 +13,13 @@ fi
 source_root=$(cd "$1" && pwd -P)
 mkdir -p "$2"
 results=$(cd "$2" && pwd -P)
+scratch="$results/scratch"
 revision=$3
 for directory in src tests examples; do
   [[ -d "$source_root/$directory" ]] || { echo "Missing authorized source directory: $directory" >&2; exit 2; }
 done
 [[ -z $(ls -A "$results") ]] || { echo 'Results directory must be fresh and empty.' >&2; exit 2; }
+mkdir -p "$scratch"
 image=ddq-linux:dev-20261014
 image_id=$(docker image inspect --format '{{.Id}}' "$image")
 command -v timeout >/dev/null || { echo 'GNU timeout is required for the outer deadline.' >&2; exit 2; }
@@ -35,6 +37,7 @@ timeout --signal=TERM --kill-after=15s 1230s docker run --name "$container" --st
   --mount "type=bind,src=$source_root/tests,dst=/work/tests,readonly" \
   --mount "type=bind,src=$source_root/examples,dst=/work/examples,readonly" \
   --mount "type=bind,src=$results,dst=/results" \
+  --mount "type=bind,src=$scratch,dst=/scratch" \
   --workdir /work --entrypoint python -e PYTHONPATH=/work/src -e PYTHONDONTWRITEBYTECODE=1 \
   -e SVSIM_FULL_FS=/full -e DDQ_IMAGE="$image" -e DDQ_IMAGE_ID="$image_id" \
   "$image_id" examples/linux_phase4_lifecycle.py --output /results \

@@ -1,0 +1,3 @@
+stage=complete
+shell_exit=0
+command=exit "$status"

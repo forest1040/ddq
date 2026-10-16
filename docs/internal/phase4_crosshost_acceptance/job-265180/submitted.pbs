@@ -1,0 +1,112 @@
+#!/bin/bash
+#PBS -N ddq-p4-coordinator
+#PBS -q workq
+#PBS -l select=2:ncpus=4:mpiprocs=2:mem=8gb
+#PBS -l place=scatter
+#PBS -l walltime=00:10:00
+#PBS -o /var/tmp/ddq-20009/p4-acceptance-20261016/coordinator.stdout
+#PBS -e /var/tmp/ddq-20009/p4-acceptance-20261016/coordinator.stderr
+set -euo pipefail
+umask 077
+export DDQ_ENV=/var/tmp/ddq-20009/phase4-dfdd4a403586
+export DDQ_CODE=/var/tmp/ddq-20009/p4-acceptance-20261016
+export DDQ_JOB="$DDQ_CODE/jobs/$PBS_JOBID"
+status=1
+stage=bootstrap
+finish() {
+  local original_rc=$1 failed_command=$2 cleanup_rc=0 archive_rc=0
+  trap - EXIT
+  set +e
+  if test "$original_rc" -ne 0; then status=$original_rc; fi
+  if ! test -d "$DDQ_JOB"; then
+    echo "DDQ_P4_COORDINATOR_NO_LOG_DIRECTORY stage=$stage exit=$original_rc" >&2
+    exit "$status"
+  fi
+  printf 'stage=%s\nshell_exit=%s\ncommand=%s\n' "$stage" "$original_rc" "$failed_command" > "$DDQ_JOB/exit-summary.txt"
+  # Cleanup is confined to this job; keep code/runtime and all diagnostic logs.
+  /opt/pbs/bin/pbsdsh -s -- /bin/bash -c "DDQ_CODE='$DDQ_CODE'; $(declare -f check_capacity); rm -rf '$DDQ_JOB/scratch' '$DDQ_JOB/tmp'; check_capacity" \
+    > "$DDQ_JOB/cleanup.log" 2>&1 || cleanup_rc=$?
+  if test "$cleanup_rc" -ne 0 && test "$status" -eq 0; then status=1; fi
+  printf '%s\n' "$status" > "$DDQ_JOB/status.txt"
+  # pipefail reports either tar or transport failure; local logs remain available.
+  tar -C "$DDQ_JOB" -czf - --exclude=scratch --exclude=tmp . | \
+    ssh -o BatchMode=yes CPUcluster-PRISM "cat > $DDQ_CODE/results-$PBS_JOBID.tar.gz" || archive_rc=$?
+  if test "$archive_rc" -ne 0; then
+    test "$status" -ne 0 || status=1
+    printf '%s\n' "$status" > "$DDQ_JOB/status.txt"
+    printf 'archive_exit=%s\n' "$archive_rc" > "$DDQ_JOB/archive-failure.txt"
+  fi
+  echo "DDQ_P4_COORDINATOR_DONE status=$status stage=$stage cleanup=$cleanup_rc archive=$archive_rc"
+  exit "$status"
+}
+trap 'finish "$?" "$BASH_COMMAND"' EXIT
+bootstrap() {
+  set -euo pipefail
+  umask 077
+  test "$(df -B1 --output=avail /var/tmp | tail -n 1)" -ge 107374182400
+  local initial_bytes=0
+  if test -d /var/tmp/ddq-20009; then initial_bytes=$(du -sb /var/tmp/ddq-20009 | cut -f1); fi
+  # Keep 512 MiB for the known runtime/archive and this small overlay before copying.
+  test "$initial_bytes" -le 8053063680
+  mkdir -p "$DDQ_CODE" "$DDQ_JOB/tmp" "$DDQ_JOB/scratch"
+  if ! test -f "$DDQ_ENV/image.ready"; then
+    mkdir -p "$DDQ_ENV"
+    ssh -o BatchMode=yes -o ConnectTimeout=15 CPUcluster-PRISM "cat $DDQ_ENV/runtime.tar.gz" > "$DDQ_ENV/runtime.tar.gz"
+    echo "82b47ddd376af24fb797bc6d47c8ca9c5c2243c7ab294da6fd4766b0faca67c4  $DDQ_ENV/runtime.tar.gz" | sha256sum -c -
+    tar -xzf "$DDQ_ENV/runtime.tar.gz" -C "$DDQ_ENV"
+    rm "$DDQ_ENV/runtime.tar.gz"
+    touch "$DDQ_ENV/image.ready"
+  fi
+  test -x "$DDQ_ENV/.venv/bin/python"
+  if ! test -f "$DDQ_CODE/overlay.ready"; then
+    ssh -o BatchMode=yes -o ConnectTimeout=15 CPUcluster-PRISM "cat $DDQ_CODE/overlay.tar.gz" > "$DDQ_CODE/overlay.tar.gz"
+    ssh -o BatchMode=yes -o ConnectTimeout=15 CPUcluster-PRISM "cat $DDQ_CODE/overlay.sha256" > "$DDQ_CODE/overlay.sha256"
+    (cd "$DDQ_CODE"; sha256sum -c overlay.sha256)
+    tar -xzf "$DDQ_CODE/overlay.tar.gz" -C "$DDQ_CODE"
+    touch "$DDQ_CODE/overlay.ready"
+  fi
+  cd "$DDQ_CODE"
+  sha256sum -c source.sha256 > "$DDQ_JOB/source-check.txt"
+}
+check_capacity() {
+  set -euo pipefail
+  local free used
+  free=$(df -B1 --output=avail "$DDQ_CODE" | tail -n 1)
+  used=$(du -sb /var/tmp/ddq-20009 | cut -f1)
+  test "$free" -ge 107374182400
+  test "$used" -le 8589934592
+  findmnt -T "$DDQ_CODE" -n -o FSTYPE | grep -Eq '^(ext4|xfs|btrfs)$'
+  echo "capacity host=$(hostname) bytes=$used free=$free"
+}
+export -f bootstrap check_capacity
+/opt/pbs/bin/pbsdsh -s -- /bin/bash -c "DDQ_ENV='$DDQ_ENV'; DDQ_CODE='$DDQ_CODE'; DDQ_JOB='$DDQ_JOB'; $(declare -f bootstrap check_capacity); bootstrap; check_capacity"
+stage=diagnostics
+export PATH="$DDQ_ENV/.venv/bin:/opt/openmpi/gcc/8.5.0/5.0.6/bin:/opt/pbs/bin:/usr/bin:/bin"
+export LD_LIBRARY_PATH=/opt/openmpi/gcc/8.5.0/5.0.6/lib
+export PYTHONPATH="$DDQ_CODE/src" TMPDIR="$DDQ_JOB/tmp"
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export OMPI_MCA_pml=cm OMPI_MCA_mtl=psm2
+cd "$DDQ_CODE"
+test "$(sort -u "$PBS_NODEFILE" | wc -l)" -eq 2
+sort -u "$PBS_NODEFILE"
+# Package metadata does not import MPI or invoke singleton MPI_Init. The PSM2
+# transport is initialized only by the real mpiexec workers below.
+python -c 'import sys; from importlib.metadata import version; print(sys.version); print("mpi4py", version("mpi4py"))' \
+  > "$DDQ_JOB/environment.log" 2>&1
+status=0
+for backend in buffered direct; do
+  for mode in run mismatch unsupported recover; do
+    stage="$backend-$mode"
+    /opt/pbs/bin/pbsdsh -s -- /bin/bash -c "DDQ_CODE='$DDQ_CODE'; $(declare -f check_capacity); check_capacity"
+    rc=0
+    timeout --signal=TERM --kill-after=10s 55 mpiexec --bind-to none --map-by ppr:2:node -n 4 \
+      -x PATH -x LD_LIBRARY_PATH -x PYTHONPATH -x TMPDIR -x OMP_NUM_THREADS -x OPENBLAS_NUM_THREADS -x MKL_NUM_THREADS \
+      python tests/mpi_volume_coordinator_runtime_worker.py "$DDQ_JOB/scratch/$backend-$mode" "$mode" \
+      --backend "$backend" --require-cross-host > "$DDQ_JOB/$backend-$mode.log" 2>&1 || rc=$?
+    echo "CASE backend=$backend mode=$mode exit=$rc" | tee -a "$DDQ_JOB/cases.txt"
+    test "$rc" -eq 0 || status=1
+    /opt/pbs/bin/pbsdsh -s -- /bin/bash -c "DDQ_CODE='$DDQ_CODE'; $(declare -f check_capacity); check_capacity"
+  done
+done
+stage=complete
+exit "$status"

@@ -1,0 +1,3 @@
+Warning: the ECDSA host key for 'cpucluster-prism' differs from the key for the IP address '192.168.20.101'
+Offending key for IP in /home/tmori/.ssh/known_hosts:2
+Matching host key in /home/tmori/.ssh/known_hosts:63

@@ -1,0 +1,68 @@
+Job Id: 265180.CPUcluster-PRISM
+    Job_Name = ddq-p4-coordinator
+    Job_Owner = tmori@cpucluster-prism
+    resources_used.cpupercent = 238
+    resources_used.cput = 00:00:40
+    resources_used.mem = 23372kb
+    resources_used.ncpus = 8
+    resources_used.vmem = 910212kb
+    resources_used.walltime = 00:00:33
+    job_state = F
+    queue = workq
+    server = CPUcluster-PRISM
+    Checkpoint = u
+    ctime = Fri Oct 16 20:27:50 2026
+    Error_Path = cpucluster-prism:/var/tmp/ddq-20009/p4-acceptance-20261016/coo
+	rdinator.stderr
+    exec_host = CPUcluster009/0*4+CPUcluster010/1*4
+    exec_vnode = (CPUcluster009:ncpus=4:mem=8388608kb)+(CPUcluster010:ncpus=4:m
+	em=8388608kb)
+    Hold_Types = n
+    Join_Path = n
+    Keep_Files = n
+    Mail_Points = a
+    mtime = Fri Oct 16 20:28:26 2026
+    Output_Path = cpucluster-prism:/var/tmp/ddq-20009/p4-acceptance-20261016/co
+	ordinator.stdout
+    Priority = 0
+    qtime = Fri Oct 16 20:27:50 2026
+    Rerunable = True
+    Resource_List.mem = 16gb
+    Resource_List.mpiprocs = 4
+    Resource_List.ncpus = 8
+    Resource_List.nodect = 2
+    Resource_List.place = scatter
+    Resource_List.select = 2:ncpus=4:mpiprocs=2:mem=8gb
+    Resource_List.walltime = 00:10:00
+    stime = Fri Oct 16 20:27:50 2026
+    obittime = Fri Oct 16 20:28:26 2026
+    session_id = 3518445
+    jobdir = /home/tmori
+    substate = 92
+    Variable_List = PBS_O_HOME=/home/tmori,PBS_O_LANG=ja_JP.UTF-8,
+	PBS_O_LOGNAME=tmori,
+	PBS_O_PATH=/opt/singularity/bin:/home/tmori/spack/bin:/home/tmori/mini
+	conda3/bin:/home/tmori/miniconda3/condabin:/usr/local/test/bin:/opt/ope
+	nmpi/gcc/8.5.0/5.0.6/bin:/opt/intel/oneapi/vtune/2023.2.0/bin64:/opt/in
+	tel/oneapi/mpi/2021.10.0/libfabric/bin:/opt/intel/oneapi/mpi/2021.10.0/
+	bin:/opt/intel/oneapi/mkl/2023.2.0/bin/intel64:/opt/intel/oneapi/itac/2
+	021.10.0/bin:/opt/intel/oneapi/inspector/2023.2.0/bin64:/opt/intel/onea
+	pi/dpcpp-ct/2023.2.0/bin:/opt/intel/oneapi/dev-utilities/2021.10.0/bin:
+	/opt/intel/oneapi/debugger/2023.2.0/gdb/intel64/bin:/opt/intel/oneapi/c
+	ompiler/2023.2.0/linux/lib/oclfpga/bin:/opt/intel/oneapi/compiler/2023.
+	2.0/linux/bin/intel64:/opt/intel/oneapi/compiler/2023.2.0/linux/bin:/op
+	t/intel/oneapi/advisor/2023.2.0/bin64:/usr/local/bin:/usr/bin:/usr/loca
+	l/sbin:/usr/sbin:/opt/pbs/bin,PBS_O_SHELL=/bin/bash,
+	PBS_O_WORKDIR=/var/tmp/ddq-20009/p4-acceptance-20261016,
+	PBS_O_SYSTEM=Linux,PBS_O_QUEUE=workq,PBS_O_HOST=cpucluster-prism
+    comment = Job run at Fri Oct 16 at 20:27 on (CPUcluster009:ncpus=4:mem=8388
+	608kb)+(CPUcluster010:ncpus=4:mem=8388608kb) and finished
+    etime = Fri Oct 16 20:27:50 2026
+    run_count = 1
+    Stageout_status = 1
+    Exit_status = 0
+    Submit_arguments = coordinator.pbs
+    history_timestamp = 1792150106
+    project = _pbs_project_default
+    Submit_Host = cpucluster-prism
+

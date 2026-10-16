@@ -1,0 +1,59 @@
+{
+  "source": "docs/internal/phase4_wave3_validation/linux-performance-v2-aborted/overhead-buffered-p1.json.rows.jsonl",
+  "input_kind": "progress-jsonl",
+  "parse_errors": [],
+  "by_workload": {
+    "mixed": {
+      "workload": "mixed",
+      "expected_measured_pairs": 7,
+      "observed_measured_pairs": 0,
+      "successful_measured_pairs": 0,
+      "failed_or_error_pairs": [],
+      "missing_monitor_cost_pairs": [],
+      "monitor_cost_eta_on_seconds_capture_plus_eval": {
+        "count": 0,
+        "median": null,
+        "p95": null,
+        "worst": null
+      },
+      "monitor_cost_sum_seconds_capture_plus_eval": null,
+      "reported_extraction_seconds_is_nested_in_capture_wall": true,
+      "backend_evidence": {
+        "observed_identities": [],
+        "empty_backend_observation_count": 0,
+        "empty_means_backend_unverified": true
+      },
+      "campaign_status": "incomplete-or-summary-unavailable",
+      "reported_interpretation": null,
+      "safe_interpretation": "inconclusive",
+      "reported_difference_ci95": null,
+      "reported_ratio_ci95": null
+    },
+    "rx-ry-low": {
+      "workload": "rx-ry-low",
+      "expected_measured_pairs": 7,
+      "observed_measured_pairs": 7,
+      "successful_measured_pairs": 7,
+      "failed_or_error_pairs": [],
+      "missing_monitor_cost_pairs": [],
+      "monitor_cost_eta_on_seconds_capture_plus_eval": {
+        "count": 7,
+        "median": 0.16099129803478718,
+        "p95": 0.387210959661752,
+        "worst": 0.3885270575992763
+      },
+      "monitor_cost_sum_seconds_capture_plus_eval": 1.7912350464612246,
+      "reported_extraction_seconds_is_nested_in_capture_wall": true,
+      "backend_evidence": {
+        "observed_identities": [],
+        "empty_backend_observation_count": 14,
+        "empty_means_backend_unverified": true
+      },
+      "campaign_status": "incomplete-or-summary-unavailable",
+      "reported_interpretation": null,
+      "safe_interpretation": "inconclusive",
+      "reported_difference_ci95": null,
+      "reported_ratio_ci95": null
+    }
+  }
+}

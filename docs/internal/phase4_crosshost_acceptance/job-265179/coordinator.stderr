@@ -1,0 +1,46 @@
+Warning: the ECDSA host key for 'cpucluster-prism' differs from the key for the IP address '192.168.20.101'
+Offending key for IP in /home/tmori/.ssh/known_hosts:2
+Matching host key in /home/tmori/.ssh/known_hosts:63
+Warning: the ECDSA host key for 'cpucluster-prism' differs from the key for the IP address '192.168.20.101'
+Offending key for IP in /home/tmori/.ssh/known_hosts:2
+Matching host key in /home/tmori/.ssh/known_hosts:63
+Warning: the ECDSA host key for 'cpucluster-prism' differs from the key for the IP address '192.168.20.101'
+Offending key for IP in /home/tmori/.ssh/known_hosts:2
+Matching host key in /home/tmori/.ssh/known_hosts:63
+Warning: the ECDSA host key for 'cpucluster-prism' differs from the key for the IP address '192.168.20.101'
+Offending key for IP in /home/tmori/.ssh/known_hosts:2
+Matching host key in /home/tmori/.ssh/known_hosts:63
+--------------------------------------------------------------------------
+Error obtaining unique transport key from PMIX (OMPI_MCA_orte_precondition_transports not present in
+the environment).
+
+  Local host: CPUcluster009
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+It looks like MPI_INIT failed for some reason; your parallel process is
+likely to abort.  There are many reasons that a parallel process can
+fail during MPI_INIT; some of which are due to configuration or environment
+problems.  This failure appears to be an internal failure; here's some
+additional information (which may only be relevant to an Open MPI
+developer):
+
+  PML add procs failed
+  --> Returned "Error" (-1) instead of "Success" (0)
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+It looks like MPI_INIT failed for some reason; your parallel process is
+likely to abort.  There are many reasons that a parallel process can
+fail during MPI_INIT; some of which are due to configuration or environment
+problems.  This failure appears to be an internal failure; here's some
+additional information (which may only be relevant to an Open MPI
+developer):
+
+  ompi_mpi_init: ompi_mpi_instance_init failed
+  --> Returned "Error" (-1) instead of "Success" (0)
+--------------------------------------------------------------------------
+[CPUcluster009:00000] *** An error occurred in MPI_Init_thread
+[CPUcluster009:00000] *** reported by process [1011286016,0]
+[CPUcluster009:00000] *** on a NULL communicator
+[CPUcluster009:00000] *** Unknown error
+[CPUcluster009:00000] *** MPI_ERRORS_ARE_FATAL (processes in this communicator will now abort,
+[CPUcluster009:00000] ***    and MPI will try to terminate your MPI job as well)

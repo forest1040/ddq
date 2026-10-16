@@ -1,4 +1,4 @@
-# P4-009 cross-host coordinator acceptance: prepared, not submitted
+# P4-009 cross-host coordinator acceptance
 
 The reviewable job is [coordinator.pbs](coordinator.pbs). It runs the real runtime
 worker on two distinct PBS nodes, two ranks on each node. Each of buffered and
@@ -31,8 +31,8 @@ files, archive size 659201 bytes, SHA256
 `9cdb8c95f8b6d801d79f58ec35d360d37ee5ac442b2e986f1213bd977481014e`.
 The local archive is `/private/tmp/ddq-p4-crosshost-20261016/overlay.tar.gz`;
 [planned-source.sha256](planned-source.sha256) lists every member digest.
-No source has been uploaded to lg and no job has been submitted.
+The user explicitly authorized the upload and one PBS job on 2026-10-16. Job `265179.CPUcluster-PRISM` reached two distinct nodes, verified the overlay and capacity, then failed before any worker case during singleton MPI initialization (Exit_status 14). See [verbatim failure evidence](job-265179/README.md). The corrected launcher avoids importing MPI in singleton diagnostics and returns stage/status/logs through an EXIT trap. Its local fake PBS/SSH regression passed 8 cases. The user explicitly authorized one retry, submitted as `265180.CPUcluster-PRISM`; its actual result is pending.
 The later campaign-only incomplete-CI guard does not affect this worker. This
 prepared bundle stays pinned to the tested production source above.
 Exact SHA256 manifests are retained with results. No cross-host result is claimed until the actual job
-passes. This prepared script has passed `bash -n` only.
+passes. The initial script passed `bash -n`; actual execution exposed the singleton MPI initialization problem above. The eight worker cases remain unvalidated across hosts.

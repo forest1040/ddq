@@ -14,7 +14,7 @@
 ## 受入を閉じるために残すもの
 
 1. **Linux最終差分。** 初期buffered305 pass、direct304 pass/1 race fail、改訂selected buffered83 passはsourceが異なる。reader/forkの4file差分と後続GC/sidecar/appendを含む最終lifecycle回帰を実行し、source manifestとbuffered/O_DIRECTの結果を保存する。旧sourceの成功や修正前のrace失敗を最終結果に読み替えない。
-2. **実別host。** 利用者は新規PBS1ジョブを明示許可し、rootが固定source束`9eb426f`、archive SHA256 `9cdb8c95f8b6d801d79f58ec35d360d37ee5ac442b2e986f1213bd977481014e`の配布・投入を進めている。異なる物理host、各host local filesystem/coordinatorで、buffered/directの独立dataset/fork/shift、共同quota、conflict/unsupportedのcollective拒否、checkpoint offline回収→claim再公開→数値resumeを確認する。[ジョブとartifact仕様](internal/phase4_crosshost_acceptance/README.md)。準備・許可・投入を成功結果と数えず、rootがjob ID／終了状態／manifest／結果を保存してから判定する。
+2. **実別host。** 固定source束`9eb426f`、archive SHA256 `9cdb8c95f8b6d801d79f58ec35d360d37ee5ac442b2e986f1213bd977481014e`を許可済みPBS265179へ配布し2host検証まで成功したが、singleton MPI診断で終了14となり本試験は未実行だった。診断を修正し、利用者が追加許可した再試行PBS265180を投入済み。異なる物理host、各host local filesystem/coordinatorで、buffered/directの独立dataset/fork/shift、共同quota、conflict/unsupportedのcollective拒否、checkpoint offline回収→claim再公開→数値resumeを確認する。[ジョブとartifact仕様](internal/phase4_crosshost_acceptance/README.md)。準備・許可・投入を成功結果と数えず、rootがjob ID／終了状態／manifest／結果を保存してから判定する。
 3. **最終照合。** 上記結果に新たな欠陥やunsupportedがあれば修正・再実行する。skipped/deselectedは理由と元の条件への影響を確認する。009A〜Dと全writerの必要証拠が揃うまでDONEへ変えない。
 
 ## 保守拒否と保証の意味

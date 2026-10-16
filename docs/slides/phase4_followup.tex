@@ -69,7 +69,7 @@
       \end{itemize}
     \end{column}
   \end{columns}
-  \smallnote{統合高速1317成功・38 skip。Linux修正版の選択83成功（buffered）。O\_DIRECTと長時間計測は継続。}
-  \takeaway{P4-002・009はIN\_PROGRESS。実別host受入、全writer閉包、監視費用・endpoint認証の残件を継続する。}
+  \smallnote{統合高速1317成功・38 skip。実2 host・4 rankで調停の8 case成功（buffered／O\_DIRECT）。}
+  \takeaway{P4-002・009はIN\_PROGRESS。Linux最終fault matrix、監視費用・endpointのheld-out評価を継続する。}
   \note{根拠：docs/phase4\_executor\_stage\_dag\_implementation.md、docs/phase4\_catalog\_startup\_recovery\_implementation.md、docs/phase4\_sqlite\_power\_loss\_implementation.md。電源断模型は成功したVFS syncのみをdurable imageへ反映する。実装済みDBとjournalの模型であり、実hardwareやtorn writeの保証は主張しない。payload/storage/Frameの未確定量はunknownとし、logical state bytesで代用しない。}
 \end{frame}

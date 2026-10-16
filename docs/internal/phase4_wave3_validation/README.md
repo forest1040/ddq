@@ -73,3 +73,12 @@ Actual cross-host submission is prepared separately in
 [phase4_crosshost_acceptance](../phase4_crosshost_acceptance/README.md), and remains
 unsubmitted pending the required new-job authorization. Final Linux lifecycle
 checks and completed held-out/overhead measurements are also outstanding.
+
+
+## Follow-up: cross-host startup correction and restartable measurement (2026-10-16)
+
+PBS 265179 reached two nodes but failed in singleton MPI diagnostics before any worker ran. The launcher now avoids MPI initialization outside mpiexec and returns failure logs through an EXIT trap. Its local regression passed 8 cases. The separately authorized retry, PBS 265180, passed all 8 actual cross-host cases (2 hosts / 4 ranks; buffered/direct × run/mismatch/unsupported/recover), Exit_status 0, walltime 33 s. [Complete evidence](../phase4_crosshost_acceptance/job-265180/README.md) retains source checks, capacity/cleanup logs and the first failed attempt.
+
+The 120-layer performance v2 campaign was resource-aborted before any long measured pair: the first long warmup pair took 1315 s, so 9 pairs could not fit its 3600 s command budget. [All partial rows](linux-performance-v2-aborted/README.md) are retained and inconclusive. The independent [v3 plan](performance-v3-plan.md) fixes long layers at 20 while retaining warmup 2 / paired measured 7, and uses fresh per-attempt output/scratch. A new result audit preserves unknown/error outcomes and reports absolute seconds and relative errors; extraction is nested in capture time, never added twice.
+
+The follow-up focused fast checks passed **16 tests** (overhead incomplete-CI guard, exact v3 artifact grid, PBS launcher failure modes), [log](mac-wave4-focused.txt). Production core remains 9eb426f, already covered by 1317 passed / 38 skipped / 83 deselected. The latest additions here are validation tooling and documentation. TeX/PDF was rebuilt successfully (40 pages, no overfull boxes) to record the actual cross-host result. P4-002 and P4-009 stay IN_PROGRESS until the outstanding Linux lifecycle/checkpoint and endpoint/measurement results are reviewed.
