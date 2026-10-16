@@ -1,6 +1,13 @@
 import json
+from pathlib import Path
+import sys
 
-from examples.p4_002_overhead_campaign import main, run_campaign, summarize_pairs
+# The console pytest entry point does not add the repository root to sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+try:
+    from examples.p4_002_overhead_campaign import main, run_campaign, summarize_pairs
+finally:
+    sys.path.pop(0)
 
 
 class SerialComm:

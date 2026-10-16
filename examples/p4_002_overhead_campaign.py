@@ -22,7 +22,10 @@ import sys
 
 from mpi4py import MPI
 
-import p4_002_observed_eta as observed
+if __package__:
+    from . import p4_002_observed_eta as observed
+else:
+    import p4_002_observed_eta as observed
 
 
 DEFAULT_WORKLOADS = ("rx-ry-low", "mixed")

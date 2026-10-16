@@ -737,7 +737,7 @@ class DiskBudget:
                         for entry in entries:
                             if Path(entry.path) in metadata_paths:
                                 continue
-                            try: info = entry.stat(follow_symlinks=False)
+                            try: info = Path(entry.path).stat(follow_symlinks=False)
                             except FileNotFoundError: continue
                             if info.st_dev != device:
                                 raise DiskAdmissionError('Disk ledger root spans another volume')
