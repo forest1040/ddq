@@ -37,10 +37,10 @@
 | benchmark/campaign/calibration scratch、pretrial sync probe | storage測定そのもののwrite。runtimeのcost認証やexplicit benchmark budgetとは区別する。未管理のscratchを管理済みと主張しない。 |
 | development runner / PBS scriptとmetadata | local job/log/report出力。job wall/output制限はdisk ledgerの代用ではない。 |
 | native VFS extension build | compilerが一時directoryへlibraryを生成する。runtime catalogに対するVFS admissionとは別のhost build artifactである。 |
-| `FileBlockStore` / `DistributedSimulator` / `DiskBudget` / `VolumeCoordinator`の最初のroot/subdir mkdir | [bootstrap preflight](phase4_bootstrap_namespace_implementation.md)で祖先volume上のquota/min-free/drain/metadata pool/FS capabilityをmkdir前に検査する。既存外部budgetがあるstoreはstore-open tokenも使う。private coordinator/policyと既存managed bytesをmkdir前に検査し、root/subdir/ledger成立直後の実killでretryと未知partial DB拒否を確認済み。既存coordinatorのglobal envelopeをroot前に確保する配線は継続中。namespace probeだけで鶏卵問題を隠さない。 |
+| `FileBlockStore` / `DistributedSimulator` / `DiskBudget` / `VolumeCoordinator`の最初のroot/subdir mkdir | [bootstrap preflight](phase4_bootstrap_namespace_implementation.md)で祖先volume上のquota/min-free/drain/metadata pool/FS capabilityをmkdir前に検査する。既存外部budgetがあるstoreはstore-open tokenも使う。private coordinator/policyと既存managed bytesをmkdir前に検査し、root/subdir/ledger成立直後の実killでretryと未知partial DB拒否を確認済み。既存coordinatorのglobal envelopeもprivate/distributedでroot前に事前claimし、他ledger pendingによる拒否とretry数値oracle、claim直後実killのpool冪等性を確認。namespace probeだけで鶏卵問題を隠さない。 |
 
 ## 検証
 
 今回のnamespace matrixは、Journal/traceの1 byte境界拒否、初回appendのexact byte拒否、既存partial tailのbyte不変、invalid serializationのbyte不変、exact creditによるrepairとcommitted cursor保持を確認する。実SIGKILLはnamespace予約直後、mkdir直後、trace open直後、およびdataset lease JSON予約/temp open直後へ置き、全artifactのbyte不変、dry-run→apply→再実行の冪等性、旧snapshotの実numerical oracleを検証する。
 
-既存writer/VFS/ENOSPC/kill/coordinator testsの結果と今回の新規結果は各実行logで区別する。SIGKILLは実power-loss durabilityの代用ではなく、SQLite EXTRAとnative VFS durability imageの検証もfilesystem/OS契約の範囲を明記する。bootstrapの継続作業を完了する前にP4-009の全writer受入をDONEとはしない。
+既存writer/VFS/ENOSPC/kill/coordinator testsの結果と今回の新規結果は各実行logで区別する。SIGKILLは実power-loss durabilityの代用ではなく、SQLite EXTRAとnative VFS durability imageの検証もfilesystem/OS契約の範囲を明記する。このbootstrap証跡だけで、他writerの未完了受入を含むP4-009全体のDONEとはしない。

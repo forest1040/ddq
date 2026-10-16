@@ -97,7 +97,7 @@ class FileBlockStore:
         self._dirty_segments, self._synced_segments = set(), set()
         if disk_budget is None:
             from .private_disk_budget import preflight_private_config
-            preflight_private_config(config,self.directory)
+            preflight_private_config(config,self.directory,create=create)
         if disk_budget is not None and hasattr(disk_budget,'db'):
             roots=[Path(p) for p, in disk_budget.db.execute('SELECT path FROM roots')]
             if not any(self.directory.resolve().is_relative_to(root) for root in roots):

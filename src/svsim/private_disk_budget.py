@@ -5,11 +5,32 @@ import sqlite3
 from .disk_budget import DiskAdmissionError, DiskBudget
 
 
-def preflight_private_config(config,directory):
+def preflight_private_config(config,directory,*,create=True):
     """Check policy, source volume and existing managed bytes without mkdir/open for writing."""
     from .bootstrap_preflight import ancestor,preflight
     directory=Path(directory).resolve();ledger=directory/'metadata/disk-ledger.sqlite3'
     pool=8*1024**2;excluded=[ledger,Path(str(ledger)+'-journal')]
+    if not create and not ledger.is_file():
+        raise DiskAdmissionError('Store-private ledger is missing; refusing to recreate admission history')
+    if ledger.exists():
+        bound=DiskBudget.read_volume_binding(ledger)
+        requested=None if config.volume_coordinator is None else str(Path(config.volume_coordinator).resolve())
+        if bound is not None and requested is None:
+            raise DiskAdmissionError('Ledger is bound to a volume coordinator; open it with that coordinator')
+        if bound is not None and bound!=requested:
+            raise DiskAdmissionError('Ledger is bound to a different volume coordinator')
+        if bound is None and requested is not None:
+            raise DiskAdmissionError('An existing private ledger cannot acquire a new volume binding during reopen')
+        con=sqlite3.connect(ledger.as_uri()+'?mode=ro',uri=True)
+        try:
+            if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='private_policy'").fetchone():
+                raise DiskAdmissionError('Store-private policy persisted none; explicit migration is required')
+            saved=con.execute('SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,bootstrap_bytes,max_page_count,max_records,volume_device,custom_accounting FROM private_policy WHERE singleton=1').fetchone()
+            expected=(config.disk_quota_bytes,config.min_free_bytes,config.drain_reserve_bytes,
+                      pool,1024,4096,ancestor(directory).stat().st_dev,0)
+            if saved!=expected:raise DiskAdmissionError('Store-private ledger policy mismatch')
+        except sqlite3.Error as exc:raise DiskAdmissionError('Private ledger policy is unreadable') from exc
+        finally:con.close()
     if config.volume_coordinator is not None:
         candidate=Path(config.volume_coordinator).absolute()
         if candidate.resolve()!=candidate:
@@ -29,9 +50,17 @@ def preflight_private_config(config,directory):
             finally:con.close()
             # Its full metadata credit is checked by the coordinator itself.
         else:pool+=1024**2
-    return preflight(directory,pool_bytes=pool,quota_bytes=config.disk_quota_bytes,
+    result=preflight(directory,pool_bytes=pool,quota_bytes=config.disk_quota_bytes,
         min_free_bytes=config.min_free_bytes,drain_reserve_bytes=config.drain_reserve_bytes,
         managed_roots=(directory,),excluded_paths=excluded)
+    if config.volume_coordinator is not None:
+        from .volume_coordinator import VolumeCoordinator
+        coordinator=(VolumeCoordinator.open_bound(config.volume_coordinator) if ledger.exists() else
+            VolumeCoordinator(config.volume_coordinator,quota_bytes=config.disk_quota_bytes,
+                min_free_bytes=config.min_free_bytes,drain_reserve_bytes=config.drain_reserve_bytes))
+        try:coordinator.pre_admit_ledger(ledger,metadata_bytes=8*1024**2,roots=(directory,))
+        finally:coordinator.close()
+    return result
 
 
 def open_private_budget(config, directory, *, create):

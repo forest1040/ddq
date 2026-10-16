@@ -118,11 +118,13 @@ class DistributedSimulator:
             self.environment = self.transport.handshake()
             self.block_bits = config.block_bits
             self.directory = Path(config.directory)
-            if not self.directory.exists():
+            if not self.directory.exists() and config.volume_coordinator is None:
                 from .bootstrap_preflight import preflight
                 preflight(self.directory,pool_bytes=8*1024**2+(1024**2 if config.volume_coordinator else 0),
                           quota_bytes=config.disk_quota_bytes,min_free_bytes=config.min_free_bytes,
                           drain_reserve_bytes=config.drain_reserve_bytes)
+            if config.storage_scope=='node-local' and config.volume_coordinator is not None:
+                self._pre_admit_dataset_namespace(create=_create)
             self.directory.mkdir(parents=True,exist_ok=True)
             self._lease_dataset_roots([self.directory])
             if config.storage_scope=='node-local':
@@ -251,6 +253,54 @@ class DistributedSimulator:
                 else 'a different one')+'; reopen it with the coordinator it was created with')
         if persisted is None and self.config.volume_coordinator is not None:
             raise ValueError('Dataset was created without a volume coordinator; a new binding is refused')
+
+    def _pre_admit_dataset_namespace(self,*,create):
+        """Publish the prospective local ledger pool before the first dataset mkdir."""
+        from .bootstrap_preflight import ancestor,preflight
+        from .volume_coordinator import VolumeCoordinator
+        record=None;error=None
+        try:
+            if not create:self._check_persisted_coordinator()
+            root=self.directory.resolve()
+            record={'host':self.environment[self.rank]['host'],'volume':ancestor(root).stat().st_dev,
+                'root':str(root),'ledger':str(Path(self.config.disk_admission_ledger).resolve())
+                    if self.config.disk_admission_ledger is not None else None,
+                'coordinator':self._coordinator_locator()}
+        except Exception as exc:error=str(exc)
+        self.transport.vote(error)
+        gathered=self.transport.control.allgather(record)
+        local=[r for r in gathered if r['host']==record['host'] and r['volume']==record['volume']]
+        roots=sorted({r['root'] for r in local})
+        choices={r['ledger'] for r in local};coordinators={r['coordinator'] for r in local}
+        error=None
+        if len(choices)!=1:error='Same-host/volume ranks must select the same disk admission ledger'
+        if len(coordinators)!=1:error='Same-host/volume ranks must select the same volume coordinator'
+        self.transport.vote(error)
+        key=content_hash({'host':record['host'],'volume':record['volume'],'roots':roots})
+        selected=next(iter(choices))
+        ledger=Path(selected) if selected is not None else Path(roots[0])/'.disk-admission'/f'{key}.sqlite3'
+        coordinator=None;error=None
+        try:
+            pool=8*1024**2+(0 if Path(self.config.volume_coordinator).exists() else 1024**2)
+            preflight(self.directory,pool_bytes=pool,quota_bytes=self.config.disk_quota_bytes,
+                min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes,
+                managed_roots=roots,excluded_paths=(ledger,Path(str(ledger)+'-journal')))
+            if ledger.exists():
+                from .disk_budget import DiskBudget,DiskAdmissionError
+                if DiskBudget.read_volume_binding(ledger)!=self._coordinator_locator():
+                    raise DiskAdmissionError('Ledger is bound to a different volume coordinator')
+                coordinator=VolumeCoordinator.open_bound(self.config.volume_coordinator)
+                if (coordinator.quota_bytes,coordinator.min_free_bytes,coordinator.drain_reserve_bytes)!=(
+                        self.config.disk_quota_bytes,self.config.min_free_bytes,self.config.drain_reserve_bytes):
+                    raise DiskAdmissionError('Volume coordinator policy mismatch')
+            else:
+                coordinator=VolumeCoordinator(self.config.volume_coordinator,quota_bytes=self.config.disk_quota_bytes,
+                    min_free_bytes=self.config.min_free_bytes,drain_reserve_bytes=self.config.drain_reserve_bytes)
+            coordinator.pre_admit_ledger(ledger,metadata_bytes=8*1024**2,roots=roots)
+        except Exception as exc:error=str(exc)
+        finally:
+            if coordinator is not None:coordinator.close()
+        self.transport.vote(error)
 
     def _bootstrap_disk_budget(self):
         """Admit catalogs and metadata before StoredSimulator's first SQL write."""

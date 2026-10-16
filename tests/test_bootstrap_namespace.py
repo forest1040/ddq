@@ -122,10 +122,18 @@ def test_private_config_coordinator_policy_mismatch_precedes_store_namespace(tmp
     assert not (tmp_path/'missing').exists()
 
 
-def test_private_small_quota_with_new_coordinator_refuses_both_namespaces(tmp_path):
-    cfg=StorageConfig(str(tmp_path/'missing/store'),2,volume_coordinator=str(tmp_path/'missing/coord/volume.sqlite3'),
-                      disk_quota_bytes=9*1024**2-1)
-    with pytest.raises(DiskAdmissionError,match='bootstrap'):FileBlockStore(cfg,4)
+@pytest.mark.parametrize('runtime',['private','distributed'])
+def test_small_quota_with_new_coordinator_refuses_both_namespaces(tmp_path,runtime):
+    options=dict(volume_coordinator=str(tmp_path/'missing/coord/volume.sqlite3'),disk_quota_bytes=9*1024**2-1)
+    if runtime=='private':
+        with pytest.raises(DiskAdmissionError,match='bootstrap'):
+            FileBlockStore(StorageConfig(str(tmp_path/'missing/store'),2,**options),4)
+    else:
+        from mpi4py import MPI
+        from svsim import DistributedSimulator,DistributedConfig
+        with pytest.raises(Exception,match='bootstrap'):
+            DistributedSimulator(4,DistributedConfig(str(tmp_path/'missing/store'),2,
+                storage_scope='node-local',**options),comm=MPI.COMM_SELF)
     assert not (tmp_path/'missing').exists()
 
 
@@ -189,3 +197,87 @@ def test_unknown_partial_bootstrap_ledger_is_preserved_and_refused(tmp_path):
     before=ledger.read_bytes()
     with pytest.raises((DiskAdmissionError,sqlite3.DatabaseError)):FileBlockStore(StorageConfig(str(root),2),4)
     assert ledger.read_bytes()==before and not (root/'metadata/catalog.sqlite3').exists()
+
+
+@pytest.mark.parametrize('runtime',['private','distributed'])
+def test_global_pending_refuses_bootstrap_before_namespace_then_retry_preserves_oracle(tmp_path,runtime):
+    import numpy as np
+    from svsim.stored_runtime import StoredSimulator
+    quota=64*1024**2;coord=str(tmp_path/'volume.sqlite3')
+    anchor=FileBlockStore(StorageConfig(str(tmp_path/'anchor'),2,volume_coordinator=coord,disk_quota_bytes=quota),4)
+    target=tmp_path/'missing/dataset'
+    def open_target():
+        if runtime=='private':
+            return StoredSimulator(4,StorageConfig(str(target),2,volume_coordinator=coord,disk_quota_bytes=quota))
+        from mpi4py import MPI
+        from svsim import DistributedSimulator,DistributedConfig
+        return DistributedSimulator(4,DistributedConfig(str(target),2,storage_scope='node-local',
+            volume_coordinator=coord,disk_quota_bytes=quota),comm=MPI.COMM_SELF)
+    try:
+        key=anchor.disk_budget.reserve(48*1024**2,operation='trace-append',writing=True)
+        claim=anchor.disk_budget._coord.claim(anchor.disk_budget._ledger_path)
+        with pytest.raises(Exception,match='quota'):open_target()
+        assert not (tmp_path/'missing').exists()
+        assert anchor.disk_budget._coord.claim(anchor.disk_budget._ledger_path)==claim
+        anchor.disk_budget.release(key)
+        sim=open_target()
+        try:
+            sim.gate('H',(0,))
+            actual=sim.state(allow_gather=True) if runtime=='distributed' else sim.state()
+            expected=np.zeros(16,dtype=np.complex128);expected[0]=expected[1]=1/np.sqrt(2)
+            np.testing.assert_allclose(actual,expected,atol=1e-12)
+        finally:sim.close()
+    finally:anchor.close()
+
+
+@pytest.mark.parametrize('runtime',['private','distributed'])
+def test_runtime_kill_after_global_claim_before_root_retry_keeps_single_pool(tmp_path,runtime):
+    script=r'''
+import os,signal,sys
+from pathlib import Path
+from svsim.volume_coordinator import VolumeCoordinator
+root=Path(sys.argv[1]);runtime=sys.argv[2];coord=str(root/'volume.sqlite3');target=root/'dataset'
+original=VolumeCoordinator.pre_admit_ledger
+
+def admitted(self,*args,**kw):
+ result=original(self,*args,**kw)
+ os.kill(os.getpid(),signal.SIGKILL)
+VolumeCoordinator.pre_admit_ledger=admitted
+if runtime=='private':
+ from svsim.stored_runtime import StoredSimulator
+ from svsim.storage import StorageConfig
+ StoredSimulator(4,StorageConfig(str(target),2,volume_coordinator=coord,disk_quota_bytes=64*1024**2))
+else:
+ from mpi4py import MPI
+ from svsim import DistributedSimulator,DistributedConfig
+ DistributedSimulator(4,DistributedConfig(str(target),2,storage_scope='node-local',volume_coordinator=coord,
+     disk_quota_bytes=64*1024**2),comm=MPI.COMM_SELF)
+'''
+    child=subprocess.run([sys.executable,'-c',script,str(tmp_path),runtime],
+        env={**os.environ,'PYTHONPATH':'src'},capture_output=True,timeout=60)
+    assert child.returncode==-signal.SIGKILL,child.stderr.decode()
+    target=tmp_path/'dataset';assert not target.exists()
+    coord=VolumeCoordinator.open_bound(tmp_path/'volume.sqlite3')
+    before=coord.db.execute('SELECT path,metadata_bytes,pending,epoch FROM ledgers').fetchall()
+    assert len(before)==1 and before[0][1:]==(8*1024**2,0,0)
+    if runtime=='private':
+        sim=FileBlockStore(StorageConfig(str(target),2,volume_coordinator=str(coord.path),disk_quota_bytes=64*1024**2),4)
+    else:
+        from mpi4py import MPI
+        from svsim import DistributedSimulator,DistributedConfig
+        sim=DistributedSimulator(4,DistributedConfig(str(target),2,storage_scope='node-local',
+            volume_coordinator=str(coord.path),disk_quota_bytes=64*1024**2),comm=MPI.COMM_SELF)
+    try:
+        after=coord.db.execute('SELECT path,metadata_bytes FROM ledgers').fetchall()
+        assert after==[before[0][:2]]
+    finally:sim.close();coord.close()
+
+
+def test_private_policy_mismatch_does_not_recreate_missing_subdirectory(tmp_path):
+    from dataclasses import replace
+    cfg=StorageConfig(str(tmp_path/'store'),2)
+    store=FileBlockStore(cfg,4);store.close()
+    state=tmp_path/'store/state';state.rmdir()
+    with pytest.raises(DiskAdmissionError,match='policy mismatch'):
+        FileBlockStore(replace(cfg,disk_quota_bytes=64*1024**2),4,create=False)
+    assert not state.exists()
