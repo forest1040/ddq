@@ -31,26 +31,58 @@ def compact_payload(data,cache=None,sources=None):
     Chunks are fixed index ranges of CHUNK_ENTRIES entries named by the sha256
     of their canonical JSON, so a checkpoint only writes chunks that changed
     (the tail) instead of the whole growing lists. ``cache`` (caller-owned dict)
-    keeps the references of full chunks below the previous commit, valid while
-    ``sources[key]`` (the identity of the live list) is unchanged: entries before
-    a published cut are never rewritten in place (rollbacks stop at the cut).
+    keeps references for complete chunks and an unchanged tail below the
+    previous commit. They are valid while ``sources[key]`` (the identity of the
+    live list) and its length match: entries before a published cut are never
+    rewritten in place (rollbacks stop at the cut). Appending invalidates only
+    the cached tail, which is rebuilt from the last complete chunk boundary.
     """
     data={k:v for k,v in data.items() if k not in {'metadata_payload','payload_format'}};chunks={}
     for key in CHUNKED_KEYS:
         items=data.pop(key);refs=[]
         identity=(sources or {}).get(key)
         cached=cache.get(key) if cache is not None and identity is not None else None
-        reuse=cached[1] if cached and cached[0]==identity else []
+        same_source=bool(cached and cached[0]==identity)
+        reuse=cached[1] if same_source else []
+        same_length=same_source and len(cached)>2 and cached[2]==len(items)
+        cached_tail=cached[3] if same_length and len(cached)>3 else None
+        cached_tail_data=cached[4] if same_length and len(cached)>4 else None
         for index,start in enumerate(range(0,len(items),CHUNK_ENTRIES)):
             if index<len(reuse):refs.append(reuse[index]);continue
+            if index==len(reuse) and cached_tail is not None and cached_tail_data is not None:
+                refs.append(cached_tail);chunks[cached_tail['sha256']]=cached_tail_data;continue
             raw=_encoded(items[start:start+CHUNK_ENTRIES]);digest=sha256(raw).hexdigest()
             refs.append({'sha256':digest,'bytes':len(raw),'entries':len(items[start:start+CHUNK_ENTRIES])})
             chunks[digest]=items[start:start+CHUNK_ENTRIES]
         if cache is not None and identity is not None:
-            cache[key]=(identity,[r for r in refs if r['entries']==CHUNK_ENTRIES])
+            full=[r for r in refs if r['entries']==CHUNK_ENTRIES]
+            tail_index=len(full)
+            tail=refs[tail_index] if len(items)%CHUNK_ENTRIES else None
+            tail_data=chunks.get(tail['sha256']) if tail is not None else None
+            if tail is not None and tail_data is None and same_length and cached_tail==tail:
+                tail_data=cached_tail_data
+            if tail is not None and tail_data is None:
+                tail_data=items[tail_index*CHUNK_ENTRIES:]
+            cache[key]=(identity,full,len(items),tail,tail_data)
         data[key+'_chunks']=refs
     data['payload_format']=2
     return data,chunks
+
+
+def remember_payload_references(cache,payload,sources):
+    """Install the committed chunk refs on every rank for consistent ETA shapes."""
+    if cache is None or not isinstance(payload,dict):return
+    for key in CHUNKED_KEYS:
+        identity=(sources or {}).get(key)
+        refs=payload.get(key+'_chunks')
+        if identity is None or not isinstance(refs,list):continue
+        full=[ref for ref in refs if ref['entries']==CHUNK_ENTRIES]
+        total=sum(ref['entries'] for ref in refs)
+        tail=refs[len(full)] if total%CHUNK_ENTRIES else None
+        prior=cache.get(key)
+        tail_data=(prior[4] if prior and prior[0]==identity and len(prior)>4 and
+                   prior[1]==full and prior[2]==total and prior[3]==tail else None)
+        cache[key]=(identity,full,total,tail,tail_data)
 
 
 def chunk_name(digest):
@@ -239,4 +271,5 @@ def distribute_payload(transport,data,directory,*,chunked,expand=True,chunk_cach
                                      if transport.rank==0 else None)
     exchange_chunks(transport,refs,chunks,directory,checkpoint_context=context,**kwargs)
     payload=exchange_payload(transport,compacted,directory,**kwargs)
+    remember_payload_references(chunk_cache,payload,sources)
     return expand_payload(directory,payload,transport.rank) if expand else payload

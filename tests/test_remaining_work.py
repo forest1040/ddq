@@ -532,10 +532,19 @@ def test_endpoint_stages_price_an_explicit_end_to_end_eta(tmp_path):
         # The endpoint task conditions are exactly the recorded stage classes.
         assert {_class(r.condition) for r in rows if r.stage == "expectation"} == {
             _class(expectation_condition(sim, obs))}
-        assert {_class(r.condition) for r in rows if r.stage == "checkpoint-commit"} == {_class(checkpoint_condition(sim))}
+        checkpoint_rows = [r for r in rows if r.stage == "checkpoint-commit"]
+        # Cost identity includes the pre-commit format-2 payload shape, so
+        # changing source/history sizes cannot borrow the cost of another size.
+        assert len({_class(r.condition) for r in checkpoint_rows}) > 1
+        latest_shape = checkpoint_condition(sim)
+        assert latest_shape['payload_format'] == 2
+        assert latest_shape['gates_entries'] == len(sim.sequencer.operations)
+        assert latest_shape['gates_pending_chunks'] >= 0
+        assert all('history_pending_entries' in r.condition for r in checkpoint_rows)
         # A stage that is not certified (here: checkpoint cost grows with the history) leaves the total unknown.
         if observed["expected_seconds"] is None:
             assert any(r.startswith("MISSING_COST:") for r in observed["unknown_reasons"])
+            assert "COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:endpoint:checkpoint" in observed["unknown_reasons"]
         sim.runtime.set_eta_endpoint()
         assert sim.runtime.update_eta()["endpoint"] == "gates-only"
         # Gradient: the recorded stage class equals the endpoint condition for the same request.

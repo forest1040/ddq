@@ -537,12 +537,15 @@ class AsyncDistributedSimulator(DistributedSimulator):
         if self._private_epoch:
             raise ValueError('Cannot checkpoint an unpublished epoch')
         self.drain()
+        # Capture the pre-commit payload shape. Format 2 reuses complete
+        # content-addressed chunks, while an incomplete tail is rewritten.
+        from .remaining_work import checkpoint_condition
+        checkpoint_shape=checkpoint_condition(self)
         started,cpu=perf_counter(),process_time()
         snapshot=super().commit_snapshot(**kwargs)
         # Measured durable-cut cost prices FRONTIER_REPLAN candidates later in the run.
         self.runtime.record_checkpoint_wall(self.transport.max_value(perf_counter()-started))
-        from .remaining_work import checkpoint_condition
-        self._record_stage('checkpoint-commit',_stage_condition(checkpoint_condition(self)),
+        self._record_stage('checkpoint-commit',_stage_condition(checkpoint_shape),
                            seconds=perf_counter()-started,cpu_seconds=process_time()-cpu)
         self.runtime.invalidate_eta('CHECKPOINT_COMMITTED')
         return snapshot

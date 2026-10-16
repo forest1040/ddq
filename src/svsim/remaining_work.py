@@ -168,7 +168,24 @@ def gradient_condition(sim,observable,parameters,method):
 
 
 def checkpoint_condition(sim):
-    return {'operation':'checkpoint-commit',**_endpoint_base(sim)}
+    from .checkpoint_payload import CHUNK_ENTRIES
+    sources={'gates':sim.sequencer.operations,'history':sim.history}
+    cache=getattr(sim,'_payload_chunk_cache',{})
+    shape={}
+    for key,items in sources.items():
+        prior=cache.get(key)
+        reusable=(len(prior[1])*CHUNK_ENTRIES if prior and prior[0]==id(items) else 0)
+        tail_reused=bool(prior and prior[0]==id(items) and len(prior)>3 and
+                         prior[2]==len(items) and prior[3] is not None)
+        if tail_reused:reusable+=prior[3]['entries']
+        pending=max(0,len(items)-reusable)
+        shape[f'{key}_entries']=len(items)
+        shape[f'{key}_reusable_entries']=reusable
+        shape[f'{key}_pending_entries']=pending
+        shape[f'{key}_tail_reused']=tail_reused
+        shape[f'{key}_chunk_refs']=(len(items)+CHUNK_ENTRIES-1)//CHUNK_ENTRIES
+        shape[f'{key}_pending_chunks']=(pending+CHUNK_ENTRIES-1)//CHUNK_ENTRIES
+    return {'operation':'checkpoint-commit','payload_format':2,**shape,**_endpoint_base(sim)}
 
 
 def endpoint_tasks(sim,spec,context):
