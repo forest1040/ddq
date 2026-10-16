@@ -66,6 +66,49 @@ def test_cost_rows_keep_submission_order_across_rings_and_evictions():
     assert set(collector._cost_order) == {id(row) for row in collector.cost_rows()}
 
 
+def test_uncertified_eta_reports_the_quality_failure_without_pricing_it():
+    from types import SimpleNamespace
+    from svsim.runtime_eta import CountedTask, RuntimeETA
+    from svsim.runtime_measurement import RuntimeMeasurementCollector
+    from svsim.runtime_observed_costs import observed_task_rejection, observed_task_cost
+
+    collector = RuntimeMeasurementCollector(max_bytes=512 * 1024)
+    def condition(angle):
+        return {'operation': 'executor-gate', 'executor': 'single-gate', 'n': 4,
+                'operations': [{'kind': 'RX', 'targets': [1], 'controls': [],
+                                'angle': angle, 'clifford': False, 'diagonal': False,
+                                'permutation': False}]}
+
+    # The angle-pooled class has enough post-burn-in values, but a regime shift
+    # makes its held-out set fail the same production certificate as execution.
+    for i, seconds in enumerate([1.0] * 9 + [3.0] * 6):
+        collector.complete(f'eta-{i}', context={'policy_epoch': 0, 'plan_version': 0},
+                           condition=condition(i % 2), stage='executor-gate', units='groups',
+                           quantity=1, protocol_seconds=seconds, validated=True, evidence='measured')
+    target = condition(0.5)
+    assert observed_task_cost(collector, target, 0, 0) is None
+    task = CountedTask('tail:rx', target, {'policy_epoch': 0, 'plan_version': 0}, 1)
+    snapshot = SimpleNamespace(snapshot_id='s', window=(task,), tail=(), future=(), future_complete=False,
+        future_reasons=(), unknown_reasons=(), complete=True, stale=False, in_flight=(),
+        in_flight_covered=False, private=False)
+    reasons = observed_task_rejection(collector, target, 0, 0)
+    report = RuntimeETA().evaluate(snapshot, None, cost_reasons=lambda _: reasons)
+    assert report.expected_seconds is None
+    assert 'COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:tail:rx' in report.unknown_reasons
+    assert 'MISSING_COST:tail:rx' in report.unknown_reasons
+
+    checkpoint = {'operation': 'checkpoint-commit', 'n': 4, 'block_bits': 2, 'ranks': 1,
+                  'backend': 'buffered', 'engine': 'cooperative', 'store': 'file'}
+    for i in range(15):
+        collector.complete(f'checkpoint-{i}', context={'policy_epoch': 0, 'plan_version': 0},
+                           condition=checkpoint, stage='checkpoint-commit', units='calls',
+                           quantity=1, protocol_seconds=.01 + (i % 3) * .0001,
+                           validated=True, evidence='measured')
+    price = observed_task_cost(collector, checkpoint, 0, 0)
+    assert price is not None and price.measured is True
+    assert price.lower_seconds <= price.mean_seconds <= price.upper_seconds
+
+
 def test_profile_adapter_requires_full_identity_scope_and_explicit_envelope():
     condition = kernel_condition("h", 2)
     profile = ProfileDocument.create({}, {}, {}, [_row(condition)])

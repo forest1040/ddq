@@ -160,6 +160,30 @@ def observed_task_cost(collector, condition, policy_epoch=None, plan_version=Non
                       measured=False)
 
 
+def observed_task_rejection(collector, condition, policy_epoch=None, plan_version=None):
+    """Explain why this run cannot certify a task, including an angle-pooled fallback.
+
+    This is diagnostic metadata only: it never returns a cost and therefore
+    cannot make an uncertified observation usable by ETA or control.
+    """
+    if collector is None or not collector.enabled or not isinstance(condition, dict):
+        return ()
+    stages = _stages(condition)
+    if condition.get('operation') not in stages:
+        return ()
+    index, executor = _by_class(collector, stages), stages is EXECUTOR_STAGES
+    exact = _assess(index.get((executor, _class(condition)), []), policy_epoch,
+                    plan_version, BURN_IN)[0]
+    reasons = [exact]
+    pooled = _pooled(condition)
+    if exact == INSUFFICIENT and pooled is not None:
+        pooled_reason = _assess(index.get((executor, 'pooled', pooled), []), policy_epoch,
+                                plan_version, BURN_IN)[0]
+        if pooled_reason != CERTIFIED:
+            reasons.append('ANGLE_POOLED_' + pooled_reason)
+    return tuple(dict.fromkeys(reasons))
+
+
 def _residual_cost(collector, condition, policy_epoch, plan_version, diagnostic, decisions):
     """Remaining time of a running call of a certified class, given its elapsed seconds.
 

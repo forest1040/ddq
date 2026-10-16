@@ -102,7 +102,7 @@ MPIのoracle（1／2／4 rank）は、現在のepochのboundary taskを数える
 **確認（Mac、file store、Trotter型の反復：1 layerを足す→実行→期待値→checkpointを14回）。**
 - **expectation。** 約2 msで安定し、認証された。
 - **checkpoint。** 11 msから35 msへ、checkpointの回数に比例して増え、`LOW_HELD_OUT_COVERAGE`で認証されなかった。そのため、checkpointを含む合計はunknownである（正しい動作）。
-- **増加の原因。** checkpointのmanifestが、毎回history全体を書き直すことにある（`distributed_checkpoint.py`）。定期的にcheckpointを取ると、run全体でO(N²)になる。これはcheckpoint形式の拡張性の問題であり、P4-009／005の残件として記録する。
+- **当時の観測。** checkpoint stageは11 msから35 msへ増え、`LOW_HELD_OUT_COVERAGE`となった。当時のhistory全体を書き直すという説明はpayload format 2導入前の形式に基づく古い説明で、現行形式の増加理由は下記「checkpoint payload v2と成長費用の再確認」を参照する。
 
 ## multi-rankのS1（2026-10-15追加）
 
@@ -137,3 +137,15 @@ MPIのoracle（1／2／4 rank）は、現在のepochのboundary taskを数える
 sequence管理のbyte課金を加えた後の60％地点の8 check smokeは、3件（37.5％）回答、median誤差8.7％、coverage 100％、collectorのdropは全件0だった。48 check評価はbyte課金追加前、smokeは追加後で、どちらも時系列修正後である。証跡は[48 check](internal/p4_002_observed_eta/chronological-holdout-20261015/mac-48-checks.json)と[byte課金後smoke](internal/p4_002_observed_eta/chronological-holdout-20261015/mac-budget-smoke.json)に保存した。再現は`PYTHONPATH=src python examples/p4_002_observed_eta.py --workloads rx-ry-low,rx-ry-var --policies S0,S2 --stores file,ram --trials 2 --skip-overhead --output /tmp/p4-eta.json --scratch /tmp/p4-eta`（smokeは`--trials 2`を`--quick`へ変更）。
 
 この変更は認証の正しさと診断を修正したもので、短いrunの回答率改善を実証したものではない。従来の約50％とは異なるworkload集合・試行で、同時に別作業も実行していたため、差の比較はできない。短いrunのcoverage不良／driftの原因調査、長いrun、Linux／multi-rankの再評価は引き続き残件である。対象試験`tests/test_runtime_measurement.py tests/test_runtime_cost_registry.py tests/test_remaining_work.py`は51 passed。
+
+## endpoint認証の理由をruntime ETAへ返す（2026-10-16）
+
+短いrunの未回答は、従来`MISSING_COST:<task>`だけで示されていた。collector側にはexact／pooled-angleの認証理由があったが、診断scriptの外では見えなかった。runtime observed viewにも`COST_UNCERTIFIED:<reason>:<task>`を加え、exactと角度pooledの失敗を区別する。`MISSING_COST`も残し、未認証sampleをETAへ価格として渡さない。
+
+判定条件は変更していない。burn-in後8件、held-out coverage 0.8、drift limit 0.5、policy／plan freshnessを維持する。実測と認証を分離する回帰では、角度pooledのheld-out driftがETA理由へ現れ、期待値はunknownのままだった。安定したcheckpoint sampleのlower／expected／upperが順序付きで保持されることも確認した。runtimeのrolling intervalはtraining／held-out実測のenvelopeであり、confidence intervalやend-to-end保証ではない。これにより低回答率の原因をruntime API上で調査できるが、回答率を改善した実証ではない。endpointを含む短run、長run、Linux／multi-rank overheadの受入は残る。
+
+## checkpoint payload v2と成長費用の再確認（2026-10-16）
+
+旧記録の「毎回history全体を書き直すためrun全体がO(N²)」という説明は、現行のpayload format 2には当てはまらない。gates／historyは512件のcontent-addressed chunkで保存し、満杯の既存chunkは再利用する。小さなpayload試算では、8／16／32／64／128／256／512件時に更新対象chunkは1個で、更新chunk bytesは722／1,462／2,948／5,921／11,953／24,227／48,774だった。520件で既存の512件chunkを再利用すると更新対象はtailと新chunkの2個、769 bytesだった（合成データ、payload encodingだけの試算であり、checkpoint end-to-end時間ではない）。512件未満のtailは毎回再シリアライズされ、全gateの`gate_data`変換とrank間hash合意も残る。以前の11→35 ms観測だけから現行版の成長則を決めない。
+
+したがって`checkpoint-commit`のrolling classは可変の回路長／history量を区別せず、held-out coverage／driftを通らなければunknownを保つ。短runでcheckpoint endpointが未認証となるのは安全側の結果である。chunk形式2を含むend-to-end checkpoint stage成長とその予測区間を再測定するまで、認証済み費用とはみなさない。

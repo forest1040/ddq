@@ -360,6 +360,7 @@ class RuntimeControl:
             sources={}
             costs=self.costs
             profiled='task-seconds' in costs.kinds()
+            observed_reasons=None
             for name in ('baseline','observed','adapted'):
                 explicit=name in self._eta_cost_views
                 resolver=None;label='unavailable'
@@ -375,6 +376,10 @@ class RuntimeControl:
                     # Observed: newest profile cell, else this run's rolling measured completions, else a
                     # pre-calibrated executor-class profile (classes and endpoint stages not yet certified here).
                     executor_profiled='executor-class-seconds' in costs.kinds()
+                    def observed_reasons(task):
+                        from .runtime_observed_costs import observed_task_rejection
+                        return observed_task_rejection(self.measurements,task.condition,
+                                                       self.policy_epoch,self.plan_version)
                     def resolver(task):
                         for kind in ('task-seconds','observed-task-seconds')+(('executor-class-seconds',) if executor_profiled else ()):
                             value=costs.resolve(kind,task.context,task.condition,purpose='production').value
@@ -382,7 +387,8 @@ class RuntimeControl:
                         return None
                     label=('conditional-envelope+' if profiled else '')+'rolling-observed'+('+executor-profile' if executor_profiled else '')
                 sources[name]=label
-                reports[name]=asdict(RuntimeETA().evaluate(snapshot,resolver))
+                reports[name]=asdict(RuntimeETA().evaluate(snapshot,resolver,
+                    cost_reasons=observed_reasons if name=='observed' else None))
             if 'eta-remaining' in costs.kinds():
                 from .runtime_time_model_eta import VIEW_NAME
                 resolved=costs.resolve('eta-remaining',snapshot,purpose='diagnostic')

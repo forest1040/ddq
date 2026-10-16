@@ -81,7 +81,7 @@ class RuntimeETA:
 
     MAX_TASK_CLASSES = 512
 
-    def evaluate(self, snapshot, cost_view=None) -> RuntimeETAReport:
+    def evaluate(self, snapshot, cost_view=None, *, cost_reasons=None) -> RuntimeETAReport:
         # An exact epoch-aligned executor shape replaces the semantic tail.
         exact = getattr(snapshot, "future_complete", False) and not getattr(snapshot, "future_reasons", ())
         tasks = (tuple(snapshot.window) + tuple(snapshot.future if exact else snapshot.tail)
@@ -121,6 +121,12 @@ class RuntimeETA:
                 continue
             sample = self._lookup(cost_view, task)
             if sample is None:
+                if callable(cost_reasons):
+                    details = cost_reasons(task)
+                    if isinstance(details, str):
+                        details = (details,)
+                    if details:
+                        unknown.extend(f"COST_UNCERTIFIED:{reason}:{task.task_id}" for reason in details)
                 unknown.append("MISSING_COST:" + task.task_id)
                 continue
             if not isinstance(sample, CostSample):
