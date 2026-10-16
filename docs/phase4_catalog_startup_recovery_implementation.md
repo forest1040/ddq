@@ -30,3 +30,7 @@ ledger directoryとdatasetの既存exclusive leaseに、creation intentが示す
 `tests/test_catalog_startup_recovery.py`と実子process workerは、shared／privateそれぞれでreserve、staging fsync、inode bind、publish、SQLite open直前、open直後、通常owner CAS、constructor完了の8位置に停止を入れる。dry runがledgerを含め無変更、apply後のartifact／観測量不変、pending 0、receiptと二重適用拒否を確認する。熱journalの拒否とadmitted replay後の精算、DB／parentの置換、generation改変、旧unbound、same-inodeでもbirthが変化する場合、birth取得不能、CAS再実行、final競合で上書きしないことも検証する。Linuxには512回を上限に実inode再利用を探す回帰を用意し、再利用が起きないfilesystemは明示skipする。
 
 関連catalog／uncommitted／store-private回収試験も再実行し、従来のsnapshotからのresumeのnumpy oracle一致と新たなsnapshot成功を確認した。birthtimeはMac floatとfilesystem時刻分解能の制約があり、同じbirth値まで複製・偽装する非協調processの検出を約束しない。
+
+## capability拒否を作成前へ移動
+
+startup intentを保存する前にguardを取得し、`:memory:` connectionでbinary hashとdispatch identityを再検証する。既知guardの検証失敗をoptional fallbackへ混ぜず拒否し、native必須でguardが使えない場合もreservationやcatalog/staging fileを作らない。新規file作成後までbinary検査を遅らせて空DBとpendingを残すregressionを修正した。capability 8件とstartup／catalog関連52件（Linux専用1件skip）で確認した。

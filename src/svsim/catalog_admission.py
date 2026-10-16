@@ -329,17 +329,21 @@ class CatalogConnection:
         self.reservation_count=0
         self.mutation_count=0
         self.guard_reason=None
+        # Capability verification is read-only and precedes both admission and
+        # catalog namespace creation. A known guard's failed identity/binary
+        # check is never downgraded to the optional soft path.
+        try:self._guard=get_sqlite_guard()
+        except CatalogAdmissionError:raise
+        except (NotImplementedError,OSError,sqlite3.Error,subprocess.SubprocessError) as exc:
+            self.guard_reason=str(exc)
+            if require_native:raise CatalogAdmissionError(self.guard_reason) from exc
+        if self._guard is not None:
+            verifier=sqlite3.connect(':memory:')
+            try:self._guard._load(verifier)
+            finally:verifier.close()
         # Reserve startup/recovery before SQLite can open/write a hot journal.
         main,side=self._reserve()
         try:
-            try: self._guard=get_sqlite_guard()
-            except CatalogAdmissionError:
-                # An identity failure is evidence of a mismatch, rather than
-                # an unavailable optional compiler/capability. Never downgrade it.
-                raise
-            except (NotImplementedError,OSError,sqlite3.Error,subprocess.SubprocessError) as exc:
-                self.guard_reason=str(exc)
-                if require_native: raise CatalogAdmissionError(self.guard_reason) from exc
             if self._lease.startup:
                 from .catalog_startup import materialize
                 materialize(self._lease)

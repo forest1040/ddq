@@ -53,11 +53,13 @@ def test_binary_mismatch_prevents_load_and_releases_startup_credit(tmp_path,monk
     budget=DiskBudget(tmp_path/'ledger.sqlite',[tmp_path],usage=lambda:0,free=lambda:10**9)
     guard=get_sqlite_guard()
     try:
+        before=set(tmp_path.iterdir())
         assert budget.snapshot()['ledger_vfs_capability'] is None  # injected accounting
         monkeypatch.setattr(guard,'_binary_hash','0'*64)
         with pytest.raises(CatalogAdmissionError,match='binary changed'):
             CatalogConnection(tmp_path/'catalog.sqlite',budget_getter=lambda:budget,require_native=True)
         assert budget.reserved_bytes==0
+        assert set(tmp_path.iterdir())==before
     finally:budget.close()
 
 
@@ -68,10 +70,25 @@ def test_identity_failure_cannot_downgrade_to_optional_soft_catalog(tmp_path,mon
 
     monkeypatch.setattr(catalog_admission,'get_sqlite_guard',failed_guard)
     try:
+        before=set(tmp_path.iterdir())
         with pytest.raises(CatalogAdmissionError,match='dispatch identity mismatch'):
             CatalogConnection(tmp_path/'catalog.sqlite',budget_getter=lambda:budget,require_native=False)
         assert not (tmp_path/'catalog.sqlite').exists()
         assert budget.reserved_bytes==0
+        assert set(tmp_path.iterdir())==before
+    finally:budget.close()
+
+
+def test_required_guard_unavailable_refuses_before_admission_or_namespace(tmp_path,monkeypatch):
+    budget=DiskBudget(tmp_path/'ledger.sqlite',[tmp_path],usage=lambda:0,free=lambda:10**9)
+    before=set(tmp_path.iterdir());calls=[]
+    def unavailable():raise NotImplementedError('no compatible native guard')
+    def getter():calls.append('admission');return budget
+    monkeypatch.setattr(catalog_admission,'get_sqlite_guard',unavailable)
+    try:
+        with pytest.raises(CatalogAdmissionError,match='no compatible native guard'):
+            CatalogConnection(tmp_path/'catalog.sqlite',budget_getter=getter,require_native=True)
+        assert calls==[] and budget.reserved_bytes==0 and set(tmp_path.iterdir())==before
     finally:budget.close()
 
 
