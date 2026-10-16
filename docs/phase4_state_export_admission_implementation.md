@@ -42,3 +42,13 @@ ledger の通常 inventory 走査は `scandir` へ変更し、読取り不能な
 2 ledger の export 60,000 byte＋別予約40,000 byteで上限到達、その次の1 byteの
 拒否、再 open 後の課金、登録時 quota 拒否のrollback、追加dataset root、
 観測不能時の変更前拒否を含む。
+
+### Collective 精算の完了境界（2026-10-16）
+
+統合高速版で、rank-local quota拒否後のreturnが他rankのreleaseより先に
+返り、共有ledgerのlive tokenを観測する競合を検出した（1221 passed、1 failed、
+37 skipped、83 deselected、失敗rankのassert後はpeerがMPI待ちになった）。
+成功・拒否cleanupのどちらも全rankのrelease結果をvoteしてから返す。
+実2 rankでrank 0のexport token releaseを意図的に遅らせる回帰を加え、
+通常publish／quota拒否／再publishとbyte一致を確認した。export関連23 passed、
+遅延回帰単独1 passed。単に呼出側のtestへbarrierを追加する対応はしていない。

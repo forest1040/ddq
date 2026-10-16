@@ -240,6 +240,15 @@ root=Path(sys.argv[1]);comm=MPI.COMM_WORLD
 cfg=DistributedConfig(str(root/'store'),2,ram_budget_bytes_per_rank=8*1024**2,
  metadata_reserve_bytes=128*1024,tile_bytes=4096,frame_policy='materialize',storage_scope='node-local')
 with DistributedSimulator(4,cfg,comm=comm) as sim:
+ # Delay a real peer's ledger release: a collective export must not return
+ # while that peer still owns live export tokens, including on refusal.
+ import time
+ original_release=sim.disk_budget.release
+ def delayed_release(key):
+  if sim.rank==0 and sim.disk_budget.reservation(key)['operation'].startswith('state-export'):
+   time.sleep(.05)
+  return original_release(key)
+ sim.disk_budget.release=delayed_release
  sim.gate('H',(3,));sim.gate('RY',(0,),angle=.3)
  output=root/'out';sim.export_state(output)
  expected=sim.state(allow_gather=True)

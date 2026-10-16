@@ -162,7 +162,11 @@ def export_distributed(sim,path,binding):
             except Exception as exc:error=str(exc)
         # No rank releases its reservation before global publication and cleanup.
         sim.transport.vote(error)
-        for key,_ in keys:budget.release(key)
+        error=None
+        try:
+            for key,_ in keys:budget.release(key)
+        except Exception as exc:error=str(exc)
+        sim.transport.vote(error)
         keys=[]
         return Path(path)
     finally:
@@ -182,5 +186,11 @@ def export_distributed(sim,path,binding):
                 except Exception as exc:cleanup_error=str(exc)
             clean=sim.transport.broadcast_json(cleanup_error is None and not any(close_errors) and not published if sim.rank==0 else None)
             if clean:
-                for key,_ in keys:budget.release(key)
+                release_error=None
+                try:
+                    for key,_ in keys:budget.release(key)
+                except Exception as exc:release_error=str(exc)
+                # The ledger is shared: returning on one rank before another
+                # releases its tokens leaks a live operation to the caller.
+                sim.transport.vote(release_error)
         if lease is not None:lease.__exit__(None,None,None)
