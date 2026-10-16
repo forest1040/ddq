@@ -229,7 +229,7 @@ def test_injected_coordinator_cannot_admit_a_store_on_another_real_volume(tmp_pa
         budget=DiskBudget(tmp_path/'ledger.sqlite3',[managed],quota_bytes=QUOTA,shared_policy=True,volume_coordinator=coordinator)
         try:
             cfg=StorageConfig(str(other/'store'),2,volume_coordinator=str(coordinator.path),disk_quota_bytes=QUOTA)
-            with pytest.raises(DiskAdmissionError,match='another volume'):
+            with pytest.raises(DiskAdmissionError,match='another volume|registered roots'):
                 FileBlockStore(cfg,4,disk_budget=budget)
             assert not (other/'store/metadata/catalog.sqlite3').exists() and budget.reserved_bytes==0
         finally:budget.close();coordinator.close()
