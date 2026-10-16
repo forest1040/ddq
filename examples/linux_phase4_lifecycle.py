@@ -62,6 +62,7 @@ STAGES=(Stage('linux-contracts','buffered',240,CONTRACT),
 # A bounded inode-reuse search may not find an actual reused inode. All other
 # skips (including VFS unavailability, missing tmpfs and ENOSPC opt-out) fail acceptance.
 OPTIONAL_SKIP='test_reused_linux_inode_is_distinguished_by_birth_identity'
+OPTIONAL_SKIP_REASON='filesystem did not reuse the catalog inode within the bounded probe'
 
 
 def source_inventory(root):
@@ -102,7 +103,8 @@ def read_junit(path):
     skipped=[{'name':case.get('name'),'reason':case.find('skipped').get('message','')}
              for case in cases if case.find('skipped') is not None]
     return {'cases':len(cases),'failed':sum(case.find('failure') is not None or case.find('error') is not None for case in cases),
-            'skipped':skipped,'unexpected_skips':[case for case in skipped if not case['name'].startswith(OPTIONAL_SKIP)]}
+            'skipped':skipped,'unexpected_skips':[case for case in skipped
+                if case['name']!=OPTIONAL_SKIP or case['reason']!=OPTIONAL_SKIP_REASON]}
 
 
 def main(argv=None):

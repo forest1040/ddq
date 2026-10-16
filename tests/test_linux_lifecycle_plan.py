@@ -6,6 +6,8 @@ import sys
 
 import pytest
 
+from examples.linux_phase4_lifecycle import read_junit
+
 
 RUNNER=Path(__file__).resolve().parents[1]/'examples/linux_phase4_lifecycle.py'
 
@@ -40,3 +42,21 @@ def test_default_plan_keeps_original_stage_limits():
 def test_invalid_retry_plan_is_rejected_before_any_environment_or_test_start(args):
     result=plan(*args)
     assert result.returncode==2 and not result.stdout and 'error:' in result.stderr
+
+
+@pytest.mark.parametrize(('reason','is_unexpected'),[
+    ('filesystem did not reuse the catalog inode within the bounded probe',False),
+    ('filesystem birth-time resolution cannot distinguish this replacement',True),
+])
+def test_inode_reuse_optional_skip_requires_bounded_probe_reason(tmp_path,reason,is_unexpected):
+    junit=tmp_path/'report.xml'
+    junit.write_text(
+        '<testsuite tests="1" skipped="1"><testcase '
+        'name="test_reused_linux_inode_is_distinguished_by_birth_identity">'
+        f'<skipped message="{reason}" /></testcase></testsuite>',
+        encoding='utf-8')
+
+    result=read_junit(junit)
+    assert result['skipped']==[{'name':'test_reused_linux_inode_is_distinguished_by_birth_identity',
+                                'reason':reason}]
+    assert bool(result['unexpected_skips']) is is_unexpected
