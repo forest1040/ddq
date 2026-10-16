@@ -59,10 +59,13 @@ STAGES=(Stage('linux-contracts','buffered',240,CONTRACT),
     Stage('native-vfs-fault-points','buffered',120,('tests/test_vfs_fault_points.py',)),
     *(Stage('physical-'+backend,backend,240,PHYSICAL) for backend in ('buffered','direct')),
     *(Stage('real-enospc-'+backend,backend,120,('tests/test_disk_real_enospc.py',)) for backend in ('buffered','direct')))
-# A bounded inode-reuse search may not find an actual reused inode. All other
-# skips (including VFS unavailability, missing tmpfs and ENOSPC opt-out) fail acceptance.
+# Permit only the exact bounded inode nonarrival and, on direct payloads, the
+# deliberately sub-page short-write injection that cannot satisfy O_DIRECT.
+# Native unavailability, missing tmpfs, and other skips fail acceptance.
 OPTIONAL_SKIP='test_reused_linux_inode_is_distinguished_by_birth_identity'
 OPTIONAL_SKIP_REASON='filesystem did not reuse the catalog inode within the bounded probe'
+DIRECT_SKIP='test_mid_write_extent_failure_keeps_the_old_cut_and_releases_the_token'
+DIRECT_SKIP_REASON='O_DIRECT transfers whole aligned pages, so a sub-page short write cannot occur'
 
 
 def source_inventory(root):
@@ -97,14 +100,15 @@ def direct_and_birth_probe(directory):
     finally:data.close();path.unlink(missing_ok=True)
 
 
-def read_junit(path):
+def read_junit(path,*,backend=None):
     root=ET.parse(path).getroot();cases=list(root.iter('testcase'))
     if not cases:raise RuntimeError('No test cases collected')
     skipped=[{'name':case.get('name'),'reason':case.find('skipped').get('message','')}
              for case in cases if case.find('skipped') is not None]
     return {'cases':len(cases),'failed':sum(case.find('failure') is not None or case.find('error') is not None for case in cases),
             'skipped':skipped,'unexpected_skips':[case for case in skipped
-                if case['name']!=OPTIONAL_SKIP or case['reason']!=OPTIONAL_SKIP_REASON]}
+                if not ((case['name']==OPTIONAL_SKIP and case['reason']==OPTIONAL_SKIP_REASON) or
+                    (backend=='direct' and case['name']==DIRECT_SKIP and case['reason']==DIRECT_SKIP_REASON))]}
 
 
 def main(argv=None):
@@ -131,7 +135,8 @@ def main(argv=None):
             'intentionally_omitted_stages':omitted,'not_run':[stage.name for stage in selected],
             'global_deadline_seconds':args.deadline_seconds,'physical_full_fs':'/full (dedicated 16 MiB tmpfs)',
             'excluded':['performance campaigns','native io_uring capability','full Mac fast suite'],
-            'optional_skip':OPTIONAL_SKIP},indent=2));return 0
+            'optional_skip':OPTIONAL_SKIP,
+            'backend_optional_skip':{'backend':'direct','name':DIRECT_SKIP,'reason':DIRECT_SKIP_REASON}},indent=2));return 0
     if not sys.platform.startswith('linux') or os.geteuid()==0:
         parser.error('Execution requires Linux and a nonroot user; use --plan for read-only inspection')
     if socket.gethostname()!='ddq-phase4-lifecycle':parser.error('Unexpected hostname')
@@ -189,7 +194,7 @@ def main(argv=None):
                 except subprocess.TimeoutExpired:
                     os.killpg(process.pid,signal.SIGKILL);process.wait();row['status']='timeout';raise
             row['seconds']=time.monotonic()-tick
-            row['tests']=read_junit(junit)
+            row['tests']=read_junit(junit,backend=stage.backend)
             row['status']=('passed' if row['exit_code']==0 and not row['tests']['failed'] and not row['tests']['unexpected_skips'] else 'failed')
             save();print(json.dumps(row),flush=True)
             if row['status']!='passed':raise RuntimeError('Stage failed: '+stage.name)
