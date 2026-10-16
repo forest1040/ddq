@@ -1,6 +1,8 @@
 # Phase 4 backlog
 
-更新日：2026-10-15。**Phase 4は未完了**。主要APIとMac／Linux・実2ノードのcorrectness検証は実装・実施済みだが、適応制御と性能評価を含む設計の完了条件には残件がある。
+更新日：2026-10-17。**Phase 4は未完了**。主要APIとMac／Linux・実2ノードのcorrectness検証は実装・実施済みだが、適応制御と性能評価を含む設計の完了条件には残件がある。
+
+2026-10-17、P4-009をDONEとした。[元009A〜Dの完了証拠](phase4_p4_009_acceptance_2026-10-16.md)はMac固定core `9eb426f`の高速1317 pass、Linux最終追加367 pass／13非適用skip、実2host/4rankのPBS265180全8case。P4-001もDONEのため**M1は達成**。P4-002とPhase 4全体はIN_PROGRESSを維持する。以下の日付付き進捗は当時の履歴であり、P4-009の過去の未実装記述を現在の残件として読まない。
 
 基準は[開発計画](../plan/distributed_quantum_circuit_simulator_development.md#phase-4非同期階層スケジューラ)と[設計書 §15](phase4_design.md#15-実装順と完了条件)。現在の挙動・制限は[実装資料](phase4_implementation.md)、既存の性能測定は[Mac比較](phase4_benchmark.md)に記載する。site固有の情報はこのbacklogに書かず、`docs/internal/`で管理する。
 
@@ -73,7 +75,7 @@ P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtim
 | [P4-006](phase4_tasks/P4-006_tile_transpose.md) | P1 | IN_PROGRESS | 作業予算内のaligned tile転置 | P4-009 |
 | [P4-007](phase4_tasks/P4-007_cache_policy.md) | P1 | IN_PROGRESS | Frame・Binding共有を含むfuture-aware cache費用 | P4-001、002、009 |
 | [P4-008](phase4_tasks/P4-008_gradient_selection.md) | P1 | IN_PROGRESS | 勾配方式の自動校正と安全な選択評価 | P4-001、004、009 |
-| [P4-009](phase4_tasks/P4-009_disk_admission.md) | P1 | IN_PROGRESS | SQLite書込み前のdisk admission | Phase 5基盤 |
+| [P4-009](phase4_tasks/P4-009_disk_admission.md) | P1 | DONE（2026-10-17） | SQLite書込み前のdisk admission（受入完了） | Phase 5基盤 |
 | [P4-010](phase4_tasks/P4-010_native_uring.md) | P2 | IN_PROGRESS | native io_uringのLinux実機検証 | Linux Docker環境、全fault／durability matrix |
 | [P4-011](phase4_tasks/P4-011_offline_migration.md) | P2 | OPEN | v3共有treeのoffline node-local移行 | P4-009、対応範囲の確定 |
 
@@ -161,7 +163,7 @@ raw／resolved identityとbounded cost hintを追加した。validated・同unit
 
 catalog／ledgerの同SQLite VFS、全runtime writerの事前予約、private policy/coordinator、catalog file帰属とstartup intent、payload/export/migrationの専用回収、GC、mkdir前bootstrap、DELETE/EXTRAとtest-only電源断模型まで実装した。[現行writer監査](phase4_writer_audit.md)と[009A〜Dの受入対応表](phase4_p4_009_acceptance_2026-10-16.md)を現在の状態とする。上の日付付き履歴の「未実装」は当時の残件であり、現行一覧ではない。
 
-固定source `9eb426f`までのMac高速1317 passed／38 skipped／83 deselectedは[証跡](internal/phase4_wave3_validation/README.md)に保存した。残りは最終reader/fork/GC等を含むLinux buffered／O_DIRECT追加回帰、明示許可された実別hostジョブの結果、全writerと009A〜Dの最終照合。ジョブ投入だけでは受入成功としない。IN_PROGRESSと`strict_capacity_guarantee=false`を維持する。
+固定core `9eb426f`までのMac高速1317 passed／38 skipped／83 deselected、Linux最終追加367 passed／13非適用skip、PBS265180の実2host/4rank全8case成功を[最終受入表](phase4_p4_009_acceptance_2026-10-16.md)へ照合し、**2026-10-17にDONE**とした。旧timeout/guard拒否の原記録とread-only再判定を保持する。native guard未提供や未知状態を成功扱いにせず、`strict_capacity_guarantee=false`と既存電源断模型の範囲は維持する。
 
 ### P4-010：native io_uringのLinux実機検証
 

@@ -1,6 +1,12 @@
 # Phase 4 引き継ぎ書（2026-10-15）
 
-## 継続wave 3（2026-10-16、実装・検証継続中）
+## 最新状態（2026-10-17）
+
+**P4-009はDONE、P4-001と合わせてM1達成**。元009A〜Dと全managed writerを、固定production core `9eb426f`のMac高速1317 pass、Linux最終追加367 pass／13非適用skip、PBS265180の実2host/4rank全8case成功へ照合した。[完了証拠と範囲](phase4_p4_009_acceptance_2026-10-16.md)、[Linux各attempt](internal/phase4_wave3_validation/README.md)、[実別host結果](internal/phase4_crosshost_acceptance/job-265180/README.md)を参照。旧timeout、directの旧guard拒否、先行PBS失敗は消さず、保存JUnitの読取専用再判定を別記録にした。
+
+**P4-002とPhase 4全体はIN_PROGRESS**。残るETA/overhead認証や他項目を本判定で完了扱いにしない。`strict_capacity_guarantee=false`、node-local coordinator契約、電源断模型の既存範囲を維持する。以下のwave 3／2と2026-10-15の本文は日付時点の履歴であり、過去の「P4-009未完了」「PBS未投入」「M1未達」はこの最新状態に更新された。
+
+## 継続wave 3（2026-10-16時点の履歴）
 
 3つの専用worktreeを並列使用し、Lunaへwork coverage・overhead runner、続いてendpoint認証を委譲した。利用者の指示はP4-009とP4-002がDONEになるまで継続であり、以下の追加実装だけで完了とはしない。
 
@@ -67,7 +73,7 @@
 - **効果。** 40回目のcheckpointは742 msから113 msになった。残りの増加はCPUだけである。
 - **互換性。** 形式1も読める。
 
-### P4-009：disk admission（IN_PROGRESS）
+### P4-009：disk admission（DONE、2026-10-17更新）
 資料は[fault matrix](phase4_disk_fault_matrix_implementation.md)、[未commit予約の回収](phase4_uncommitted_recovery_implementation.md)、[調停](phase4_disk_coordination_implementation.md)にある。
 - **fault試験。**
   - quota境界の1 byte／page掃引
@@ -91,8 +97,8 @@
   - offline回収（未commit予約、checkpoint）の後で、coordinatorのclaimを真の値へ再公開する。
   - 試験は16件（実mpiexecの1／2 rankを含む）で、Macで成功した。
   - **未確認。** このcommitのLinux（ent）での結果は、subagentの報告前に取り込んだため確認していない。再起動後に、`tests/test_volume_coordination_runtime.py`ほかをentのbuffered／O_DIRECTで実行して確かめる。
-- **現在の受入残り（2026-10-16）。** [009A〜D対応表](phase4_p4_009_acceptance_2026-10-16.md)に集約する。catalog file帰属、外部job宣言超過検出、private coordinator、payload/export/migration回収、EXTRA電源断模型は実装済み。上の「未確認」は当時の履歴であり、[wave 3 source別記録](internal/phase4_wave3_validation/README.md)を確認する。
-- **最終確認。** reader/fork/GC等を含むLinux buffered／O_DIRECT追加回帰と、明示許可された実別host PBSジョブの結果を保存し、元の全受入条件へ照合する。現時点でP4-009はIN_PROGRESS、`strict_capacity_guarantee=false`を維持する。
+- **完了（2026-10-17）。** [009A〜D最終対応表](phase4_p4_009_acceptance_2026-10-16.md)の全条件へ最新Linux差分と実別hostの結果を照合し、DONEとした。上の各commit時点の「未確認」は履歴であり、[wave 3 source別記録](internal/phase4_wave3_validation/README.md)と[実別host結果](internal/phase4_crosshost_acceptance/job-265180/README.md)を確認する。
+- **継続事項。** P4-009の実装・受入残件は解消。保証の既存範囲と保守拒否は維持し、P4-002の未完了やPhase 4全体のIN_PROGRESSとは区別する。
 
 ## 未決・相談事項
 
@@ -101,7 +107,7 @@
 
 ## 次の候補
 
-1. P4-009の残り（上記）
+1. P4-009はDONE（2026-10-17）。P4-002などの残件を継続する
 2. P4-002：短いrunでの認証
 3. P4-005：最終比較のmatrix
 4. P4-006／007／008：tile、cache、勾配の自動運用

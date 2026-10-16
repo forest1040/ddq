@@ -1,12 +1,12 @@
 # P4-009：SQLiteを含む書込み前disk admission
 
-状態：**IN_PROGRESS（2026-10-16）**。元の009A〜Dと全writerのenforced reservation／recovery受入条件は維持する。[現行の受入対応表](../phase4_p4_009_acceptance_2026-10-16.md)に実装、環境別の証拠、最後の未確認をまとめる。共通契約は[全体設計](../phase4_remaining_design.md)。
+状態：**DONE（2026-10-17）**。元の009A〜Dと全writerのenforced reservation／recovery受入条件は維持する。[現行の受入対応表](../phase4_p4_009_acceptance_2026-10-16.md)に実装と環境別の最終受入結果をまとめる。共通契約は[全体設計](../phase4_remaining_design.md)。
 
 同SQLite VFS、metadata pool、全runtime writerの事前予約、explicit offline回収／GC、catalog file帰属とstartup intent、payload/chunk/export/migration intent、private policy/coordinator、mkdir前bootstrap、DELETE/EXTRAとtest-only電源断模型は実装済み。[writer監査](../phase4_writer_audit.md)と[受入対応表](../phase4_p4_009_acceptance_2026-10-16.md)を現在の状態として読む。個別実装資料の日付付きの「残り」は当時の進捗であり、現在の未実装一覧ではない。
 
-固定production source `9eb426f`までのMac高速は1317 passed／38 skipped／83 deselected。真の受入残りは、最後のreader/fork/GC/sidecar/append等を含むLinux buffered／O_DIRECT追加回帰、明示許可された実別host PBSジョブの結果、両者を元の009A〜Dへ照合した最終判定である。jobの準備・投入だけでは成功としない。`strict_capacity_guarantee=false`を維持し、保証範囲を狭めたことを理由にDONEへ変えない。
+固定production core `9eb426f`のMac高速1317 passed／38 skipped／83 deselectedに、Linux最終追加367 passed／13非適用skipとPBS265180の実2host/4rank全8case成功を照合した。[009A〜Dの最終結果](../phase4_p4_009_acceptance_2026-10-16.md)にsource provenance、全checkpoint kill/ENOSPC追加、旧timeout/guard失敗の保持と保存JUnitの読取専用再判定を記録した。元の全受入条件を維持してDONEとする。`strict_capacity_guarantee=false`と電源断模型の既存範囲は変えない。P4-001もDONEのためM1達成、P4-002とPhase 4全体はIN_PROGRESSである。
 
-## 設計時点（6aa8581）の現状とwriter棚卸し
+## 設計時点（6aa8581）の現状とwriter棚卸し（履歴）
 
 上記recovery-only metadata poolはlogical quota/pending/drain超過を越えて既存pool内のcheckpoint CASを許す。物理headroom、min_free、native journal/page capは引き続き強制する。実hardware ENOSPCや電源断時durability、全writer回収は009Cの残件である。
 
@@ -53,5 +53,5 @@ ledger自身のbootstrap/成長/rollback journalは予約の再帰を起こす�
 | 009C crash/lifecycle | reserve/SQL/commit/fsync/decision前後kill、hot journal、partial extent、orphan、drain pool、二重回収拒否 |
 | 009D 接続 | async completion、RAM flush_to_file、prefix/gradient/replan/tile/offline copy、全writer audit |
 
-faultはfake byte backend→Mac実SQLite/worker I/O→許可されたLinux/O_DIRECT環境の順。quota境界の1 byte/page掃引、実ENOSPC、stage killと回収、電源断模型は個別資料と[受入対応表](../phase4_p4_009_acceptance_2026-10-16.md)に記録済み。最後のLinux差分と実別host結果の照合は継続中である。全writerのenforced reservationとrecovery証跡が揃ってDONE。自由SQL、未証明temp growth、native guard不在で厳密保証を出す実装は受け入れない。
+faultはfake byte backend→Mac実SQLite/worker I/O→許可されたLinux/O_DIRECT環境の順。quota境界の1 byte/page掃引、実ENOSPC、stage killと回収、電源断模型は個別資料と[受入対応表](../phase4_p4_009_acceptance_2026-10-16.md)に記録済み。最後のLinux差分と実別host結果も[最終結果](../phase4_p4_009_acceptance_2026-10-16.md)へ照合済みである。全writerのenforced reservationとrecovery証跡が揃ったためDONEとした。自由SQL、未証明temp growth、native guard不在で厳密保証を出す実装は受け入れない。
 

@@ -1,8 +1,8 @@
 # P4-009 書き込み経路監査（現在）
 
-更新日：2026-10-16。現在の実装一覧である。2026-10-14の初回監査（`bb87551`）に書かれていた「export未予約」「payload回収なし」「catalog synchronous=FULL」は現状ではない。履歴はGitに残し、この表を過去の未修正一覧として読まない。以下の予約はmanaged disk ledgerによるsoft admissionであり、全filesystem metadataへのphysical quotaや非協調writerの強制ではない。`strict_capacity_guarantee=false`を維持する。
+更新日：2026-10-17。**P4-009はDONE**。現在の実装一覧である。2026-10-14の初回監査（`bb87551`）に書かれていた「export未予約」「payload回収なし」「catalog synchronous=FULL」は現状ではない。履歴はGitに残し、この表を過去の未修正一覧として読まない。以下の予約はmanaged disk ledgerによるsoft admissionであり、全filesystem metadataへのphysical quotaや非協調writerの強制ではない。`strict_capacity_guarantee=false`を維持する。
 
-元の009A〜Dとの対応、最新source別証跡、真の受入残りは[受入対応表](phase4_p4_009_acceptance_2026-10-16.md)を参照する。Mac高速1317 passだけでLinux最終差分／実別hostの合格を代用しない。
+元の009A〜Dとの対応、最新source別証跡、完了判定は[受入対応表](phase4_p4_009_acceptance_2026-10-16.md)を参照する。Mac高速1317 passに加え、Linux最終追加367 pass／13非適用skipとPBS265180の実2host/4rank全8case成功を照合した。旧timeout/guard拒否の記録を残し、保存JUnitのdirect非適用1件はread-only再判定を保存した。
 
 ## managed runtimeのwriter
 
@@ -49,7 +49,7 @@ managed budgetを受け取るatomic sidecar、Journal、trace、raw measurement�
 
 今回のnamespace matrixは、Journal/traceの1 byte境界拒否、初回appendのexact byte拒否、既存partial tailのbyte不変、invalid serializationのbyte不変、exact creditによるrepairとcommitted cursor保持を確認する。実SIGKILLはnamespace予約直後、mkdir直後、trace open直後、およびdataset lease JSON予約/temp open直後へ置き、全artifactのbyte不変、dry-run→apply→再実行の冪等性、旧snapshotの実numerical oracleを検証する。
 
-既存writer/VFS/ENOSPC/kill/coordinator testsの結果と今回の新規結果は各実行logで区別する。SIGKILLは実power-loss durabilityの代用ではなく、SQLite EXTRAとnative VFS durability imageの検証もfilesystem/OS契約の範囲を明記する。このbootstrap証跡だけで、他writerの未完了受入を含むP4-009全体のDONEとはしない。
+既存writer/VFS/ENOSPC/kill/coordinator testsの結果と今回の新規結果は各実行logで区別する。SIGKILLは実power-loss durabilityの代用ではなく、SQLite EXTRAとnative VFS durability imageの検証もfilesystem/OS契約の範囲を明記する。bootstrapだけではなく、全managed writerのMac/Linux fault・回収、runtime接続、実別hostの結果を[最終対応表](phase4_p4_009_acceptance_2026-10-16.md)へ照合してDONEとした。
 
 ## runtime切替・forkのadmission継承監査（2026-10-16）
 
