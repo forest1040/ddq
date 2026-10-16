@@ -49,7 +49,11 @@ def decode_gate(data):
 class Journal:
     def __init__(self, directory, *, disk_budget_getter=lambda:None, drain_getter=lambda:False):
         self.directory = Path(directory)
-        self.directory.mkdir(parents=True, exist_ok=True)
+        budget=disk_budget_getter()
+        # This admits namespace creation, not filesystem metadata's physical size.
+        with (budget.allocation(1,drain=bool(drain_getter()),operation='journal-open')
+              if budget is not None else nullcontext()):
+            self.directory.mkdir(parents=True, exist_ok=True)
         self.streams = {}
         self.protected_cursor = lambda kind: 0
         self._disk_budget_getter,self._drain_getter=disk_budget_getter,drain_getter
@@ -57,6 +61,12 @@ class Journal:
 
     def append(self, kind, payload):
         if kind not in {'gates','local','shared','joint','commits','frame'}: raise ValueError('Invalid journal')
+        record = {'schema_version':1,'payload':payload}
+        record['checksum'] = content_hash(record)
+        raw = (canonical(record)+'\n').encode()
+        if len(raw)>1024**2: raise ValueError('Journal record exceeds bounded 1 MiB envelope')
+        # Admission precedes open/create and any repair of an uncommitted tail.
+        self._append.admit(len(raw))
         stream = self.streams.get(kind)
         if stream is None:
             path = self.directory/f'{kind}.jsonl'
@@ -77,13 +87,6 @@ class Journal:
                         if last < self.protected_cursor(kind): raise OSError('Incomplete committed journal tail')
                         repair.truncate(last)
             stream = self.streams[kind] = open(path,'ab',buffering=0)
-        record = {'schema_version':1,'payload':payload}
-        record['checksum'] = content_hash(record)
-        raw = (canonical(record)+'\n').encode()
-        if len(raw)>1024**2: raise ValueError('Journal record exceeds bounded 1 MiB envelope')
-        # One chunked token covers the record before it is written; a short
-        # write keeps the bytes covered for the caller's rollback/recovery.
-        self._append.admit(len(raw))
         if stream.write(raw) != len(raw): raise OSError('Incomplete journal write')
         self._append.wrote(len(raw))
         return stream.tell()

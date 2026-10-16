@@ -14,14 +14,14 @@ from .layout import QubitLayout
 from .admitted_files import file_allocation
 
 
-def atomic_json(path,data,*,disk_budget=None,checkpoint_context=None,owner=None):
+def atomic_json(path,data,*,disk_budget=None,checkpoint_context=None,owner=None,operation='atomic-json'):
     from .dataset_lease import DirectoryLease
     context=DirectoryLease(checkpoint_context['dataset_root']) if checkpoint_context is not None else nullcontext()
     with context:
-        return _atomic_json(path,data,disk_budget=disk_budget,checkpoint_context=checkpoint_context,owner=owner)
+        return _atomic_json(path,data,disk_budget=disk_budget,checkpoint_context=checkpoint_context,owner=owner,operation=operation)
 
 
-def _atomic_json(path,data,*,disk_budget=None,checkpoint_context=None,owner=None):
+def _atomic_json(path,data,*,disk_budget=None,checkpoint_context=None,owner=None,operation='atomic-json'):
     path=Path(path)
     raw=(canonical(data)+'\n').encode()
     nonce=uuid4().hex
@@ -32,7 +32,7 @@ def _atomic_json(path,data,*,disk_budget=None,checkpoint_context=None,owner=None
               'digest':sha256(raw).hexdigest()}
     # Keep admission through the rename, directory durability barrier, and all
     # temporary-file cleanup. A rejected reservation therefore leaves no files.
-    with file_allocation(disk_budget,len(raw),temporary,drain=True,operation='atomic-json',
+    with file_allocation(disk_budget,len(raw),temporary,drain=True,operation=operation,
                          owner=owner,generation=nonce,checkpoint_link=link) as key:
         path.parent.mkdir(parents=True,exist_ok=True)
         created=False
@@ -63,6 +63,7 @@ def _disk_kwargs(sim,snapshot_id=None,stage=None):
     budget=getattr(sim,'disk_budget',None)
     if budget is None:return {}
     kwargs={'disk_budget':budget}
+    if snapshot_id is None:kwargs['operation']='dataset-lease-json'
     if snapshot_id is not None:
         for lease in getattr(sim,'_dataset_leases',{}).values():lease.assert_current()
         kwargs.update(checkpoint_context={'dataset_root':str(sim.directory.absolute()),
@@ -426,40 +427,42 @@ def migrate_stored_snapshot(sim,source_config,snapshot):
         if layout.logical_to_physical != manifest.layout: raise OSError('Source layout history mismatch')
         if len(canonical(history).encode())*4 > sim.config.metadata_reserve_bytes:
             raise MemoryError('Migration history exceeds metadata reserve')
-        root = sim._new_root()
-        with TemporaryDirectory(prefix='ddq-migrate-',dir=sim.directory) as temporary:
-            copied = replace(source_config,directory=temporary,metadata_reserve_bytes=metadata)
-            (Path(temporary)/'metadata').mkdir()
-            from .catalog_admission import CatalogConnection
-            target_db = CatalogConnection(Path(temporary)/'metadata/catalog.sqlite3',
-                budget_getter=lambda:sim.store.disk_budget)
-            try: target_db.backup_from(source.db)
-            finally: target_db.close()
-            catalog = FileBlockStore(copied,sim.num_qubits,create=False,disk_budget=sim.store.disk_budget)
-            try:
-                proxy = SimpleNamespace(store=catalog,config=copied,block_bits=sim.block_bits,
-                                        assets=sim.assets,binding=binding,trace=sim.trace)
-                phase2 = Phase2Catalog(proxy); catalog.phase2=phase2
-                phase2.validate_root(manifest.root)
-                work = BufferLease(sim.budget,source.slot_bytes,source_config.alignment)
+        with sim.store.disk_budget.allocation(1,operation='migration-open',
+                drain=bool(getattr(sim.store,'_disk_drain',False))):
+            root = sim._new_root()
+            with TemporaryDirectory(prefix='ddq-migrate-',dir=sim.store.directory) as temporary:
+                copied = replace(source_config,directory=temporary,metadata_reserve_bytes=metadata)
+                (Path(temporary)/'metadata').mkdir()
+                from .catalog_admission import CatalogConnection
+                target_db = CatalogConnection(Path(temporary)/'metadata/catalog.sqlite3',
+                    budget_getter=lambda:sim.store.disk_budget)
+                try: target_db.backup_from(source.db)
+                finally: target_db.close()
+                catalog = FileBlockStore(copied,sim.num_qubits,create=False,disk_budget=sim.store.disk_budget)
                 try:
-                    for h in range(source.num_blocks):
-                        view = catalog.view(manifest.root,h)
-                        source.read_version(view.version_id,work.view)
-                        array = work.array(source.payload_bytes)
-                        try: phase2.resolve(array,view,h)
-                        finally: del array
-                        with sim.cache.outputs(1) as outputs:
-                            padding = outputs[0].array()
-                            padding.fill(0); del padding
-                            outputs[0].view[:source.payload_bytes] = work.view[:source.payload_bytes]
-                            version = sim.cache.adopt(outputs[0])
-                            sim._publish(root,h,StoredBlockView(version,manifest.frontier,manifest.frontier))
-                        sim.cache.flush()
-                        if hasattr(sim.store,'flush_to_file'): sim.store.flush_to_file()
-                        sim.cache.clear()
-                finally: work.close()
-            finally: catalog.close()
+                    proxy = SimpleNamespace(store=catalog,config=copied,block_bits=sim.block_bits,
+                                            assets=sim.assets,binding=binding,trace=sim.trace)
+                    phase2 = Phase2Catalog(proxy); catalog.phase2=phase2
+                    phase2.validate_root(manifest.root)
+                    work = BufferLease(sim.budget,source.slot_bytes,source_config.alignment)
+                    try:
+                        for h in range(source.num_blocks):
+                            view = catalog.view(manifest.root,h)
+                            source.read_version(view.version_id,work.view)
+                            array = work.array(source.payload_bytes)
+                            try: phase2.resolve(array,view,h)
+                            finally: del array
+                            with sim.cache.outputs(1) as outputs:
+                                padding = outputs[0].array()
+                                padding.fill(0); del padding
+                                outputs[0].view[:source.payload_bytes] = work.view[:source.payload_bytes]
+                                version = sim.cache.adopt(outputs[0])
+                                sim._publish(root,h,StoredBlockView(version,manifest.frontier,manifest.frontier))
+                            sim.cache.flush()
+                            if hasattr(sim.store,'flush_to_file'): sim.store.flush_to_file()
+                            sim.cache.clear()
+                    finally: work.close()
+                finally: catalog.close()
         sim.root=sim.local.root=root; sim.frontier=sim.local.frontier=manifest.frontier
         sim.binding=sim.local.binding=binding
         sim.layout=sim.local.layout=QubitLayout(manifest.layout,manifest.layout_id)

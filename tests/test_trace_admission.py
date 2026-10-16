@@ -277,7 +277,7 @@ def test_journal_appends_share_chunk_tokens_and_release_on_close(tmp_path):
         journal.append("gates", {"value": i})
         journal.append("commits", {"value": i})
     size = sum(p.stat().st_size for p in (tmp_path / "journal").glob("*.jsonl"))
-    assert calls == ["journal-append"] * -(-size // (64 * 1024))
+    assert calls == ["journal-open"] + ["journal-append"] * -(-size // (64 * 1024))
     assert budget.lease_reserved_bytes == budget.reserved_bytes > 0
     journal.close()
     assert budget.reserved_bytes == 0

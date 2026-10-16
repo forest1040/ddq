@@ -29,8 +29,9 @@ MAX_TOKENS = 256
 MAX_ENTRIES = 8192
 APPEND_OPERATIONS = ('trace-append', 'journal-append', 'measurement-append')
 EXTENT_OPERATIONS = ('amplitude-extent', 'tile-amplitude-extent')
-SIDECAR_OPERATIONS = ('matrix-asset', 'snapshot-export', 'sidecar-write')
-KNOWN_OPERATIONS = APPEND_OPERATIONS + EXTENT_OPERATIONS + SIDECAR_OPERATIONS + ('catalog-transaction',)
+SIDECAR_OPERATIONS = ('matrix-asset', 'snapshot-export', 'sidecar-write', 'dataset-lease-json')
+NAMESPACE_OPERATIONS = ('trace-open','journal-open','migration-open')
+KNOWN_OPERATIONS = APPEND_OPERATIONS + EXTENT_OPERATIONS + SIDECAR_OPERATIONS + NAMESPACE_OPERATIONS + ('catalog-transaction',)
 TEMPORARY_NAME = re.compile(r'^\.?.+\.[0-9a-f]{32}\.tmp$')
 _JOURNAL_KINDS = ('gates', 'local', 'shared', 'joint', 'commits', 'frame')
 
@@ -375,6 +376,8 @@ def _classify(token, owners):
         if re.fullmatch('[0-9a-f]{64}', token['generation'] or '') is None:
             return None, 'catalog-generation-unbound'
         return 'catalog', None
+    if operation in NAMESPACE_OPERATIONS:
+        return 'namespace', None
     if operation in APPEND_OPERATIONS:
         return 'append', None
     if operation in EXTENT_OPERATIONS:
