@@ -38,7 +38,7 @@ def trial(directory,endpoint,size,trial_id,calibration,holdouts,case):
     from mpi4py import MPI
     from svsim import AsyncDistributedSimulator,AsyncPolicy,DistributedConfig,ObservableIR,PauliTerm,ParameterSymbol
     from svsim.kernels import eager_reference
-    from svsim.remaining_work import checkpoint_condition,expectation_condition,gradient_condition
+    from svsim.remaining_work import checkpoint_condition,expectation_condition,gradient_condition,materialize_prepare_condition
     from svsim import runtime_observed_costs as roc
     cfg=DistributedConfig(str(directory),2,ram_budget_bytes_per_rank=64*1024**2,
         metadata_reserve_bytes=8*1024**2,amplitude_store='file',frame_policy='materialize',storage_scope='node-local')
@@ -73,6 +73,14 @@ def trial(directory,endpoint,size,trial_id,calibration,holdouts,case):
                 'quiescent_preparation_seconds':preparation_seconds,'cache_entries_before_preparation':entries_before,
                 'cache_entries_at_query':len(sim.cache.entries),
                 'matching_prior_completions':len(matching),'certification':{'reason':reason,'post_burn_in_samples':len(values),'heldout_coverage':coverage}}
+            prepare_shape=None;prior_prepare_ids=set()
+            if endpoint!='checkpoint':
+                prepare_shape=materialize_prepare_condition(sim,pending_sources=0)
+                prepare_rows=[r for r in sim.runtime.measurements.cost_rows() if r.stage=='materialize-prepare' and roc._class(r.condition)==roc._class(prepare_shape)]
+                prior_prepare_ids={r.event_id for r in prepare_rows}
+                prepare_reason,prepare_values,_,_,prepare_coverage=roc._assess(prepare_rows,sim.runtime.policy_epoch,sim.runtime.plan_version,roc.BURN_IN)
+                row['prepare_condition']=prepare_shape
+                row['prepare_certification']={'reason':prepare_reason,'post_burn_in_samples':len(prepare_values),'heldout_coverage':prepare_coverage}
             if query:
                 tick=perf_counter();eta=sim.runtime.update_eta(endpoint_frontier=sim.frontier)
                 row['query_seconds']=perf_counter()-tick;row['eta']=eta
@@ -93,6 +101,14 @@ def trial(directory,endpoint,size,trial_id,calibration,holdouts,case):
                 assert latest.evidence=='measured' and latest.success and latest.validated
                 assert roc._class(latest.condition)==roc._class(shape),'Commit recorded a different pre-call shape'
                 row['actual_stage_seconds']=latest.protocol_seconds if latest.protocol_seconds is not None else latest.service_seconds
+                row['actual_measured_endpoint_seconds']=row['actual_stage_seconds']
+                if prepare_shape is not None:
+                    new_prepare=[r for r in sim.runtime.measurements.cost_rows() if r.stage=='materialize-prepare' and r.event_id not in prior_prepare_ids and roc._class(r.condition)==roc._class(prepare_shape)]
+                    assert len(new_prepare)==1,'Endpoint did not emit exactly one matching materialize prelude'
+                    prepare=new_prepare[0]
+                    assert prepare.evidence=='measured' and prepare.success and prepare.validated
+                    row['prepare_completion']=prepare.to_dict()
+                    row['actual_measured_endpoint_seconds']+=prepare.protocol_seconds if prepare.protocol_seconds is not None else prepare.service_seconds
                 if query and row['prediction']['expected_seconds'] is not None:
                     predicted=row['prediction']['expected_seconds'];actual=row['actual_wall_seconds']
                     row['signed_error_seconds']=predicted-actual
@@ -123,8 +139,9 @@ def trial(directory,endpoint,size,trial_id,calibration,holdouts,case):
                 case['resume_oracle']=True
         snapshot=sim.runtime.measurements.snapshot()
         observations=snapshot.pop('observations')
-        snapshot['endpoint_observations']=[row for row in observations if row['stage']==stage]
-        snapshot['other_stage_observations_count']=sum(row['stage']!=stage for row in observations)
+        endpoint_stages=(stage,'materialize-prepare') if endpoint!='checkpoint' else (stage,)
+        snapshot['endpoint_observations']=[row for row in observations if row['stage'] in endpoint_stages]
+        snapshot['other_stage_observations_count']=sum(row['stage'] not in endpoint_stages for row in observations)
         case['collector_snapshot']=snapshot
     return case
 
@@ -156,7 +173,7 @@ def main(argv=None):
     started=perf_counter()
     def save():
         held=[r for case in report['cases'] for r in case.get('holdout',[])];growth=[r for case in report['cases'] for r in case.get('growth',[])]
-        report['summary']={'same_shape':metrics(held),'same_shape_measured_stage':metrics(held,'actual_stage_seconds'),'growth':metrics(growth),
+        report['summary']={'same_shape':metrics(held),'same_shape_measured_stage':metrics(held,'actual_measured_endpoint_seconds'),'same_shape_body_stage':metrics(held,'actual_stage_seconds'),'growth':metrics(growth),
             'by_endpoint':{endpoint:metrics([r for case in report['cases'] if case['endpoint']==endpoint for r in case.get('holdout',[])]) for endpoint in endpoints}}
         args.output.write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     for endpoint in endpoints:

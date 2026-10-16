@@ -161,3 +161,19 @@ sequence管理のbyte課金を加えた後の60％地点の8 check smokeは、3�
 - adjoint gradient：45/45回答、median 0.69%、p95 5.06%、worst 10.11%、coverage 97.8%。gradientもcontext/schedule/vote/traceがstage timer外である。
 
 この結果をendpointの受入完了とはしない。explicit expectation/gradientのfuture APIに必要なmaterialize前処理（実gate/epochを除く）を別stageとして補完し、gradient timerにも必須準備を含めた後に再測定する。checkpoint低coverage、Linux／multi-rank、非quiescent snapshot、monitor overheadは引き続き評価対象である。
+
+## explicit endpoint の materialize 前処理費用（2026-10-17）
+
+baselineで確認したAPI/stageの欠落に対し、`materialize-prepare`を実completion stageとして追加した。`AsyncDistributedSimulator.materialize`の入口からagree、Binding確認、`update_eta`、初回gradient-origin準備までを計測し、**executor/epochを実行するwhileより前でtimerを止める**。実gate、publication、boundaryの費用をこのstageへ含めない。前処理の内側のETA更新はsnapshot capture/evaluateだけであり、materializeを呼び直さない。stage記録も内側ETA更新の後に行い、自分のqueryへ自分の未完了sampleを使用しない。
+
+explicit expectationとgradient endpointはそれぞれ将来のAPI呼出しを1回持つため、既存body taskに`materialize-prepare`を各1call追加する。両endpointを指定した場合はprepareが2callになる。bodyとprepareはどちらもmain resourceで直列に加算し、gate taskの件数は変えない。checkpointはこのprepareを追加しない。
+
+prepare conditionはbackend/engine/n/block/ranks、source件数、pending source件数、gradient-origin準備済みflag、有効endpoint specの固定長hashを持つ。hash対象は既存のexpectation/gradient/checkpoint conditionsであり、specのobservable/method/parametersやcheckpoint payload shapeが変われば別classにする。source列やspec全体をtaskへ複写せず、既存collectorのrow/byte予算とETAのserialized metadata予算内に保持する。rolling認証はburn-in 3、以後8件、coverage 0.8、drift 0.5のままで、source増加後の未測定prepareはunknownになる。
+
+実入口でpending gateがあるsampleはその件数で記録する。endpoint taskは「残gateの実行後に呼ぶendpoint」の前処理なのでpending=0を要求し、gateあり入口のsampleを転用しない。gate-onlyの外部query→将来のmaterialize API入口は、現在のgate-only endpoint契約が全Python API費用を包含するという主張にはしない。一方、active epoch内snapshotでは入口前処理は既に終了しているため、無条件にprepareを1call追加すれば過大になる。今回の補完は確実なexplicit expectation/gradient future APIだけに限定する。
+
+gradient bodyのtimerも、materializeの後・requested parameter/context/schedule/collective vote/agreement/traceの**前**へ移した。旧いexecute-only profileを使い回さないため、gradient conditionに`measurement_scope=schedule-and-execute-v2`を追加した。body timerとprepare timerは重ならない。checkpoint timerは今回変更せず、baselineで残ったAPI/stage約0.7〜0.9%の差と低coverageは既知limitとして残す。
+
+回帰は実prepare completionとquery条件の一致、実`update_eta`がtimer内にあること、prepare記録がgate開始前であること、empty materialize反復でgate completionが増えないこと、各endpointのprepare件数、source/spec変化後のunknown、固定長condition、gradient新identityと数値oracleを確認する。修正後heldoutは親担当のMac全fast/TeX完了後に再測定し、baselineとの性能改善を先行して主張しない。
+
+core修正のfocused検証は`test_endpoint_prepare`・`test_remaining_work`・`test_runtime_measurement`・`test_runtime_cost_registry`・report reducerの計67 passed。gradient/batch/adaptiveを含む追加実行は82 passedで、唯一のMPI campaign subprocessはsandboxのlocalhost bind禁止で起動前に拒否された。この性能campaignを単体検証のために再投入していない。修正後の性能heldoutは未実行で、親担当のMac高速検証が完了してから実施する。

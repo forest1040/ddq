@@ -42,7 +42,7 @@ TOLERANCE = .1
 EXECUTOR_STAGES = ('executor-gate', 'executor-group')
 EPOCH_STAGES = ('epoch-publication', 'epoch-boundary')  # once per epoch; priced like executor classes
 # ETA endpoint stages (expectation, gradient, durable checkpoint): repeated across iterations of one run.
-ENDPOINT_STAGES = ('expectation', 'gradient', 'checkpoint-commit')
+ENDPOINT_STAGES = ('expectation', 'gradient', 'checkpoint-commit', 'materialize-prepare')
 OVERRUN = 'RESIDUAL_OVERRUN'
 CERTIFIED, INSUFFICIENT, LOW_COVERAGE, STALE, DRIFTING = ('CERTIFIED', 'INSUFFICIENT_SAMPLES', 'LOW_HELD_OUT_COVERAGE', 'STALE_POLICY_EPOCH',
                                                      'DRIFTING')

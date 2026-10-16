@@ -141,7 +141,7 @@ def boundary_condition(sim):
         'backend':sim.config.backend,'engine':sim.io_engine.identity,'mode':sim.policy.mode}
 
 
-ENDPOINT_STAGES=('expectation','gradient','checkpoint-commit')
+ENDPOINT_STAGES=('expectation','gradient','checkpoint-commit','materialize-prepare')
 
 
 def _endpoint_base(sim):
@@ -163,7 +163,7 @@ def expectation_condition(sim,observables):
 
 
 def gradient_condition(sim,observable,parameters,method):
-    return {'operation':'gradient','method':method,'observable':observable_id(observable),
+    return {'operation':'gradient','measurement_scope':'schedule-and-execute-v2','method':method,'observable':observable_id(observable),
             'parameters':content_hash(sorted(str(p) for p in parameters)),'circuit':sim.circuit_hash,**_endpoint_base(sim)}
 
 
@@ -188,16 +188,42 @@ def checkpoint_condition(sim):
     return {'operation':'checkpoint-commit','payload_format':2,**shape,**_endpoint_base(sim)}
 
 
+def materialize_prepare_condition(sim, *, pending_sources=None):
+    """Bounded identity for the API prelude, excluding all gate/epoch work.
+
+    Explicit endpoints run after the requested gates, so their task requests
+    pending_sources=0. Entry samples with actual pending gates stay separate.
+    Hash the endpoint conditions: update_eta inside this prelude depends on
+    that spec, including the checkpoint payload shape, not just its label.
+    """
+    spec=getattr(sim.runtime,'_eta_endpoint_spec',{})
+    signature={}
+    if spec.get('expectation') is not None:
+        signature['expectation']=expectation_condition(sim,spec['expectation'])
+    if spec.get('gradient') is not None:
+        g=spec['gradient'];parameters=g.get('parameters')
+        if parameters is None:parameters=sorted(set().union(*(op.dependencies for op in sim.sequencer.operations)))
+        signature['gradient']=gradient_condition(sim,g['observable'],parameters,g.get('method','auto'))
+    if spec.get('checkpoint'):
+        signature['checkpoint']=checkpoint_condition(sim)
+    return {'operation':'materialize-prepare','source_entries':len(sim.sequencer.operations),
+            'pending_sources':max(0,len(sim.sequencer.operations)-1-sim.frontier) if pending_sources is None else pending_sources,
+            'endpoint_spec':content_hash(signature),
+            'gradient_origin_ready':getattr(sim,'_gradient_origin',None) is not None,**_endpoint_base(sim)}
+
+
 def endpoint_tasks(sim,spec,context):
     """Counted endpoint tasks for an ``RuntimeControl.set_eta_endpoint`` spec, and the endpoint label."""
     tasks=[];labels=['gates']
     if spec.get('expectation') is not None:
+        tasks.append(task('endpoint:expectation:prepare',materialize_prepare_condition(sim,pending_sources=0),context,kind='endpoint'))
         tasks.append(task('endpoint:expectation',expectation_condition(sim,spec['expectation']),context,kind='endpoint'))
         labels.append('expectation')
     if spec.get('gradient') is not None:
         g=spec['gradient']
         parameters=g.get('parameters')
         if parameters is None:parameters=sorted(set().union(*(op.dependencies for op in sim.sequencer.operations)))
+        tasks.append(task('endpoint:gradient:prepare',materialize_prepare_condition(sim,pending_sources=0),context,kind='endpoint'))
         tasks.append(task('endpoint:gradient',gradient_condition(sim,g['observable'],parameters,g.get('method','auto')),
                           context,kind='endpoint'))
         labels.append('gradient')

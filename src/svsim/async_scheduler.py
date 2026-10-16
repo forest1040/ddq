@@ -357,15 +357,22 @@ class AsyncDistributedSimulator(DistributedSimulator):
         self._commit_stage(new, end)
 
     def materialize(self, frontier=None, binding=None):
+        prepare_started,prepare_cpu=perf_counter(),process_time()
         self._open()
         last = len(self.sequencer.operations)-1 if frontier is None else frontier
         if last < self.frontier or last >= len(self.sequencer.operations):
             raise ValueError('Invalid frontier')
+        from .remaining_work import materialize_prepare_condition
+        prepare_condition=materialize_prepare_condition(self,pending_sources=max(0,last-self.frontier))
         self.transport.agree({'last': last, 'policy': asdict(self.policy)})
         self._set_binding(binding or self.binding or self.bind(), last)
         self.runtime.update_eta(endpoint_frontier=last,collective=True)
         if self.frontier == -1 and self._gradient_origin is None and any(g.dependencies for g in self.sequencer.operations):
             self._gradient_origin = self.commit_snapshot()['snapshot_id']
+        # The measured prelude stops before any executor/epoch work; those
+        # already have their own counted tasks. update_eta never materializes.
+        self._record_stage('materialize-prepare',_stage_condition(prepare_condition),
+                           seconds=perf_counter()-prepare_started,cpu_seconds=process_time()-prepare_cpu)
         while self.frontier < last:
             start = self.frontier+1
             end = min(last, start+self.policy.lookahead_gates-1)
@@ -580,6 +587,9 @@ class AsyncDistributedSimulator(DistributedSimulator):
         from .observables import ObservableIR
         if not isinstance(observable,ObservableIR):observable=ObservableIR(tuple(observable))
         self.materialize(binding=binding)
+        # Scheduling, agreement and trace are mandatory endpoint work. The
+        # materialize prelude is priced separately; executed gates are excluded.
+        started,cpu=perf_counter(),process_time()
         requested = list(parameters) if parameters is not None else sorted(
             set().union(*(g.dependencies for g in self.sequencer.operations)))
         error = None
@@ -601,7 +611,7 @@ class AsyncDistributedSimulator(DistributedSimulator):
         self.trace.record('gradient-schedule', metadata={'path': 'GRADIENT_SCHEDULE', **asdict(schedule),
             'cost_origin':cost_origin,'context_hash':content_hash(context)})
         self.runtime.invalidate_eta('GRADIENT_JOB_STARTED')
-        started=perf_counter();cpu=process_time();success=False;result=None
+        success=False;result=None
         try:
             result=execute_gradient(self, observable, requested, schedule)
             success=True
