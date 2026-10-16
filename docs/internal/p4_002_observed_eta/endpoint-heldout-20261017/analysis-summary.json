@@ -1,0 +1,1121 @@
+{
+  "provenance": {
+    "base_main_runtime": "89e8ad2",
+    "measured_revision": "61798367b33225a7f7d360332ea48533899eda94",
+    "runtime_source_sha256": "08e168ab11e5eed05cb6817b08efea27eb5613c35521bd64b291f0a058f39139",
+    "runtime_files": {
+      "src/svsim/async_scheduler.py": "4d90defee7b7bc82fb8079fe413ba99e48733b3702300dbf20c18de441b1c81a",
+      "src/svsim/remaining_work.py": "a4ab7e4709e719871d519b08c73997d621e3467dad821886c5ee82121e13c59f",
+      "src/svsim/runtime_observed_costs.py": "f5f8f522d6e8dbc9ba7463c0060aa4d9a4207beb94e9bf92fa6df6b55c0e1282"
+    },
+    "runner_sha256": "7a5f6a610b1924de42f1d439fd1889376ae625efadb19339d69592511b6b41eb",
+    "measurement_seconds": 374.67304108303506,
+    "root_heavy_work_stopped_by_parent": true,
+    "baseline_earlier_TeX_overlap": true,
+    "comparison_caveat": "Sequential runs with different answered subsets; no randomized paired throughput/performance claim.",
+    "raw_json_sha256": "a49ed5dc5cff026ba4afb24cdd8aa2a352fefd3533b42b53a5753013cd75ade1"
+  },
+  "validation": {
+    "cases": 27,
+    "calibration_calls": 432,
+    "heldout_queries": 135,
+    "growth_queries": 9,
+    "measured_endpoint_calls": 576,
+    "prepare_completion_pairs": 378,
+    "query_completion_revision_unchanged": 144,
+    "api_errors": 0,
+    "numerical_oracle_failures": 0,
+    "growth_unknown_and_resume_success": 9
+  },
+  "overall": {
+    "checks": 135,
+    "answered": 83,
+    "answer_fraction": 0.6148148148148148,
+    "errors": 0,
+    "unknown": 52,
+    "unknown_reasons": {
+      "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation:prepare": 17,
+      "MISSING_COST:endpoint:expectation:prepare": 17,
+      "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation": 5,
+      "MISSING_COST:endpoint:expectation": 5,
+      "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient:prepare": 30,
+      "MISSING_COST:endpoint:gradient:prepare": 30,
+      "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient": 4,
+      "MISSING_COST:endpoint:gradient": 4
+    },
+    "absolute_error_seconds": {
+      "median": 0.0009384796139784157,
+      "p95": 0.04192357474821612,
+      "worst": 0.23715439648367465,
+      "mean": 0.009809564358655768
+    },
+    "absolute_relative_error": {
+      "median": 0.0763963640356969,
+      "p95": 0.2299732751952674,
+      "worst": 0.3645918311072671,
+      "mean": 0.08666033219211038
+    },
+    "interval_checks": 83,
+    "interval_coverage": 0.5421686746987951,
+    "signed_error_seconds_mean": -0.007086766634069114,
+    "actual_seconds_mean_all_checks": 0.6448883833191185,
+    "interval_mean_width_seconds": 0.042202825213400984
+  },
+  "by_endpoint": {
+    "checkpoint": {
+      "api_wall": {
+        "checks": 45,
+        "answered": 45,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0009384796139784157,
+          "p95": 0.0011319827171973884,
+          "worst": 0.001403437985572964,
+          "mean": 0.0009114310753324794
+        },
+        "absolute_relative_error": {
+          "median": 0.07816329336788493,
+          "p95": 0.09642942918315871,
+          "worst": 0.10367884546301002,
+          "mean": 0.07538086023049749
+        },
+        "interval_checks": 45,
+        "interval_coverage": 0.24444444444444444,
+        "signed_error_seconds_mean": -0.0009114310753324794,
+        "actual_seconds_mean_all_checks": 0.012144680600613356,
+        "interval_mean_width_seconds": 0.0019452026501918832
+      },
+      "measured_stage_sum": {
+        "checks": 45,
+        "answered": 45,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0008442285470664501,
+          "p95": 0.0010402413783594966,
+          "worst": 0.001307188009377569,
+          "mean": 0.0008165440560939411
+        },
+        "absolute_relative_error": {
+          "median": 0.07164734084195896,
+          "p95": 0.09010256112865557,
+          "worst": 0.09621306294905846,
+          "mean": 0.06802245034745287
+        },
+        "interval_checks": 45,
+        "interval_coverage": 0.3111111111111111,
+        "signed_error_seconds_mean": -0.0008165440560939411,
+        "actual_seconds_mean_all_checks": 0.012049793581374818,
+        "interval_mean_width_seconds": 0.0019452026501918832
+      },
+      "baseline_api_wall": {
+        "checks": 45,
+        "answered": 38,
+        "answer_fraction": 0.8444444444444444,
+        "errors": 0,
+        "unknown": 7,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:checkpoint": 7,
+          "MISSING_COST:endpoint:checkpoint": 7
+        },
+        "absolute_error_seconds": {
+          "median": 0.0008917397062759846,
+          "p95": 0.0012470909918192773,
+          "worst": 0.0023191460059024394,
+          "mean": 0.0009418564303287942
+        },
+        "absolute_relative_error": {
+          "median": 0.08005757698309754,
+          "p95": 0.11271544108726576,
+          "worst": 0.1496681890044043,
+          "mean": 0.0819446053015239
+        },
+        "interval_checks": 38,
+        "interval_coverage": 0.13157894736842105,
+        "signed_error_seconds_mean": -0.0009418564303287942,
+        "actual_seconds_mean_all_checks": 0.011779835139815177,
+        "interval_mean_width_seconds": 0.001578246981616279
+      },
+      "api_to_measured_sum_median_ratio": 1.008319269278669,
+      "collector_drops": {
+        "dropped_conditions": 0,
+        "dropped_raw": 0,
+        "dropped_bytes": 0,
+        "dropped_children": 0,
+        "failures": 0
+      }
+    },
+    "expectation": {
+      "api_wall": {
+        "checks": 45,
+        "answered": 24,
+        "answer_fraction": 0.5333333333333333,
+        "errors": 0,
+        "unknown": 21,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation:prepare": 17,
+          "MISSING_COST:endpoint:expectation:prepare": 17,
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation": 5,
+          "MISSING_COST:endpoint:expectation": 5
+        },
+        "absolute_error_seconds": {
+          "median": 0.000501478963997215,
+          "p95": 0.001480139192426577,
+          "worst": 0.0015946660423651338,
+          "mean": 0.0006305782493048658
+        },
+        "absolute_relative_error": {
+          "median": 0.10880995586020568,
+          "p95": 0.3410340043125093,
+          "worst": 0.3645918311072671,
+          "mean": 0.14309243099072558
+        },
+        "interval_checks": 24,
+        "interval_coverage": 0.875,
+        "signed_error_seconds_mean": -6.053824715005855e-06,
+        "actual_seconds_mean_all_checks": 0.004267478641122579,
+        "interval_mean_width_seconds": 0.0036154494397730255
+      },
+      "measured_stage_sum": {
+        "checks": 45,
+        "answered": 24,
+        "answer_fraction": 0.5333333333333333,
+        "errors": 0,
+        "unknown": 21,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation:prepare": 17,
+          "MISSING_COST:endpoint:expectation:prepare": 17,
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation": 5,
+          "MISSING_COST:endpoint:expectation": 5
+        },
+        "absolute_error_seconds": {
+          "median": 0.0005023439880460501,
+          "p95": 0.0015490657184273004,
+          "worst": 0.0016248954343609512,
+          "mean": 0.000624415081498834
+        },
+        "absolute_relative_error": {
+          "median": 0.13805225928506829,
+          "p95": 0.3869439029958689,
+          "worst": 0.41087184426831275,
+          "mean": 0.1491802875470895
+        },
+        "interval_checks": 24,
+        "interval_coverage": 0.7916666666666666,
+        "signed_error_seconds_mean": 0.00014321685497028133,
+        "actual_seconds_mean_all_checks": 0.004116362025443878,
+        "interval_mean_width_seconds": 0.0036154494397730255
+      },
+      "baseline_api_wall": {
+        "checks": 45,
+        "answered": 45,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0008843120303936303,
+          "p95": 0.0022870914312079537,
+          "worst": 0.0024532091338187456,
+          "mean": 0.0010689800915618737
+        },
+        "absolute_relative_error": {
+          "median": 0.2514899994073772,
+          "p95": 0.454435174570688,
+          "worst": 0.47772723151901136,
+          "mean": 0.2711333970956618
+        },
+        "interval_checks": 45,
+        "interval_coverage": 0.4444444444444444,
+        "signed_error_seconds_mean": -0.0010689800915618737,
+        "actual_seconds_mean_all_checks": 0.0037310629565682676,
+        "interval_mean_width_seconds": 0.001701751910150051
+      },
+      "api_to_measured_sum_median_ratio": 1.0389289046145636,
+      "collector_drops": {
+        "dropped_conditions": 0,
+        "dropped_raw": 0,
+        "dropped_bytes": 0,
+        "dropped_children": 0,
+        "failures": 0
+      }
+    },
+    "gradient": {
+      "api_wall": {
+        "checks": 45,
+        "answered": 14,
+        "answer_fraction": 0.3111111111111111,
+        "errors": 0,
+        "unknown": 31,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient:prepare": 30,
+          "MISSING_COST:endpoint:gradient:prepare": 30,
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient": 4,
+          "MISSING_COST:endpoint:gradient": 4
+        },
+        "absolute_error_seconds": {
+          "median": 0.026639385556336492,
+          "p95": 0.2127095901290886,
+          "worst": 0.23715439648367465,
+          "mean": 0.05414611181393931
+        },
+        "absolute_relative_error": {
+          "median": 0.02542560010563074,
+          "p95": 0.04824407881507682,
+          "worst": 0.05142309405981422,
+          "mean": 0.026175036985382878
+        },
+        "interval_checks": 14,
+        "interval_coverage": 0.9285714285714286,
+        "signed_error_seconds_mean": -0.03907442431747248,
+        "actual_seconds_mean_all_checks": 1.9182529907156196,
+        "interval_mean_width_seconds": 0.23775211334993532
+      },
+      "measured_stage_sum": {
+        "checks": 45,
+        "answered": 14,
+        "answer_fraction": 0.3111111111111111,
+        "errors": 0,
+        "unknown": 31,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient:prepare": 30,
+          "MISSING_COST:endpoint:gradient:prepare": 30,
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient": 4,
+          "MISSING_COST:endpoint:gradient": 4
+        },
+        "absolute_error_seconds": {
+          "median": 0.02663932304130867,
+          "p95": 0.21250800597481428,
+          "worst": 0.23693710460793227,
+          "mean": 0.054040126639717655
+        },
+        "absolute_relative_error": {
+          "median": 0.024921679789824847,
+          "p95": 0.048125165067604746,
+          "worst": 0.05137839858836116,
+          "mean": 0.025666233093037165
+        },
+        "interval_checks": 14,
+        "interval_coverage": 0.9285714285714286,
+        "signed_error_seconds_mean": -0.03888580186009806,
+        "actual_seconds_mean_all_checks": 1.9180593453477033,
+        "interval_mean_width_seconds": 0.23775211334993532
+      },
+      "baseline_api_wall": {
+        "checks": 45,
+        "answered": 45,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.009643208119086921,
+          "p95": 0.20725827496498805,
+          "worst": 0.4187135830288753,
+          "mean": 0.038136484739111944
+        },
+        "absolute_relative_error": {
+          "median": 0.006919891354664567,
+          "p95": 0.050561542179991495,
+          "worst": 0.10105927672871527,
+          "mean": 0.014656338071776883
+        },
+        "interval_checks": 45,
+        "interval_coverage": 0.9777777777777777,
+        "signed_error_seconds_mean": 0.025687347868612657,
+        "actual_seconds_mean_all_checks": 1.792000088820027,
+        "interval_mean_width_seconds": 1.2450466646554155
+      },
+      "api_to_measured_sum_median_ratio": 1.0001728527435307,
+      "collector_drops": {
+        "dropped_conditions": 0,
+        "dropped_raw": 139253,
+        "dropped_bytes": 0,
+        "dropped_children": 0,
+        "failures": 0
+      }
+    }
+  },
+  "by_endpoint_and_size": {
+    "checkpoint:4": {
+      "api_wall": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0010202499106526375,
+          "p95": 0.0011314207222312689,
+          "worst": 0.0011322075151838362,
+          "mean": 0.0009657708539937933
+        },
+        "absolute_relative_error": {
+          "median": 0.08698565402202692,
+          "p95": 0.1013307713554479,
+          "worst": 0.10367884546301002,
+          "mean": 0.08681690300848528
+        },
+        "interval_checks": 15,
+        "interval_coverage": 0.0,
+        "signed_error_seconds_mean": -0.0009657708539937933,
+        "actual_seconds_mean_all_checks": 0.011095150055674215,
+        "interval_mean_width_seconds": 0.001406903083746632
+      },
+      "measured_stage_sum": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0009307089494541287,
+          "p95": 0.001029895758256316,
+          "worst": 0.0010419994941912591,
+          "mean": 0.0008704485992590586
+        },
+        "absolute_relative_error": {
+          "median": 0.07902093260628835,
+          "p95": 0.09390981971820016,
+          "worst": 0.09621306294905846,
+          "mean": 0.07890231567793907
+        },
+        "interval_checks": 15,
+        "interval_coverage": 0.13333333333333333,
+        "signed_error_seconds_mean": -0.0008704485992590586,
+        "actual_seconds_mean_all_checks": 0.01099982780093948,
+        "interval_mean_width_seconds": 0.001406903083746632
+      },
+      "baseline_api_wall": {
+        "checks": 15,
+        "answered": 13,
+        "answer_fraction": 0.8666666666666667,
+        "errors": 0,
+        "unknown": 2,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:checkpoint": 2,
+          "MISSING_COST:endpoint:checkpoint": 2
+        },
+        "absolute_error_seconds": {
+          "median": 0.0009199595078825951,
+          "p95": 0.0010872788028791546,
+          "worst": 0.001129915937781334,
+          "mean": 0.0008954727180445424
+        },
+        "absolute_relative_error": {
+          "median": 0.09008648648895133,
+          "p95": 0.10832755867615401,
+          "worst": 0.11196894832476946,
+          "mean": 0.08785820133653206
+        },
+        "interval_checks": 13,
+        "interval_coverage": 0.07692307692307693,
+        "signed_error_seconds_mean": -0.0008954727180445424,
+        "actual_seconds_mean_all_checks": 0.010191041526074212,
+        "interval_mean_width_seconds": 0.0015133402596872586
+      }
+    },
+    "checkpoint:32": {
+      "api_wall": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0007747505442239344,
+          "p95": 0.0010483914811629802,
+          "worst": 0.0010990829905495048,
+          "mean": 0.0007928498943025867
+        },
+        "absolute_relative_error": {
+          "median": 0.06882363413521925,
+          "p95": 0.09163263977720966,
+          "worst": 0.0961044939403497,
+          "mean": 0.0697369003481238
+        },
+        "interval_checks": 15,
+        "interval_coverage": 0.3333333333333333,
+        "signed_error_seconds_mean": -0.0007928498943025867,
+        "actual_seconds_mean_all_checks": 0.011355386076805493,
+        "interval_mean_width_seconds": 0.002083402833280464
+      },
+      "measured_stage_sum": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0006839585839770734,
+          "p95": 0.000953862624010071,
+          "worst": 0.0010042909998446703,
+          "mean": 0.000698758359067142
+        },
+        "absolute_relative_error": {
+          "median": 0.06125230742906826,
+          "p95": 0.08406519909778316,
+          "worst": 0.08854978380639622,
+          "mean": 0.06195921639510543
+        },
+        "interval_checks": 15,
+        "interval_coverage": 0.3333333333333333,
+        "signed_error_seconds_mean": -0.000698758359067142,
+        "actual_seconds_mean_all_checks": 0.011261294541570047,
+        "interval_mean_width_seconds": 0.002083402833280464
+      },
+      "baseline_api_wall": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0009036249248310924,
+          "p95": 0.001190314412815496,
+          "worst": 0.0013444159412756562,
+          "mean": 0.0009419389806377391
+        },
+        "absolute_relative_error": {
+          "median": 0.08166822475119222,
+          "p95": 0.10452648308016213,
+          "worst": 0.11694556674141153,
+          "mean": 0.0847296009664879
+        },
+        "interval_checks": 15,
+        "interval_coverage": 0.13333333333333333,
+        "signed_error_seconds_mean": -0.0009419389806377391,
+        "actual_seconds_mean_all_checks": 0.01108306673510621,
+        "interval_mean_width_seconds": 0.0015014443236092726
+      }
+    },
+    "checkpoint:128": {
+      "api_wall": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0009684170363470912,
+          "p95": 0.001224661146989092,
+          "worst": 0.001403437985572964,
+          "mean": 0.000975672477701058
+        },
+        "absolute_relative_error": {
+          "median": 0.06875032185497493,
+          "p95": 0.0855355508323551,
+          "worst": 0.09651066299386096,
+          "mean": 0.06958877733488342
+        },
+        "interval_checks": 15,
+        "interval_coverage": 0.4,
+        "signed_error_seconds_mean": -0.000975672477701058,
+        "actual_seconds_mean_all_checks": 0.013983505669360359,
+        "interval_mean_width_seconds": 0.0023453020335485538
+      },
+      "measured_stage_sum": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0008746259845793247,
+          "p95": 0.0011299559904728081,
+          "worst": 0.001307188009377569,
+          "mean": 0.0008804252099556228
+        },
+        "absolute_relative_error": {
+          "median": 0.06250807040991692,
+          "p95": 0.07944083513394475,
+          "worst": 0.09049075545922042,
+          "mean": 0.06320581896931408
+        },
+        "interval_checks": 15,
+        "interval_coverage": 0.4666666666666667,
+        "signed_error_seconds_mean": -0.0008804252099556228,
+        "actual_seconds_mean_all_checks": 0.013888258401614924,
+        "interval_mean_width_seconds": 0.0023453020335485538
+      },
+      "baseline_api_wall": {
+        "checks": 15,
+        "answered": 10,
+        "answer_fraction": 0.6666666666666666,
+        "errors": 0,
+        "unknown": 5,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:checkpoint": 5,
+          "MISSING_COST:endpoint:checkpoint": 5
+        },
+        "absolute_error_seconds": {
+          "median": 0.0008312502759508789,
+          "p95": 0.0018289925035787735,
+          "worst": 0.0023191460059024394,
+          "mean": 0.0010020314308349042
+        },
+        "absolute_relative_error": {
+          "median": 0.06001569890283843,
+          "p95": 0.12045815820776185,
+          "worst": 0.1496681890044043,
+          "mean": 0.07007943695856735
+        },
+        "interval_checks": 10,
+        "interval_coverage": 0.2,
+        "signed_error_seconds_mean": -0.0010020314308349042,
+        "actual_seconds_mean_all_checks": 0.014065397158265113,
+        "interval_mean_width_seconds": 0.001777829707134515
+      }
+    },
+    "expectation:4": {
+      "api_wall": {
+        "checks": 15,
+        "answered": 7,
+        "answer_fraction": 0.4666666666666667,
+        "errors": 0,
+        "unknown": 8,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation:prepare": 4,
+          "MISSING_COST:endpoint:expectation:prepare": 4,
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation": 5,
+          "MISSING_COST:endpoint:expectation": 5
+        },
+        "absolute_error_seconds": {
+          "median": 0.00036150013329461217,
+          "p95": 0.0008659830549731847,
+          "worst": 0.001035582972690463,
+          "mean": 0.00038718477922624776
+        },
+        "absolute_relative_error": {
+          "median": 0.0964064603571028,
+          "p95": 0.20063187284529727,
+          "worst": 0.23319345712257836,
+          "mean": 0.09850910307874655
+        },
+        "interval_checks": 7,
+        "interval_coverage": 1.0,
+        "signed_error_seconds_mean": -0.0003738872224598059,
+        "actual_seconds_mean_all_checks": 0.0037852776624883217,
+        "interval_mean_width_seconds": 0.0030233924044296145
+      },
+      "measured_stage_sum": {
+        "checks": 15,
+        "answered": 7,
+        "answer_fraction": 0.4666666666666667,
+        "errors": 0,
+        "unknown": 8,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation:prepare": 4,
+          "MISSING_COST:endpoint:expectation:prepare": 4,
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation": 5,
+          "MISSING_COST:endpoint:expectation": 5
+        },
+        "absolute_error_seconds": {
+          "median": 0.00020916707580909133,
+          "p95": 0.0007216413854621347,
+          "worst": 0.0008942910935729742,
+          "mean": 0.0002776788065343031
+        },
+        "absolute_relative_error": {
+          "median": 0.058143683087759565,
+          "p95": 0.172008631245189,
+          "worst": 0.20799484213864639,
+          "mean": 0.072708886753424
+        },
+        "interval_checks": 7,
+        "interval_coverage": 1.0,
+        "signed_error_seconds_mean": -0.00022671497260619487,
+        "actual_seconds_mean_all_checks": 0.0036379473051056264,
+        "interval_mean_width_seconds": 0.0030233924044296145
+      },
+      "baseline_api_wall": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0005117500550113618,
+          "p95": 0.0017245088238269086,
+          "worst": 0.0020011250162497163,
+          "mean": 0.0007645651892138024
+        },
+        "absolute_relative_error": {
+          "median": 0.16385543204367192,
+          "p95": 0.397171756419394,
+          "worst": 0.43378165805746083,
+          "mean": 0.2124195565369252
+        },
+        "interval_checks": 15,
+        "interval_coverage": 0.3333333333333333,
+        "signed_error_seconds_mean": -0.0007645651892138024,
+        "actual_seconds_mean_all_checks": 0.003379186134164532,
+        "interval_mean_width_seconds": 0.0026071996505682665
+      }
+    },
+    "expectation:32": {
+      "api_wall": {
+        "checks": 15,
+        "answered": 9,
+        "answer_fraction": 0.6,
+        "errors": 0,
+        "unknown": 6,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation:prepare": 6,
+          "MISSING_COST:endpoint:expectation:prepare": 6
+        },
+        "absolute_error_seconds": {
+          "median": 0.0004698334960266948,
+          "p95": 0.0013709496473893522,
+          "worst": 0.0015946660423651338,
+          "mean": 0.0006129538976690836
+        },
+        "absolute_relative_error": {
+          "median": 0.13259180369269763,
+          "p95": 0.2573523851936905,
+          "worst": 0.2949262167565033,
+          "mean": 0.13687194550855378
+        },
+        "interval_checks": 9,
+        "interval_coverage": 1.0,
+        "signed_error_seconds_mean": -0.00017370344398336278,
+        "actual_seconds_mean_all_checks": 0.00410273892339319,
+        "interval_mean_width_seconds": 0.0028587359831564957
+      },
+      "measured_stage_sum": {
+        "checks": 15,
+        "answered": 9,
+        "answer_fraction": 0.6,
+        "errors": 0,
+        "unknown": 6,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation:prepare": 6,
+          "MISSING_COST:endpoint:expectation:prepare": 6
+        },
+        "absolute_error_seconds": {
+          "median": 0.0006054164841771126,
+          "p95": 0.001211608201265335,
+          "worst": 0.0014348749537020922,
+          "mean": 0.0006537362286407086
+        },
+        "absolute_relative_error": {
+          "median": 0.1572298069645318,
+          "p95": 0.25576559967626117,
+          "worst": 0.2734548954953945,
+          "mean": 0.1577119290036614
+        },
+        "interval_checks": 9,
+        "interval_coverage": 0.7777777777777778,
+        "signed_error_seconds_mean": -2.7226866222918034e-05,
+        "actual_seconds_mean_all_checks": 0.003953705580594639,
+        "interval_mean_width_seconds": 0.0028587359831564957
+      },
+      "baseline_api_wall": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.000734084052965045,
+          "p95": 0.001855166850145906,
+          "worst": 0.0019178750226274133,
+          "mean": 0.000941805560917904
+        },
+        "absolute_relative_error": {
+          "median": 0.21736147542065754,
+          "p95": 0.41288672397631476,
+          "worst": 0.4225634985208988,
+          "mean": 0.25262604068130584
+        },
+        "interval_checks": 15,
+        "interval_coverage": 0.8,
+        "signed_error_seconds_mean": -0.000941805560917904,
+        "actual_seconds_mean_all_checks": 0.003584105606811742,
+        "interval_mean_width_seconds": 0.0012555834061155717
+      }
+    },
+    "expectation:128": {
+      "api_wall": {
+        "checks": 15,
+        "answered": 8,
+        "answer_fraction": 0.5333333333333333,
+        "errors": 0,
+        "unknown": 7,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation:prepare": 7,
+          "MISSING_COST:endpoint:expectation:prepare": 7
+        },
+        "absolute_error_seconds": {
+          "median": 0.0006461879820562899,
+          "p95": 0.0014659642067272217,
+          "worst": 0.001490770431701094,
+          "mean": 0.0008633749312139116
+        },
+        "absolute_relative_error": {
+          "median": 0.12111949773560399,
+          "p95": 0.3572420216030827,
+          "worst": 0.3645918311072671,
+          "mean": 0.18910088908115047
+        },
+        "interval_checks": 8,
+        "interval_coverage": 0.625,
+        "signed_error_seconds_mean": 0.0005044062199885957,
+        "actual_seconds_mean_all_checks": 0.004914419337486227,
+        "interval_mean_width_seconds": 0.0049848019843921065
+      },
+      "measured_stage_sum": {
+        "checks": 15,
+        "answered": 8,
+        "answer_fraction": 0.5333333333333333,
+        "errors": 0,
+        "unknown": 7,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:expectation:prepare": 7,
+          "MISSING_COST:endpoint:expectation:prepare": 7
+        },
+        "absolute_error_seconds": {
+          "median": 0.0007620630785822868,
+          "p95": 0.0016008476843126119,
+          "worst": 0.0016248954343609512,
+          "mean": 0.0008948230315581895
+        },
+        "absolute_relative_error": {
+          "median": 0.16004062016966514,
+          "p95": 0.40336232135203237,
+          "worst": 0.41087184426831275,
+          "mean": 0.2064946666029034
+        },
+        "interval_checks": 8,
+        "interval_coverage": 0.625,
+        "signed_error_seconds_mean": 0.0006586563904420473,
+        "actual_seconds_mean_all_checks": 0.004757433190631369,
+        "interval_mean_width_seconds": 0.0049848019843921065
+      },
+      "baseline_api_wall": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0012924999464303255,
+          "p95": 0.0024127252749167384,
+          "worst": 0.0024532091338187456,
+          "mean": 0.0015005695245539148
+        },
+        "absolute_relative_error": {
+          "median": 0.32395178997786067,
+          "p95": 0.4709095090946435,
+          "worst": 0.47772723151901136,
+          "mean": 0.34835459406875435
+        },
+        "interval_checks": 15,
+        "interval_coverage": 0.2,
+        "signed_error_seconds_mean": -0.0015005695245539148,
+        "actual_seconds_mean_all_checks": 0.0042298971287285285,
+        "interval_mean_width_seconds": 0.001242472673766315
+      }
+    },
+    "gradient:4": {
+      "api_wall": {
+        "checks": 15,
+        "answered": 6,
+        "answer_fraction": 0.4,
+        "errors": 0,
+        "unknown": 9,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient:prepare": 9,
+          "MISSING_COST:endpoint:gradient:prepare": 9,
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient": 3,
+          "MISSING_COST:endpoint:gradient": 3
+        },
+        "absolute_error_seconds": {
+          "median": 0.0029207501211203635,
+          "p95": 0.004418099852045998,
+          "worst": 0.004692459129728377,
+          "mean": 0.0026593544074178985
+        },
+        "absolute_relative_error": {
+          "median": 0.01963454497428622,
+          "p95": 0.02940657471048381,
+          "worst": 0.031172303985955687,
+          "mean": 0.01782457691227895
+        },
+        "interval_checks": 6,
+        "interval_coverage": 0.8333333333333334,
+        "signed_error_seconds_mean": -0.0026593544074178985,
+        "actual_seconds_mean_all_checks": 0.15719588329084216,
+        "interval_mean_width_seconds": 0.06261032026183481
+      },
+      "measured_stage_sum": {
+        "checks": 15,
+        "answered": 6,
+        "answer_fraction": 0.4,
+        "errors": 0,
+        "unknown": 9,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient:prepare": 9,
+          "MISSING_COST:endpoint:gradient:prepare": 9,
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient": 3,
+          "MISSING_COST:endpoint:gradient": 3
+        },
+        "absolute_error_seconds": {
+          "median": 0.0027421870618127286,
+          "p95": 0.004239265690557659,
+          "worst": 0.004514541942626238,
+          "mean": 0.0024807706649880856
+        },
+        "absolute_relative_error": {
+          "median": 0.01845660815255097,
+          "p95": 0.028249289872872882,
+          "worst": 0.0300258768531009,
+          "mean": 0.01664324534692893
+        },
+        "interval_checks": 6,
+        "interval_coverage": 0.8333333333333334,
+        "signed_error_seconds_mean": -0.0024807706649880856,
+        "actual_seconds_mean_all_checks": 0.15700532485110064,
+        "interval_mean_width_seconds": 0.06261032026183481
+      },
+      "baseline_api_wall": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.0005042704287916422,
+          "p95": 0.003427104442380368,
+          "worst": 0.004130749963223934,
+          "mean": 0.0010842082983193299
+        },
+        "absolute_relative_error": {
+          "median": 0.0035016652034217206,
+          "p95": 0.023554271205067985,
+          "worst": 0.028208255665548777,
+          "mean": 0.007533604851670198
+        },
+        "interval_checks": 15,
+        "interval_coverage": 1.0,
+        "signed_error_seconds_mean": -0.00032975552215551337,
+        "actual_seconds_mean_all_checks": 0.14300394994206728,
+        "interval_mean_width_seconds": 0.03497363836504519
+      }
+    },
+    "gradient:32": {
+      "api_wall": {
+        "checks": 15,
+        "answered": 4,
+        "answer_fraction": 0.26666666666666666,
+        "errors": 0,
+        "unknown": 11,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient:prepare": 11,
+          "MISSING_COST:endpoint:gradient:prepare": 11
+        },
+        "absolute_error_seconds": {
+          "median": 0.03134107304504141,
+          "p95": 0.04971112576604354,
+          "worst": 0.05250860383966938,
+          "mean": 0.03491153124195989
+        },
+        "absolute_relative_error": {
+          "median": 0.029526847629972167,
+          "p95": 0.04439923845917507,
+          "worst": 0.04653230137560284,
+          "mean": 0.031808382820325325
+        },
+        "interval_checks": 4,
+        "interval_coverage": 1.0,
+        "signed_error_seconds_mean": -0.00357045819691848,
+        "actual_seconds_mean_all_checks": 1.101629116735421,
+        "interval_mean_width_seconds": 0.14986383257200941
+      },
+      "measured_stage_sum": {
+        "checks": 15,
+        "answered": 4,
+        "answer_fraction": 0.26666666666666666,
+        "errors": 0,
+        "unknown": 11,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient:prepare": 11,
+          "MISSING_COST:endpoint:gradient:prepare": 11
+        },
+        "absolute_error_seconds": {
+          "median": 0.031533324043266475,
+          "p95": 0.04958034404844511,
+          "worst": 0.05232060299022123,
+          "mean": 0.03491286477947142
+        },
+        "absolute_relative_error": {
+          "median": 0.029713167438003247,
+          "p95": 0.04429278598416891,
+          "worst": 0.04637342394104361,
+          "mean": 0.031820427603543026
+        },
+        "interval_checks": 4,
+        "interval_coverage": 1.0,
+        "signed_error_seconds_mean": -0.0033795407362049446,
+        "actual_seconds_mean_all_checks": 1.101438805569584,
+        "interval_mean_width_seconds": 0.14986383257200941
+      },
+      "baseline_api_wall": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.010252582025714219,
+          "p95": 0.03921244749217294,
+          "worst": 0.04317262500990182,
+          "mean": 0.013156887446530163
+        },
+        "absolute_relative_error": {
+          "median": 0.009639338937073087,
+          "p95": 0.03613872305385194,
+          "worst": 0.03937172462500463,
+          "mean": 0.012343621627443695
+        },
+        "interval_checks": 15,
+        "interval_coverage": 1.0,
+        "signed_error_seconds_mean": -0.006113750953227281,
+        "actual_seconds_mean_all_checks": 1.0543806248577312,
+        "interval_mean_width_seconds": 0.11931670864578336
+      }
+    },
+    "gradient:128": {
+      "api_wall": {
+        "checks": 15,
+        "answered": 4,
+        "answer_fraction": 0.26666666666666666,
+        "errors": 0,
+        "unknown": 11,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient:prepare": 10,
+          "MISSING_COST:endpoint:gradient:prepare": 10,
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient": 1,
+          "MISSING_COST:endpoint:gradient": 1
+        },
+        "absolute_error_seconds": {
+          "median": 0.16123462555697188,
+          "p95": 0.23151328732492402,
+          "worst": 0.23715439648367465,
+          "mean": 0.15061082849570084
+        },
+        "absolute_relative_error": {
+          "median": 0.03548826770611163,
+          "p95": 0.05025806543632876,
+          "worst": 0.05142309405981422,
+          "mean": 0.03306738126009632
+        },
+        "interval_checks": 4,
+        "interval_coverage": 1.0,
+        "signed_error_seconds_mean": -0.12920099530310836,
+        "actual_seconds_mean_all_checks": 4.4959339721205955,
+        "interval_mean_width_seconds": 0.5883530837600119
+      },
+      "measured_stage_sum": {
+        "checks": 15,
+        "answered": 4,
+        "answer_fraction": 0.26666666666666666,
+        "errors": 0,
+        "unknown": 11,
+        "unknown_reasons": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient:prepare": 10,
+          "MISSING_COST:endpoint:gradient:prepare": 10,
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:endpoint:gradient": 1,
+          "MISSING_COST:endpoint:gradient": 1
+        },
+        "absolute_error_seconds": {
+          "median": 0.16103747993474826,
+          "p95": 0.23129962030798196,
+          "worst": 0.23693710460793227,
+          "mean": 0.15050642246205825
+        },
+        "absolute_relative_error": {
+          "median": 0.03544631799909671,
+          "p95": 0.050214012985176554,
+          "worst": 0.05137839858836116,
+          "mean": 0.03304652020169366
+        },
+        "interval_checks": 4,
+        "interval_coverage": 1.0,
+        "signed_error_seconds_mean": -0.12899960977665614,
+        "actual_seconds_mean_all_checks": 4.4957339056224255,
+        "interval_mean_width_seconds": 0.5883530837600119
+      },
+      "baseline_api_wall": {
+        "checks": 15,
+        "answered": 15,
+        "answer_fraction": 1.0,
+        "errors": 0,
+        "unknown": 0,
+        "unknown_reasons": {},
+        "absolute_error_seconds": {
+          "median": 0.03970914607634768,
+          "p95": 0.3566276223864405,
+          "worst": 0.4187135830288753,
+          "mean": 0.10016835847248634
+        },
+        "absolute_relative_error": {
+          "median": 0.009411666041907154,
+          "p95": 0.0860907261232084,
+          "worst": 0.10105927672871527,
+          "mean": 0.024091787736216754
+        },
+        "interval_checks": 15,
+        "interval_coverage": 0.9333333333333333,
+        "signed_error_seconds_mean": 0.08350555008122076,
+        "actual_seconds_mean_all_checks": 4.178615691660283,
+        "interval_mean_width_seconds": 3.5808496469554183
+      }
+    }
+  },
+  "growth": {
+    "checks": 9,
+    "answered": 0,
+    "answer_fraction": 0.0,
+    "errors": 0,
+    "unknown": 9,
+    "unknown_reasons": {
+      "COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:endpoint:checkpoint": 9,
+      "MISSING_COST:endpoint:checkpoint": 9
+    },
+    "absolute_error_seconds": {
+      "median": null,
+      "p95": null,
+      "worst": null,
+      "mean": null
+    },
+    "absolute_relative_error": {
+      "median": null,
+      "p95": null,
+      "worst": null,
+      "mean": null
+    },
+    "interval_checks": 0,
+    "interval_coverage": null,
+    "signed_error_seconds_mean": null,
+    "actual_seconds_mean_all_checks": 0.018120078564000625,
+    "interval_mean_width_seconds": null
+  }
+}

@@ -183,3 +183,17 @@ core修正のfocused検証は`test_endpoint_prepare`・`test_remaining_work`・`
 固定長hashを保存するだけではhash前のCPU／一時RAMは制限できないため、endpoint条件の共通preflightを追加した。gradientのsourceは`CaptureLimits`既定scan上限と同じ256件までとし、超過時はNone／明示parametersの双方でsourceを列挙せず`circuit_hash`も計算しない。小さいsourceでは元のcircuit hashを使い、stale Bindingのhashへ置き換えない。None parametersは再帰的な全依存unionではなく、全1024 expression node・深さ32までの走査で取得する。明示parameters／observableもhash前に256項目、文字列128文字、mask256bit等の有限上限を検査する。128 gateの既存測定条件は同一identityを保つ。
 
 上限超過はexecutionの拒否ではない。固定長のunproven conditionと`ENDPOINT_IDENTITY_BUDGET` task unknown reasonを返し、学習済みsentinel costがresolverにあっても総ETAをnullにする。actual materializeは通常どおり進める。prepareとendpoint bodyは同じhelper結果を使い、unbounded source/specを繰り返しhashしない。巨大len／iteration bombで0scan、None／明示parameters、oversized observable、深い式、学習済みcost遮断、通常materialize／state oracleと小条件のexact hash互換を回帰にした。
+
+## bounded core修正後の実endpoint heldout（2026-10-17）
+
+Mac最終全fastの終了後、rootのheavy pytest／TeXを止めて[修正後27case](internal/p4_002_observed_eta/endpoint-heldout-20261017/README.md)を測定した。main `89e8ad2`とruntime対象3fileが完全一致するworktreeで、同じ4／32／128 gate×3 endpoint×3 trial、校正16＋heldout5、growth9を維持した。runtime source fingerprintは`08e168ab11e5eed05cb6817b08efea27eb5613c35521bd64b291f0a058f39139`。全raw、平均/size別/区間/unknown理由の集計を保存した。374.67秒、API error／数値失敗0、全state最大絶対誤差0、growth9件ともunknown＋実commit/resume成功。
+
+| endpoint | 回答/check | 相対誤差% median / p95 / worst | API wall coverage |
+|---|---|---|---|
+| checkpoint | 45/45 | 7.82 / 9.64 / 10.37 | 24.4% |
+| expectation | 24/45 | 10.88 / 34.10 / 36.46 | 87.5% |
+| adjoint gradient | 14/45 | 2.54 / 4.82 / 5.14 | 92.9% |
+
+expectation 128 gateでは新prepareの実時間median 1.424 msを価格付け対象へ入れた。API wall／実body+prepare和のmedian比は1.035で、baselineのAPI/body比1.446の必須費用欠落を補完した。ただしbaselineにはTeX重複期間があり、回答集合も異なるため、前後の実API時間や精度差を純粋な性能改善として主張しない。
+
+expectationの未回答21はprepare/bodyの`LOW_HELD_OUT_COVERAGE`（17/5点、重複1）、gradientの未回答31は同理由（30/4点、重複3）。認証を緩めず全unknownを分母に残した。checkpoint低coverageとprepareの短run回答率は残件である。collectorのcost側drop/failureは0だが、gradient内部のbounded raw queueには`dropped_raw=139253`がありcounterを保持した。要求した全576 endpoint行と378 prepare行は別途直接保存したため、それらの校正/実測/数値oracleを検査できる。全内部event rawが無欠落という主張はしない。測定後はJSON数値/provenance検査だけを実施し、heavy試験やTeXは実行していない。
