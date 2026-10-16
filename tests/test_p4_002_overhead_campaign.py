@@ -72,6 +72,15 @@ def test_empty_or_identical_noise_has_no_invented_effect_threshold():
     assert summary["difference_ci95"]["lower"] == summary["difference_ci95"]["upper"] == 0.0
 
 
+def test_incomplete_campaign_never_claims_a_performance_effect():
+    rows = [{"status": "ok", "eta_on_seconds": 6.0, "eta_off_seconds": 3.0} for _ in range(7)]
+    rows.append({"status": "failed", "errors": {"eta_off": "I/O failed"}})
+    result = summarize_pairs(rows, seed=4, bootstrap_replicates=100)
+    assert result["difference_ci95"]["lower"] > 0
+    assert result["status"] == "incomplete"
+    assert result["interpretation"] == "inconclusive"
+
+
 def test_plan_only_smoke_records_resolved_workloads_and_sources(tmp_path):
     output = tmp_path / "campaign-plan.json"
     assert main(["--plan-only", "--output", str(output), "--backend", "direct"]) == 0

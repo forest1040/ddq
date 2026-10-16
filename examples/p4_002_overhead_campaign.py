@@ -66,7 +66,7 @@ def summarize_pairs(rows, *, seed, bootstrap_replicates=5000):
     med_ratio = statistics.median(ratios) if ratios else None
     diff_ci = bootstrap_median_ci(differences, seed=seed, replicates=bootstrap_replicates)
     ratio_ci = bootstrap_median_ci(ratios, seed=seed + 1, replicates=bootstrap_replicates)
-    if not differences or diff_ci["lower"] is None or ratio_ci["lower"] is None:
+    if len(good) != len(rows) or not differences or diff_ci["lower"] is None or ratio_ci["lower"] is None:
         conclusion = "inconclusive"
     elif diff_ci["lower"] <= 0 <= diff_ci["upper"] or ratio_ci["lower"] <= 1 <= ratio_ci["upper"]:
         conclusion = "inconclusive"
