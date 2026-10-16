@@ -177,14 +177,15 @@ def offline_scope(ledger, *, policy=None, writer=False):
                 leases.append(DirectoryLease(directory, exclusive=True))
             except DatasetBusyError as exc:
                 raise UncommittedRecoveryRefused(f'A live runtime holds dataset lease {directory}; owner death is not proven') from exc
-        binding = None if private else DiskBudget.read_volume_binding(ledger)
+        binding = DiskBudget.read_volume_binding(ledger)
         if binding is not None:
             # A bound ledger needs its coordinator: opened before any mutation (a missing or foreign one refuses).
             from .volume_coordinator import VolumeCoordinator
             coordinator = VolumeCoordinator.open_bound(binding)
         if private:
             if writer:
-                budget = DiskBudget(ledger, roots, ledger_lease=ledger_lease, persist_private_policy=True, **persisted)
+                budget = DiskBudget(ledger, roots, ledger_lease=ledger_lease, persist_private_policy=True,
+                                    volume_coordinator=coordinator, **persisted)
             else:
                 budget = DiskBudget(ledger, roots, recovery_only=True, store_private=True, **persisted)
         elif writer:

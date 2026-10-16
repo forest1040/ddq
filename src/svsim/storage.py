@@ -24,6 +24,10 @@ class StorageConfig:
     segment_size_bytes: int = 1 << 30
     metadata_reserve_bytes: int = 65536
     root_depth_limit: int = 16
+    volume_coordinator: str | None = None
+    disk_quota_bytes: int | None = None
+    min_free_bytes: int = 0
+    drain_reserve_bytes: int = 0
 
     def __post_init__(self):
         if self.block_bits < 1: raise ValueError('Invalid block_bits')
@@ -31,6 +35,19 @@ class StorageConfig:
         if self.backend not in {'buffered','direct'}: raise ValueError('Invalid backend')
         if not 0 <= self.metadata_reserve_bytes < self.ram_budget_bytes: raise ValueError('Invalid metadata reserve')
         if self.segment_size_bytes < self.slot_bytes or self.root_depth_limit < 2: raise ValueError('Invalid segment/depth limit')
+        for name in ('disk_quota_bytes','min_free_bytes','drain_reserve_bytes'):
+            value=getattr(self,name)
+            if name=='disk_quota_bytes' and value is None:continue
+            if type(value) is not int or value < (1 if name=='disk_quota_bytes' else 0):
+                raise ValueError('Invalid '+name)
+        if self.volume_coordinator is not None:
+            locator=self.volume_coordinator
+            if (not isinstance(locator,str) or not locator or len(locator.encode())>4096 or
+                    not Path(locator).is_absolute()):
+                raise ValueError('volume_coordinator requires an absolute node-local path')
+            if Path(locator).resolve() in {(Path(self.directory)/'metadata'/name).resolve()
+                                         for name in ('disk-ledger.sqlite3','catalog.sqlite3')}:
+                raise ValueError('volume_coordinator must differ from the store catalog and ledger')
 
     @property
     def payload_bytes(self): return 16*(1 << self.block_bits)
@@ -90,12 +107,23 @@ class FileBlockStore:
 
     def _open_store(self, config, num_qubits, create, disk_budget):
         for sub in ('state','metadata','assets','journal','traces','manifests'): (self.directory/sub).mkdir(exist_ok=True)
-        from .disk_budget import DiskBudget
         from .catalog_admission import CatalogConnection
         self._owned_disk_budget = None
         if disk_budget is None:
-            self._owned_disk_budget=DiskBudget(self.directory/'metadata/disk-ledger.sqlite3',[self.directory],persist_private_policy=True)
+            from .private_disk_budget import open_private_budget
+            self._owned_disk_budget=open_private_budget(config,self.directory,create=create)
             disk_budget=self._owned_disk_budget
+        elif config.volume_coordinator is not None:
+            from .disk_budget import DiskAdmissionError
+            coordinator=getattr(disk_budget,'_coord',None)
+            if coordinator is None or str(coordinator.path)!=str(Path(config.volume_coordinator).resolve()):
+                raise DiskAdmissionError('StorageConfig coordinator differs from the supplied disk budget')
+            if coordinator.volume_device!=self.directory.stat().st_dev:
+                raise DiskAdmissionError('StorageConfig coordinator and supplied budget are on another volume')
+            requested=(config.disk_quota_bytes,config.min_free_bytes,config.drain_reserve_bytes)
+            if ((coordinator.quota_bytes,coordinator.min_free_bytes,coordinator.drain_reserve_bytes)!=requested or
+                    (disk_budget.quota_bytes,disk_budget.min_free_bytes,disk_budget.drain_reserve_bytes)!=requested):
+                raise DiskAdmissionError('StorageConfig coordinator policy differs from the supplied disk budget')
         self.disk_budget=disk_budget
         self.db=CatalogConnection(self.directory/'metadata/catalog.sqlite3',
             budget_getter=lambda:self.disk_budget,drain_getter=lambda:getattr(self,'_disk_drain',False),

@@ -590,6 +590,8 @@ class DiskBudget:
             raise DiskAdmissionError('Volume coordinator is on another volume than the budgeted roots')
         if bound is not None and bound[0]!=str(self._coord.path):
             raise DiskAdmissionError('Ledger is bound to a different volume coordinator')
+        if bound is None and self.persist_private_policy and self._ledger_preexisting:
+            raise DiskAdmissionError('An existing private ledger cannot acquire a new volume binding during reopen')
         if not has:
             self.db.execute('''CREATE TABLE IF NOT EXISTS volume_binding(singleton INTEGER PRIMARY KEY CHECK(singleton=1),
                 coordinator TEXT NOT NULL, epoch INTEGER NOT NULL)''')
