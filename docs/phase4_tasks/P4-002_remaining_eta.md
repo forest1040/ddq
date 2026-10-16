@@ -52,3 +52,16 @@ suffix summaryが古ければstaleと表示して自動gainへ使わない。観
 | real runtime | held-out回路のsnapshot時刻から実完了までを照合、rank MAX/短区間もreport |
 
 実装は002A window capture、002B suffix/in-flight、002C profile viewsとheld-out評価に分ける。初期誤差目標median30%以内、p95/worst/絶対誤差とmonitor overheadも保存する。達成しないcaseは残して原因・不足を示す。手動CostTaskの成功だけではDONEにしない。
+
+## 受入表の証跡対応（2026-10-16）
+
+| case | 主な実行証跡 | 現状 |
+|---|---|---|
+| 小DAG oracle | [`test_counted_dag_matches_explicit_dag_oracle_for_dependencies_resources_and_counts`](../../tests/test_runtime_eta.py)、`test_dag_lower_bound_and_serial_expected_upper_match_oracle` | counted nodeを明示taskへ展開した小DAGと旧explicit modelのlower／expected／upper、resource demand、dependency、countを比較する回帰を追加。 |
+| virtual/fused/S2 | [`test_executor_stages.py`](../../tests/test_executor_stages.py)、[`test_s2_group_preserves_each_source_id_once`](../../tests/test_remaining_work.py)、[`test_future_shape_matches_scheduler_calls_and_epochs`](../../tests/test_remaining_work.py) | 実dispatchとstage route、fused source ID、S2未来call数を照合。virtual route、conditional Frame/log、unknown routeはstage-oracle testsで個別検証。 |
+| in-flight/retry | [`test_private_staged_delta_keeps_published_cut_and_marks_unknown`](../../tests/test_remaining_work.py)、[`test_call_residual_prices_the_remainder_of_a_certified_class`](../../tests/test_remaining_work.py)、[`test_duplicate_or_excessive_inflight_requests_are_rejected`](../../tests/test_runtime_eta.py)、[`test_duplicate_unknown_hole_and_failure_never_publish`](../../tests/test_execution_tasks.py) | private/STAGED重複除去、校正済みresidualと超過unknown、重複request拒否、失敗epochの未公開化を検証。 |
+| unknown/stale/budget | [`test_remaining_work.py`](../../tests/test_remaining_work.py)、[`test_partial_snapshots_never_publish_total_eta`](../../tests/test_runtime_eta.py)、[`test_unknown_suffix_and_huge_count_never_claim_unjustified_eta`](../../tests/test_remaining_work.py) | scan不足、stale、profile version違い、byte予算超過、構造unknownでtotal ETAがnullとなり、reasonとpartial coverageを保持する。 |
+| 大きいcount | [`test_huge_count_with_finite_weighted_cost_remains_compact`](../../tests/test_remaining_work.py)、[`test_huge_block_count_uses_algebra_and_remote_payload_stays_unknown`](../../tests/test_executor_stages.py)、[`test_capture_bounds_window_scan_groups_and_metadata`](../../tests/test_remaining_work.py) | huge countは加重算術、block数は代数式、captureは有限group／byte budgetを使う。全occurrence／peer列挙や64 MiB到達の単一専用試験ではなく、既定のより小さい上限でoverflow・打切りを検証する。 |
+| real runtime | [48-check held-out](../internal/p4_002_observed_eta/chronological-holdout-20261015/mac-48-checks.json)、[checkpoint growth/same-size smoke](../phase4_exact_future_eta_implementation.md#checkpoint-payload-v2と成長費用の再確認)、[short quick sample](../internal/p4_002_observed_eta/acceptance-20261016/mac-rx-ry-low-quick.json) | Mac 48 checksは30回答（62.5%）、回答分median absolute relative error 8.6%、p95 18.5%、worst 67.5%、interval coverage 83.3%。Mac quick 4件は2回答、両unknownはepoch-boundary LOW_HELD_OUT_COVERAGE。quickは回答率改善の比較証拠ではない。Linux／multi-rankの現行source snapshot held-outとoverhead campaignは進行中で、完了証拠を追記する。 |
+
+Mac quick sampleの条件は1 rank、buffered、cooperative、`rx-ry-low`、fraction 0.6、S0/S2×file/RAMの各1 trial。既存48-check評価とworkload集合・試行数が違うため前後差を主張しない。回答率改善は受入条件に含めず、未立証のまま扱う。

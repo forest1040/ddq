@@ -1,0 +1,525 @@
+{
+  "schema_version": 1,
+  "kind": "runtime-eta-accuracy",
+  "env": {
+    "platform": "macOS-26.7.1-arm64-arm-64bit",
+    "python": "3.12.13",
+    "ranks": 1,
+    "backend": "buffered",
+    "git_rev": "52ac2c921d934223d480ed634f66150a947f2f4c",
+    "git_dirty_src": null
+  },
+  "summary": {
+    "overall": {
+      "class_resolution": {
+        "exact": 30,
+        "pooled": 0,
+        "missing": 2
+      },
+      "n_checks": 4,
+      "n_errors": 0,
+      "n_answered": 2,
+      "answered_fraction": 0.5,
+      "median_abs_relative_error": 0.15463951714087917,
+      "p95_abs_relative_error": 0.2557192307532212,
+      "worst_abs_relative_error": 0.2669503100434815,
+      "coverage": 0.5,
+      "unknown_reason_tally": {
+        "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 2,
+        "MISSING_COST:future:boundary": 2
+      }
+    },
+    "by_policy": {
+      "S0": {
+        "class_resolution": {
+          "exact": 20,
+          "pooled": 0,
+          "missing": 2
+        },
+        "n_checks": 2,
+        "n_errors": 0,
+        "n_answered": 0,
+        "answered_fraction": 0.0,
+        "median_abs_relative_error": null,
+        "p95_abs_relative_error": null,
+        "worst_abs_relative_error": null,
+        "coverage": null,
+        "unknown_reason_tally": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 2,
+          "MISSING_COST:future:boundary": 2
+        }
+      },
+      "S2": {
+        "class_resolution": {
+          "exact": 10,
+          "pooled": 0,
+          "missing": 0
+        },
+        "n_checks": 2,
+        "n_errors": 0,
+        "n_answered": 2,
+        "answered_fraction": 1.0,
+        "median_abs_relative_error": 0.15463951714087917,
+        "p95_abs_relative_error": 0.2557192307532212,
+        "worst_abs_relative_error": 0.2669503100434815,
+        "coverage": 0.5,
+        "unknown_reason_tally": {}
+      }
+    },
+    "by_store": {
+      "file": {
+        "class_resolution": {
+          "exact": 15,
+          "pooled": 0,
+          "missing": 1
+        },
+        "n_checks": 2,
+        "n_errors": 0,
+        "n_answered": 1,
+        "answered_fraction": 0.5,
+        "median_abs_relative_error": 0.04232872423827682,
+        "p95_abs_relative_error": 0.04232872423827682,
+        "worst_abs_relative_error": 0.04232872423827682,
+        "coverage": 1.0,
+        "unknown_reason_tally": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 1,
+          "MISSING_COST:future:boundary": 1
+        }
+      },
+      "ram": {
+        "class_resolution": {
+          "exact": 15,
+          "pooled": 0,
+          "missing": 1
+        },
+        "n_checks": 2,
+        "n_errors": 0,
+        "n_answered": 1,
+        "answered_fraction": 0.5,
+        "median_abs_relative_error": 0.2669503100434815,
+        "p95_abs_relative_error": 0.2669503100434815,
+        "worst_abs_relative_error": 0.2669503100434815,
+        "coverage": 0.0,
+        "unknown_reason_tally": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 1,
+          "MISSING_COST:future:boundary": 1
+        }
+      }
+    },
+    "by_engine": {
+      "cooperative": {
+        "class_resolution": {
+          "exact": 30,
+          "pooled": 0,
+          "missing": 2
+        },
+        "n_checks": 4,
+        "n_errors": 0,
+        "n_answered": 2,
+        "answered_fraction": 0.5,
+        "median_abs_relative_error": 0.15463951714087917,
+        "p95_abs_relative_error": 0.2557192307532212,
+        "worst_abs_relative_error": 0.2669503100434815,
+        "coverage": 0.5,
+        "unknown_reason_tally": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 2,
+          "MISSING_COST:future:boundary": 2
+        }
+      }
+    },
+    "by_ranks": {
+      "1": {
+        "class_resolution": {
+          "exact": 30,
+          "pooled": 0,
+          "missing": 2
+        },
+        "n_checks": 4,
+        "n_errors": 0,
+        "n_answered": 2,
+        "answered_fraction": 0.5,
+        "median_abs_relative_error": 0.15463951714087917,
+        "p95_abs_relative_error": 0.2557192307532212,
+        "worst_abs_relative_error": 0.2669503100434815,
+        "coverage": 0.5,
+        "unknown_reason_tally": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 2,
+          "MISSING_COST:future:boundary": 2
+        }
+      }
+    },
+    "by_workload": {
+      "rx-ry-low": {
+        "class_resolution": {
+          "exact": 30,
+          "pooled": 0,
+          "missing": 2
+        },
+        "n_checks": 4,
+        "n_errors": 0,
+        "n_answered": 2,
+        "answered_fraction": 0.5,
+        "median_abs_relative_error": 0.15463951714087917,
+        "p95_abs_relative_error": 0.2557192307532212,
+        "worst_abs_relative_error": 0.2669503100434815,
+        "coverage": 0.5,
+        "unknown_reason_tally": {
+          "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 2,
+          "MISSING_COST:future:boundary": 2
+        }
+      }
+    }
+  },
+  "overall": {
+    "class_resolution": {
+      "exact": 30,
+      "pooled": 0,
+      "missing": 2
+    },
+    "n_checks": 4,
+    "n_errors": 0,
+    "n_answered": 2,
+    "answered_fraction": 0.5,
+    "median_abs_relative_error": 0.15463951714087917,
+    "p95_abs_relative_error": 0.2557192307532212,
+    "worst_abs_relative_error": 0.2669503100434815,
+    "coverage": 0.5,
+    "unknown_reason_tally": {
+      "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 2,
+      "MISSING_COST:future:boundary": 2
+    }
+  },
+  "by_policy": {
+    "S0": {
+      "class_resolution": {
+        "exact": 20,
+        "pooled": 0,
+        "missing": 2
+      },
+      "n_checks": 2,
+      "n_errors": 0,
+      "n_answered": 0,
+      "answered_fraction": 0.0,
+      "median_abs_relative_error": null,
+      "p95_abs_relative_error": null,
+      "worst_abs_relative_error": null,
+      "coverage": null,
+      "unknown_reason_tally": {
+        "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 2,
+        "MISSING_COST:future:boundary": 2
+      }
+    },
+    "S2": {
+      "class_resolution": {
+        "exact": 10,
+        "pooled": 0,
+        "missing": 0
+      },
+      "n_checks": 2,
+      "n_errors": 0,
+      "n_answered": 2,
+      "answered_fraction": 1.0,
+      "median_abs_relative_error": 0.15463951714087917,
+      "p95_abs_relative_error": 0.2557192307532212,
+      "worst_abs_relative_error": 0.2669503100434815,
+      "coverage": 0.5,
+      "unknown_reason_tally": {}
+    }
+  },
+  "by_store": {
+    "file": {
+      "class_resolution": {
+        "exact": 15,
+        "pooled": 0,
+        "missing": 1
+      },
+      "n_checks": 2,
+      "n_errors": 0,
+      "n_answered": 1,
+      "answered_fraction": 0.5,
+      "median_abs_relative_error": 0.04232872423827682,
+      "p95_abs_relative_error": 0.04232872423827682,
+      "worst_abs_relative_error": 0.04232872423827682,
+      "coverage": 1.0,
+      "unknown_reason_tally": {
+        "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 1,
+        "MISSING_COST:future:boundary": 1
+      }
+    },
+    "ram": {
+      "class_resolution": {
+        "exact": 15,
+        "pooled": 0,
+        "missing": 1
+      },
+      "n_checks": 2,
+      "n_errors": 0,
+      "n_answered": 1,
+      "answered_fraction": 0.5,
+      "median_abs_relative_error": 0.2669503100434815,
+      "p95_abs_relative_error": 0.2669503100434815,
+      "worst_abs_relative_error": 0.2669503100434815,
+      "coverage": 0.0,
+      "unknown_reason_tally": {
+        "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 1,
+        "MISSING_COST:future:boundary": 1
+      }
+    }
+  },
+  "by_engine": {
+    "cooperative": {
+      "class_resolution": {
+        "exact": 30,
+        "pooled": 0,
+        "missing": 2
+      },
+      "n_checks": 4,
+      "n_errors": 0,
+      "n_answered": 2,
+      "answered_fraction": 0.5,
+      "median_abs_relative_error": 0.15463951714087917,
+      "p95_abs_relative_error": 0.2557192307532212,
+      "worst_abs_relative_error": 0.2669503100434815,
+      "coverage": 0.5,
+      "unknown_reason_tally": {
+        "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 2,
+        "MISSING_COST:future:boundary": 2
+      }
+    }
+  },
+  "by_ranks": {
+    "1": {
+      "class_resolution": {
+        "exact": 30,
+        "pooled": 0,
+        "missing": 2
+      },
+      "n_checks": 4,
+      "n_errors": 0,
+      "n_answered": 2,
+      "answered_fraction": 0.5,
+      "median_abs_relative_error": 0.15463951714087917,
+      "p95_abs_relative_error": 0.2557192307532212,
+      "worst_abs_relative_error": 0.2669503100434815,
+      "coverage": 0.5,
+      "unknown_reason_tally": {
+        "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 2,
+        "MISSING_COST:future:boundary": 2
+      }
+    }
+  },
+  "by_workload": {
+    "rx-ry-low": {
+      "class_resolution": {
+        "exact": 30,
+        "pooled": 0,
+        "missing": 2
+      },
+      "n_checks": 4,
+      "n_errors": 0,
+      "n_answered": 2,
+      "answered_fraction": 0.5,
+      "median_abs_relative_error": 0.15463951714087917,
+      "p95_abs_relative_error": 0.2557192307532212,
+      "worst_abs_relative_error": 0.2669503100434815,
+      "coverage": 0.5,
+      "unknown_reason_tally": {
+        "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary": 2,
+        "MISSING_COST:future:boundary": 2
+      }
+    }
+  },
+  "monitor_overhead": {},
+  "mid_epoch_summary": null,
+  "mid_epoch_rows": [],
+  "rows": [
+    {
+      "status": "ok",
+      "error": null,
+      "workload": "rx-ry-low",
+      "n": 6,
+      "block_bits": 2,
+      "total_gates": 120,
+      "policy": "S0",
+      "store": "file",
+      "engine": "cooperative",
+      "backend": "buffered",
+      "frac": 0.6,
+      "k": 71,
+      "last": 119,
+      "trial": 0,
+      "ranks": 1,
+      "eta": null,
+      "lower": null,
+      "upper": null,
+      "actual": 1.6665692079113796,
+      "relative_error": null,
+      "covered": null,
+      "unknown_reasons": [
+        "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary",
+        "MISSING_COST:future:boundary"
+      ],
+      "future_complete": true,
+      "epochs": 30,
+      "class_diag": [
+        {
+          "classes": 11,
+          "exact": 10,
+          "pooled": 0,
+          "missing": 1,
+          "missing_detail": {
+            "future:boundary:LOW_HELD_OUT_COVERAGE": 1
+          },
+          "missing_classes": [
+            {
+              "task_id": "future:boundary",
+              "required_post_burn_in_samples": 8,
+              "burn_in_samples": 3,
+              "minimum_held_out_coverage": 0.8,
+              "exact": {
+                "reason": "LOW_HELD_OUT_COVERAGE",
+                "post_burn_in_window_samples": 15,
+                "held_out_samples": 8,
+                "held_out_coverage": 0.75
+              }
+            }
+          ],
+          "collector_dropped_conditions": 0,
+          "collector_dropped_bytes": 0
+        }
+      ]
+    },
+    {
+      "status": "ok",
+      "error": null,
+      "workload": "rx-ry-low",
+      "n": 6,
+      "block_bits": 2,
+      "total_gates": 120,
+      "policy": "S0",
+      "store": "ram",
+      "engine": "cooperative",
+      "backend": "buffered",
+      "frac": 0.6,
+      "k": 71,
+      "last": 119,
+      "trial": 0,
+      "ranks": 1,
+      "eta": null,
+      "lower": null,
+      "upper": null,
+      "actual": 0.6084969580406323,
+      "relative_error": null,
+      "covered": null,
+      "unknown_reasons": [
+        "COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary",
+        "MISSING_COST:future:boundary"
+      ],
+      "future_complete": true,
+      "epochs": 30,
+      "class_diag": [
+        {
+          "classes": 11,
+          "exact": 10,
+          "pooled": 0,
+          "missing": 1,
+          "missing_detail": {
+            "future:boundary:LOW_HELD_OUT_COVERAGE": 1
+          },
+          "missing_classes": [
+            {
+              "task_id": "future:boundary",
+              "required_post_burn_in_samples": 8,
+              "burn_in_samples": 3,
+              "minimum_held_out_coverage": 0.8,
+              "exact": {
+                "reason": "LOW_HELD_OUT_COVERAGE",
+                "post_burn_in_window_samples": 15,
+                "held_out_samples": 8,
+                "held_out_coverage": 0.75
+              }
+            }
+          ],
+          "collector_dropped_conditions": 0,
+          "collector_dropped_bytes": 0
+        }
+      ]
+    },
+    {
+      "status": "ok",
+      "error": null,
+      "workload": "rx-ry-low",
+      "n": 6,
+      "block_bits": 2,
+      "total_gates": 120,
+      "policy": "S2",
+      "store": "file",
+      "engine": "cooperative",
+      "backend": "buffered",
+      "frac": 0.6,
+      "k": 71,
+      "last": 119,
+      "trial": 0,
+      "ranks": 1,
+      "eta": 0.4030294921249151,
+      "lower": 0.3739560004323721,
+      "upper": 0.4320835070684552,
+      "actual": 0.4208432500017807,
+      "relative_error": -0.04232872423827682,
+      "covered": true,
+      "unknown_reasons": [],
+      "future_complete": true,
+      "epochs": 30,
+      "class_diag": [
+        {
+          "classes": 5,
+          "exact": 5,
+          "pooled": 0,
+          "missing": 0,
+          "missing_detail": {},
+          "missing_classes": [],
+          "collector_dropped_conditions": 0,
+          "collector_dropped_bytes": 0
+        }
+      ]
+    },
+    {
+      "status": "ok",
+      "error": null,
+      "workload": "rx-ry-low",
+      "n": 6,
+      "block_bits": 2,
+      "total_gates": 120,
+      "policy": "S2",
+      "store": "ram",
+      "engine": "cooperative",
+      "backend": "buffered",
+      "frac": 0.6,
+      "k": 71,
+      "last": 119,
+      "trial": 0,
+      "ranks": 1,
+      "eta": 0.17755498923361301,
+      "lower": 0.16583150485530496,
+      "upper": 0.20376349054276943,
+      "actual": 0.24221412499900907,
+      "relative_error": -0.2669503100434815,
+      "covered": false,
+      "unknown_reasons": [],
+      "future_complete": true,
+      "epochs": 30,
+      "class_diag": [
+        {
+          "classes": 5,
+          "exact": 5,
+          "pooled": 0,
+          "missing": 0,
+          "missing_detail": {},
+          "missing_classes": [],
+          "collector_dropped_conditions": 0,
+          "collector_dropped_bytes": 0
+        }
+      ]
+    }
+  ]
+}

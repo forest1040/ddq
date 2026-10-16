@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from svsim.runtime_cost import CostSample
+from svsim.runtime_cost import CostSample, CostTask, RuntimeCostModel
 from svsim.runtime_eta import CountedTask, InFlightWork, RuntimeETA
 
 
@@ -58,6 +58,37 @@ def test_dag_lower_bound_and_serial_expected_upper_match_oracle():
     assert report.eligible_for_control is False
     assert report.critical_chain_coverage.coverage == 1
     assert report.critical_chain_coverage.total_work == 6
+
+
+def test_counted_dag_matches_explicit_dag_oracle_for_dependencies_resources_and_counts():
+    # The counted node b represents two serial calls after a. c is an independent
+    # dependent call sharing the CPU resource with both b calls.
+    samples = {
+        "a": CostSample("a", 2, 1, 3),
+        "b": CostSample("b", 5, 2, 7),
+        "c": CostSample("c", 4, 3, 6),
+    }
+    counted = Snapshot(window=(
+        task("a", resource="cpu"),
+        task("b", count=2, deps=("a",), resource="cpu"),
+        task("c", deps=("a",), resource="cpu"),
+    ))
+    report = RuntimeETA().evaluate(counted, samples)
+
+    explicit = RuntimeCostModel()
+    for sample in samples.values():
+        explicit.record(sample)
+    oracle = explicit.estimate((
+        CostTask("a", "a", resource="cpu"),
+        CostTask("b0", "b", dependencies=("a",), resource="cpu"),
+        CostTask("b1", "b", dependencies=("b0",), resource="cpu"),
+        CostTask("c", "c", dependencies=("a",), resource="cpu"),
+    ))
+
+    assert (report.lower_seconds, report.expected_seconds, report.upper_seconds) == (
+        oracle.lower_seconds, oracle.expected_seconds, oracle.upper_seconds)
+    assert report.total_work_count == report.known_work_count == 4
+    assert report.coverage == oracle.coverage == 1
 
 
 def test_large_count_is_weighted_without_expansion():
