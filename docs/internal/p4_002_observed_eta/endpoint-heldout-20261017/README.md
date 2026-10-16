@@ -60,4 +60,4 @@ expectationのproduction prepare実時間medianは4／32／128 gateで0.507／0.
 - 今回の128 gate以下のshapeでは `ENDPOINT_IDENTITY_BUDGET` は発火していない。oversized sourceを受け入れた証拠ではなく、その拒否は別のbounded identity単体回帰の範囲である。
 - collectorのcost側`dropped_conditions/dropped_bytes/dropped_children/failures`は全caseで0。gradient内部の**bounded raw pending queue**では合計139,253 event行の`dropped_raw`が記録された。すべての内部event streamを無欠落で保存したという主張はしない。今回要求した校正・heldout・growthのendpoint576行とprepare378行はrunnerが別途直接保存し、全件の実completion／condition／数値を検査できた。各caseのcounterとfailed observationsもrawへ残す。
 
-baselineに比べてexpectationの回答点の誤差とcoverageは変わった一方、回答率は45/45から24/45、gradientは45/45から14/45へ下がった。回答された集合も変わるため、精度改善率を全caseへ外挿しない。checkpointの低coverageとprepareの短run認証を残件として扱い、P4-002全体のDONEにはしない。
+baselineに比べてexpectationの回答点の誤差とcoverageは変わった一方、回答率は45/45から24/45、gradientは45/45から14/45へ下がった。回答された集合も変わるため、精度改善率を全caseへ外挿しない。checkpointの低coverageとprepareの短run認証は品質上の既知限界・将来の改善候補として残す。元の個別taskはconditional intervalの報告を求め、回答率改善を受入条件に含めておらず、未来APIの95% coverageや80%回答率を新設しない。今回のendpoint実測だけでP4-002全体をDONEにはせず、Linux generic held-out／rank MAX短区間／overheadの完了と元6条件の照合を待つ。

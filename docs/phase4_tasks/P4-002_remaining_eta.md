@@ -1,10 +1,10 @@
 # P4-002：runtime残workからの自動ETA
 
-状態：IN_PROGRESS（2026-10-14）。依存：P4-001。共通契約は[全体設計](../phase4_remaining_design.md)。実行中に未完了gate、actual layout、request、metadata/commitを集計し、baseline/observed/adapted ETAを自動更新する。
+状態：IN_PROGRESS（2026-10-17、Linux最終測定待ち）。依存：P4-001。共通契約は[全体設計](../phase4_remaining_design.md)。元6受入条件と現source・証拠の対応は[受入表](../phase4_p4_002_acceptance_2026-10-17.md)。実行中に未完了gate、actual layout、request、metadata/commitを集計し、baseline/observed/adapted ETAを自動更新する。
 
 window／counted suffix／in-flight capture、private STAGED delta、strict-profile／diagnostic view、epoch／local completion更新を先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#残workとetap4-002)。先行実装時点はgates-onlyで、suffix executor／private residualがunknownだった。現在は下記endpointと実executor stage DAGへ接続済みで、現在sourceのLinux held-out／overhead受入は継続中。
 
-[残りepochの正確な実行形状と実測費用によるETA](../phase4_exact_future_eta_implementation.md)（2026-10-15）で、S0／S2の残りの実行形状を正確に数えてobserved viewで価格付けし、private epochの実行中の呼出しをresidualで扱い、held-out評価を行った。答えたcheckのmedianは目標内である。続いて、end-to-end endpoint（期待値／gradient／checkpoint）と、multi-rankのS1判断の再現を追加した。短いrunの未回答理由はruntime ETAへ反映するようにしたが、回答率の改善は未実証である。checkpoint payload v2は512件単位のchunk再利用を行い、更新conditionにpayload sizeとincrementを保持する。同サイズの小さなend-to-end checkpointは14 sampleからinterval回答したが、可変size checkpointのgrowthはsizeごとのheld-out評価が残る。
+[残りepochの正確な実行形状と実測費用によるETA](../phase4_exact_future_eta_implementation.md)（2026-10-15）で、S0／S2の残りの実行形状を正確に数えてobserved viewで価格付けし、private epochの実行中の呼出しをresidualで扱い、held-out評価を行った。答えたcheckのmedianは目標内である。続いて、end-to-end endpoint（期待値／gradient／checkpoint）と、multi-rankのS1判断の再現を追加した。短いrunの未回答理由はruntime ETAへ反映するようにしたが、回答率の改善は未実証である。checkpoint payload v2は512件単位のchunk再利用を行い、更新conditionにpayload sizeとincrementを保持する。同サイズの小さなend-to-end checkpointは14 sampleからinterval回答したが、可変size checkpointでは未校正shapeのunknownと、その直後の実commit/resumeを検証した（2026-10-17の追記参照）。
 
 ## 現状・変更箇所
 
@@ -36,7 +36,7 @@ requestの完了済みchunkは除外できる。未完了時間は単に`max(0, 
 
 ## 更新・制御
 
-`RemainingWorkExtractor.capture(sim)`、`RuntimeETA.evaluate(snapshot, cost_view)`、`RuntimeControl.update_eta()`を追加予定。更新はepoch境界＋一定時間のlocal progress通知を初期値とし、collective summaryは合意済み順序のみ。profile/policy変更、checkpoint、gradient method変更でsnapshotを無効化・再構築する。
+`RemainingWorkExtractor.capture(sim)`、`RuntimeETA.evaluate(snapshot, cost_view)`、`RuntimeControl.update_eta()`を実装済み。更新はepoch境界＋一定時間のlocal progress通知を初期値とし、collective summaryは合意済み順序のみ。profile/policy変更、checkpoint、gradient method変更でsnapshotを無効化・再構築する。
 
 suffix summaryが古ければstaleと表示して自動gainへ使わない。観測が新baselineの状態へ変わった場合は同snapshotで再評価する。baseline viewを新observedで上書きしない。抽出と再評価の時間はmonitor/planning費用へ含める。
 
@@ -65,3 +65,10 @@ suffix summaryが古ければstaleと表示して自動gainへ使わない。観
 | real runtime | [48-check held-out](../internal/p4_002_observed_eta/chronological-holdout-20261015/mac-48-checks.json)、[checkpoint growth/same-size smoke](../phase4_exact_future_eta_implementation.md#checkpoint-payload-v2と成長費用の再確認)、[short quick sample](../internal/p4_002_observed_eta/acceptance-20261016/mac-rx-ry-low-quick.json) | Mac 48 checksは30回答（62.5%）、回答分median absolute relative error 8.6%、p95 18.5%、worst 67.5%、interval coverage 83.3%。Mac quick 4件は2回答、両unknownはepoch-boundary LOW_HELD_OUT_COVERAGE。quickは回答率改善の比較証拠ではない。Linux／multi-rankの現行source snapshot held-outとoverhead campaignは進行中で、完了証拠を追記する。 |
 
 Mac quick sampleの条件は1 rank、buffered、cooperative、`rx-ry-low`、fraction 0.6、S0/S2×file/RAMの各1 trial。既存48-check評価とworkload集合・試行数が違うため前後差を主張しない。回答率改善は受入条件に含めず、未立証のまま扱う。
+
+
+## 実API endpointの最終Mac測定（2026-10-17）
+
+source `89e8ad2`では期待値／gradientのmaterialize前処理を各future callへ一回加え、gate/epochと重複させない。gradientのschedule/collective/trace費用もbodyへ含め、旧execute-only profileを別identityにした。大きいsource/specはhash/走査前に予算検査し、未証明ならENDPOINT_IDENTITY_BUDGETでunknownを維持、通常実行は継続する。[実装と境界](../phase4_exact_future_eta_implementation.md)。
+
+[実endpoint135地点](../internal/p4_002_observed_eta/endpoint-heldout-20261017/README.md)は27 caseで完走し、83回答／52unknown、API・数値失敗0。回答分の実API wall誤差medianはcheckpoint7.82%、期待値10.88%、gradient2.54%。p95/worst/絶対秒誤差、source増加後9件のunknown＋実commit/resume、checkpointの低い区間coverage24.4%と短run prepare未認証を全て保存した。詳細raw queueの上限到達と、要求endpoint/prepare行を別途全保持したことも区別する。回答率改善や全internal eventの無欠落を主張しない。最終Mac高速1363 pass／38 skip／83 deselect、最新Linux endpoint/実MPI19 pass。Linux4条件のheld-out/overheadは固定sourceで進行中のため、P4-002はIN_PROGRESSを維持する。
