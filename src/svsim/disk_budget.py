@@ -461,11 +461,7 @@ class DiskBudget:
                 raise DiskAdmissionError('A store-private ledger must register exactly its own store')
             table=con.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='private_policy'").fetchone()
             if table is None:
-                # Legacy/unpersisted ledger: only the FileBlockStore defaults can be honored.
-                if (self.quota_bytes,self.min_free_bytes,self.drain_reserve_bytes,self.bootstrap_bytes,
-                        self.max_records)!=(None,0,0,8*1024*1024,4096):
-                    raise DiskAdmissionError('Recovery cannot verify a non-default policy: this store-private ledger persisted none')
-                return
+                raise DiskAdmissionError('Recovery cannot verify store-private policy: persisted none; explicit migration is required')
             if _schema_text(table[0])!=_schema_text(_PRIVATE_POLICY_TABLE):
                 raise DiskAdmissionError('Recovery private policy schema changed')
             expected=(self.quota_bytes,self.min_free_bytes,self.drain_reserve_bytes,self.bootstrap_bytes,
@@ -546,6 +542,8 @@ class DiskBudget:
             return
         if not self.shared_policy:
             return
+        if self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='private_policy'").fetchone():
+            raise DiskAdmissionError('Cannot bind shared policy to a store-private ledger: policy mismatch')
         active = self.db.execute("SELECT 1 FROM reservations WHERE state IN ('RESERVED','WRITING') LIMIT 1").fetchone()
         if active is not None:
             raise DiskAdmissionError('Cannot bind shared policy while legacy reservations are active')
@@ -556,20 +554,21 @@ class DiskBudget:
     def _check_or_bind_private_policy(self, volume_device):
         """Persist the policy of a *newly created* store-private ledger and verify it on later opens.
 
-        An existing ledger without the table is not migrated: recovery keeps the documented weaker check
-        (defaults only) for it.
+        A missing legacy policy is never inferred from caller defaults. A saved
+        private binding cannot be bypassed by omitting persist_private_policy.
         """
-        if not self.persist_private_policy or self.shared_policy: return
         expected = (self.quota_bytes, self.min_free_bytes, self.drain_reserve_bytes, self.bootstrap_bytes,
                     self.max_page_count, self.max_records, int(volume_device), int(self._custom_accounting))
         has = self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='private_policy'").fetchone()
         if has:
             row = self.db.execute('''SELECT quota_bytes,min_free_bytes,drain_reserve_bytes,bootstrap_bytes,
                 max_page_count,max_records,volume_device,custom_accounting FROM private_policy WHERE singleton=1''').fetchone()
-            if row is not None and tuple(row) != expected:
+            if self.shared_policy or row is None or tuple(row) != expected:
                 raise DiskAdmissionError('Store-private ledger policy mismatch')
             return
-        if self._ledger_preexisting: return
+        if not self.persist_private_policy or self.shared_policy:return
+        if self._ledger_preexisting:
+            raise DiskAdmissionError('Store-private policy persisted none; explicit migration is required')
         self.db.execute(_PRIVATE_POLICY_TABLE)
         self.db.execute('''INSERT INTO private_policy(singleton,quota_bytes,min_free_bytes,
             drain_reserve_bytes,bootstrap_bytes,max_page_count,max_records,volume_device,

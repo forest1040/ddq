@@ -44,3 +44,9 @@
 inode再利用対策としてownerを`catalog-v3:<path/device/inode/birth identityのhash>`とした。Linuxはlibc `statx`からbirthtimeを読み、返却maskとdev/inoを照合する（Linux headerの固定256-byte ABIを確認）。macOSは`st_birthtime_ns`または`st_birthtime.hex()`。取得不能は未帰属tokenとなり回収拒否。DBの`birth_identity`を計画とreceiptにも保存する。試験はLinux ABI bufferのoffset/mask/identity不一致、birthtime取得不能の全token据置き、実fileへの追記後identity維持、再作成後の変化、同inodeでもbirth identityが変化した接続の拒否を含む。macOS float／filesystemの時刻分解能の限界と、非協調processによるbirthtime保存・偽装は上記設計の制約に残る。
 
 親directoryのaliasとDB自身のaliasを区別する回帰を追加した。`tests/test_checkpoint_recovery.py::test_checkpoint_writer_and_recovery_accept_root_external_symlink_parent_traversal`に加え、parent aliasからcatalogを再openしてcanonical ownerが一致し通常transactionが成功すること、DB自身のsymlinkは引き続き拒否することを検証する。
+
+## private policy欠落時の保守拒否（2026-10-16）
+
+従来の「private policyがなければdefaultsとして回収する」弱い経路を廃止した。`_private_layout`とrecovery-onlyの`DiskBudget`はtable／row欠損を拒否し、artifact／token／ledgerを変更しない。通常のprivate writer reopenも無言でbindingを作らず拒否する。保存済みbindingはgeneric callerが`persist_private_policy`を省いても検証し、shared policyへの無言の変更も拒否する。新規private ledgerには従来どおり最初からpolicyを保存する。既存policy欠落の移行は明示offline手順と過去policyの根拠を必要とし、本APIの受入範囲には入れない（推測による安全条件の緩和を廃止する変更である）。
+
+回帰はdefault／非defaultの両recovery open拒否、通常store reopenで非移行、row欠損、generic flag省略とshared flagでの迂回拒否、token／artifact不変を確認する。保存済みpolicyの非既定quota／min_freeによる回収と、通常のprivate numerical resumeは維持する。

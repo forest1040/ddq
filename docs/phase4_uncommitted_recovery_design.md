@@ -43,22 +43,19 @@ tokenはintentを持たないものだけを対象にする（intent付きは件
 
 ## store-private ledgerの回収
 
-`DiskBudget`を渡さないstore（`FileBlockStore`が自前で開く）は、`<store>/metadata/disk-ledger.sqlite3`をprivate ledgerとして使う。`shared_policy`表は作られるが行は束縛されず、policyは永続化されない（`FileBlockStore`は常に既定値で開く）。このため従来のrecovery-only openはpolicy照合ができず拒否していた。
+`DiskBudget`を渡さないstore（`FileBlockStore`が自前で開く）は、`<store>/metadata/disk-ledger.sqlite3`をprivate ledgerとして使う。新規ledgerの`private_policy`へquota／min_free／drain／bootstrap／page／record／volume／accounting modeを永続化し、通常openとrecovery-only openで一致を検証する。
 
-安全にできる根拠は次のとおりである。
-
-- ledgerの親directory（`<store>/metadata`）とstore directoryはどちらも既存のleaseで保護される。生きているwriterの`DiskBudget`が`metadata`の共有flockを、`FileBlockStore`がstoreの共有flockを保持する。同じ排他flock証明（PID・時刻は不使用）がそのまま成立する。
-- レイアウトを厳密に判定する。ledger名が`disk-ledger.sqlite3`、親が`metadata`、親の親に`metadata/catalog.sqlite3`があり、`shared_policy`表が空で、登録rootが祖先を含まずちょうどそのstore 1件であること。束縛済みpolicyを持つledgerは従来どおり共有policy経路で検査する（置き場所には依存しない）。判定に合わない未束縛のlegacy ledgerは拒否する。
-- recovery-only openは`store_private=True`の別modeとして追加した。`recovery_only`必須、`shared_policy`と併用不可、quota／min_free／drain／bootstrap／page／record上限の非既定値を拒否する。既存のschema全文・trigger・DELETE journal・page envelope・native VFS検査、side file（`-journal`／`-wal`／`-shm`）が非空なら拒否する検査、existing-only open、migration／作成／root登録なしの性質は共有policy modeと同一である。追加で、policy行が存在しないことと、rootがstoreの1件であることを毎transactionで再検査する。
-- 永続policyがないため、論理quotaを回収から除外する意味はない（常に未設定）。min_freeは0として扱う。物理headroom、未割当pool、page／journal capの検査は維持する。非既定policyで作られたprivate ledgerがあっても、policyは確認できず、page envelopeを超える場合に拒否されるだけである。これは共有policy modeより弱い照合であり、制約として明記する。
-- dry run→`plan_sha256`付きapply、ledger内CAS＋receipt（同一transaction）、全か無かの拒否規則、artifactを削除しない原則は変更しない。ledger file自体は観測使用量の走査から除外される（既存の扱い）ため、applyによるledgerの成長は使用量の一致判定に影響しない。
-- temporary GCとdead branch GCも同じscopeを使う。dead branchは、leaseを引き継ぐadmitting budget（quota未設定の既定値）でcatalogを編集する。
+- ledger親directoryとstoreのexclusive leaseでowner停止を証明する。PIDや時刻で解放しない。
+- ledger名と厳密layout、rootがstore 1個、shared policy行なし、schema／trigger／DELETE journal／page envelope／native VFS／物理headroomを検証する。catalog未作成の場合は[新規startup intent](phase4_catalog_startup_recovery_implementation.md)で存在条件だけを補完する。
+- 2026-10-16以降、private policyのtable／rowがない旧ledgerは既定値でも拒否する。historical quotaやdrain余裕をcaller defaultsから推測しない。通常の`FileBlockStore` reopenも無言でpolicyをbindせず拒否し、generic `DiskBudget`がflagを省いて保存済みprivate bindingを迂回することも拒否する。移行するには独立した明示offline migrationで過去policyの根拠を確定する必要があり、本回収APIは移行しない。
+- 保存policyがあれば非既定値も検証して回収する。`recovery_only=True, store_private=True`は新規admission／migration／root登録を行わず、logical quota／pending／drain超過時にも事前課金pool内のCASとreceiptだけを許す。min_free、未割当pool、page／journal capと実I/O失敗は維持する。
+- dry run→plan digest付きapply、exact CAS＋receipt、artifactを削除せず存在byteを課金する原則は共有policyと同じである。GCも同じscopeと保存policyを利用する。
 
 SQLiteが非空のsideファイルを読む前に拒否するため、`_persisted`のread-only openより前にside fileを検査する（共有policy modeにも適用）。`wal`が残る場合にread-only openが`-shm`を作る副作用を避けるためである。
 
 ## catalog予約のfile単位帰属（追加）
 
-catalog leaseのownerはDBのcanonical path、device、inode、birth identityを固定する。別catalogのDBへ交換した場合、同じ内容のDBで置換した場合、別volumeやsymlink／hardlinkへ変更した場合は一致しない。writerはDB自身のsymlinkを拒否し、親directoryの表記はresolveしてcanonical pathへ正規化する（root外のparent symlinkと`..`を含む既存APIを維持する）。writerはopen中のDB identityを記憶し、各transaction開始時に確認してから予約する。lease再利用にもowner一致を要求する。新規DB作成前のstartup予約は`catalog-unbound-v3:<identity hash>`であり、最初の正常なmutationではidentity付きtokenへ切り替える。作成途中で停止した未帰属startup tokenは推測で回収しない。
+catalog leaseのownerはDBのcanonical path、device、inode、birth identityを固定する。別catalogのDBへ交換した場合、同じ内容のDBで置換した場合、別volumeやsymlink／hardlinkへ変更した場合は一致しない。writerはDB自身のsymlinkを拒否し、親directoryの表記はresolveしてcanonical pathへ正規化する（root外のparent symlinkと`..`を含む既存APIを維持する）。writerはopen中のDB identityを記憶し、各transaction開始時に確認してから予約する。lease再利用にもowner一致を要求する。新規DB作成は[durable startup intentとinode CAS](phase4_catalog_startup_recovery_implementation.md)で扱い、open成功時に通常のidentity付きtokenへ原子的に移す。以前の未帰属startup tokenは推測で回収しない。
 
 rollback journalはDBの固定suffix `-journal`（WAL／SHMも検査対象）のpathへ帰属する。journalのinodeはSQLiteが作成・削除するため、token作成時のinodeをDBと同様に固定することはしない。offline検査は各side pathの存在、device／inode／byteを計画に記録し、非空side fileは常に拒否する。admitted reopenでjournalを消費してから再検査する。DBと全side fileのpath／identity／byteはtokenの`catalog_attribution`とreceiptにも保存する。applyではレビュー済み計画の再計算に加え、tokenを変更する前に全catalog namespaceを再確認する。共有ledgerに複数catalogがある場合もtokenごとに独立した帰属を報告する。schemaの変更や旧tokenの自動移行は行わない。
 

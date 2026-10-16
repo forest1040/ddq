@@ -47,16 +47,12 @@ def _digest(document):
     return sha256(canonical(document).encode()).hexdigest()
 
 
-_PRIVATE_DEFAULTS = {'quota_bytes': None, 'min_free_bytes': 0, 'drain_reserve_bytes': 0,
-                     'bootstrap_bytes': 8 * 1024 ** 2, 'max_records': 4096}
-
-
 def _private_layout(ledger, roots, persisted=None, startup=False):
     """Store-private ledger: ``<store>/metadata/disk-ledger.sqlite3`` with no bound shared policy and one root.
 
     A ledger created with ``persist_private_policy`` carries a ``private_policy`` row and recovery verifies and
-    uses it. An older ledger persisted none (FileBlockStore always opened it with defaults), so recovery accepts
-    only the exact layout and the default envelope; anything else is an unbound legacy ledger and is refused.
+    uses it. An older ledger without a saved policy is refused, even when the
+    caller supplies defaults: its historical policy cannot be inferred.
     """
     store = ledger.parent.parent
     if (ledger.name != 'disk-ledger.sqlite3' or ledger.parent.name != 'metadata' or ledger.parent.is_symlink()
@@ -64,7 +60,9 @@ def _private_layout(ledger, roots, persisted=None, startup=False):
         raise DiskAdmissionError('Recovery requires a bound shared-policy ledger or a store-private ledger')
     if [Path(p) for p in roots] != [store]:
         raise DiskAdmissionError('A store-private ledger must register exactly its own store')
-    return dict(persisted or _PRIVATE_DEFAULTS, private=True), roots
+    if persisted is None:
+        raise DiskAdmissionError('Store-private policy persisted none; explicit migration is required')
+    return dict(persisted, private=True), roots
 
 
 def _persisted(ledger):

@@ -333,7 +333,7 @@ def test_tampered_private_policy_is_refused_and_changes_nothing(tmp_path, tamper
     assert _sha(ledger) == before
 
 
-def test_ledger_without_a_private_policy_row_keeps_the_weaker_default_check(tmp_path):
+def test_ledger_without_a_private_policy_is_refused_without_guessing_defaults(tmp_path):
     root, ledger, _ = _kill(tmp_path, 'quiet')
     con = sqlite3.connect(ledger)
     try:
@@ -341,12 +341,17 @@ def test_ledger_without_a_private_policy_row_keeps_the_weaker_default_check(tmp_
     finally: con.close()
     with pytest.raises(DiskAdmissionError, match='persisted none'):
         DiskBudget(ledger, [root], recovery_only=True, store_private=True, quota_bytes=1 << 30)
-    report = recover_uncommitted_reservations(ledger)
-    assert report['status'] == 'dry-run' and not report['refusals']
-    # an existing ledger is never migrated by an ordinary reopen
+    before=_sha(ledger),_artifacts(root),_live(ledger)
+    with pytest.raises(DiskAdmissionError,match='persisted none'):
+        recover_uncommitted_reservations(ledger)
+    assert (_sha(ledger),_artifacts(root),_live(ledger))==before
+    with pytest.raises(DiskAdmissionError,match='persisted none'):
+        DiskBudget(ledger,[root],recovery_only=True,store_private=True)
+    assert (_sha(ledger),_artifacts(root),_live(ledger))==before
+    # Ordinary opens cannot silently bind a historical policy, either.
     from svsim.storage import FileBlockStore
-    store = FileBlockStore(_cfg(root), 8, create=False)
-    store.close()
+    with pytest.raises(DiskAdmissionError,match='persisted none'):
+        FileBlockStore(_cfg(root),8,create=False)
     con = sqlite3.connect(ledger)
     try: assert con.execute("SELECT count(*) FROM sqlite_master WHERE name='private_policy'").fetchone()[0] == 0
     finally: con.close()
@@ -358,3 +363,27 @@ def test_reopening_a_custom_private_ledger_with_defaults_is_refused(tmp_path):
     recover_uncommitted_reservations(ledger)  # recovery itself is fine; only a differing writer policy is refused
     with pytest.raises(DiskAdmissionError, match='(?i)policy mismatch'):
         FileBlockStore(StorageConfig(str(root), 2, backend=BACKEND), 4, create=False)
+
+
+def test_saved_private_policy_cannot_be_bypassed_by_a_generic_open(tmp_path):
+    root,ledger=_custom_private_store(tmp_path)
+    before=_sha(ledger),_live(ledger)
+    with pytest.raises(DiskAdmissionError,match='policy mismatch'):
+        DiskBudget(ledger,[root],quota_bytes=1<<31,min_free_bytes=1<<20)
+    assert (_sha(ledger),_live(ledger))==before
+    with pytest.raises(DiskAdmissionError,match='policy mismatch'):
+        DiskBudget(ledger,[root],quota_bytes=1<<30,min_free_bytes=1<<20,shared_policy=True)
+    assert _live(ledger)==before[1]
+
+
+def test_empty_private_policy_row_is_not_rebound_by_default_open(tmp_path):
+    root,ledger,_=_kill(tmp_path,'quiet')
+    con=sqlite3.connect(ledger)
+    con.execute('DELETE FROM private_policy');con.commit();con.close()
+    before=_sha(ledger),_artifacts(root),_live(ledger)
+    with pytest.raises(DiskAdmissionError,match='persisted none'):
+        recover_uncommitted_reservations(ledger)
+    assert (_sha(ledger),_artifacts(root),_live(ledger))==before
+    with pytest.raises(DiskAdmissionError,match='policy mismatch'):
+        DiskBudget(ledger,[root],persist_private_policy=True)
+    assert _live(ledger)==before[2]
