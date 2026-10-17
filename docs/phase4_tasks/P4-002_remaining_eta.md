@@ -1,8 +1,8 @@
 # P4-002：runtime残workからの自動ETA
 
-状態：IN_PROGRESS（2026-10-17、Linux最終測定待ち）。依存：P4-001。共通契約は[全体設計](../phase4_remaining_design.md)。元6受入条件と現source・証拠の対応は[受入表](../phase4_p4_002_acceptance_2026-10-17.md)。実行中に未完了gate、actual layout、request、metadata/commitを集計し、baseline/observed/adapted ETAを自動更新する。
+状態：**DONE（2026-10-17）**。依存：P4-001。共通契約は[全体設計](../phase4_remaining_design.md)。元6受入条件と現source・証拠の対応は[受入表](../phase4_p4_002_acceptance_2026-10-17.md)。実行中に未完了gate、actual layout、request、metadata/commitを集計し、baseline/observed/adapted ETAを自動更新する。
 
-window／counted suffix／in-flight capture、private STAGED delta、strict-profile／diagnostic view、epoch／local completion更新を先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#残workとetap4-002)。先行実装時点はgates-onlyで、suffix executor／private residualがunknownだった。現在は下記endpointと実executor stage DAGへ接続済みで、現在sourceのLinux held-out／overhead受入は継続中。
+window／counted suffix／in-flight capture、private STAGED delta、strict-profile／diagnostic view、epoch／local completion更新を先行実装した。[実装範囲と検証](../phase4_remaining_implementation.md#残workとetap4-002)。先行実装時点はgates-onlyで、suffix executor／private residualがunknownだった。現在は下記endpointと実executor stage DAGへ接続済みで、現在sourceのLinux held-out／overheadを含む元6条件の受入は完了した（末尾の最終結果参照）。
 
 [残りepochの正確な実行形状と実測費用によるETA](../phase4_exact_future_eta_implementation.md)（2026-10-15）で、S0／S2の残りの実行形状を正確に数えてobserved viewで価格付けし、private epochの実行中の呼出しをresidualで扱い、held-out評価を行った。答えたcheckのmedianは目標内である。続いて、end-to-end endpoint（期待値／gradient／checkpoint）と、multi-rankのS1判断の再現を追加した。短いrunの未回答理由はruntime ETAへ反映するようにしたが、回答率の改善は未実証である。checkpoint payload v2は512件単位のchunk再利用を行い、更新conditionにpayload sizeとincrementを保持する。同サイズの小さなend-to-end checkpointは14 sampleからinterval回答したが、可変size checkpointでは未校正shapeのunknownと、その直後の実commit/resumeを検証した（2026-10-17の追記参照）。
 
@@ -62,7 +62,7 @@ suffix summaryが古ければstaleと表示して自動gainへ使わない。観
 | in-flight/retry | [`test_private_staged_delta_keeps_published_cut_and_marks_unknown`](../../tests/test_remaining_work.py)、[`test_call_residual_prices_the_remainder_of_a_certified_class`](../../tests/test_remaining_work.py)、[`test_duplicate_or_excessive_inflight_requests_are_rejected`](../../tests/test_runtime_eta.py)、[`test_duplicate_unknown_hole_and_failure_never_publish`](../../tests/test_execution_tasks.py) | private/STAGED重複除去、校正済みresidualと超過unknown、重複request拒否、失敗epochの未公開化を検証。 |
 | unknown/stale/budget | [`test_remaining_work.py`](../../tests/test_remaining_work.py)、[`test_partial_snapshots_never_publish_total_eta`](../../tests/test_runtime_eta.py)、[`test_unknown_suffix_and_huge_count_never_claim_unjustified_eta`](../../tests/test_remaining_work.py) | scan不足、stale、profile version違い、byte予算超過、構造unknownでtotal ETAがnullとなり、reasonとpartial coverageを保持する。 |
 | 大きいcount | [`test_huge_count_with_finite_weighted_cost_remains_compact`](../../tests/test_remaining_work.py)、[`test_huge_block_count_uses_algebra_and_remote_payload_stays_unknown`](../../tests/test_executor_stages.py)、[`test_capture_bounds_window_scan_groups_and_metadata`](../../tests/test_remaining_work.py) | huge countは加重算術、block数は代数式、captureは有限group／byte budgetを使う。全occurrence／peer列挙や64 MiB到達の単一専用試験ではなく、既定のより小さい上限でoverflow・打切りを検証する。 |
-| real runtime | [48-check held-out](../internal/p4_002_observed_eta/chronological-holdout-20261015/mac-48-checks.json)、[checkpoint growth/same-size smoke](../phase4_exact_future_eta_implementation.md#checkpoint-payload-v2と成長費用の再確認)、[short quick sample](../internal/p4_002_observed_eta/acceptance-20261016/mac-rx-ry-low-quick.json) | Mac 48 checksは30回答（62.5%）、回答分median absolute relative error 8.6%、p95 18.5%、worst 67.5%、interval coverage 83.3%。Mac quick 4件は2回答、両unknownはepoch-boundary LOW_HELD_OUT_COVERAGE。quickは回答率改善の比較証拠ではない。Linux／multi-rankの現行source snapshot held-outとoverhead campaignは進行中で、完了証拠を追記する。 |
+| real runtime | [48-check held-out](../internal/p4_002_observed_eta/chronological-holdout-20261015/mac-48-checks.json)、[checkpoint growth/same-size smoke](../phase4_exact_future_eta_implementation.md#checkpoint-payload-v2と成長費用の再確認)、[short quick sample](../internal/p4_002_observed_eta/acceptance-20261016/mac-rx-ry-low-quick.json) | Mac 48 checksは30回答（62.5%）、回答分median absolute relative error 8.6%、p95 18.5%、worst 67.5%、interval coverage 83.3%。Mac quick 4件は2回答、両unknownはepoch-boundary LOW_HELD_OUT_COVERAGE。quickは回答率改善の比較証拠ではない。[最終Linux測定](../internal/phase4_wave3_validation/linux-performance-v3/README.md)で現sourceの216点・全overhead8群を照合済み。旧48-check評価は履歴として保持する。 |
 
 Mac quick sampleの条件は1 rank、buffered、cooperative、`rx-ry-low`、fraction 0.6、S0/S2×file/RAMの各1 trial。既存48-check評価とworkload集合・試行数が違うため前後差を主張しない。回答率改善は受入条件に含めず、未立証のまま扱う。
 
@@ -71,4 +71,13 @@ Mac quick sampleの条件は1 rank、buffered、cooperative、`rx-ry-low`、frac
 
 source `89e8ad2`では期待値／gradientのmaterialize前処理を各future callへ一回加え、gate/epochと重複させない。gradientのschedule/collective/trace費用もbodyへ含め、旧execute-only profileを別identityにした。大きいsource/specはhash/走査前に予算検査し、未証明ならENDPOINT_IDENTITY_BUDGETでunknownを維持、通常実行は継続する。[実装と境界](../phase4_exact_future_eta_implementation.md)。
 
-[実endpoint135地点](../internal/p4_002_observed_eta/endpoint-heldout-20261017/README.md)は27 caseで完走し、83回答／52unknown、API・数値失敗0。回答分の実API wall誤差medianはcheckpoint7.82%、期待値10.88%、gradient2.54%。p95/worst/絶対秒誤差、source増加後9件のunknown＋実commit/resume、checkpointの低い区間coverage24.4%と短run prepare未認証を全て保存した。詳細raw queueの上限到達と、要求endpoint/prepare行を別途全保持したことも区別する。回答率改善や全internal eventの無欠落を主張しない。最終Mac高速1363 pass／38 skip／83 deselect、最新Linux endpoint/実MPI19 pass。Linux4条件のheld-out/overheadは固定sourceで進行中のため、P4-002はIN_PROGRESSを維持する。
+[実endpoint135地点](../internal/p4_002_observed_eta/endpoint-heldout-20261017/README.md)は27 caseで完走し、83回答／52unknown、API・数値失敗0。回答分の実API wall誤差medianはcheckpoint7.82%、期待値10.88%、gradient2.54%。p95/worst/絶対秒誤差、source増加後9件のunknown＋実commit/resume、checkpointの低い区間coverage24.4%と短run prepare未認証を全て保存した。詳細raw queueの上限到達と、要求endpoint/prepare行を別途全保持したことも区別する。回答率改善や全internal eventの無欠落を主張しない。最終Mac高速1363 pass／38 skip／83 deselect、最新Linux endpoint/実MPI19 pass。Linux4条件のheld-out/overheadも固定sourceで完了し、以下の元6条件の最終照合へ接続した。
+
+
+## 完了判定（2026-10-17）
+
+元の受入表6条件を変更せず、source `89e8ad2`の実装、小DAG／実dispatch route／in-flight residual／unknown-stale-budget／巨大countの機能oracle、最終Mac高速1363 passとLinux endpoint/実MPI19 pass、[Linux最終測定全8case](../internal/phase4_wave3_validation/linux-performance-v3/README.md)を照合し、P4-002をDONEとした。[受入対応表](../phase4_p4_002_acceptance_2026-10-17.md)に各条件の証拠と限界を記録する。
+
+Linux held-outはbuffered/direct×P1/P2の各54点、計216点で78回答／138unknown／error0。回答分相対誤差medianは同順で5.76%／2.92%／4.13%／3.50%、全workload別medianも初期30%目標内。p95/worstの大きな誤差（direct P1 worst239.82%）、絶対秒誤差、rank MAX／短区間、区間とunknown理由を残した。全8overhead群でwarmup2組＋measured7組とcleanupが完了し、buffered P1 mixed／direct P2 rx-ry-lowはeta-on-slower、残6群はinconclusiveだった。低overheadや高速化の実証へ読み替えない。
+
+回答率改善、全条件での未来API区間保証、全workload matrix、raw内部event無欠落を新たに主張しない。元条件のmedian30%初期目標・tail/費用/未達保持を維持し、unknownを落として成功だけを選ばない。endpoint規模超過時のunknown／通常実行継続、gradient旧profile無効、baseline/observed/adapted分離とcontrol-ineligibleも変えない。P4-004等はIN_PROGRESSのためM2・Phase 4全体は未完了である。
