@@ -4,6 +4,8 @@
 
 2026-10-17、P4-009をDONEとした。[元009A〜Dの完了証拠](phase4_p4_009_acceptance_2026-10-16.md)はMac固定core `9eb426f`の高速1317 pass、Linux最終追加367 pass／13非適用skip、実2host/4rankのPBS265180全8case。P4-001もDONEのため**M1は達成**。P4-002も同日に元6受入条件への照合を完了しDONEとした。P4-004が未完了のためM2は未達、Phase 4全体はIN_PROGRESSを維持する。以下の日付付き進捗は当時の履歴であり、P4-002／009の過去の未実装記述を現在の残件として読まない。
 
+2026-10-17、P4-006のP>1 fragment通信を追加した（[実装](phase4_remaining_implementation.md#aligned-tile転置p4-006)）。Mac実P=2/4のtyped MPIでsource fragmentをrank間へ交換し、identity Frame／empty log／scalar phaseの範囲でrank bit、mixed、2組のpairとinverse、full-block不可能なbounded caseを検証した。一般Frame、durable fault、性能・勾配比較は残る。
+
 P4-002の[受入対応表](phase4_p4_002_acceptance_2026-10-17.md)、[実endpoint 135地点＋growth 9件](internal/p4_002_observed_eta/endpoint-heldout-20261017/README.md)、[Linux最終held-out／overhead](internal/phase4_wave3_validation/linux-performance-v3/README.md)に最終証拠を保存した。固定source `89e8ad2`のLinux buffered/direct×P=1/2は全8 case完走。held-outは216地点（54×4）、78回答／138unknown、error 0。回答分の相対誤差medianはbuffered P1/P2、direct P1/P2の順に5.76／2.92／4.13／3.50%で、回答のある全workloadの中央値も初期目標30%以内だった。direct P1のworst相対誤差239.82%など大きいtailは保存し、各予測が30%以内とは主張しない。
 
 overheadは8群すべてwarmup 2組＋measured 7 paired組を完了し、buffered P1 mixedとdirect P2 `rx-ry-low`は`eta-on-slower`、残り6群は`inconclusive`。監視が無料・高速化したとは判定しない。checkpointの低い区間coverage、短runのprepare認証不足とunknownは報告済みの品質上の限界として保持する。元6受入条件へ新しいcoverage／回答率の合格閾値を追加しない。
@@ -138,7 +140,7 @@ manifest／raw測定hash／rank MAX／resource検証、全metricのpaired統計�
 
 ### P4-006：作業予算内のaligned tile転置
 
-P=1／local FileBlockStore／identity Frame＋empty logのaligned tile routeを実装した。source page＋destination tileだけで実行し、full-block不可能なcaseも検証した。P>1、一般Frame、durable切替fault、勾配と性能比較は残る。
+P=1／local FileBlockStore／identity Frame＋empty logのaligned tile routeを実装した。source page＋destination tileだけで実行し、full-block不可能なcaseも検証した。**2026-10-17にP>1のfragment通信を追加**し、Mac実P=2/4のtyped MPIでsource fragmentをrank間交換する（[実装](phase4_remaining_implementation.md#aligned-tile転置p4-006)）。rank bit、mixed、2組のpairとinverse、bounded caseを検証した。一般Frame、durable切替fault、勾配と性能比較は残る。
 
 - full output blockが予算に収まらない場合にaligned destination tileへ転置する経路を実装する。
 - overlapping pairの順序、bit階層、O_DIRECT alignment、Frame解消、COW容量、各output範囲の一意な書込みを保証する。

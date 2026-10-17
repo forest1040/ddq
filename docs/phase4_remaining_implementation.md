@@ -1,6 +1,6 @@
 # Phase 4 残件：ETA・候補探索・tile・cacheの先行実装
 
-更新日：2026-10-14。P4-002に続き、追加の3タスクP4-004／006／007を進めた。Codexが統合、Lunaがcounted ETA、cache identity／費用、tile routeと各oracleを担当した。4項目は **IN_PROGRESS**。設計の全受入条件、Phase 4全体の完了を宣言するものではない。今回はMac内で検証し、クラスタへの接続・PBS job投入は行っていない。
+更新日：2026-10-14（P4-006のP>1 fragment通信は2026-10-17に追加、下記）。P4-002に続き、追加の3タスクP4-004／006／007を進めた。Codexが統合、Lunaがcounted ETA、cache identity／費用、tile routeと各oracleを担当した。4項目は **IN_PROGRESS**。設計の全受入条件、Phase 4全体の完了を宣言するものではない。今回はMac内で検証し、クラスタへの接続・PBS job投入は行っていない。
 
 ## 残workとETA：P4-002
 
@@ -38,15 +38,15 @@ endpointは **gates-only**。observable／gradient、durable checkpoint、cleanu
 
 [tile_transpose.py](../src/svsim/tile_transpose.py)、[tile_resolver.py](../src/svsim/tile_resolver.py)、[tile_extent_writer.py](../src/svsim/tile_extent_writer.py)を追加。公開APIは`AsyncDistributedSimulator.tile_index_bit_swap(pairs, tile_bytes=4096)`。StoredSimulatorにも同じhelperを適用できる。
 
-初期対応は **P=1、FileBlockStore、local owner、identity Frame、empty log、解消済みscalar phase**。最大2組のordered physical swapを逆順pairのsource mappingで実行する。P>1、remote owner、非identity Frame、deferred log、RAM storeは出力root／extent作成前に理由付きで拒否する。自動full-block fallbackは行わない。
+初期対応は **P=1、FileBlockStore、local owner、identity Frame、empty log、解消済みscalar phase**。最大2組のordered physical swapを逆順pairのsource mappingで実行する。**2026-10-17にP>1のfragment通信を追加**した。P>1では`_execute_tile_swap_distributed`が、destination blockごとにsource fragmentを`_tile_groups`で求め、source rankが`_read_source_range`で読んでtyped MPIでownerへ送り、ownerがdestination tileへ配置して書く。rank bit、mixed、2組のpairとinverseをMac実P=2/4で検証した。remote owner、非identity Frame、deferred log、RAM storeは出力root／extent作成前に理由付きで拒否する。自動full-block fallbackは行わない。
 
-sourceのmetadataとchecksumをlazyな二回の走査でpreflightする。managed BufferLeaseはaligned source page一枚とdestination tile一枚。全Block／fragment／amplitude mapping表を保持しない。source pageを再利用し、destinationからsourceを求めてscalar phaseを反映する。full blockが作業RAMに入らないcaseでもこの経路は実行できる。
+sourceのmetadataとchecksumをlazyな二回の走査でpreflightする（P>1では`_preflight_distributed`が各rankのlocal blockを検査し、collectiveでvoteする）。managed BufferLeaseはP=1ではaligned source page一枚とdestination tile一枚、P>1ではsource fragment一枚（tile size）とdestination tile一枚。全Block／fragment／amplitude mapping表を保持しない。source pageを再利用し、destinationからsourceを求めてscalar phaseを反映する。full blockが作業RAMに入らないcaseでもこの経路は実行できる。
 
 writerはfull physical slotをallocator SQL前に予約する。逐次offsetと整数coverage cursorで穴／重複／順序逆転を拒否し、short I/Oを失敗とする。paddingはzero、checksumはlogical byte順のbounded再readで作り、paddingを含めない。全slot完成後にprivate root／layout／placement／inverse historyを公開する。失敗時は旧root／layout／historyを保持し、partial出力を公開しない。
 
 checksum preflightと出力checksum再readは追加I/Oであり、転置一回だけの帯域費用として見積もらない。reservationのmaterializeはslot seal時で、途中write中は保守的な予約課金が続く。今回の公開はruntime cutであり、durable replan用decision protocolの完了ではない。scalar実装の性能改善も未評価。
 
-残る範囲：Mac実P=2/4 fragment通信、別owner／Linux O_DIRECT、一般Frame resolver、SQL／fsync／decision／ack fault、tile後の勾配、sequential／fused／tileの実費用比較と候補採用。
+残る範囲：別owner／Linux O_DIRECT、一般Frame resolver、SQL／fsync／decision／ack fault、tile後の勾配、sequential／fused／tileの実費用比較と候補採用。
 
 ## cache identityと費用fallback：P4-007
 

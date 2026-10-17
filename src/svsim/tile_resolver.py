@@ -37,9 +37,9 @@ def certify(sim, pairs, tile_bytes):
         raise ValueError('tile_bytes must be a positive multiple of storage alignment')
     if sim.store.__class__.__name__ != 'FileBlockStore':
         raise ValueError('UNSUPPORTED_TILE_STORE: only FileBlockStore is supported')
-    if getattr(sim, 'ownership', None) is not None and sim.size != 1:
-        raise ValueError('UNSUPPORTED_TILE_DISTRIBUTED: P>1 tile routing is not implemented')
-    return TileRouteCertificate(pairs, sim.num_qubits, sim.block_bits, tile_bytes, align)
+    rank_count = getattr(sim, 'size', 1)
+    return TileRouteCertificate(pairs, sim.num_qubits, sim.block_bits, tile_bytes, align,
+                                rank_count=rank_count)
 
 
 def require_identity_view(view, sim=None):

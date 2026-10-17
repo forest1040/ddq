@@ -1,12 +1,31 @@
+import importlib.util
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
 import numpy as np
 import pytest
 from dataclasses import replace
-import sys
 
 from svsim.storage import StorageConfig
 from svsim.stored_runtime import StoredSimulator
 from svsim.tile_transpose import execute_tile_swap
 from svsim.cache import BufferLease
+
+_mpi_available = bool(shutil.which('mpiexec')) and importlib.util.find_spec('mpi4py') is not None
+_mpi_test_timeout = int(os.environ.get('DDQ_MPI_TEST_TIMEOUT', '180'))
+if not 1 <= _mpi_test_timeout <= 1800:
+    raise ValueError('DDQ_MPI_TEST_TIMEOUT must be in 1..1800 seconds')
+
+
+def _run_mpi_tile_worker(tmp_path, ranks, mode):
+    env = dict(os.environ, PYTHONPATH='src')
+    env.setdefault('OMPI_ALLOW_RUN_AS_ROOT', '1')
+    env.setdefault('OMPI_ALLOW_RUN_AS_ROOT_CONFIRM', '1')
+    subprocess.run([shutil.which('mpiexec'), '-n', str(ranks), sys.executable,
+                    str(Path(__file__).with_name('mpi_tile_transpose_worker.py')), str(tmp_path), mode],
+                   check=True, env=env, timeout=_mpi_test_timeout)
 
 
 def cfg(path, block_bits=3, ram=1 << 20, backend='buffered', alignment=64):
@@ -122,27 +141,21 @@ def test_async_distributed_p1_tile_route_state_expectation_and_inverse(tmp_path)
         np.testing.assert_allclose(sim.state(allow_gather=True), initial, atol=1e-12, rtol=1e-12)
 
 
-def test_async_public_tile_route_rejects_p_gt_1_before_output(tmp_path):
-    MPI = pytest.importorskip('mpi4py.MPI')
-    from svsim.async_scheduler import AsyncDistributedSimulator, AsyncPolicy
-    from svsim.distributed import DistributedConfig
+@pytest.mark.skipif(not _mpi_available, reason='Local MPI runtime unavailable')
+@pytest.mark.slow
+@pytest.mark.parametrize('ranks,pairs', [
+    (2, [(3, 2)]), (2, [(3, 0)]), (2, [(3, 2), (2, 0)]), (2, [(0, 1)]),
+    (4, [(3, 2)]), (4, [(3, 0)]), (4, [(3, 2), (2, 0)]),
+])
+def test_async_distributed_p_gt_1_tile_route_matches_oracle(tmp_path, ranks, pairs):
+    # Real MPI fragment communication: the route updates physical coordinates and
+    # the layout, so logical state, expectation and the inverse all match.
+    _run_mpi_tile_worker(tmp_path, ranks, repr(pairs))
 
-    config = DistributedConfig(str(tmp_path/'async-reject'), 2,
-        ram_budget_bytes_per_rank=2*1024**2, metadata_reserve_bytes=128*1024,
-        tile_bytes=64, alignment=64)
-    policy = AsyncPolicy(io_engine='cooperative', prefetch_blocks=0, lookahead_gates=2)
-    with AsyncDistributedSimulator(4, config, comm=MPI.COMM_SELF, policy=policy) as sim:
-        root, layout = sim.root, sim.layout
-        allocator = sim.store.db.execute("SELECT data FROM settings WHERE key='allocator'").fetchone()[0]
-        roots = sim.store.db.execute('SELECT count(*) FROM roots').fetchone()[0]
-        actual_size = sim.size
-        sim.size = 2  # Exercise the public capability guard without launching MPI ranks.
-        try:
-            with pytest.raises(ValueError, match='UNSUPPORTED_TILE_DISTRIBUTED'):
-                sim.tile_index_bit_swap([(0, 3)], tile_bytes=64)
-        finally:
-            sim.size = actual_size
-        assert sim.root == root
-        assert sim.layout == layout
-        assert sim.store.db.execute("SELECT data FROM settings WHERE key='allocator'").fetchone()[0] == allocator
-        assert sim.store.db.execute('SELECT count(*) FROM roots').fetchone()[0] == roots
+
+@pytest.mark.skipif(not _mpi_available, reason='Local MPI runtime unavailable')
+@pytest.mark.slow
+def test_async_distributed_tile_route_fits_when_full_block_does_not(tmp_path):
+    # The distributed route keeps one destination tile plus one source fragment
+    # resident; it must complete when the full block buffer does not fit.
+    _run_mpi_tile_worker(tmp_path, 2, 'bounded')
