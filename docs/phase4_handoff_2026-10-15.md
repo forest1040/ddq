@@ -4,7 +4,11 @@
 
 **P4-009はDONE、P4-001と合わせてM1達成**。元009A〜Dと全managed writerを、固定production core `9eb426f`のMac高速1317 pass、Linux最終追加367 pass／13非適用skip、PBS265180の実2host/4rank全8case成功へ照合した。[完了証拠と範囲](phase4_p4_009_acceptance_2026-10-16.md)、[Linux各attempt](internal/phase4_wave3_validation/README.md)、[実別host結果](internal/phase4_crosshost_acceptance/job-265180/README.md)を参照。旧timeout、directの旧guard拒否、先行PBS失敗は消さず、保存JUnitの読取専用再判定を別記録にした。
 
-**P4-002とPhase 4全体はIN_PROGRESS**。残るETA/overhead認証や他項目を本判定で完了扱いにしない。`strict_capacity_guarantee=false`、node-local coordinator契約、電源断模型の既存範囲を維持する。以下のwave 3／2と2026-10-15の本文は日付時点の履歴であり、過去の「P4-009未完了」「PBS未投入」「M1未達」はこの最新状態に更新された。
+**P4-002もDONE（2026-10-17）**。[元6受入条件の対応表](phase4_p4_002_acceptance_2026-10-17.md)、[実endpoint 135地点＋growth 9件](internal/p4_002_observed_eta/endpoint-heldout-20261017/README.md)、[Linux最終held-out／overhead](internal/phase4_wave3_validation/linux-performance-v3/README.md)へ最終証拠を保存した。固定source `89e8ad2`のLinux buffered/direct×P=1/2は全8 case完走。held-outは216地点（54×4）、78回答／138unknown、error 0。回答分の相対誤差medianはbuffered P1/P2、direct P1/P2の順に5.76／2.92／4.13／3.50%で、回答のある全workloadの中央値も初期目標30%以内だった。direct P1のworst相対誤差239.82%など大きいtailは保存し、各予測が30%以内とは主張しない。
+
+overheadは8群すべてwarmup 2組＋measured 7 paired組を完了し、buffered P1 mixedとdirect P2 `rx-ry-low`は`eta-on-slower`、残り6群は`inconclusive`。監視が無料・高速化したとは判定しない。checkpointの低い区間coverage、短runのprepare認証不足とunknownは報告済みの品質上の限界として保持する。元6受入条件へ新しいcoverage／回答率の合格閾値を追加しない。
+
+**M1達成、P4-004未完了のためM2未達、Phase 4全体はIN_PROGRESS**。他項目を本判定で完了扱いにしない。`strict_capacity_guarantee=false`、node-local coordinator契約、電源断模型の既存範囲を維持する。以下のwave 3／2と2026-10-15の本文は日付時点の履歴であり、過去の「P4-002／009未完了」「PBS未投入」「M1未達」はこの最新状態に更新された。
 
 ## 継続wave 3（2026-10-16時点の履歴）
 
@@ -98,7 +102,7 @@
   - 試験は16件（実mpiexecの1／2 rankを含む）で、Macで成功した。
   - **未確認。** このcommitのLinux（ent）での結果は、subagentの報告前に取り込んだため確認していない。再起動後に、`tests/test_volume_coordination_runtime.py`ほかをentのbuffered／O_DIRECTで実行して確かめる。
 - **完了（2026-10-17）。** [009A〜D最終対応表](phase4_p4_009_acceptance_2026-10-16.md)の全条件へ最新Linux差分と実別hostの結果を照合し、DONEとした。上の各commit時点の「未確認」は履歴であり、[wave 3 source別記録](internal/phase4_wave3_validation/README.md)と[実別host結果](internal/phase4_crosshost_acceptance/job-265180/README.md)を確認する。
-- **継続事項。** P4-009の実装・受入残件は解消。保証の既存範囲と保守拒否は維持し、P4-002の未完了やPhase 4全体のIN_PROGRESSとは区別する。
+- **継続事項。** P4-009の実装・受入残件は解消。保証の既存範囲と保守拒否は維持し、P4-002の完了とは独立した判定であり、Phase 4全体のIN_PROGRESSとは区別する。
 
 ## 未決・相談事項
 
@@ -107,8 +111,8 @@
 
 ## 次の候補
 
-1. P4-009はDONE（2026-10-17）。P4-002などの残件を継続する
-2. P4-002：短いrunでの認証
+1. P4-001／002／009はDONE。P4-003／004の適応シナリオ・再計画の残件を継続する
+2. P4-002の短run認証・checkpoint区間coverageは品質改善の継続候補（元の受入は完了）
 3. P4-005：最終比較のmatrix
 4. P4-006／007／008：tile、cache、勾配の自動運用
 

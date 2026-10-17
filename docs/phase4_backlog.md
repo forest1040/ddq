@@ -2,7 +2,11 @@
 
 更新日：2026-10-17。**Phase 4は未完了**。主要APIとMac／Linux・実2ノードのcorrectness検証は実装・実施済みだが、適応制御と性能評価を含む設計の完了条件には残件がある。
 
-2026-10-17、P4-009をDONEとした。[元009A〜Dの完了証拠](phase4_p4_009_acceptance_2026-10-16.md)はMac固定core `9eb426f`の高速1317 pass、Linux最終追加367 pass／13非適用skip、実2host/4rankのPBS265180全8case。P4-001もDONEのため**M1は達成**。P4-002とPhase 4全体はIN_PROGRESSを維持する。以下の日付付き進捗は当時の履歴であり、P4-009の過去の未実装記述を現在の残件として読まない。
+2026-10-17、P4-009をDONEとした。[元009A〜Dの完了証拠](phase4_p4_009_acceptance_2026-10-16.md)はMac固定core `9eb426f`の高速1317 pass、Linux最終追加367 pass／13非適用skip、実2host/4rankのPBS265180全8case。P4-001もDONEのため**M1は達成**。P4-002も同日に元6受入条件への照合を完了しDONEとした。P4-004が未完了のためM2は未達、Phase 4全体はIN_PROGRESSを維持する。以下の日付付き進捗は当時の履歴であり、P4-002／009の過去の未実装記述を現在の残件として読まない。
+
+P4-002の[受入対応表](phase4_p4_002_acceptance_2026-10-17.md)、[実endpoint 135地点＋growth 9件](internal/p4_002_observed_eta/endpoint-heldout-20261017/README.md)、[Linux最終held-out／overhead](internal/phase4_wave3_validation/linux-performance-v3/README.md)に最終証拠を保存した。固定source `89e8ad2`のLinux buffered/direct×P=1/2は全8 case完走。held-outは216地点（54×4）、78回答／138unknown、error 0。回答分の相対誤差medianはbuffered P1/P2、direct P1/P2の順に5.76／2.92／4.13／3.50%で、回答のある全workloadの中央値も初期目標30%以内だった。direct P1のworst相対誤差239.82%など大きいtailは保存し、各予測が30%以内とは主張しない。
+
+overheadは8群すべてwarmup 2組＋measured 7 paired組を完了し、buffered P1 mixedとdirect P2 `rx-ry-low`は`eta-on-slower`、残り6群は`inconclusive`。監視が無料・高速化したとは判定しない。checkpointの低い区間coverage、短runのprepare認証不足とunknownは報告済みの品質上の限界として保持する。元6受入条件へ新しいcoverage／回答率の合格閾値を追加しない。
 
 基準は[開発計画](../plan/distributed_quantum_circuit_simulator_development.md#phase-4非同期階層スケジューラ)と[設計書 §15](phase4_design.md#15-実装順と完了条件)。現在の挙動・制限は[実装資料](phase4_implementation.md)、既存の性能測定は[Mac比較](phase4_benchmark.md)に記載する。site固有の情報はこのbacklogに書かず、`docs/internal/`で管理する。
 
@@ -68,7 +72,7 @@ P4-001／009の関連commit件名：`Implement Phase 4 disk admission and runtim
 | ID | 優先度 | 状態 | 残件 | 主な依存 |
 |---|---|---|---|---|
 | [P4-001](phase4_tasks/P4-001_measurement.md) | P0 | DONE | 条件一致の混合負荷校正とruntime計測 | Phase 5基盤 |
-| [P4-002](phase4_tasks/P4-002_remaining_eta.md) | P0 | IN_PROGRESS | 残DAGからの自動ETA生成 | P4-001 |
+| [P4-002](phase4_tasks/P4-002_remaining_eta.md) | P0 | DONE（2026-10-17） | 残DAGからの自動ETA生成（受入完了） | P4-001 |
 | [P4-003](phase4_tasks/P4-003_adaptive_validation.md) | P0 | IN_PROGRESS | 性能低下から改善確認までの適応シナリオ | P4-001、002、004、009 |
 | [P4-004](phase4_tasks/P4-004_replanning.md) | P0 | IN_PROGRESS | 費用に基づく再計画候補の探索と運用制御 | P4-001、002、009。tile採用時006 |
 | [P4-005](phase4_tasks/P4-005_performance_evaluation.md) | P0 | IN_PROGRESS | 完了条件に対応する性能比較・trace report | P4-001〜004、006〜009 |
@@ -92,7 +96,7 @@ completion collector、厳密profile adapter、実executorの有限mixed campaig
 
 ### P4-002：残DAGからの自動ETA生成
 
-window／counted suffix／in-flightの自動captureと3 viewの診断ETAを実装した。細粒度stage、profile充足、payload coverage、real held-out誤差とoverheadは残る。
+**DONE（2026-10-17）。** window／counted suffix／in-flightの自動capture、実executor共通stage DAG、有界metadata、3 view、explicit endpointを実装し、元6受入条件を機能oracleと実完了測定へ照合した。[受入対応表](phase4_p4_002_acceptance_2026-10-17.md)と[Linux最終held-out／overhead](internal/phase4_wave3_validation/linux-performance-v3/README.md)を参照。Mac固定sourceの高速1363 pass／38 skip／83 deselect、Linux endpoint実MPI 19 pass、実API 135地点＋growth 9件を保存した。checkpointの低い区間coverage、短runのprepare認証不足とunknownは報告済みの品質上の限界として保持する。元6受入条件へ新しいcoverage／回答率の合格閾値を追加しない。
 
 - 未実行gate、layout transition、I/O、MPI、metadata/commitを残DAGに反映する。抽出・評価用メモリも有界にする。
 - baseline／observed／adapted ETAを、profileとplanの版・切替費用・不確実性とともに更新する。

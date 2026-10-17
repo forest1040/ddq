@@ -1,6 +1,10 @@
 # P4-002：残りepochの正確な実行形状と実測費用によるETA
 
-更新日：2026-10-15。P4-002の残件「細粒度の残work」「in-flight残量」「抽出・評価のoverhead」のうち、S0／S2（および1 rankのS1）で残り全体を実測費用で価格付けする部分を実装した。P4-002はIN_PROGRESSのまま維持する。
+最新状態：**P4-002 DONE（2026-10-17）**。[元6受入条件との対応](phase4_p4_002_acceptance_2026-10-17.md)を機能oracle・実endpoint heldout・[Linux最終held-out／overhead](internal/phase4_wave3_validation/linux-performance-v3/README.md)へ照合した。固定source `89e8ad2`のLinux buffered/direct×P=1/2は全8 case完走。held-outは216地点（54×4）、78回答／138unknown、error 0。回答分の相対誤差medianはbuffered P1/P2、direct P1/P2の順に5.76／2.92／4.13／3.50%で、回答のある全workloadの中央値も初期目標30%以内だった。direct P1のworst相対誤差239.82%など大きいtailは保存し、各予測が30%以内とは主張しない。
+
+overheadは8群すべてwarmup 2組＋measured 7 paired組を完了し、buffered P1 mixedとdirect P2 `rx-ry-low`は`eta-on-slower`、残り6群は`inconclusive`。監視が無料・高速化したとは判定しない。checkpointの低い区間coverage、短runのprepare認証不足とunknownは報告済みの品質上の限界として保持する。元6受入条件へ新しいcoverage／回答率の合格閾値を追加しない。M1は達成済みだが、P4-004未完了のためM2は未達、Phase 4全体はIN_PROGRESSである。
+
+以下は2026-10-15の先行実装と日付付き追加実装の履歴である。S0／S2（および1 rankのS1）で残り全体を実測費用で価格付けする部分から段階的に実装した。過去の測定待ち・未対応は、その時点の状態として保持する。
 
 ## 前提の確認
 
@@ -113,7 +117,9 @@ MPIのoracle（1／2／4 rank）は、現在のepochのboundary taskを数える
 - **時間model view。** semantic tailは現在のlayoutを仮定するので、S1が動くrunでは`FUTURE_S1_LAYOUT_UNKNOWN`でunknownにする。observed viewは正確なfutureを使う。
 - **試験。** `tests/mpi_s1_eta_worker.py`（2 rank、合成の通信profile）で確認した。rank bitのqubitへの回転が続く回路で、S1が実際にlayoutを動かすとき、予測したclass×回数（判断後のlayoutを含む）が、実際に記録された呼出しと完全に一致する。1 epoch進めた後の増分captureも、最初からの走査と一致する。
 
-## 残件
+## 先行実装時点の残件（2026-10-15の履歴）
+
+現在の受入状態は冒頭と[最終対応表](phase4_p4_002_acceptance_2026-10-17.md)を参照する。以下のLinux測定待ち、payload／critical-chain coverage未対応は後続実装・測定で更新された。未認証classのunknownや任意の時間model viewの制限を、元6受入条件への追加閾値とはしない。
 
 - **答える割合。** 短いrunでは答える割合が低い。burn-inの後に8件が必要なほか、件数を満たしてもheld-out coverage／driftの条件で未回答になる（下の再評価）。長いrunとLinux file store・multi-rankでの再評価も残る。
 - **overhead。** Linuxとmulti-rankの監視overheadは、ばらつきが大きく判定できていない。
@@ -196,4 +202,4 @@ Mac最終全fastの終了後、rootのheavy pytest／TeXを止めて[修正後27
 
 expectation 128 gateでは新prepareの実時間median 1.424 msを価格付け対象へ入れた。API wall／実body+prepare和のmedian比は1.035で、baselineのAPI/body比1.446の必須費用欠落を補完した。ただしbaselineにはTeX重複期間があり、回答集合も異なるため、前後の実API時間や精度差を純粋な性能改善として主張しない。
 
-expectationの未回答21はprepare/bodyの`LOW_HELD_OUT_COVERAGE`（17/5点、重複1）、gradientの未回答31は同理由（30/4点、重複3）。認証を緩めず全unknownを分母に残した。checkpoint低coverageとprepareの短run回答率は残件である。collectorのcost側drop/failureは0だが、gradient内部のbounded raw queueには`dropped_raw=139253`がありcounterを保持した。要求した全576 endpoint行と378 prepare行は別途直接保存したため、それらの校正/実測/数値oracleを検査できる。全内部event rawが無欠落という主張はしない。測定後はJSON数値/provenance検査だけを実施し、heavy試験やTeXは実行していない。
+expectationの未回答21はprepare/bodyの`LOW_HELD_OUT_COVERAGE`（17/5点、重複1）、gradientの未回答31は同理由（30/4点、重複3）。認証を緩めず全unknownを分母に残した。checkpoint低coverageとprepareの短run回答率は報告済みの品質上の限界であり、元6受入条件へ新しい合格閾値を追加するものではない。collectorのcost側drop/failureは0だが、gradient内部のbounded raw queueには`dropped_raw=139253`がありcounterを保持した。要求した全576 endpoint行と378 prepare行は別途直接保存したため、それらの校正/実測/数値oracleを検査できる。全内部event rawが無欠落という主張はしない。測定後はJSON数値/provenance検査だけを実施し、heavy試験やTeXは実行していない。
