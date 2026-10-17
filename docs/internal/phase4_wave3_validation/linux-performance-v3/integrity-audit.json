@@ -1,0 +1,46 @@
+{
+  "all_source_files_match_checkout": true,
+  "cases": {
+    "heldout-buffered-p1": {
+      "cleanup_verified_absent": true,
+      "source_files_verified": 284,
+      "status": "complete"
+    },
+    "heldout-buffered-p2": {
+      "cleanup_verified_absent": true,
+      "source_files_verified": 284,
+      "status": "complete"
+    },
+    "heldout-direct-p1": {
+      "cleanup_verified_absent": true,
+      "source_files_verified": 284,
+      "status": "complete"
+    },
+    "heldout-direct-p2": {
+      "cleanup_verified_absent": true,
+      "source_files_verified": 284,
+      "status": "complete"
+    },
+    "overhead-buffered-p1": {
+      "cleanup_verified_absent": true,
+      "source_files_verified": 284,
+      "status": "complete"
+    },
+    "overhead-buffered-p2": {
+      "cleanup_verified_absent": true,
+      "source_files_verified": 284,
+      "status": "complete"
+    },
+    "overhead-direct-p1": {
+      "cleanup_verified_absent": true,
+      "source_files_verified": 284,
+      "status": "complete"
+    },
+    "overhead-direct-p2": {
+      "cleanup_verified_absent": true,
+      "source_files_verified": 284,
+      "status": "complete"
+    }
+  },
+  "source_revision": "89e8ad2"
+}

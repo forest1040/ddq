@@ -1,0 +1,38 @@
+{
+  "case": "heldout-buffered-p1",
+  "backend": "buffered",
+  "ranks": 1,
+  "timeout_seconds": 3600,
+  "source_context": "/tmp/ddq-p4-linux-followup-20261015-tmori/wave3-performance-context-v3",
+  "image": "sha256:3bee5df0c2960ab030ea1e9cb5528638929ab3cb6e45ee2ee073102f1d8cce14",
+  "source_revision": "89e8ad2",
+  "source_hash_manifest_sha256": "45319eb9686bb50fdbf887deb504a73a8dc39e35e5bdbe7a0133f6d3e346775e",
+  "stage": "heldout",
+  "workloads": [
+    "rx-ry-low",
+    "rx-ry-var",
+    "mixed"
+  ],
+  "omitted_workloads": [
+    "upper",
+    "cz",
+    "mixed-var"
+  ],
+  "policies": [
+    "S0",
+    "S1",
+    "S2"
+  ],
+  "stores": [
+    "file",
+    "ram"
+  ],
+  "fractions": [
+    0.4,
+    0.6,
+    0.8
+  ],
+  "trials": 1,
+  "expected_checks": 54,
+  "timeout_scope": "one representative held-out matrix"
+}

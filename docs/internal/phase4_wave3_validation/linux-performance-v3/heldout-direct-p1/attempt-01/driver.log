@@ -1,0 +1,99 @@
+================================================================================================
+                Held-out Runtime ETA Evaluation (Observed View)
+================================================================================================
+Environment:
+  Platform:       Linux-6.8.0-138-generic-x86_64-with-glibc2.36
+  Python:         3.12.15
+  MPI Ranks:      1
+  Backend:        direct
+  Git Revision:   unknown
+------------------------------------------------------------------------------------------------
+Slice                   Checks  Answered   Answer%  Coverage    Med Err    P95 Err  Worst Err
+------------------------------------------------------------------------------------------------
+Overall                     54        27     50.0%     70.4%     0.0413     1.1118     2.3982
+Policy: S0                  18         8     44.4%     37.5%     0.4096     1.8179     2.3982
+Policy: S1                  18         8     44.4%     87.5%     0.0619     1.0364     1.2711
+Policy: S2                  18        11     61.1%     81.8%     0.0253     0.5079     0.5746
+Store: file                 27        15     55.6%     46.7%     0.4411     1.6092     2.3982
+Store: ram                  27        12     44.4%    100.0%     0.0377     0.0764     0.0910
+Engine: cooperative         54        27     50.0%     70.4%     0.0413     1.1118     2.3982
+Ranks: 1                    54        27     50.0%     70.4%     0.0413     1.1118     2.3982
+Workload: rx-ry-low         18        10     55.6%     80.0%     0.0542     0.8976     1.2711
+Workload: mixed             18         8     44.4%     62.5%     0.0323     0.6913     0.7401
+Workload: rx-ry-var         18         9     50.0%     66.7%     0.0385     1.6996     2.3982
+------------------------------------------------------------------------------------------------
+Unanswered Unknown Reason Tally:
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:future:0: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:future:1: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:future:2: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:future:3: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:window:0: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:window:1: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:window:2: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:window:3: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:future:2: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:future:3: 6
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:future:4: 6
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:future:5: 4
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:window:0: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:window:1: 6
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:window:2: 6
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:window:3: 4
+  COST_UNCERTIFIED:ANGLE_POOLED_LOW_HELD_OUT_COVERAGE:future:0: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_LOW_HELD_OUT_COVERAGE:future:1: 1
+  COST_UNCERTIFIED:ANGLE_POOLED_LOW_HELD_OUT_COVERAGE:future:2: 3
+  COST_UNCERTIFIED:ANGLE_POOLED_LOW_HELD_OUT_COVERAGE:future:3: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_LOW_HELD_OUT_COVERAGE:window:0: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_LOW_HELD_OUT_COVERAGE:window:1: 1
+  COST_UNCERTIFIED:ANGLE_POOLED_LOW_HELD_OUT_COVERAGE:window:2: 3
+  COST_UNCERTIFIED:ANGLE_POOLED_LOW_HELD_OUT_COVERAGE:window:3: 2
+  COST_UNCERTIFIED:DRIFTING:future:0           : 3
+  COST_UNCERTIFIED:DRIFTING:future:1           : 3
+  COST_UNCERTIFIED:DRIFTING:future:2           : 4
+  COST_UNCERTIFIED:DRIFTING:future:3           : 3
+  COST_UNCERTIFIED:DRIFTING:future:4           : 2
+  COST_UNCERTIFIED:DRIFTING:future:5           : 1
+  COST_UNCERTIFIED:DRIFTING:future:boundary    : 10
+  COST_UNCERTIFIED:DRIFTING:future:publish     : 7
+  COST_UNCERTIFIED:DRIFTING:window:0           : 4
+  COST_UNCERTIFIED:DRIFTING:window:1           : 3
+  COST_UNCERTIFIED:DRIFTING:window:2           : 3
+  COST_UNCERTIFIED:DRIFTING:window:3           : 2
+  COST_UNCERTIFIED:DRIFTING:window:publish     : 7
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:0: 10
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:1: 9
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:2: 11
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:3: 10
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:4: 6
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:5: 4
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:window:0: 10
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:window:1: 9
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:window:2: 11
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:window:3: 8
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:0: 1
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:1: 3
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:2: 1
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:3: 2
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary: 7
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:publish: 6
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:window:0: 1
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:window:1: 2
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:window:2: 1
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:window:3: 2
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:window:publish: 6
+  MISSING_COST:future:0                        : 14
+  MISSING_COST:future:1                        : 15
+  MISSING_COST:future:2                        : 16
+  MISSING_COST:future:3                        : 15
+  MISSING_COST:future:4                        : 8
+  MISSING_COST:future:5                        : 5
+  MISSING_COST:future:boundary                 : 17
+  MISSING_COST:future:publish                  : 13
+  MISSING_COST:window:0                        : 15
+  MISSING_COST:window:1                        : 14
+  MISSING_COST:window:2                        : 15
+  MISSING_COST:window:3                        : 12
+  MISSING_COST:window:publish                  : 13
+------------------------------------------------------------------------------------------------
+Results written to: /output/heldout-heldout-direct-p1.json
+================================================================================================

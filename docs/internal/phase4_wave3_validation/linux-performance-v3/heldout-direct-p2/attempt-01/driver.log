@@ -1,0 +1,92 @@
+================================================================================================
+                Held-out Runtime ETA Evaluation (Observed View)
+================================================================================================
+Environment:
+  Platform:       Linux-6.8.0-138-generic-x86_64-with-glibc2.36
+  Python:         3.12.15
+  MPI Ranks:      2
+  Backend:        direct
+  Git Revision:   unknown
+------------------------------------------------------------------------------------------------
+Slice                   Checks  Answered   Answer%  Coverage    Med Err    P95 Err  Worst Err
+------------------------------------------------------------------------------------------------
+Overall                     54        12     22.2%     75.0%     0.0350     0.7274     0.7385
+Policy: S0                  18         5     27.8%     80.0%     0.0768     0.6085     0.7385
+Policy: S1                  18         3     16.7%     33.3%     0.5836     0.7048     0.7183
+Policy: S2                  18         4     22.2%    100.0%     0.0246     0.0369     0.0377
+Store: file                 27         7     25.9%     71.4%     0.0251     0.6920     0.7385
+Store: ram                  27         5     18.5%     80.0%     0.0768     0.5923     0.7183
+Engine: cooperative         54        12     22.2%     75.0%     0.0350     0.7274     0.7385
+Ranks: 2                    54        12     22.2%     75.0%     0.0350     0.7274     0.7385
+Workload: rx-ry-low         18         5     27.8%     80.0%     0.0251     0.5900     0.7183
+Workload: mixed             18         5     27.8%     60.0%     0.0323     0.7075     0.7385
+Workload: rx-ry-var         18         2     11.1%    100.0%     0.0632     0.0861     0.0886
+------------------------------------------------------------------------------------------------
+Unanswered Unknown Reason Tally:
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:future:0: 4
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:future:1: 4
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:future:2: 5
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:future:3: 5
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:window:0: 4
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:window:1: 4
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:window:2: 5
+  COST_UNCERTIFIED:ANGLE_POOLED_DRIFTING:window:3: 5
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:future:2: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:future:3: 6
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:future:4: 6
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:future:5: 4
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:window:0: 2
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:window:1: 6
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:window:2: 6
+  COST_UNCERTIFIED:ANGLE_POOLED_INSUFFICIENT_SAMPLES:window:3: 4
+  COST_UNCERTIFIED:ANGLE_POOLED_LOW_HELD_OUT_COVERAGE:future:0: 1
+  COST_UNCERTIFIED:ANGLE_POOLED_LOW_HELD_OUT_COVERAGE:window:0: 1
+  COST_UNCERTIFIED:DRIFTING:future:0           : 4
+  COST_UNCERTIFIED:DRIFTING:future:1           : 4
+  COST_UNCERTIFIED:DRIFTING:future:2           : 4
+  COST_UNCERTIFIED:DRIFTING:future:3           : 4
+  COST_UNCERTIFIED:DRIFTING:future:4           : 1
+  COST_UNCERTIFIED:DRIFTING:future:boundary    : 19
+  COST_UNCERTIFIED:DRIFTING:future:publish     : 12
+  COST_UNCERTIFIED:DRIFTING:window:0           : 4
+  COST_UNCERTIFIED:DRIFTING:window:1           : 4
+  COST_UNCERTIFIED:DRIFTING:window:2           : 4
+  COST_UNCERTIFIED:DRIFTING:window:3           : 3
+  COST_UNCERTIFIED:DRIFTING:window:publish     : 12
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:0: 11
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:1: 10
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:2: 11
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:3: 11
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:4: 6
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:future:5: 4
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:window:0: 11
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:window:1: 10
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:window:2: 11
+  COST_UNCERTIFIED:INSUFFICIENT_SAMPLES:window:3: 9
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:1: 1
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:2: 3
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:3: 1
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:5: 3
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:boundary: 17
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:future:publish: 1
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:window:0: 2
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:window:1: 1
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:window:2: 1
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:window:3: 3
+  COST_UNCERTIFIED:LOW_HELD_OUT_COVERAGE:window:publish: 1
+  MISSING_COST:future:0                        : 15
+  MISSING_COST:future:1                        : 15
+  MISSING_COST:future:2                        : 18
+  MISSING_COST:future:3                        : 16
+  MISSING_COST:future:4                        : 7
+  MISSING_COST:future:5                        : 7
+  MISSING_COST:future:boundary                 : 35
+  MISSING_COST:future:publish                  : 13
+  MISSING_COST:window:0                        : 17
+  MISSING_COST:window:1                        : 15
+  MISSING_COST:window:2                        : 16
+  MISSING_COST:window:3                        : 15
+  MISSING_COST:window:publish                  : 13
+------------------------------------------------------------------------------------------------
+Results written to: /output/heldout-heldout-direct-p2.json
+================================================================================================

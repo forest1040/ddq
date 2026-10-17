@@ -1,0 +1,2547 @@
+{
+  "schema_version": 1,
+  "kind": "p4-002-monitoring-overhead-campaign",
+  "source": {
+    "git_revision": null,
+    "sha256": {
+      "examples/p4_002_overhead_campaign.py": "c0a696b91a0f3b612c7c8d9b4117a7b29f90612eb7f80a06580efb142d84dcd1",
+      "examples/p4_002_observed_eta.py": "b362367b495a5308f4734b7436d20b8e9f06396b1bad149efca2d689adf9fa2a",
+      "src/svsim/runtime_eta.py": "0e87c964f6e29c6c79f68fd47e6578e5bf6b0cec6bef114b1e98bf12aa3e9ad4",
+      "src/svsim/runtime_control.py": "88a4821b68b44bba39f8f5eeee83ccf098c41a54c042461143a02f9a13c58b92",
+      "src/svsim/remaining_work.py": "a4ab7e4709e719871d519b08c73997d621e3467dad821886c5ee82121e13c59f"
+    }
+  },
+  "created_unix_seconds": 1792193321.5633185,
+  "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.36",
+  "python": "3.12.15 (main, Oct  6 2026, 02:02:31) [GCC 12.2.0]",
+  "measurement_clock": {
+    "clock": "time.perf_counter",
+    "scope": "local wall; actual run reported as max across ranks",
+    "capture_and_evaluation": "per-rank accumulated wall; report rank maximum"
+  },
+  "campaign_seed": 20261016,
+  "pair_order": "seeded initial side, then alternating side per pair",
+  "warmup_pairs_per_workload": 2,
+  "measured_pairs_per_workload": 7,
+  "bootstrap_replicates": 5000,
+  "conditions": {
+    "monitoring_delta": "RuntimeControl ETA monitoring enabled versus disabled",
+    "shared_conditions": {
+      "amplitude_store": "file",
+      "io_engine": "cooperative",
+      "io_workers": 1,
+      "prefetch_blocks": 0,
+      "lookahead_gates": 4,
+      "swap_policy": "S2",
+      "cooldown_seconds": 0,
+      "storage_scope": "node-local",
+      "frame_policy": "materialize",
+      "ram_budget_bytes_per_rank": 67108864,
+      "metadata_reserve_bytes": 8388608,
+      "measurement_collector_max_bytes": 2097152,
+      "backend_requested": "direct",
+      "backend_resolved": null
+    },
+    "ranks": 1,
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1"
+    },
+    "workloads": [
+      {
+        "name": "rx-ry-low",
+        "campaign_class": "small",
+        "n": 6,
+        "block_bits": 2,
+        "layers": 30,
+        "recipe_sha256": "0153e08f77e20f0c5cae2dc05b99e84e37416466275f5ce5704c65239929e8f6",
+        "gate_count": 120
+      },
+      {
+        "name": "mixed",
+        "campaign_class": "long",
+        "n": 8,
+        "block_bits": 3,
+        "layers": 20,
+        "recipe_sha256": "f50a351af446eae585fd6633198b8218da805b240e52087e872be91c8b9bac1a",
+        "gate_count": 120
+      }
+    ]
+  },
+  "status": "complete",
+  "results": {
+    "rx-ry-low": {
+      "workload": "rx-ry-low",
+      "workload_class": "small",
+      "status": "complete",
+      "warmup_pair_count": 2,
+      "measured_pair_count": 7,
+      "initial_order_eta_on_first": false,
+      "warmup_pairs": [
+        {
+          "workload": "rx-ry-low",
+          "pair_index": 0,
+          "warmup": true,
+          "order": [
+            "eta-off",
+            "eta-on"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 7.801374611910433,
+            "capture_wall_seconds": 0.0967006809078157,
+            "reported_extraction_seconds": 0.05227004364132881,
+            "eta_evaluation_seconds": 0.06121861981227994,
+            "capture_count": 39,
+            "eta_evaluation_count": 117,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 7.821339194197208,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 7.801374611910433,
+          "eta_off_seconds": 7.821339194197208,
+          "difference_seconds": -0.019964582286775112,
+          "ratio_eta_on_over_eta_off": 0.9974474214976398
+        },
+        {
+          "workload": "rx-ry-low",
+          "pair_index": 1,
+          "warmup": true,
+          "order": [
+            "eta-on",
+            "eta-off"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 8.093515354208648,
+            "capture_wall_seconds": 0.09709577867761254,
+            "reported_extraction_seconds": 0.05275735352188349,
+            "eta_evaluation_seconds": 0.06139323767274618,
+            "capture_count": 39,
+            "eta_evaluation_count": 117,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 18.881123275030404,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 8.093515354208648,
+          "eta_off_seconds": 18.881123275030404,
+          "difference_seconds": -10.787607920821756,
+          "ratio_eta_on_over_eta_off": 0.4286564541905209
+        }
+      ],
+      "measured_pairs": [
+        {
+          "workload": "rx-ry-low",
+          "pair_index": 2,
+          "warmup": false,
+          "order": [
+            "eta-off",
+            "eta-on"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 34.65763691440225,
+            "capture_wall_seconds": 0.20078982459381223,
+            "reported_extraction_seconds": 0.07844666857272387,
+            "eta_evaluation_seconds": 0.17151283379644156,
+            "capture_count": 62,
+            "eta_evaluation_count": 186,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 21.78719278005883,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 34.65763691440225,
+          "eta_off_seconds": 21.78719278005883,
+          "difference_seconds": 12.870444134343415,
+          "ratio_eta_on_over_eta_off": 1.5907343944798318
+        },
+        {
+          "workload": "rx-ry-low",
+          "pair_index": 3,
+          "warmup": false,
+          "order": [
+            "eta-on",
+            "eta-off"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 34.65027076564729,
+            "capture_wall_seconds": 0.2108877464197576,
+            "reported_extraction_seconds": 0.07749731605872512,
+            "eta_evaluation_seconds": 0.1766142686828971,
+            "capture_count": 63,
+            "eta_evaluation_count": 189,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 24.18748050229624,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 34.65027076564729,
+          "eta_off_seconds": 24.18748050229624,
+          "difference_seconds": 10.462790263351053,
+          "ratio_eta_on_over_eta_off": 1.4325704887847979
+        },
+        {
+          "workload": "rx-ry-low",
+          "pair_index": 4,
+          "warmup": false,
+          "order": [
+            "eta-off",
+            "eta-on"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 7.947675586212426,
+            "capture_wall_seconds": 0.09812716161832213,
+            "reported_extraction_seconds": 0.05286538600921631,
+            "eta_evaluation_seconds": 0.061964526772499084,
+            "capture_count": 39,
+            "eta_evaluation_count": 117,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 24.9564279881306,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 7.947675586212426,
+          "eta_off_seconds": 24.9564279881306,
+          "difference_seconds": -17.008752401918173,
+          "ratio_eta_on_over_eta_off": 0.31846206476312955
+        },
+        {
+          "workload": "rx-ry-low",
+          "pair_index": 5,
+          "warmup": false,
+          "order": [
+            "eta-on",
+            "eta-off"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 7.891065415926278,
+            "capture_wall_seconds": 0.09831122169271111,
+            "reported_extraction_seconds": 0.052997833117842674,
+            "eta_evaluation_seconds": 0.06178962765261531,
+            "capture_count": 39,
+            "eta_evaluation_count": 117,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 7.976116947829723,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 7.891065415926278,
+          "eta_off_seconds": 7.976116947829723,
+          "difference_seconds": -0.08505153190344572,
+          "ratio_eta_on_over_eta_off": 0.9893367245666341
+        },
+        {
+          "workload": "rx-ry-low",
+          "pair_index": 6,
+          "warmup": false,
+          "order": [
+            "eta-off",
+            "eta-on"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 8.08945583179593,
+            "capture_wall_seconds": 0.10039750672876835,
+            "reported_extraction_seconds": 0.054005523677915335,
+            "eta_evaluation_seconds": 0.06219089403748512,
+            "capture_count": 39,
+            "eta_evaluation_count": 117,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 7.832146410830319,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 8.08945583179593,
+          "eta_off_seconds": 7.832146410830319,
+          "difference_seconds": 0.25730942096561193,
+          "ratio_eta_on_over_eta_off": 1.0328529891384313
+        },
+        {
+          "workload": "rx-ry-low",
+          "pair_index": 7,
+          "warmup": false,
+          "order": [
+            "eta-on",
+            "eta-off"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 7.864517542067915,
+            "capture_wall_seconds": 0.09717505378648639,
+            "reported_extraction_seconds": 0.05227575497701764,
+            "eta_evaluation_seconds": 0.06149842543527484,
+            "capture_count": 39,
+            "eta_evaluation_count": 117,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 24.214656808879226,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 7.864517542067915,
+          "eta_off_seconds": 24.214656808879226,
+          "difference_seconds": -16.35013926681131,
+          "ratio_eta_on_over_eta_off": 0.3247833576226482
+        },
+        {
+          "workload": "rx-ry-low",
+          "pair_index": 8,
+          "warmup": false,
+          "order": [
+            "eta-off",
+            "eta-on"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 34.44948389520869,
+            "capture_wall_seconds": 0.20238627586513758,
+            "reported_extraction_seconds": 0.07829291792586446,
+            "eta_evaluation_seconds": 0.1760537913069129,
+            "capture_count": 62,
+            "eta_evaluation_count": 186,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 28.95932134287432,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 1966080,
+              "read_events": 0,
+              "write_events": 480,
+              "read_event_bytes": 0,
+              "write_event_bytes": 1966080,
+              "submitted_requests": 480,
+              "completed_requests": 480,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 1966080,
+                "read_events": 0,
+                "write_events": 480,
+                "read_event_bytes": 0,
+                "write_event_bytes": 1966080,
+                "submitted_requests": 480,
+                "completed_requests": 480,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 34.44948389520869,
+          "eta_off_seconds": 28.95932134287432,
+          "difference_seconds": 5.490162552334368,
+          "ratio_eta_on_over_eta_off": 1.1895818789166919
+        }
+      ],
+      "summary": {
+        "status": "complete",
+        "requested_pair_count": 7,
+        "successful_pair_count": 7,
+        "failed_pair_count": 0,
+        "median_paired_difference_seconds": 0.25730942096561193,
+        "p95_paired_difference_seconds": 12.148147973045706,
+        "paired_difference_sample_stdev_seconds": 11.966889463374628,
+        "paired_difference_coefficient_of_variation": 19.19864300617463,
+        "median_paired_ratio_eta_on_over_eta_off": 1.0328529891384313,
+        "p95_paired_ratio_eta_on_over_eta_off": 1.5432852227713216,
+        "eta_on_wall": {
+          "median_seconds": 8.08945583179593,
+          "p95_seconds": 34.65542706977576,
+          "sample_stdev_seconds": 14.238746210028607,
+          "coefficient_of_variation": 0.7353090782978704
+        },
+        "eta_off_wall": {
+          "median_seconds": 24.18748050229624,
+          "p95_seconds": 27.758453336451204,
+          "sample_stdev_seconds": 8.524057642647234,
+          "coefficient_of_variation": 0.4264668566454727
+        },
+        "difference_ci95": {
+          "method": "paired percentile bootstrap of median, 95% CI",
+          "confidence": 0.95,
+          "replicates": 5000,
+          "seed": 20261016,
+          "lower": -16.35013926681131,
+          "upper": 10.462790263351053,
+          "status": "computed"
+        },
+        "ratio_ci95": {
+          "method": "paired percentile bootstrap of median, 95% CI",
+          "confidence": 0.95,
+          "replicates": 5000,
+          "seed": 20261017,
+          "lower": 0.3247833576226482,
+          "upper": 1.4325704887847976,
+          "status": "computed"
+        },
+        "interpretation": "inconclusive",
+        "ci_note": "CI crossing zero/one is inconclusive; no minimum effect or response-rate threshold is imposed."
+      }
+    },
+    "mixed": {
+      "workload": "mixed",
+      "workload_class": "long",
+      "status": "complete",
+      "warmup_pair_count": 2,
+      "measured_pair_count": 7,
+      "initial_order_eta_on_first": true,
+      "warmup_pairs": [
+        {
+          "workload": "mixed",
+          "pair_index": 0,
+          "warmup": true,
+          "order": [
+            "eta-on",
+            "eta-off"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 97.38996028574184,
+            "capture_wall_seconds": 0.44844382582232356,
+            "reported_extraction_seconds": 0.0789408148266375,
+            "eta_evaluation_seconds": 0.37484797462821007,
+            "capture_count": 126,
+            "eta_evaluation_count": 378,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 108.32812488777563,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 97.38996028574184,
+          "eta_off_seconds": 108.32812488777563,
+          "difference_seconds": -10.938164602033794,
+          "ratio_eta_on_over_eta_off": 0.8990274721974061
+        },
+        {
+          "workload": "mixed",
+          "pair_index": 1,
+          "warmup": true,
+          "order": [
+            "eta-off",
+            "eta-on"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 96.39473158679903,
+            "capture_wall_seconds": 0.44637667993083596,
+            "reported_extraction_seconds": 0.08157654665410519,
+            "eta_evaluation_seconds": 0.4564830777235329,
+            "capture_count": 124,
+            "eta_evaluation_count": 372,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 100.08123534778133,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 96.39473158679903,
+          "eta_off_seconds": 100.08123534778133,
+          "difference_seconds": -3.686503760982305,
+          "ratio_eta_on_over_eta_off": 0.9631648855235275
+        }
+      ],
+      "measured_pairs": [
+        {
+          "workload": "mixed",
+          "pair_index": 2,
+          "warmup": false,
+          "order": [
+            "eta-on",
+            "eta-off"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 80.74331436585635,
+            "capture_wall_seconds": 0.3713374719955027,
+            "reported_extraction_seconds": 0.07401823019608855,
+            "eta_evaluation_seconds": 0.29570274520665407,
+            "capture_count": 110,
+            "eta_evaluation_count": 330,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 128.79131509084255,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 80.74331436585635,
+          "eta_off_seconds": 128.79131509084255,
+          "difference_seconds": -48.048000724986196,
+          "ratio_eta_on_over_eta_off": 0.6269313603087624
+        },
+        {
+          "workload": "mixed",
+          "pair_index": 3,
+          "warmup": false,
+          "order": [
+            "eta-off",
+            "eta-on"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 129.6563679096289,
+            "capture_wall_seconds": 0.5817741039209068,
+            "reported_extraction_seconds": 0.09476910950616002,
+            "eta_evaluation_seconds": 0.6450502872467041,
+            "capture_count": 156,
+            "eta_evaluation_count": 468,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 81.93041986925527,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 129.6563679096289,
+          "eta_off_seconds": 81.93041986925527,
+          "difference_seconds": 47.72594804037362,
+          "ratio_eta_on_over_eta_off": 1.5825180453918677
+        },
+        {
+          "workload": "mixed",
+          "pair_index": 4,
+          "warmup": false,
+          "order": [
+            "eta-on",
+            "eta-off"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 86.66683790506795,
+            "capture_wall_seconds": 0.374623314011842,
+            "reported_extraction_seconds": 0.07561658229678869,
+            "eta_evaluation_seconds": 0.365351268555969,
+            "capture_count": 116,
+            "eta_evaluation_count": 348,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 106.19684394914657,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 86.66683790506795,
+          "eta_off_seconds": 106.19684394914657,
+          "difference_seconds": -19.53000604407862,
+          "ratio_eta_on_over_eta_off": 0.8160961727503808
+        },
+        {
+          "workload": "mixed",
+          "pair_index": 5,
+          "warmup": false,
+          "order": [
+            "eta-off",
+            "eta-on"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 97.8473517675884,
+            "capture_wall_seconds": 0.4501822083257139,
+            "reported_extraction_seconds": 0.08167758490890265,
+            "eta_evaluation_seconds": 0.35672568110749125,
+            "capture_count": 126,
+            "eta_evaluation_count": 378,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 110.80671499669552,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 97.8473517675884,
+          "eta_off_seconds": 110.80671499669552,
+          "difference_seconds": -12.959363229107112,
+          "ratio_eta_on_over_eta_off": 0.8830453260030894
+        },
+        {
+          "workload": "mixed",
+          "pair_index": 6,
+          "warmup": false,
+          "order": [
+            "eta-on",
+            "eta-off"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 108.5540012139827,
+            "capture_wall_seconds": 0.4793780669569969,
+            "reported_extraction_seconds": 0.08591384207829833,
+            "eta_evaluation_seconds": 0.518399731721729,
+            "capture_count": 136,
+            "eta_evaluation_count": 408,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 67.62018256122246,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 108.5540012139827,
+          "eta_off_seconds": 67.62018256122246,
+          "difference_seconds": 40.93381865276024,
+          "ratio_eta_on_over_eta_off": 1.6053491295398274
+        },
+        {
+          "workload": "mixed",
+          "pair_index": 7,
+          "warmup": false,
+          "order": [
+            "eta-off",
+            "eta-on"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 47.73120180005208,
+            "capture_wall_seconds": 0.20742240641266108,
+            "reported_extraction_seconds": 0.05943378759548068,
+            "eta_evaluation_seconds": 0.17722464725375175,
+            "capture_count": 79,
+            "eta_evaluation_count": 237,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 130.1106866397895,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 47.73120180005208,
+          "eta_off_seconds": 130.1106866397895,
+          "difference_seconds": -82.37948483973742,
+          "ratio_eta_on_over_eta_off": 0.36685074095562625
+        },
+        {
+          "workload": "mixed",
+          "pair_index": 8,
+          "warmup": false,
+          "order": [
+            "eta-on",
+            "eta-off"
+          ],
+          "status": "ok",
+          "eta_on": {
+            "actual_rank_max_seconds": 68.52630752371624,
+            "capture_wall_seconds": 0.29581615747883916,
+            "reported_extraction_seconds": 0.068082463927567,
+            "eta_evaluation_seconds": 0.30616952246055007,
+            "capture_count": 99,
+            "eta_evaluation_count": 297,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "eta_off": {
+            "actual_rank_max_seconds": 109.25269171223044,
+            "capture_count": 0,
+            "capture_wall_seconds": 0.0,
+            "reported_extraction_seconds": 0.0,
+            "eta_evaluation_count": 0,
+            "eta_evaluation_seconds": 0.0,
+            "storage_io_local": {
+              "backend_identities": [
+                "linux-o-direct"
+              ],
+              "read_bytes": 0,
+              "write_bytes": 13107200,
+              "read_events": 0,
+              "write_events": 3200,
+              "read_event_bytes": 0,
+              "write_event_bytes": 13107200,
+              "submitted_requests": 3200,
+              "completed_requests": 3200,
+              "outstanding_requests_at_observation": 0,
+              "trace_event_bytes_match_counters": true,
+              "backend_observation_status": "complete",
+              "backend_observation_complete": true,
+              "observation_window": "completed storage events during materialize; sampled after wall stop",
+              "byte_counter_scope": "exact trace counter delta during materialize",
+              "event_identity_scope": "trace events since pre-materialize event count",
+              "cached_handle_backend_identities": [],
+              "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+            },
+            "storage_io_by_rank": [
+              {
+                "backend_identities": [
+                  "linux-o-direct"
+                ],
+                "read_bytes": 0,
+                "write_bytes": 13107200,
+                "read_events": 0,
+                "write_events": 3200,
+                "read_event_bytes": 0,
+                "write_event_bytes": 13107200,
+                "submitted_requests": 3200,
+                "completed_requests": 3200,
+                "outstanding_requests_at_observation": 0,
+                "trace_event_bytes_match_counters": true,
+                "backend_observation_status": "complete",
+                "backend_observation_complete": true,
+                "observation_window": "completed storage events during materialize; sampled after wall stop",
+                "byte_counter_scope": "exact trace counter delta during materialize",
+                "event_identity_scope": "trace events since pre-materialize event count",
+                "cached_handle_backend_identities": [],
+                "cached_handle_scope": "currently cached FileBlockStore handles; not async handles"
+              }
+            ],
+            "backend_resolved_by_rank": [
+              []
+            ],
+            "backend_resolved_by_rank_scope": "currently cached FileBlockStore handles only; may be empty for AsyncStoreIO"
+          },
+          "errors": {},
+          "eta_on_seconds": 68.52630752371624,
+          "eta_off_seconds": 109.25269171223044,
+          "difference_seconds": -40.7263841885142,
+          "ratio_eta_on_over_eta_off": 0.6272276357658377
+        }
+      ],
+      "summary": {
+        "status": "complete",
+        "requested_pair_count": 7,
+        "successful_pair_count": 7,
+        "failed_pair_count": 0,
+        "median_paired_difference_seconds": -19.53000604407862,
+        "p95_paired_difference_seconds": 45.68830922408961,
+        "paired_difference_sample_stdev_seconds": 47.200980606041675,
+        "paired_difference_coefficient_of_variation": 2.8735161457342184,
+        "median_paired_ratio_eta_on_over_eta_off": 0.8160961727503808,
+        "p95_paired_ratio_eta_on_over_eta_off": 1.5984998042954395,
+        "eta_on_wall": {
+          "median_seconds": 86.66683790506795,
+          "p95_seconds": 123.32565790093506,
+          "sample_stdev_seconds": 26.79535179098703,
+          "coefficient_of_variation": 0.3026622240072263
+        },
+        "eta_off_wall": {
+          "median_seconds": 109.25269171223044,
+          "p95_seconds": 129.71487517510542,
+          "sample_stdev_seconds": 23.019025422354083,
+          "coefficient_of_variation": 0.21931568797566042
+        },
+        "difference_ci95": {
+          "method": "paired percentile bootstrap of median, 95% CI",
+          "confidence": 0.95,
+          "replicates": 5000,
+          "seed": 20261033,
+          "lower": -48.048000724986196,
+          "upper": 40.93381865276024,
+          "status": "computed"
+        },
+        "ratio_ci95": {
+          "method": "paired percentile bootstrap of median, 95% CI",
+          "confidence": 0.95,
+          "replicates": 5000,
+          "seed": 20261034,
+          "lower": 0.6269313603087624,
+          "upper": 1.5825180453918677,
+          "status": "computed"
+        },
+        "interpretation": "inconclusive",
+        "ci_note": "CI crossing zero/one is inconclusive; no minimum effect or response-rate threshold is imposed."
+      }
+    }
+  },
+  "progress_jsonl": "/output/overhead-overhead-direct-p1.json.rows.jsonl"
+}

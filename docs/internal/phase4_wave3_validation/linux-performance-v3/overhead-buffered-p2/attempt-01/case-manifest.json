@@ -1,0 +1,20 @@
+{
+  "case": "overhead-buffered-p2",
+  "backend": "buffered",
+  "ranks": 2,
+  "timeout_seconds": 3600,
+  "source_context": "/tmp/ddq-p4-linux-followup-20261015-tmori/wave3-performance-context-v3",
+  "image": "sha256:3bee5df0c2960ab030ea1e9cb5528638929ab3cb6e45ee2ee073102f1d8cce14",
+  "source_revision": "89e8ad2",
+  "source_hash_manifest_sha256": "45319eb9686bb50fdbf887deb504a73a8dc39e35e5bdbe7a0133f6d3e346775e",
+  "stage": "overhead",
+  "workloads": [
+    "rx-ry-low",
+    "mixed"
+  ],
+  "mixed_layers": 20,
+  "warmups": 2,
+  "measured_pairs": 7,
+  "seed": 20261016,
+  "timeout_scope": "one complete overhead workload campaign"
+}

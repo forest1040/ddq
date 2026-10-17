@@ -38,3 +38,7 @@ No v3 measurement ran against the earlier prepared context. That unused context 
 The declared order is heldout-buffered-p1, heldout-buffered-p2, heldout-direct-p1, heldout-direct-p2, then overhead-buffered-p1, overhead-buffered-p2, overhead-direct-p1, overhead-direct-p2. The order was fixed before any v3 result. Each case uses fresh scratch and output; no trial data is shared across cases. Four Linux endpoint/MPI test files run before the first measurement. All performance cases run serially, after the separate Linux fault/lifecycle containers have exited. The Mac fast suite and subsequent Mac endpoint evaluation run on a different physical host. No TeX rebuild is planned during the final measurement.
 
 Trial errors, unknown outcomes, command timeouts and failed cleanup remain reportable artifacts. An unsuccessful case does not cause its rows to be removed; the finite batch continues to the remaining predeclared cases.
+
+## Completion record (2026-10-17)
+
+All eight cases completed under the frozen design above. [Raw artifacts, full error/unknown accounting and final audit](linux-performance-v3/README.md) preserve the 216-cell grid and all 2+7 paired repetitions. This completion note does not alter the predeclared workload scope or acceptance criteria.

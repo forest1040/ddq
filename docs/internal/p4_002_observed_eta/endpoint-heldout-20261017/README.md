@@ -61,3 +61,6 @@ expectationのproduction prepare実時間medianは4／32／128 gateで0.507／0.
 - collectorのcost側`dropped_conditions/dropped_bytes/dropped_children/failures`は全caseで0。gradient内部の**bounded raw pending queue**では合計139,253 event行の`dropped_raw`が記録された。すべての内部event streamを無欠落で保存したという主張はしない。今回要求した校正・heldout・growthのendpoint576行とprepare378行はrunnerが別途直接保存し、全件の実completion／condition／数値を検査できた。各caseのcounterとfailed observationsもrawへ残す。
 
 baselineに比べてexpectationの回答点の誤差とcoverageは変わった一方、回答率は45/45から24/45、gradientは45/45から14/45へ下がった。回答された集合も変わるため、精度改善率を全caseへ外挿しない。checkpointの低coverageとprepareの短run認証は品質上の既知限界・将来の改善候補として残す。元の個別taskはconditional intervalの報告を求め、回答率改善を受入条件に含めておらず、未来APIの95% coverageや80%回答率を新設しない。今回のendpoint実測だけでP4-002全体をDONEにはせず、Linux generic held-out／rank MAX短区間／overheadの完了と元6条件の照合を待つ。
+
+
+2026-10-17最終追記：[Linux全8ケースの完了・監査](../../phase4_wave3_validation/linux-performance-v3/README.md)と[元6条件の照合](../../../phase4_p4_002_acceptance_2026-10-17.md)を完了し、P4-002をDONEとした。上記のunknown／低coverage／raw上限は品質上の既知限界として保持する。TeXは更新していない。
