@@ -13,6 +13,7 @@ identified by the sha256 of its canonical content.
 from __future__ import annotations
 
 from statistics import median
+from dataclasses import asdict
 
 from .journal import canonical, content_hash
 from .runtime_cost import CostSample
@@ -22,6 +23,24 @@ KIND = 'executor-class-profile'
 SWAP_STAGE = 'physical-bit-swap'
 PHYSICAL_KEYS = ('n', 'block_bits', 'backend', 'engine', 'ranks', 'threads')
 MAX_ROWS = 4096
+
+
+def production_health_context(sim):
+    """Execution settings required by the opt-in health observer, beyond class keys.
+
+    Directory names are not cost identities; storage volume is already bound by
+    the configuration fingerprint. Control-only policy settings may differ
+    between calibration and observation without changing executor work.
+    """
+    config = asdict(sim.config)
+    for key in ('directory', 'disk_admission_ledger', 'volume_coordinator'):
+        value = config.pop(key)
+        if key != 'directory':
+            config[key + '_enabled'] = value is not None
+    policy = asdict(sim.policy)
+    for key in ('mode', 'cooldown_seconds', 'minimum_gain_fraction', 'candidate_ttl_seconds'):
+        policy.pop(key)
+    return {'schema_version': 1, 'config': config, 'policy': policy}
 
 
 def physical_context(context):
@@ -79,11 +98,14 @@ def export_profile(sim, *, fingerprint=None):
                      'held_out_count': held, 'held_out_coverage': coverage, 'samples': len(values),
                      'validation': 'held-out', 'evidence': 'measured', 'units': 'seconds/call'})
     if len(rows) > MAX_ROWS: raise ValueError('Executor profile exceeds row limit')
-    return document(rows, fingerprint or runtime_fingerprint(sim))
+    return document(rows, fingerprint or runtime_fingerprint(sim),
+                    health_context=production_health_context(sim))
 
 
-def document(rows, fingerprint):
+def document(rows, fingerprint, *, health_context=None):
     body = {'schema_version': 1, 'kind': KIND, 'configuration_fingerprint': fingerprint, 'rows': rows}
+    if health_context is not None:
+        body['health_context'] = health_context
     return {**body, 'profile_id': content_hash(body)}
 
 
@@ -92,16 +114,22 @@ def merge(documents):
     fingerprints = {doc['configuration_fingerprint'] for doc in documents}
     if len(fingerprints) != 1: raise ValueError('Executor profiles from different configurations')
     rows = {}
+    contexts = {canonical(doc.get('health_context')) for doc in documents}
+    if len(contexts) != 1:
+        raise ValueError('Executor profiles have different health execution settings')
     for doc in documents:
         validate(doc)
         for row in doc['rows']: rows[(row['class_key'], canonical(row['context']))] = row
-    return document(list(rows.values()), fingerprints.pop())
+    return document(list(rows.values()), fingerprints.pop(),
+                    health_context=documents[0].get('health_context'))
 
 
 def validate(doc):
     if not isinstance(doc, dict) or doc.get('kind') != KIND or doc.get('schema_version') != 1:
         raise ValueError('Not an executor-class profile')
     body = {k: doc[k] for k in ('schema_version', 'kind', 'configuration_fingerprint', 'rows')}
+    if 'health_context' in doc:
+        body['health_context'] = doc['health_context']
     if doc.get('profile_id') != content_hash(body): raise ValueError('Executor profile id does not match its content')
     if not isinstance(doc['rows'], list) or len(doc['rows']) > MAX_ROWS: raise ValueError('Invalid executor profile rows')
     for row in doc['rows']:
